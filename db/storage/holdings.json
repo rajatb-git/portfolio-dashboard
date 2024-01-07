@@ -1,0 +1,182 @@
+{
+  "83dd7d14-9c38-4ef5-8016-8a59440fdef6": {
+    "symbol": "AAPL",
+    "type": "stock",
+    "name": "Apple Inc",
+    "userId": "RB",
+    "qty": 22,
+    "averagePrice": 130.36,
+    "id": "83dd7d14-9c38-4ef5-8016-8a59440fdef6"
+  },
+  "c1b750df-3f49-43f8-a9ca-94f92a4699a1": {
+    "symbol": "ABNB",
+    "type": "stock",
+    "name": "Airbnb Inc",
+    "userId": "RB",
+    "qty": 2,
+    "averagePrice": 151.39,
+    "id": "c1b750df-3f49-43f8-a9ca-94f92a4699a1"
+  },
+  "8b67d7d9-cb42-49f4-94cf-7551bf4abb01": {
+    "symbol": "AMD",
+    "type": "stock",
+    "name": "Advanced Micro Devices Inc",
+    "userId": "RB",
+    "qty": 15,
+    "averagePrice": 127.25,
+    "id": "8b67d7d9-cb42-49f4-94cf-7551bf4abb01"
+  },
+  "1aedc058-17c5-480d-8db5-2f2c4c8e1b03": {
+    "symbol": "AMZN",
+    "type": "stock",
+    "name": "Amazon.com Inc",
+    "userId": "RB",
+    "qty": 30,
+    "averagePrice": 159.3,
+    "id": "1aedc058-17c5-480d-8db5-2f2c4c8e1b03"
+  },
+  "fcb18e26-8797-4000-ab36-d329c836dfcf": {
+    "symbol": "BA",
+    "type": "stock",
+    "name": "Boeing Co",
+    "userId": "RB",
+    "qty": 10,
+    "averagePrice": 198.98,
+    "id": "fcb18e26-8797-4000-ab36-d329c836dfcf"
+  },
+  "e99303fe-f7b9-40e3-861e-ea9e1fcffaed": {
+    "symbol": "BLNK",
+    "type": "stock",
+    "name": "Blink Charging Co",
+    "userId": "RB",
+    "qty": 20,
+    "averagePrice": 23.9,
+    "id": "e99303fe-f7b9-40e3-861e-ea9e1fcffaed"
+  },
+  "62932859-d8b0-4f22-b561-405ed96dd3c8": {
+    "symbol": "CHPT",
+    "type": "stock",
+    "name": "ChargePoint Holdings Inc",
+    "userId": "RB",
+    "qty": 500,
+    "averagePrice": 1.98,
+    "id": "62932859-d8b0-4f22-b561-405ed96dd3c8"
+  },
+  "1fe2ba4a-81e1-44eb-af58-ba01893e76a7": {
+    "symbol": "CMCSA",
+    "type": "stock",
+    "name": "Comcast Corp",
+    "userId": "RB",
+    "qty": 12,
+    "averagePrice": 38.39,
+    "id": "1fe2ba4a-81e1-44eb-af58-ba01893e76a7"
+  },
+  "d4383eba-c694-4f2e-9d08-8973bf791e15": {
+    "symbol": "COIN",
+    "type": "stock",
+    "name": "Coinbase Global Inc",
+    "userId": "RB",
+    "qty": 2,
+    "averagePrice": 335.79,
+    "id": "d4383eba-c694-4f2e-9d08-8973bf791e15"
+  },
+  "d694fe83-2346-454c-b18b-0cfb7bd87d48": {
+    "symbol": "DIS",
+    "type": "stock",
+    "name": "The Walt Disney Co",
+    "userId": "RB",
+    "qty": 20,
+    "averagePrice": 168.98,
+    "id": "d694fe83-2346-454c-b18b-0cfb7bd87d48"
+  },
+  "4b4845aa-7ef8-4c49-998c-34ca646da078": {
+    "symbol": "F",
+    "type": "stock",
+    "name": "Ford Motor Co",
+    "userId": "RB",
+    "qty": 220,
+    "averagePrice": 9.94,
+    "id": "4b4845aa-7ef8-4c49-998c-34ca646da078"
+  },
+  "9c539d92-9bf7-438c-82e2-6749a9cabf54": {
+    "symbol": "GOOG",
+    "type": "stock",
+    "name": "Alphabet Inc",
+    "userId": "RB",
+    "qty": 20,
+    "averagePrice": 116.93,
+    "id": "9c539d92-9bf7-438c-82e2-6749a9cabf54"
+  },
+  "5cc3f92c-836d-4f62-9ba7-764925c561ea": {
+    "symbol": "NVDA",
+    "type": "stock",
+    "name": "NVIDIA Corp",
+    "userId": "RB",
+    "qty": 5,
+    "averagePrice": 360.67,
+    "id": "5cc3f92c-836d-4f62-9ba7-764925c561ea"
+  },
+  "23c99eff-be0f-4afa-9d70-fbba1237a485": {
+    "symbol": "ONEQ",
+    "type": "stock",
+    "name": "Fidelity Nasdaq Composite ETF",
+    "userId": "RB",
+    "qty": 200,
+    "averagePrice": 44.41,
+    "id": "23c99eff-be0f-4afa-9d70-fbba1237a485"
+  },
+  "836e29d9-bc75-4d18-8449-976dab1758af": {
+    "symbol": "PYPL",
+    "type": "stock",
+    "name": "PayPal Holdings Inc",
+    "userId": "RB",
+    "qty": 17,
+    "averagePrice": 171.15,
+    "id": "836e29d9-bc75-4d18-8449-976dab1758af"
+  },
+  "d6ea8174-cbdf-4374-b491-61b35913e083": {
+    "symbol": "RIVN",
+    "type": "stock",
+    "name": "Rivian Automotive Inc",
+    "userId": "RB",
+    "qty": 5,
+    "averagePrice": 121.7,
+    "id": "d6ea8174-cbdf-4374-b491-61b35913e083"
+  },
+  "acf4227b-1a8f-4847-88ae-de7bf2a2f751": {
+    "symbol": "RYCEY",
+    "type": "stock",
+    "name": "Rolls-Royce Holdings PLC",
+    "userId": "RB",
+    "qty": 400,
+    "averagePrice": 1.65,
+    "id": "acf4227b-1a8f-4847-88ae-de7bf2a2f751"
+  },
+  "5e224e59-1740-4b70-b189-f6be5be6d62f": {
+    "symbol": "SBUX",
+    "type": "stock",
+    "name": "Starbucks Corp",
+    "userId": "RB",
+    "qty": 5,
+    "averagePrice": 110.37,
+    "id": "5e224e59-1740-4b70-b189-f6be5be6d62f"
+  },
+  "86a9d485-bc21-4a50-a5c7-3e139d3e711f": {
+    "symbol": "TSLA",
+    "type": "stock",
+    "name": "Tesla Inc",
+    "userId": "RB",
+    "qty": 11,
+    "averagePrice": 243.47,
+    "id": "86a9d485-bc21-4a50-a5c7-3e139d3e711f"
+  },
+  "8908e012-8c29-40da-b378-38ab0466f969": {
+    "symbol": "UAL",
+    "type": "stock",
+    "name": "United Airlines Holdings Inc",
+    "userId": "RB",
+    "qty": 20,
+    "averagePrice": 55.55,
+    "id": "8908e012-8c29-40da-b378-38ab0466f969"
+  }
+}

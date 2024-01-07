@@ -1,0 +1,48 @@
+{
+  "name": "material-ui-nextjs-ts",
+  "version": "5.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "post-update": "echo \"codesandbox preview only, need an update\" && yarn upgrade --latest"
+  },
+  "dependencies": {
+    "@emotion/cache": "latest",
+    "@emotion/react": "latest",
+    "@emotion/styled": "latest",
+    "@iconify/react": "^4.1.1",
+    "@mui/icons-material": "latest",
+    "@mui/material": "latest",
+    "axios": "^1.6.3",
+    "moment": "^2.30.1",
+    "next": "latest",
+    "numeral": "^2.0.6",
+    "react": "latest",
+    "react-dom": "latest",
+    "simplebar-react": "^3.2.4",
+    "uuid": "^9.0.1"
+  },
+  "devDependencies": {
+    "@types/moment": "^2.13.0",
+    "@types/node": "latest",
+    "@types/numeral": "^2.0.5",
+    "@types/react": "latest",
+    "@types/react-dom": "latest",
+    "@types/uuid": "^9.0.7",
+    "eslint": "latest",
+    "eslint-config-next": "latest",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-config-standard": "^17.1.0",
+    "eslint-plugin-import": "^2.29.1",
+    "eslint-plugin-n": "^16.6.1",
+    "eslint-plugin-prettier": "latest",
+    "eslint-plugin-promise": "^6.1.1",
+    "eslint-plugin-react": "^7.33.2",
+    "eslint-plugin-react-hooks": "^4.6.0",
+    "prettier": "latest",
+    "typescript": "latest"
+  }
+}
