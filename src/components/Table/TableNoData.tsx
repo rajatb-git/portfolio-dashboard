@@ -10,21 +10,29 @@ type TableNoDataProps = {
 export default function TableNoData({ query }: TableNoDataProps) {
   return (
     <TableRow>
-      <TableCell align="center" colSpan={6} sx={{ py: 3 }}>
+      <TableCell align="center" colSpan={100} sx={{ py: 3 }}>
         <Paper
           sx={{
             textAlign: 'center',
           }}
         >
-          <Typography variant="h6" paragraph>
-            Not found
-          </Typography>
+          {query ? (
+            <>
+              <Typography variant="h6" paragraph>
+                Not found
+              </Typography>
 
-          <Typography variant="body2">
-            No results found for &nbsp;
-            <strong>&quot;{query}&quot;</strong>.
-            <br /> Try checking for typos or using complete words.
-          </Typography>
+              <Typography variant="body2">
+                No results found for &nbsp;
+                <strong>&quot;{query}&quot;</strong>.
+                <br /> Try checking for typos or using complete words.
+              </Typography>
+            </>
+          ) : (
+            <Typography variant="h6" paragraph color="error">
+              No data
+            </Typography>
+          )}
         </Paper>
       </TableCell>
     </TableRow>

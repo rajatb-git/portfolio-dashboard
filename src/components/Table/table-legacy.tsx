@@ -16,6 +16,7 @@ interface Column {
   label: string;
   minWidth?: number;
   align?: 'right';
+  // eslint-disable-next-line no-unused-vars
   format?: (value: number) => string;
 }
 
@@ -68,6 +69,7 @@ export default function Table({ rows, columns }: Props) {
           </TableBody>
         </MuiTable>
       </TableContainer>
+
       <TablePagination
         rowsPerPageOptions={[10, 25, 100]}
         component="div"

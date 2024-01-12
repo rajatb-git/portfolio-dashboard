@@ -6,6 +6,7 @@ import TableRow from '@mui/material/TableRow';
 import TableSortLabel from '@mui/material/TableSortLabel';
 
 import { visuallyHidden } from './utils';
+import theme from '../ThemeRegistry/theme';
 
 type TableHeadProps = {
   order: 'asc' | 'desc';
@@ -31,7 +32,7 @@ export default function TableHead({
   };
 
   return (
-    <MuiTableHead>
+    <MuiTableHead sx={{ backgroundColor: theme.palette.background.neutral }}>
       <TableRow>
         <TableCell padding="checkbox">
           <Checkbox

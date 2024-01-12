@@ -5,16 +5,16 @@ export type HoldingsType = {
   qty: number;
   purchasePrice: number;
   targetPrice: number;
-  type: "stock" | "crypto";
+  type: 'stock' | 'crypto';
   createdAt: Date;
   updatedAt: Date;
 };
 
 export type PriceStoreType = {
-    sym: string;
-    price: number;
-    updatedAt: Date;
-}
+  sym: string;
+  price: number;
+  updatedAt: Date;
+};
 
 export type UserType = {
   userId: string;

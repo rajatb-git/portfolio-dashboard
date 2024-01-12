@@ -1,3 +1,5 @@
+import { IHoldingsModel } from 'db/models/HoldingsModel';
+
 export const visuallyHidden = {
   border: 0,
   margin: -1,
@@ -56,7 +58,11 @@ export function applyFilter({
   inputData = stabilizedThis.map((el: any) => el[0]);
 
   if (filterName) {
-    inputData = inputData.filter((user: any) => user.name.toLowerCase().indexOf(filterName.toLowerCase()) !== -1);
+    inputData = inputData.filter(
+      (x: IHoldingsModel) =>
+        x.name.toLowerCase().indexOf(filterName.toLowerCase()) !== -1 ||
+        x.symbol.toLowerCase().indexOf(filterName.toLowerCase()) !== -1
+    );
   }
 
   return inputData;

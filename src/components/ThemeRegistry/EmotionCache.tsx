@@ -1,18 +1,17 @@
 'use client';
 import * as React from 'react';
+
 import createCache from '@emotion/cache';
-import { useServerInsertedHTML } from 'next/navigation';
-import { CacheProvider as DefaultCacheProvider } from '@emotion/react';
 import type { EmotionCache, Options as OptionsOfCreateCache } from '@emotion/cache';
+import { CacheProvider as DefaultCacheProvider } from '@emotion/react';
+import { useServerInsertedHTML } from 'next/navigation';
 
 export type NextAppDirEmotionCacheProviderProps = {
   /** This is the options passed to createCache() from 'import createCache from "@emotion/cache"' */
   options: Omit<OptionsOfCreateCache, 'insertionPoint'>;
   /** By default <CacheProvider /> from 'import { CacheProvider } from "@emotion/react"' */
-  CacheProvider?: (props: {
-    value: EmotionCache;
-    children: React.ReactNode;
-  }) => React.JSX.Element | null;
+  // eslint-disable-next-line no-unused-vars
+  CacheProvider?: (props: { value: EmotionCache; children: React.ReactNode }) => React.JSX.Element | null;
   children: React.ReactNode;
 };
 

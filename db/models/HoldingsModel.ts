@@ -10,6 +10,12 @@ export interface IHoldings {
   targetPrice: number;
   type: 'stock' | 'crypto';
   currentPrice?: number;
+  percentChange?: number;
+  dayHigh?: number;
+  dayLow?: number;
+  totalGL?: number;
+  totalGLPercent?: number;
+  marketValue?: number;
   priceDate?: String;
   createdAt: Date;
   updatedAt: Date;

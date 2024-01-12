@@ -1,6 +1,5 @@
 import { useState } from 'react';
 
-import Avatar from '@mui/material/Avatar';
 import Checkbox from '@mui/material/Checkbox';
 import IconButton from '@mui/material/IconButton';
 import MenuItem from '@mui/material/MenuItem';
@@ -9,31 +8,20 @@ import Stack from '@mui/material/Stack';
 import TableCell from '@mui/material/TableCell';
 import { default as MuiTableRow } from '@mui/material/TableRow';
 import Typography from '@mui/material/Typography';
+import moment from 'moment';
 
 import { Iconify } from '@/components/Iconify';
 import Label from '@/components/Label';
+import { fnCurrency } from '@/utils/formatNumber';
+import { IHoldingsModel } from 'db/models/HoldingsModel';
 
 type TableRowProps = {
-  icon?: string;
-  company: any;
+  row: IHoldingsModel;
   handleClick: any;
-  isVerified: any;
-  name: any;
-  role: any;
   selected: any;
-  status: string;
 };
 
-export default function TableRow({
-  selected,
-  name,
-  icon,
-  company,
-  role,
-  isVerified,
-  status,
-  handleClick,
-}: TableRowProps) {
+export default function TableRow({ selected, row, handleClick }: TableRowProps) {
   const [open, setOpen] = useState(null);
 
   const handleOpenMenu = (event: any) => {
@@ -51,27 +39,59 @@ export default function TableRow({
           <Checkbox disableRipple checked={selected} onChange={handleClick} />
         </TableCell>
 
-        <TableCell component="th" scope="row" padding="none">
-          <Stack direction="row" alignItems="center" spacing={2}>
-            {icon && (
-              <Avatar alt={name}>
-                <Iconify icon={icon} />
-              </Avatar>
-            )}
+        <TableCell component="th" scope="row">
+          <Stack direction="column" spacing={0}>
             <Typography variant="subtitle2" noWrap>
-              {name}
+              {row.symbol}
+            </Typography>
+
+            <Typography variant="caption" noWrap>
+              {row.name}
             </Typography>
           </Stack>
         </TableCell>
 
-        <TableCell>{company}</TableCell>
+        <TableCell align="right">{row.qty}</TableCell>
 
-        <TableCell>{role}</TableCell>
+        <TableCell align="right">
+          <Stack direction="column" spacing={0} alignItems="flex-end">
+            {row.currentPrice}
 
-        <TableCell align="center">{isVerified ? 'Yes' : 'No'}</TableCell>
+            <Typography variant="caption" noWrap sx={{ fontSize: '11px' }}>
+              {row.dayHigh?.toFixed(2)} - {row.dayLow?.toFixed(2)}
+            </Typography>
+          </Stack>
+        </TableCell>
 
-        <TableCell>
-          <Label color={(status === 'banned' && 'error') || 'success'}>{status}</Label>
+        <TableCell align="right">
+          <Stack direction="column" spacing={0} alignItems="flex-end">
+            <Label
+              color={row.percentChange === 0 ? 'default' : row.percentChange! > 0 ? 'success' : 'error'}
+              sx={{ fontSize: '13px' }}
+            >
+              {row.percentChange?.toFixed(2)}%
+            </Label>
+
+            <Typography variant="caption" noWrap>
+              {moment(row.priceDate as string).format('MMM DD, hh:mma')}
+            </Typography>
+          </Stack>
+        </TableCell>
+
+        <TableCell align="right">
+          <Stack direction="column" spacing={0} alignItems="flex-end">
+            <Label
+              color={row.totalGLPercent === 0 ? 'default' : row.totalGLPercent! > 0 ? 'success' : 'error'}
+              sx={{ fontSize: '13px' }}
+            >
+              {(row.totalGLPercent || 0) > 0 && '+'}
+              {row.totalGLPercent?.toFixed(2)}%
+            </Label>
+
+            <Typography variant="caption" noWrap sx={{ fontWeight: 700 }}>
+              {fnCurrency(row.totalGL)}
+            </Typography>
+          </Stack>
         </TableCell>
 
         <TableCell align="right">
@@ -94,11 +114,6 @@ export default function TableRow({
         <MenuItem onClick={handleCloseMenu}>
           <Iconify icon="eva:edit-fill" sx={{ mr: 2 }} />
           Edit
-        </MenuItem>
-
-        <MenuItem onClick={handleCloseMenu} sx={{ color: 'error.main' }}>
-          <Iconify icon="eva:trash-2-outline" sx={{ mr: 2 }} />
-          Delete
         </MenuItem>
       </Popover>
     </>

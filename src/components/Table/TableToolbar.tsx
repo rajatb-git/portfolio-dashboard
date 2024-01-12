@@ -1,3 +1,4 @@
+import { Checkbox, Stack } from '@mui/material';
 import IconButton from '@mui/material/IconButton';
 import InputAdornment from '@mui/material/InputAdornment';
 import OutlinedInput from '@mui/material/OutlinedInput';
@@ -11,13 +12,19 @@ type TableToolbarProps = {
   numSelected: number;
   filterName: string;
   onFilterName: any;
+  // eslint-disable-next-line no-unused-vars
+  handleUnselectAllClick: (event: any) => void;
 };
 
-export default function TableToolbar({ numSelected, filterName, onFilterName }: TableToolbarProps) {
+export default function TableToolbar({
+  numSelected,
+  filterName,
+  onFilterName,
+  handleUnselectAllClick,
+}: TableToolbarProps) {
   return (
     <Toolbar
       sx={{
-        height: 96,
         display: 'flex',
         justifyContent: 'space-between',
         p: (theme) => theme.spacing(0, 1, 0, 3),
@@ -28,11 +35,16 @@ export default function TableToolbar({ numSelected, filterName, onFilterName }: 
       }}
     >
       {numSelected > 0 ? (
-        <Typography component="div" variant="subtitle1">
-          {numSelected} selected
-        </Typography>
+        <Stack direction="row">
+          <Checkbox disableRipple checked={numSelected > 0} onChange={handleUnselectAllClick} />
+          <Typography component="div" variant="subtitle1" sx={{ py: '9px' }}>
+            {numSelected} selected
+          </Typography>
+        </Stack>
       ) : (
         <OutlinedInput
+          fullWidth
+          size="small"
           value={filterName}
           onChange={onFilterName}
           placeholder="Search name..."
@@ -44,16 +56,10 @@ export default function TableToolbar({ numSelected, filterName, onFilterName }: 
         />
       )}
 
-      {numSelected > 0 ? (
+      {numSelected > 0 && (
         <Tooltip title="Delete">
           <IconButton>
             <Iconify icon="eva:trash-2-fill" />
-          </IconButton>
-        </Tooltip>
-      ) : (
-        <Tooltip title="Filter list">
-          <IconButton>
-            <Iconify icon="ic:round-filter-list" />
           </IconButton>
         </Tooltip>
       )}

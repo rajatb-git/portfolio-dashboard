@@ -84,6 +84,7 @@ export class Model<T extends { id: string }> {
     this.saveState(records);
   }
 
+  // eslint-disable-next-line no-unused-vars
   public deleteOne(recordId: string): T {
     const records = this.loadFile();
 

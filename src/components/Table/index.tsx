@@ -15,10 +15,10 @@ import TableRow from './TableRow';
 import TableToolbar from './TableToolbar';
 import { emptyRows, applyFilter, getComparator } from './utils';
 
-export interface Column {
+export type Column = {
   id: string;
   label: string;
-}
+};
 
 type TableProps<T> = {
   rows: Array<T>;
@@ -36,7 +36,7 @@ export default function Table<T>({ rows, columns }: TableProps<T>) {
 
   const [filterName, setFilterName] = useState('');
 
-  const [rowsPerPage, setRowsPerPage] = useState(5);
+  const [rowsPerPage, setRowsPerPage] = useState(25);
 
   const handleSort = (event: any, id: string) => {
     const isAsc = orderBy === id && order === 'asc';
@@ -53,6 +53,13 @@ export default function Table<T>({ rows, columns }: TableProps<T>) {
       return;
     }
     setSelected([]);
+  };
+
+  const handleUnselectAllClick = (event: any) => {
+    if (!event.target.checked) {
+      setSelected([]);
+      return;
+    }
   };
 
   const handleClick = (event: any, name: string) => {
@@ -92,11 +99,16 @@ export default function Table<T>({ rows, columns }: TableProps<T>) {
     filterName,
   });
 
-  const notFound = !dataFiltered.length && !!filterName;
+  const notFound = !dataFiltered.length;
 
   return (
     <Card elevation={3}>
-      <TableToolbar numSelected={selected.length} filterName={filterName} onFilterName={handleFilterByName} />
+      <TableToolbar
+        handleUnselectAllClick={handleUnselectAllClick}
+        numSelected={selected.length}
+        filterName={filterName}
+        onFilterName={handleFilterByName}
+      />
 
       <TableContainer sx={{ overflow: 'unset' }}>
         <MuiTable sx={{ minWidth: 800 }}>
@@ -113,12 +125,7 @@ export default function Table<T>({ rows, columns }: TableProps<T>) {
             {dataFiltered.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((row: any) => (
               <TableRow
                 key={row.id}
-                name={row.name}
-                role={row.role}
-                status={row.status}
-                company={row.company}
-                icon={row.icon}
-                isVerified={row.isVerified}
+                row={row}
                 selected={selected.indexOf(row.name) !== -1}
                 handleClick={(event: any) => handleClick(event, row.name)}
               />
@@ -137,7 +144,7 @@ export default function Table<T>({ rows, columns }: TableProps<T>) {
         count={rows.length}
         rowsPerPage={rowsPerPage}
         onPageChange={handleChangePage}
-        rowsPerPageOptions={[5, 10, 25]}
+        rowsPerPageOptions={[25, 50, 100]}
         onRowsPerPageChange={handleChangeRowsPerPage}
       />
     </Card>
