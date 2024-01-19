@@ -1,4 +1,4 @@
-export type HoldingsType = {
+export type HoldingsDBType = {
   userId: string;
   name: string;
   symbol: string;
@@ -10,13 +10,13 @@ export type HoldingsType = {
   updatedAt: Date;
 };
 
-export type PriceStoreType = {
+export type PriceStoreDBType = {
   sym: string;
   price: number;
   updatedAt: Date;
 };
 
-export type UserType = {
+export type UserDBType = {
   userId: string;
   name: string;
   displayName: string;

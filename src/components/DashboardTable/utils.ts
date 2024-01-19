@@ -1,4 +1,4 @@
-import { IHoldingsModel } from 'db/models/HoldingsModel';
+import { IHoldingsModel } from '@/models/HoldingsModel';
 
 export const visuallyHidden = {
   border: 0,

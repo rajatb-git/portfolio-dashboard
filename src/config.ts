@@ -7,7 +7,7 @@ export const FINN_HUB_API = `https://www.finnhub.io/api/v1/quote?symbol=`;
 // ---------------------------------------------
 export const NAV_CONFIG = [
   { text: 'Dashboard', href: '/dashboard', icon: 'streamline:dashboard-3-solid' },
-  { text: 'Data', href: '/data', icon: 'icon-park-twotone:data' },
+  { text: 'Database', href: '/database', icon: 'icon-park-twotone:data' },
 ];
 
 // APP Config

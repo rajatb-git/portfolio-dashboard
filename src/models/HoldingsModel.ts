@@ -17,6 +17,7 @@ export interface IHoldings {
   totalGLPercent?: number;
   marketValue?: number;
   priceDate?: String;
+  originalValue?: number;
   createdAt: Date;
   updatedAt: Date;
 }

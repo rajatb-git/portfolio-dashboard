@@ -2,7 +2,9 @@ import fs from 'fs';
 
 import { v4 as uuidv4 } from 'uuid';
 
-export interface IModel {
+import { DBError } from './DBError';
+
+export interface IModelDB {
   id: string;
 }
 
@@ -13,7 +15,7 @@ interface GenericRecordType<T extends { id: string }> {
 // todo:
 // 1 - and indexing spec
 // 2 - force unique fields on index
-export class Model<T extends { id: string }> {
+export class DBModel<T extends { id: string }> {
   name: string;
 
   path: string;
@@ -22,14 +24,14 @@ export class Model<T extends { id: string }> {
     this.name = name;
     this.path = `${process.cwd()}/db/storage/${name}.json`;
 
-    this.initialize();
+    // this.initialize();
   }
 
-  private initialize() {
-    if (!fs.existsSync(this.path)) {
-      fs.writeFileSync(this.path, '{}');
-    }
-  }
+  // private initialize() {
+  //   if (!fs.existsSync(this.path)) {
+  //     fs.writeFileSync(this.path, '{}');
+  //   }
+  // }
 
   private loadFile(): GenericRecordType<T> {
     return JSON.parse(
@@ -85,12 +87,17 @@ export class Model<T extends { id: string }> {
   }
 
   // eslint-disable-next-line no-unused-vars
-  public deleteOne(recordId: string): T {
+  public deleteById(recordId: string): Error | T {
     const records = this.loadFile();
 
-    const { recordId: deletedRecord, ...rest } = records;
+    const deletedRecord = records[recordId];
+    delete records[recordId];
 
-    this.saveState(rest);
+    if (!deletedRecord) {
+      return new DBError('Record not found for deletion!');
+    }
+
+    this.saveState(records);
 
     return deletedRecord;
   }

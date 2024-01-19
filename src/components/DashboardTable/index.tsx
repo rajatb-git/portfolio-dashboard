@@ -27,15 +27,9 @@ type TableProps<T> = {
 
 export default function Table<T>({ rows, columns }: TableProps<T>) {
   const [page, setPage] = useState(0);
-
   const [order, setOrder] = useState<'asc' | 'desc'>('asc');
-
-  const [selected, setSelected] = useState<Array<string>>([]);
-
-  const [orderBy, setOrderBy] = useState('name');
-
+  const [orderBy, setOrderBy] = useState('symbol');
   const [filterName, setFilterName] = useState('');
-
   const [rowsPerPage, setRowsPerPage] = useState(25);
 
   const handleSort = (event: any, id: string) => {
@@ -44,39 +38,6 @@ export default function Table<T>({ rows, columns }: TableProps<T>) {
       setOrder(isAsc ? 'desc' : 'asc');
       setOrderBy(id);
     }
-  };
-
-  const handleSelectAllClick = (event: any) => {
-    if (event.target.checked) {
-      const newSelecteds = rows.map((n: any) => n.name);
-      setSelected(newSelecteds);
-      return;
-    }
-    setSelected([]);
-  };
-
-  const handleUnselectAllClick = (event: any) => {
-    if (!event.target.checked) {
-      setSelected([]);
-      return;
-    }
-  };
-
-  const handleClick = (event: any, name: string) => {
-    const selectedIndex = selected.indexOf(name);
-    let newSelected: typeof selected = [];
-
-    if (selectedIndex === -1) {
-      newSelected = newSelected.concat(selected, name);
-    } else if (selectedIndex === 0) {
-      newSelected = newSelected.concat(selected.slice(1));
-    } else if (selectedIndex === selected.length - 1) {
-      newSelected = newSelected.concat(selected.slice(0, -1));
-    } else if (selectedIndex > 0) {
-      newSelected = newSelected.concat(selected.slice(0, selectedIndex), selected.slice(selectedIndex + 1));
-    }
-
-    setSelected(newSelected);
   };
 
   const handleChangePage = (event: React.MouseEvent<HTMLButtonElement, MouseEvent> | null, newPage: number) => {
@@ -103,32 +64,20 @@ export default function Table<T>({ rows, columns }: TableProps<T>) {
 
   return (
     <Card elevation={3}>
-      <TableToolbar
-        handleUnselectAllClick={handleUnselectAllClick}
-        numSelected={selected.length}
-        filterName={filterName}
-        onFilterName={handleFilterByName}
-      />
+      <TableToolbar filterName={filterName} onFilterName={handleFilterByName} />
 
-      <TableContainer sx={{ overflow: 'unset' }}>
-        <MuiTable sx={{ minWidth: 800 }}>
+      <TableContainer>
+        <MuiTable>
           <TableHead
             order={order}
             orderBy={orderBy}
             rowCount={rows.length}
-            numSelected={selected.length}
             onRequestSort={handleSort}
-            onSelectAllClick={handleSelectAllClick}
             headLabel={columns}
           />
           <TableBody>
             {dataFiltered.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((row: any) => (
-              <TableRow
-                key={row.id}
-                row={row}
-                selected={selected.indexOf(row.name) !== -1}
-                handleClick={(event: any) => handleClick(event, row.name)}
-              />
+              <TableRow key={row.id} row={row} />
             ))}
 
             <TableEmptyRows height={77} emptyRows={emptyRows(page, rowsPerPage, rows.length)} />

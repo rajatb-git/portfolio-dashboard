@@ -1,5 +1,4 @@
 import Box from '@mui/material/Box';
-import Checkbox from '@mui/material/Checkbox';
 import TableCell from '@mui/material/TableCell';
 import { default as MuiTableHead } from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
@@ -13,20 +12,10 @@ type TableHeadProps = {
   orderBy: string;
   rowCount: number;
   headLabel: Array<any>;
-  numSelected: number;
   onRequestSort: any;
-  onSelectAllClick: any;
 };
 
-export default function TableHead({
-  order,
-  orderBy,
-  rowCount,
-  headLabel,
-  numSelected,
-  onRequestSort,
-  onSelectAllClick,
-}: TableHeadProps) {
+export default function TableHead({ order, orderBy, headLabel, onRequestSort }: TableHeadProps) {
   const onSort = (property: any) => (event: any) => {
     onRequestSort(event, property);
   };
@@ -34,14 +23,6 @@ export default function TableHead({
   return (
     <MuiTableHead sx={{ backgroundColor: theme.palette.background.neutral }}>
       <TableRow>
-        <TableCell padding="checkbox">
-          <Checkbox
-            indeterminate={numSelected > 0 && numSelected < rowCount}
-            checked={rowCount > 0 && numSelected === rowCount}
-            onChange={onSelectAllClick}
-          />
-        </TableCell>
-
         {headLabel.map((headCell) => (
           <TableCell
             key={headCell.id}
