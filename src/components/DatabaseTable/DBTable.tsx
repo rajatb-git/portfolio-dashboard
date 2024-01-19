@@ -15,13 +15,13 @@ import { IHoldingsDBModel } from 'db/models/HoldingsDBModel';
 import { IUserDBModel } from 'db/models/UserDBModel';
 
 import AddDialog from './AddEditDialog';
-import ImportDialog from './ImportDialog';
-import TableEmptyRows from './TableEmptyRows';
-import TableHead from './TableHead';
-import TableNoData from './TableNoData';
-import TableRow from './TableRow';
-import TableToolbar from './TableToolbar';
-import { emptyRows, applyFilter, getComparator } from './utils';
+import ImportDialog from './DBImportDialog';
+import TableEmptyRows from './DBTableEmptyRows';
+import TableHead from './DBTableHead';
+import TableNoData from './DBTableNoData';
+import TableRow from './DBTableRow';
+import TableToolbar from './DBTableToolbar';
+import { emptyRows, applyFilter, getComparator } from './dbTableUtils';
 
 export type Column = {
   id: string;

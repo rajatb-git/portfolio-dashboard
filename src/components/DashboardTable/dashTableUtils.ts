@@ -12,10 +12,6 @@ export const visuallyHidden = {
   clip: 'rect(0 0 0 0)',
 };
 
-export function emptyRows(page: number, rowsPerPage: number, arrayLength: number) {
-  return page ? Math.max(0, (1 + page) * rowsPerPage - arrayLength) : 0;
-}
-
 function descendingComparator(a: any, b: any, orderBy: string) {
   if (a[orderBy] === null) {
     return 1;
@@ -42,10 +38,14 @@ export function applyFilter({
   inputData,
   comparator,
   filterName,
+  filterUser,
+  filterType,
 }: {
   filterName: string;
   comparator: Function;
   inputData: any;
+  filterUser: string;
+  filterType: string;
 }) {
   const stabilizedThis = inputData.map((el: any, index: number) => [el, index]);
 
@@ -63,6 +63,14 @@ export function applyFilter({
         x.name.toLowerCase().indexOf(filterName.toLowerCase()) !== -1 ||
         x.symbol.toLowerCase().indexOf(filterName.toLowerCase()) !== -1
     );
+  }
+
+  if (filterType) {
+    inputData = inputData.filter((x: IHoldingsModel) => x.type === filterType);
+  }
+
+  if (filterUser) {
+    inputData = inputData.filter((x: IHoldingsModel) => x.userId === filterUser);
   }
 
   return inputData;

@@ -4,7 +4,7 @@ import { Alert } from '@mui/material';
 
 import { getHoldingsData } from '@/api/holdings';
 import { getUserData } from '@/api/user';
-import DatabaseTable from '@/components/DatabaseTable/index';
+import DatabaseTable from '@/components/DatabaseTable/DBTable';
 import { DBError } from 'db/DBError';
 
 import { HoldingsDBModel, IHoldingsDBModel } from '../../../db/models/HoldingsDBModel';

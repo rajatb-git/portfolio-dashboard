@@ -4,7 +4,7 @@ import { default as MuiTableHead } from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
 import TableSortLabel from '@mui/material/TableSortLabel';
 
-import { visuallyHidden } from './utils';
+import { visuallyHidden } from './dashTableUtils';
 import theme from '../ThemeRegistry/theme';
 
 type TableHeadProps = {

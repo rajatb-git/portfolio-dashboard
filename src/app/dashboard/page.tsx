@@ -4,11 +4,12 @@ import { Alert, Grid } from '@mui/material';
 import moment from 'moment';
 
 import { getPriceForSymbol } from '@/api/finnHub';
-import DashboardTable from '@/components/DashboardTable/index';
+import { getHoldingsData } from '@/api/holdings';
+import { getUserData } from '@/api/user';
+import DashboardTable from '@/components/DashboardTable/DashTable';
 import TotalCard from '@/components/TotalCard';
 import { IHoldingsModel } from '@/models/HoldingsModel';
-
-import { HoldingsDBModel } from '../../../db/models/HoldingsDBModel';
+import { IUserDBModel } from 'db/models/UserDBModel';
 
 export type Total = {
   userId: string;
@@ -20,17 +21,22 @@ export type Total = {
 type Data = {
   rows: Array<IHoldingsModel>;
   totals: Array<Total>;
+  users: Array<IUserDBModel>;
 };
 
 const getData = async (): Promise<[Error | null, Data | null]> => {
-  const holdingsModel = HoldingsDBModel();
-  const rows: Array<any> = holdingsModel.getAllRecords();
+  const [holdingsError, holdingsData] = await getHoldingsData();
+  const [usersError, usersData] = await getUserData();
+
+  if (holdingsError || usersError) {
+    return [holdingsError || usersError, null];
+  }
 
   let totals: Array<Total> = [];
 
   try {
     await Promise.all(
-      rows.map((x: any) =>
+      holdingsData.map((x: any) =>
         getPriceForSymbol(x.symbol).then((response) => {
           const priceDate = moment.unix(response.t);
 
@@ -51,7 +57,7 @@ const getData = async (): Promise<[Error | null, Data | null]> => {
     );
 
     const tempMap: { [key: string]: Total } = {};
-    rows.forEach((x: IHoldingsModel) => {
+    holdingsData.forEach((x: IHoldingsModel) => {
       if (!tempMap[x.userId]) {
         tempMap[x.userId] = { userId: x.userId, totalGL: 0, percentGL: 0, totalInvestment: 0 };
       }
@@ -68,7 +74,7 @@ const getData = async (): Promise<[Error | null, Data | null]> => {
     return [err as Error, null];
   }
 
-  return [null, { rows, totals }];
+  return [null, { rows: holdingsData, totals, users: usersData }];
 };
 
 export default async function DashboardPage() {
@@ -120,7 +126,7 @@ export default async function DashboardPage() {
             ))}
           </Grid>
 
-          <DashboardTable rows={data.rows || []} columns={columns} />
+          <DashboardTable rows={data.rows} users={data.users} columns={columns} />
         </>
       )}
     </>
