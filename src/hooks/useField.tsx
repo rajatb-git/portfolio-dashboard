@@ -3,7 +3,7 @@ import React from 'react';
 import debounce from 'lodash/debounce';
 
 type useFieldProps = {
-  initValue: string;
+  initValue: string | number;
   // eslint-disable-next-line no-unused-vars
   validate: (value: string) => string | boolean;
   required?: boolean;
@@ -32,7 +32,7 @@ export const useField = ({ initValue, validate, required = false }: useFieldProp
     setValueNotDebounced(newValue);
   };
 
-  const onChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const onChange = (e: any) => {
     if (typeof e === 'string') {
       setValue(e);
     } else {
@@ -41,7 +41,7 @@ export const useField = ({ initValue, validate, required = false }: useFieldProp
   };
 
   const isValid = (): boolean => {
-    if (required && value.length < 1) {
+    if (required && value.toString().length < 1) {
       setError('This is a required field!');
       return false;
     }

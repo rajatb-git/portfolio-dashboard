@@ -1,4 +1,4 @@
-import { IModel, Model } from 'db/ModelProto';
+import { IModelDB, DBModel } from 'db/ModelProto';
 
 export interface IHoldings {
   id: string;
@@ -22,6 +22,6 @@ export interface IHoldings {
   updatedAt: Date;
 }
 
-export interface IHoldingsModel extends IHoldings, IModel {}
+export interface IHoldingsModel extends IHoldings, IModelDB {}
 
-export const HoldingsModel = () => new Model<IHoldingsModel>('holdings');
+export const HoldingsModel = () => new DBModel<IHoldingsModel>('holdings');

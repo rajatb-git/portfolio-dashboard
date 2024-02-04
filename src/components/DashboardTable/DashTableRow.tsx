@@ -21,21 +21,7 @@ export default function TableRow({ row }: TableRowProps) {
           </Typography>
 
           <Typography variant="caption" noWrap>
-            {row.name}
-          </Typography>
-        </Stack>
-      </TableCell>
-
-      <TableCell>{row.userId}</TableCell>
-
-      <TableCell align="right">{row.qty}</TableCell>
-
-      <TableCell align="right">
-        <Stack direction="column" spacing={0} alignItems="flex-end">
-          {row.currentPrice}
-
-          <Typography variant="caption" noWrap sx={{ fontSize: '11px' }}>
-            {row.dayHigh?.toFixed(2)} - {row.dayLow?.toFixed(2)}
+            {row.qty} {row.type === 'crypto' ? 'coins' : 'shares'}
           </Typography>
         </Stack>
       </TableCell>
@@ -70,6 +56,18 @@ export default function TableRow({ row }: TableRowProps) {
           </Typography>
         </Stack>
       </TableCell>
+
+      <TableCell align="right">
+        <Stack direction="column" spacing={0} alignItems="flex-end">
+          {row.currentPrice}
+
+          <Typography variant="caption" noWrap sx={{ fontSize: '11px' }}>
+            {row.dayHigh?.toFixed(2)} - {row.dayLow?.toFixed(2)}
+          </Typography>
+        </Stack>
+      </TableCell>
+
+      <TableCell>{row.userId}</TableCell>
     </MuiTableRow>
   );
 }

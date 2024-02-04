@@ -1,4 +1,4 @@
-import { IModelDB, DBModel } from 'db/ModelProto';
+import { IModelDB, DBModel } from '../ModelProto';
 
 export interface IHoldingsDB {
   id: string;

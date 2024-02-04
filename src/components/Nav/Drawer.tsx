@@ -6,6 +6,7 @@ import Divider from '@mui/material/Divider';
 import { default as MuiDrawer } from '@mui/material/Drawer';
 import List from '@mui/material/List';
 import ListItem from '@mui/material/ListItem';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 
 import { DRAWER_WIDTH, NAV_CONFIG } from '@/config';
@@ -34,7 +35,9 @@ export default function Drawer() {
       anchor="left"
     >
       <List>
-        <ListItem sx={{ fontWeight: 700, justifyContent: 'center' }}>Portfolio Dashboard</ListItem>
+        <ListItem sx={{ fontWeight: 700, justifyContent: 'center' }}>
+          <Image src="/images/logo.png" alt="Portfolio Dashboard" width={180} height={40} />
+        </ListItem>
 
         <Divider sx={{ borderColor: 'transparent', my: 2 }} />
 

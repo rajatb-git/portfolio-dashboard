@@ -22,35 +22,53 @@ export class DBModel<T extends { id: string }> {
 
   constructor(name: string) {
     this.name = name;
-    this.path = `${process.cwd()}/db/storage/${name}.json`;
+    this.path = `${process.cwd()}/db/storage/${name}`;
 
-    // this.initialize();
+    this.initialize();
   }
 
-  // private initialize() {
-  //   if (!fs.existsSync(this.path)) {
-  //     fs.writeFileSync(this.path, '{}');
-  //   }
-  // }
+  private initialize() {
+    if (!fs.existsSync(`${this.path}.json`)) {
+      fs.writeFileSync(`${this.path}.json`, '{}');
+    }
+
+    if (!fs.existsSync(`${this.path}_values.json`)) {
+      fs.writeFileSync(`${this.path}_values.json`, '[]');
+    }
+  }
 
   private loadFile(): GenericRecordType<T> {
     return JSON.parse(
-      fs.readFileSync(this.path, {
+      fs.readFileSync(`${this.path}.json`, {
+        encoding: 'utf-8',
+      })
+    );
+  }
+
+  private loadValuesFile(): Array<T> {
+    return JSON.parse(
+      fs.readFileSync(`${this.path}_values.json`, {
         encoding: 'utf-8',
       })
     );
   }
 
   public getAllRecords(): Array<T> {
-    const file = this.loadFile();
+    const valuesFile = this.loadValuesFile();
 
-    return Object.values(file);
+    return valuesFile;
   }
 
   public findById(recordId: string): T {
     const records = this.loadFile();
     return records[recordId];
   }
+
+  // public find(queryObj: Partial<T>) {
+  //   const records = this.loadValuesFile();
+
+  //   records.find(x => )
+  // }
 
   public insertOne(record: any): T {
     const records = this.loadFile();
@@ -103,6 +121,7 @@ export class DBModel<T extends { id: string }> {
   }
 
   private saveState(records: GenericRecordType<T>): void {
-    fs.writeFileSync(this.path, JSON.stringify(records));
+    console.log(fs.writeFileSync(`${this.path}.json`, JSON.stringify(records)));
+    console.log(fs.writeFileSync(`${this.path}_values.json`, JSON.stringify(Object.values(records))));
   }
 }

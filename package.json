@@ -30,7 +30,8 @@
     "react": "latest",
     "react-dom": "latest",
     "simplebar-react": "latest",
-    "uuid": "latest"
+    "uuid": "latest",
+    "typescript": "latest"
   },
   "devDependencies": {
     "@types/node": "20.10.8",
@@ -48,7 +49,6 @@
     "eslint-plugin-promise": "latest",
     "eslint-plugin-react": "latest",
     "eslint-plugin-react-hooks": "latest",
-    "prettier": "latest",
-    "typescript": "latest"
+    "prettier": "latest"
   }
 }

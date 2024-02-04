@@ -3,9 +3,10 @@ import Divider from '@mui/material/Divider';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 
-import { Total } from '@/app/dashboard/page';
 import { Iconify } from '@/components/Iconify';
 import { fnCurrency, fnPercent } from '@/utils/formatNumber';
+
+import { Total } from './DashboardTable/dashTableUtils';
 
 type TotalCardProps = {
   total: Total;
@@ -42,11 +43,19 @@ export default function TotalCard({ total }: TotalCardProps) {
 
       <Divider sx={{ my: 1 }} />
 
-      <Stack direction="column">
-        <Typography variant="caption" sx={{ fontSize: '10px' }}>
-          Total Investment
-        </Typography>
-        <Typography>{fnCurrency(total.totalInvestment)}</Typography>
+      <Stack direction="row" justifyContent="space-between">
+        <Stack direction="column">
+          <Typography variant="caption" sx={{ fontSize: '10px' }}>
+            Total Investment
+          </Typography>
+          <Typography>{fnCurrency(total.totalInvestment)}</Typography>
+        </Stack>
+        <Stack direction="column">
+          <Typography variant="caption" sx={{ fontSize: '10px' }}>
+            Total Value
+          </Typography>
+          <Typography>{fnCurrency(total.totalInvestment + total.totalGL)}</Typography>
+        </Stack>
       </Stack>
     </Card>
   );

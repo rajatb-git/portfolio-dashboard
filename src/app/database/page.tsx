@@ -59,6 +59,12 @@ export default async function DataPage() {
     }
   };
 
+  // const addNewHolding = (holding: IHoldingsDBModel) => {
+  //   const holdingsModel = HoldingsDBModel();
+
+  //   holdingsModel.findById
+  // };
+
   const insertHoldingsData = async (newData: Array<IHoldingsDBModel>) => {
     'use server';
     const holdingsModel = HoldingsDBModel();

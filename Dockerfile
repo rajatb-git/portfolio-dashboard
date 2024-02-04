@@ -1,5 +1,5 @@
 # first install and build layer
-FROM node: 18.19.0-alpine3.17 as builder
+FROM node:18.19.0-alpine3.17 as builder
 
 ENV APP_ENV production
 ENV NODE_ENV production
@@ -23,9 +23,10 @@ ENV NEXT_TELEMETRY_DISABLED 1
 ENV PORT 3000
 
 # a standalone build automatically imports the needed files from node modules
-COPY --from=builder /app/.next/standalone ./standalone
-COPY --from=builder /app/public /app/standalone/public
-COPY --from=builder /app/.next/static /app/standalone/.next/static
+COPY --from=builder /app/.next/standalone /app
+COPY --from=builder /app/public /app/public
+COPY --from=builder /app/.next/static /app/.next/static
+# COPY --from=builder /app/db /app/db
 
 EXPOSE ${PORT}
-CMD ["node", "/standalone/server.js"]
+CMD ["node", "/app/server.js"]

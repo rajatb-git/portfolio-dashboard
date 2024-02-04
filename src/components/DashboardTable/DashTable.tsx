@@ -2,21 +2,22 @@
 
 import React, { useState } from 'react';
 
-import { SelectChangeEvent } from '@mui/material';
+import { Box, Button, Grid, ToggleButton, ToggleButtonGroup } from '@mui/material';
 import Card from '@mui/material/Card';
 import { default as MuiTable } from '@mui/material/Table';
 import TableBody from '@mui/material/TableBody';
 import TableContainer from '@mui/material/TableContainer';
 import TablePagination from '@mui/material/TablePagination';
+import Case from 'case';
 
-import { IHoldingsModel } from '@/models/HoldingsModel';
+import { HoldingTypesEnum } from '@/lib/enums';
 import { IUserDBModel } from 'db/models/UserDBModel';
 
 import TableHead from './DashTableHead';
 import TableRow from './DashTableRow';
 import TableToolbar from './DashTableToolbar';
 import { applyFilter, getComparator } from './dashTableUtils';
-import TableNoData from '../DatabaseTable/DBTableNoData';
+import TotalCard from '../TotalCard';
 
 export type Total = {
   userId: string;
@@ -34,17 +35,17 @@ type TableProps<T> = {
   rows: Array<T>;
   columns: Array<Column>;
   users: Array<IUserDBModel>;
+  refreshSymbolData: () => void;
 };
 
-export default function Table<T>({ rows, columns, users }: TableProps<T>) {
+export default function Table<T>({ rows, columns, users, refreshSymbolData }: TableProps<T>) {
   const [page, setPage] = useState(0);
   const [order, setOrder] = useState<'asc' | 'desc'>('asc');
   const [orderBy, setOrderBy] = useState('symbol');
   const [filterName, setFilterName] = useState('');
   const [rowsPerPage, setRowsPerPage] = useState(25);
-  const [filterType, setFilterType] = useState<string>('');
-  const [filterUser, setFilterUser] = useState('');
-  const [totals, setTotals] = useState<Array<Total>>([]);
+  const [filterType, setFilterType] = useState<string>('all');
+  const [filterUser, setFilterUser] = useState('all');
 
   const handleSort = (event: any, id: string) => {
     const isAsc = orderBy === id && order === 'asc';
@@ -65,39 +66,21 @@ export default function Table<T>({ rows, columns, users }: TableProps<T>) {
 
   const handleFilterByName = (event: any) => {
     setPage(0);
+    console.log(event.target.value);
     setFilterName(event.target.value);
   };
 
-  const handleTypeFilterChange = (event: SelectChangeEvent<string>) => {
+  const handleTypeFilterChange = (event: any) => {
     setPage(0);
     setFilterType(event.target.value);
   };
 
-  const handleUserFilterChange = (event: SelectChangeEvent<string>) => {
+  const handleUserFilterChange = (event: any) => {
     setPage(0);
     setFilterUser(event.target.value);
   };
 
-  const calculateTotals = (rows: Array<IHoldingsModel>) => {
-    const tempMap: { [key: string]: Total } = {};
-    rows.forEach((x: IHoldingsModel) => {
-      if (!tempMap[x.userId]) {
-        tempMap[x.userId] = { userId: x.userId, totalGL: 0, percentGL: 0, totalInvestment: 0 };
-      }
-
-      tempMap[x.userId].totalGL += x.totalGL || 0;
-      tempMap[x.userId].totalInvestment += x.originalValue || 0;
-    });
-
-    const tempArray = Object.values(tempMap);
-    tempArray.forEach((x) => {
-      x.percentGL = x.totalGL / x.totalInvestment;
-    });
-
-    setTotals(tempArray);
-  };
-
-  const dataFiltered = applyFilter({
+  const { dataFiltered, totals } = applyFilter({
     inputData: rows,
     comparator: getComparator(order, orderBy),
     filterName,
@@ -105,48 +88,103 @@ export default function Table<T>({ rows, columns, users }: TableProps<T>) {
     filterType,
   });
 
-  const notFound = !dataFiltered.length;
+  // const notFound = !dataFiltered.length;
 
   return (
-    <Card elevation={3}>
-      <TableToolbar
-        handleTypeFilterChange={handleTypeFilterChange}
-        handleUserFilterChange={handleUserFilterChange}
-        filterName={filterName}
-        onFilterName={handleFilterByName}
-        filterType={filterType}
-        filterUser={filterUser}
-        users={users}
-      />
+    <>
+      <Button onClick={refreshSymbolData}>Refresh</Button>
 
-      <TableContainer>
-        <MuiTable>
-          <TableHead
-            order={order}
-            orderBy={orderBy}
-            rowCount={rows.length}
-            onRequestSort={handleSort}
-            headLabel={columns}
-          />
-          <TableBody>
-            {dataFiltered.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((row: any) => (
-              <TableRow key={row.id} row={row} />
-            ))}
+      <Grid container spacing={3}>
+        {totals.map((total) => (
+          <Grid key={total.userId} item xs={12} sm={6} lg={4} xl={3}>
+            <TotalCard total={total} />
+          </Grid>
+        ))}
+      </Grid>
 
-            {notFound && <TableNoData query={filterName} />}
-          </TableBody>
-        </MuiTable>
-      </TableContainer>
+      <Box sx={{ pt: 2, pb: 0.5, display: 'flex', justifyContent: 'space-between' }}>
+        <ToggleButtonGroup
+          color="warning"
+          size="small"
+          value={filterType}
+          exclusive
+          onChange={handleTypeFilterChange}
+          aria-label="type-filter"
+        >
+          <ToggleButton value="all" sx={{ mx: 1, border: '0 !important', borderRadius: '4px !important', p: 0.5 }}>
+            All
+          </ToggleButton>
 
-      <TablePagination
-        page={page}
-        component="div"
-        count={rows.length}
-        rowsPerPage={rowsPerPage}
-        onPageChange={handleChangePage}
-        rowsPerPageOptions={[25, 50, 100]}
-        onRowsPerPageChange={handleChangeRowsPerPage}
-      />
-    </Card>
+          {Object.values(HoldingTypesEnum).map((x) => (
+            <ToggleButton
+              key={x}
+              value={x}
+              sx={{ mx: 1, border: '0 !important', borderRadius: '4px !important', p: 0.5 }}
+            >
+              {Case.capital(x)}
+            </ToggleButton>
+          ))}
+        </ToggleButtonGroup>
+
+        <ToggleButtonGroup
+          color="warning"
+          size="small"
+          value={filterUser}
+          exclusive
+          onChange={handleUserFilterChange}
+          aria-label="type-filter"
+        >
+          <ToggleButton
+            value="all"
+            sx={{ mx: 1, border: '0 !important', borderRadius: '4px !important', py: 0, px: 0.5 }}
+          >
+            All
+          </ToggleButton>
+
+          {users.map((x) => (
+            <ToggleButton
+              key={x.id}
+              value={x.id}
+              sx={{ mx: 1, border: '0 !important', borderRadius: '4px !important', py: 0, px: 0.5 }}
+            >
+              {x.name}
+            </ToggleButton>
+          ))}
+        </ToggleButtonGroup>
+      </Box>
+
+      <Card elevation={3}>
+        <TableToolbar filterName={filterName} onFilterName={handleFilterByName} />
+
+        <TableContainer>
+          <MuiTable>
+            <TableHead
+              order={order}
+              orderBy={orderBy}
+              rowCount={rows.length}
+              onRequestSort={handleSort}
+              headLabel={columns}
+            />
+            <TableBody>
+              {dataFiltered.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((row: any) => (
+                <TableRow key={row.id} row={row} />
+              ))}
+
+              {/* {notFound && <TableNoData query={filterName} />} */}
+            </TableBody>
+          </MuiTable>
+        </TableContainer>
+
+        <TablePagination
+          page={page}
+          component="div"
+          count={rows.length}
+          rowsPerPage={rowsPerPage}
+          onPageChange={handleChangePage}
+          rowsPerPageOptions={[25, 50, 100]}
+          onRowsPerPageChange={handleChangeRowsPerPage}
+        />
+      </Card>
+    </>
   );
 }

@@ -7,7 +7,6 @@ import { default as MuiTable } from '@mui/material/Table';
 import TableBody from '@mui/material/TableBody';
 import TableContainer from '@mui/material/TableContainer';
 import TablePagination from '@mui/material/TablePagination';
-import { motion } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import { SnackbarProvider, enqueueSnackbar } from 'notistack';
 
@@ -80,6 +79,11 @@ export default function DatabaseTable<T>({
     setDialogOpen(true);
   };
 
+  const openAddDialog = () => {
+    setAddEdit('Add');
+    setDialogOpen(true);
+  };
+
   const handleChangePage = (event: React.MouseEvent<HTMLButtonElement, MouseEvent> | null, newPage: number) => {
     setPage(newPage);
   };
@@ -108,7 +112,7 @@ export default function DatabaseTable<T>({
         <TableToolbar
           filterName={filterName}
           onFilterName={handleFilterByName}
-          openNewDialog={() => setDialogOpen(true)}
+          openNewDialog={openAddDialog}
           openImportDialog={() => setImportDialogOpen(true)}
         />
 
@@ -144,33 +148,22 @@ export default function DatabaseTable<T>({
         />
       </Card>
 
-      <motion.div
-        layout
-        animate={{ opacity: 0.5 }}
-        transition={{
-          opacity: { ease: 'linear' },
-          layout: { duration: 0.3 },
-        }}
-      >
-        <AddDialog addEdit={addEdit} open={dialogOpen} handleDialogClose={() => setDialogOpen(false)} />
-      </motion.div>
+      <AddDialog
+        addEdit={addEdit}
+        insertHoldingsData={insertHoldingsData}
+        open={dialogOpen}
+        handleDialogClose={() => setDialogOpen(false)}
+        refreshPage={refreshPage}
+        usersData={usersData}
+      />
 
-      <motion.div
-        layout
-        animate={{ opacity: 0.5 }}
-        transition={{
-          opacity: { ease: 'linear' },
-          layout: { duration: 0.3 },
-        }}
-      >
-        <ImportDialog
-          open={importDialogOpen}
-          handleDialogClose={() => setImportDialogOpen(false)}
-          insertHoldingsData={insertHoldingsData}
-          usersData={usersData}
-          refreshPage={refreshPage}
-        />
-      </motion.div>
+      <ImportDialog
+        open={importDialogOpen}
+        handleDialogClose={() => setImportDialogOpen(false)}
+        insertHoldingsData={insertHoldingsData}
+        usersData={usersData}
+        refreshPage={refreshPage}
+      />
 
       <SnackbarProvider autoHideDuration={10000} />
     </React.Fragment>

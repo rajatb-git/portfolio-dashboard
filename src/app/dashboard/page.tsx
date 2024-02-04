@@ -1,26 +1,17 @@
 import * as React from 'react';
 
-import { Alert, Grid } from '@mui/material';
+import { Alert } from '@mui/material';
 import moment from 'moment';
 
-import { getPriceForSymbol } from '@/api/finnHub';
+import { getPriceForSymbol, getPriceForSymbolRevalidate } from '@/api/finnHub';
 import { getHoldingsData } from '@/api/holdings';
 import { getUserData } from '@/api/user';
 import DashboardTable from '@/components/DashboardTable/DashTable';
-import TotalCard from '@/components/TotalCard';
 import { IHoldingsModel } from '@/models/HoldingsModel';
 import { IUserDBModel } from 'db/models/UserDBModel';
 
-export type Total = {
-  userId: string;
-  totalGL: number;
-  percentGL: number;
-  totalInvestment: number;
-};
-
 type Data = {
   rows: Array<IHoldingsModel>;
-  totals: Array<Total>;
   users: Array<IUserDBModel>;
 };
 
@@ -31,8 +22,6 @@ const getData = async (): Promise<[Error | null, Data | null]> => {
   if (holdingsError || usersError) {
     return [holdingsError || usersError, null];
   }
-
-  let totals: Array<Total> = [];
 
   try {
     await Promise.all(
@@ -55,26 +44,11 @@ const getData = async (): Promise<[Error | null, Data | null]> => {
         })
       )
     );
-
-    const tempMap: { [key: string]: Total } = {};
-    holdingsData.forEach((x: IHoldingsModel) => {
-      if (!tempMap[x.userId]) {
-        tempMap[x.userId] = { userId: x.userId, totalGL: 0, percentGL: 0, totalInvestment: 0 };
-      }
-
-      tempMap[x.userId].totalGL += x.totalGL || 0;
-      tempMap[x.userId].totalInvestment += x.originalValue || 0;
-    });
-
-    totals = Object.values(tempMap);
-    totals.forEach((x) => {
-      x.percentGL = x.totalGL / x.totalInvestment;
-    });
   } catch (err: any) {
     return [err as Error, null];
   }
 
-  return [null, { rows: holdingsData, totals, users: usersData }];
+  return [null, { rows: holdingsData, users: usersData }];
 };
 
 export default async function DashboardPage() {
@@ -84,17 +58,6 @@ export default async function DashboardPage() {
     {
       id: 'symbol',
       label: 'SYM',
-    },
-    { id: 'userId', label: 'Owner' },
-    {
-      id: 'qty',
-      label: 'Quantity',
-      align: 'right',
-    },
-    {
-      id: 'currentPrice',
-      label: 'Current Price',
-      align: 'right',
     },
     {
       id: 'percentChange',
@@ -106,7 +69,19 @@ export default async function DashboardPage() {
       label: 'Total G/L',
       align: 'right',
     },
+    {
+      id: 'currentPrice',
+      label: 'Current Price',
+      align: 'right',
+    },
+
+    { id: 'userId', label: 'Owner' },
   ];
+
+  const refreshSymbolData = async () => {
+    'use server';
+    await getPriceForSymbolRevalidate();
+  };
 
   return (
     <>
@@ -117,17 +92,7 @@ export default async function DashboardPage() {
       )}
 
       {data && (
-        <>
-          <Grid container spacing={3} sx={{ mb: 3 }}>
-            {data.totals.map((total) => (
-              <Grid key={total.userId} item xs={12} sm={6} lg={4} xl={3}>
-                <TotalCard total={total} />
-              </Grid>
-            ))}
-          </Grid>
-
-          <DashboardTable rows={data.rows} users={data.users} columns={columns} />
-        </>
+        <DashboardTable refreshSymbolData={refreshSymbolData} rows={data.rows} users={data.users} columns={columns} />
       )}
     </>
   );

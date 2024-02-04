@@ -15,18 +15,12 @@ import { default as MuiSelect } from '@mui/material/Select';
 import { styled, Theme } from '@mui/material/styles';
 import { default as MuiTextField } from '@mui/material/TextField';
 import Toolbar from '@mui/material/Toolbar';
+import Case from 'case';
 
+import { useField } from '@/hooks/useField';
+import { HoldingTypesEnum } from '@/lib/enums';
 import { IHoldingsDBModel } from 'db/models/HoldingsDBModel';
-
-// const fields = [
-//   { id: 'id', label: 'id' },
-//   { id: 'userId', label: 'userId' },
-//   { id: 'name', label: 'name' },
-//   { id: 'symbol', label: 'symbol' },
-//   { id: 'qty', label: 'qty' },
-//   { id: 'averagePrice', label: 'averagePrice' },
-//   { id: 'targetPrice', label: 'targetPrice' },
-// ];
+import { IUserDBModel } from 'db/models/UserDBModel';
 
 const Select = styled(MuiSelect)(({ theme }: { theme: Theme }) => ({
   '& .MuiInputBase-input': {
@@ -53,27 +47,80 @@ type AddEditDialogProps = {
   editValues?: IHoldingsDBModel;
   addEdit: 'Add' | 'Edit';
   handleDialogClose: () => void;
+  // eslint-disable-next-line no-unused-vars
+  insertHoldingsData: (newData: Array<IHoldingsDBModel>) => void;
+  refreshPage: () => void;
+  usersData: Array<IUserDBModel>;
 };
 
-export default function AddEditDialog({ open, addEdit, handleDialogClose, editValues }: AddEditDialogProps) {
+export default function AddEditDialog({
+  open,
+  addEdit,
+  handleDialogClose,
+  editValues,
+  insertHoldingsData,
+  refreshPage,
+  usersData,
+}: AddEditDialogProps) {
+  const formFields = {
+    name: useField({
+      initValue: editValues?.name || '',
+      validate: (value: string) => value.length <= 3 && 'Name has to be longer than 3 characters',
+      required: true,
+    }),
+    symbol: useField({
+      initValue: editValues?.symbol || '',
+      validate: () => '',
+      required: true,
+    }),
+    userId: useField({
+      initValue: editValues?.userId || '',
+      validate: () => '',
+      required: true,
+    }),
+    type: useField({
+      initValue: editValues?.type || '',
+      validate: () => '',
+      required: true,
+    }),
+    qty: useField({
+      initValue: editValues?.qty || '',
+      validate: () => '',
+      required: true,
+    }),
+    averagePrice: useField({
+      initValue: editValues?.averagePrice || '',
+      validate: () => '',
+      required: true,
+    }),
+    targetPrice: useField({
+      initValue: editValues?.targetPrice || '',
+      validate: () => '',
+      required: false,
+    }),
+  };
+
+  const handleSave = () => {
+    Object.values(formFields).map((x) => x.isValid());
+
+    const record: any = {};
+    for (const holding in formFields) {
+      record[holding] = (formFields as any)[holding].value;
+    }
+
+    insertHoldingsData([record]);
+
+    handleDialogClose();
+    resetDialog();
+    refreshPage();
+  };
+
+  const resetDialog = () => {
+    Object.values(formFields).map((x) => x.resetValue());
+  };
+
   return (
-    <Dialog
-      open={open}
-      onClose={handleDialogClose}
-      maxWidth="md"
-      fullScreen
-      PaperProps={{
-        component: 'form',
-        onSubmit: (event: React.FormEvent<HTMLFormElement>) => {
-          event.preventDefault();
-          const formData = new FormData(event.currentTarget);
-          const formJson = Object.fromEntries((formData as any).entries());
-          const email = formJson.email;
-          console.log(email);
-          handleDialogClose();
-        },
-      }}
-    >
+    <Dialog open={open} onClose={handleDialogClose} maxWidth="md" fullScreen>
       <AppBar sx={{ position: 'relative' }}>
         <Toolbar sx={{ justifyContent: 'space-between' }}>
           <Box sx={{ display: 'inline-flex' }}>
@@ -85,7 +132,7 @@ export default function AddEditDialog({ open, addEdit, handleDialogClose, editVa
           </Box>
 
           <Box component={DialogActions} sx={{ mt: 2 }}>
-            <Button type="submit" variant="contained">
+            <Button type="submit" variant="contained" onClick={handleSave}>
               Save
             </Button>
           </Box>
@@ -98,12 +145,22 @@ export default function AddEditDialog({ open, addEdit, handleDialogClose, editVa
             <Stack direction="column" spacing={0.5}>
               <FormLabel>Type</FormLabel>
 
-              <Select value="" displayEmpty size="small">
+              <Select
+                value={formFields.type.value}
+                displayEmpty
+                size="small"
+                onChange={formFields.type.onChange}
+                error={!!formFields.type.error}
+              >
                 <MenuItem disabled value="">
                   Type of asset
                 </MenuItem>
-                <MenuItem value="stock">Stock</MenuItem>
-                <MenuItem value="crypto">Crypto</MenuItem>
+
+                {Object.values(HoldingTypesEnum).map((x) => (
+                  <MenuItem key={x} value={x}>
+                    {Case.capital(x)}
+                  </MenuItem>
+                ))}
               </Select>
             </Stack>
           </Grid>
@@ -112,12 +169,21 @@ export default function AddEditDialog({ open, addEdit, handleDialogClose, editVa
             <Stack direction="column" spacing={0.5}>
               <FormLabel>User</FormLabel>
 
-              <Select displayEmpty value="" size="small">
+              <Select
+                value={formFields.userId.value}
+                displayEmpty
+                size="small"
+                onChange={formFields.userId.onChange}
+                error={!!formFields.userId.error}
+              >
                 <MenuItem disabled value="">
                   Owner
                 </MenuItem>
-                <MenuItem value="RB">RB</MenuItem>
-                <MenuItem value="Kimi">Kimi</MenuItem>
+                {usersData.map((user) => (
+                  <MenuItem value={user.id} key={user.id}>
+                    {user.name}
+                  </MenuItem>
+                ))}
               </Select>
             </Stack>
           </Grid>
@@ -127,14 +193,16 @@ export default function AddEditDialog({ open, addEdit, handleDialogClose, editVa
               <FormLabel>Name</FormLabel>
               <TextField
                 color="primary"
-                autoFocus
-                required
                 placeholder="Name of the asset"
                 id="name"
                 name="name"
                 fullWidth
                 variant="outlined"
                 size="small"
+                value={formFields.name.value}
+                onChange={formFields.name.onChange}
+                error={!!formFields.name.error}
+                helperText={formFields.name.error}
               />
             </Stack>
           </Grid>
@@ -143,14 +211,16 @@ export default function AddEditDialog({ open, addEdit, handleDialogClose, editVa
             <Stack direction="column" spacing={0.5}>
               <FormLabel>Symbol</FormLabel>
               <TextField
-                autoFocus
-                required
                 placeholder="Exact symbol of asset"
                 id="symbol"
                 name="symbol"
                 fullWidth
                 variant="outlined"
                 size="small"
+                value={formFields.symbol.value}
+                onChange={formFields.symbol.onChange}
+                error={!!formFields.symbol.error}
+                helperText={formFields.symbol.error}
               />
             </Stack>
           </Grid>
@@ -159,14 +229,16 @@ export default function AddEditDialog({ open, addEdit, handleDialogClose, editVa
             <Stack direction="column" spacing={0.5}>
               <FormLabel>Quantity</FormLabel>
               <TextField
-                autoFocus
-                required
                 placeholder="Number of assets"
                 id="qty"
                 name="qty"
                 fullWidth
                 variant="outlined"
                 size="small"
+                value={formFields.qty.value}
+                onChange={formFields.qty.onChange}
+                error={!!formFields.qty.error}
+                helperText={formFields.qty.error}
               />
             </Stack>
           </Grid>
@@ -175,14 +247,16 @@ export default function AddEditDialog({ open, addEdit, handleDialogClose, editVa
             <Stack direction="column" spacing={0.5}>
               <FormLabel>Purchase Price</FormLabel>
               <TextField
-                autoFocus
-                required
                 placeholder="Price of purchase"
                 id="price"
                 name="price"
                 fullWidth
                 variant="outlined"
                 size="small"
+                value={formFields.averagePrice.value}
+                onChange={formFields.averagePrice.onChange}
+                error={!!formFields.averagePrice.error}
+                helperText={formFields.averagePrice.error}
               />
             </Stack>
           </Grid>
@@ -191,14 +265,16 @@ export default function AddEditDialog({ open, addEdit, handleDialogClose, editVa
             <Stack direction="column" spacing={0.5}>
               <FormLabel>Target Price</FormLabel>
               <TextField
-                autoFocus
-                required
                 placeholder="Price to watch for"
                 id="targetPrice"
                 name="targetPrice"
                 fullWidth
                 variant="outlined"
                 size="small"
+                value={formFields.targetPrice.value}
+                onChange={formFields.targetPrice.onChange}
+                error={!!formFields.targetPrice.error}
+                helperText={formFields.targetPrice.error}
               />
             </Stack>
           </Grid>

@@ -34,6 +34,33 @@ export function getComparator(order: 'asc' | 'desc', orderBy: string) {
     : (a: any, b: any) => -descendingComparator(a, b, orderBy);
 }
 
+export type Total = {
+  userId: string;
+  totalGL: number;
+  percentGL: number;
+  totalInvestment: number;
+};
+
+const calculateTotals = (inputData: any) => {
+  const tempMap: { [key: string]: Total } = {};
+
+  inputData.forEach((x: IHoldingsModel) => {
+    if (!tempMap[x.userId]) {
+      tempMap[x.userId] = { userId: x.userId, totalGL: 0, percentGL: 0, totalInvestment: 0 };
+    }
+
+    tempMap[x.userId].totalGL += x.totalGL || 0;
+    tempMap[x.userId].totalInvestment += x.originalValue || 0;
+  });
+
+  const tempArray = Object.values(tempMap);
+  tempArray.forEach((x) => {
+    x.percentGL = x.totalGL / x.totalInvestment;
+  });
+
+  return tempArray;
+};
+
 export function applyFilter({
   inputData,
   comparator,
@@ -65,13 +92,13 @@ export function applyFilter({
     );
   }
 
-  if (filterType) {
+  if (filterType && filterType !== 'all') {
     inputData = inputData.filter((x: IHoldingsModel) => x.type === filterType);
   }
 
-  if (filterUser) {
+  if (filterUser && filterUser !== 'all') {
     inputData = inputData.filter((x: IHoldingsModel) => x.userId === filterUser);
   }
 
-  return inputData;
+  return { dataFiltered: inputData, totals: calculateTotals(inputData) };
 }
