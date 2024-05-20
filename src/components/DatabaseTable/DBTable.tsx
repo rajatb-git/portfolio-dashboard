@@ -10,8 +10,8 @@ import TablePagination from '@mui/material/TablePagination';
 import { useRouter } from 'next/navigation';
 import { SnackbarProvider, enqueueSnackbar } from 'notistack';
 
-import { IHoldingsDBModel } from 'db/models/HoldingsDBModel';
-import { IUserDBModel } from 'db/models/UserDBModel';
+import { IHoldings } from '@/models/HoldingsModel';
+import { IUser } from '@/models/UserModel';
 
 import AddDialog from './AddEditDialog';
 import ImportDialog from './DBImportDialog';
@@ -31,10 +31,10 @@ type TableProps<T> = {
   rows: Array<T>;
   columns: Array<Column>;
   // eslint-disable-next-line no-unused-vars
-  handleDelete: (recordId: string) => void;
+  handleDelete: (recordId: string) => Promise<any>;
   // eslint-disable-next-line no-unused-vars
-  insertHoldingsData: (newData: Array<IHoldingsDBModel>) => void;
-  usersData: Array<IUserDBModel>;
+  insertHoldingsData: (newData: Array<IHoldings>) => void;
+  usersData: Array<IUser>;
 };
 
 export default function DatabaseTable<T>({
@@ -50,16 +50,20 @@ export default function DatabaseTable<T>({
   const [order, setOrder] = useState<'asc' | 'desc'>('asc');
   const [orderBy, setOrderBy] = useState('name');
   const [filterName, setFilterName] = useState('');
-  const [rowsPerPage, setRowsPerPage] = useState(25);
+  const [rowsPerPage, setRowsPerPage] = useState(50);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [addEdit, setAddEdit] = useState<'Add' | 'Edit'>('Add');
 
   const handleRowDelete = (recordId: string) => {
-    handleDelete(recordId);
-    refreshPage();
+    const deleteResponse = handleDelete(recordId);
 
-    enqueueSnackbar({ message: 'deleted', variant: 'success' });
+    if (deleteResponse instanceof Error) {
+      enqueueSnackbar({ message: deleteResponse.message, variant: 'error' });
+      refreshPage();
+    } else {
+      enqueueSnackbar({ message: 'deleted', variant: 'success' });
+    }
   };
 
   const refreshPage = () => {
@@ -143,7 +147,7 @@ export default function DatabaseTable<T>({
           count={rows.length}
           rowsPerPage={rowsPerPage}
           onPageChange={handleChangePage}
-          rowsPerPageOptions={[25, 50, 100]}
+          rowsPerPageOptions={[50, 100, 200]}
           onRowsPerPageChange={handleChangeRowsPerPage}
         />
       </Card>

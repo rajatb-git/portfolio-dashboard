@@ -1,13 +1,19 @@
+'use client';
+
 import * as React from 'react';
 
-import { Alert } from '@mui/material';
+import LoadingButton from '@mui/lab/LoadingButton';
+import { Box } from '@mui/material';
+import { ErrorBoundary } from 'next/dist/client/components/error-boundary';
+import { enqueueSnackbar } from 'notistack';
 
-import { getHoldingsData } from '@/api/holdings';
-import { getUserData } from '@/api/user';
+import apis from '@/api';
 import DatabaseTable from '@/components/DatabaseTable/DBTable';
-import { DBError } from 'db/DBError';
+import { Iconify } from '@/components/Iconify';
+import { IHoldings } from '@/models/HoldingsModel';
+import { IUser } from '@/models/UserModel';
 
-import { HoldingsDBModel, IHoldingsDBModel } from '../../../db/models/HoldingsDBModel';
+import Error from './error';
 
 const columns = [
   {
@@ -44,49 +50,62 @@ const columns = [
   { id: 'actions', label: '' },
 ];
 
-export default async function DataPage() {
-  const [holdingsError, holdingsData] = await getHoldingsData();
-  const [, usersData] = await getUserData();
+export default function DataPage() {
+  const [isLoading, setIsLoading] = React.useState(true);
+  const [holdings, setHoldings] = React.useState<Array<IHoldings>>();
+  const [users, setUsers] = React.useState<Array<IUser>>();
 
   const deleteRecord = async (recordId: string) => {
-    'use server';
-    const holdingsModel = HoldingsDBModel();
-
-    const deleteResponse = holdingsModel.deleteById(recordId);
-
-    if (deleteResponse instanceof DBError) {
-      console.error(deleteResponse.message);
-    }
+    const deleteResponse = await apis.holdings.deleteHoldingById(recordId);
+    return deleteResponse;
   };
 
-  // const addNewHolding = (holding: IHoldingsDBModel) => {
-  //   const holdingsModel = HoldingsDBModel();
-
-  //   holdingsModel.findById
-  // };
-
-  const insertHoldingsData = async (newData: Array<IHoldingsDBModel>) => {
-    'use server';
-    const holdingsModel = HoldingsDBModel();
-
-    holdingsModel.insertMany(newData);
+  const insertHoldingsData = async (newData: Array<IHoldings>) => {
+    await apis.holdings.insertHoldings(newData);
   };
+
+  const loadData = () => {
+    setIsLoading(true);
+
+    Promise.all([apis.holdings.getAllHoldings(), apis.user.getAllUsers()])
+      .then((response) => {
+        setHoldings(response[0]);
+        setUsers(response[1]);
+      })
+      .catch((err) => {
+        enqueueSnackbar({ message: err.message, variant: 'error' });
+      })
+      .finally(() => {
+        setIsLoading(false);
+      });
+  };
+
+  React.useEffect(() => {
+    loadData();
+  }, []);
 
   return (
-    <>
-      {holdingsError && (
-        <Alert variant="filled" color="error" sx={{ my: 2 }}>
-          {holdingsError.message}
-        </Alert>
-      )}
+    <ErrorBoundary errorComponent={Error}>
+      <Box sx={{ display: 'flex', direction: 'row', justifyContent: 'flex-end', mb: '8px' }}>
+        <LoadingButton
+          variant="contained"
+          startIcon={<Iconify icon="mynaui:refresh" />}
+          onClick={loadData}
+          loading={isLoading}
+          size="small"
+          color="secondary"
+        >
+          Refresh
+        </LoadingButton>
+      </Box>
 
       <DatabaseTable
-        rows={holdingsData || []}
+        rows={holdings || []}
         columns={columns}
         handleDelete={deleteRecord}
         insertHoldingsData={insertHoldingsData}
-        usersData={usersData || []}
+        usersData={users || []}
       />
-    </>
+    </ErrorBoundary>
   );
 }

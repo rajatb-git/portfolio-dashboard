@@ -2,12 +2,12 @@ import { IconButton, Stack } from '@mui/material';
 import TableCell from '@mui/material/TableCell';
 import { default as MuiTableRow } from '@mui/material/TableRow';
 
-import { IHoldingsModel } from '@/models/HoldingsModel';
+import { IHoldings } from '@/models/HoldingsModel';
 
 import { Iconify } from '../Iconify';
 
 type TableRowProps = {
-  row: IHoldingsModel;
+  row: IHoldings;
   openEditDialog: () => void;
   // eslint-disable-next-line no-unused-vars
   handleDelete: (recordId: string) => void;

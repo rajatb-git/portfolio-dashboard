@@ -19,8 +19,8 @@ import Case from 'case';
 
 import { useField } from '@/hooks/useField';
 import { HoldingTypesEnum } from '@/lib/enums';
-import { IHoldingsDBModel } from 'db/models/HoldingsDBModel';
-import { IUserDBModel } from 'db/models/UserDBModel';
+import { IHoldings } from '@/models/HoldingsModel';
+import { IUser } from '@/models/UserModel';
 
 const Select = styled(MuiSelect)(({ theme }: { theme: Theme }) => ({
   '& .MuiInputBase-input': {
@@ -44,13 +44,13 @@ const FormLabel = styled('div')(({ theme }: { theme: Theme }) => ({
 
 type AddEditDialogProps = {
   open: boolean;
-  editValues?: IHoldingsDBModel;
+  editValues?: IHoldings;
   addEdit: 'Add' | 'Edit';
   handleDialogClose: () => void;
   // eslint-disable-next-line no-unused-vars
-  insertHoldingsData: (newData: Array<IHoldingsDBModel>) => void;
+  insertHoldingsData: (newData: Array<IHoldings>) => void;
   refreshPage: () => void;
-  usersData: Array<IUserDBModel>;
+  usersData: Array<IUser>;
 };
 
 export default function AddEditDialog({

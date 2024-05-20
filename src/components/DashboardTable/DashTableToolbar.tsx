@@ -1,16 +1,23 @@
-import { Stack } from '@mui/material';
+import React from 'react';
+
+import { Button, Stack } from '@mui/material';
 import InputAdornment from '@mui/material/InputAdornment';
 import OutlinedInput from '@mui/material/OutlinedInput';
 import Toolbar from '@mui/material/Toolbar';
 
 import { Iconify } from '@/components/Iconify';
+import { useToggle } from '@/utils/useToggle';
+
+import BuySellDialog from '../BuySellDialog';
 
 type TableToolbarProps = {
   filterName: string;
   onFilterName: any;
+  action?: React.ReactNode;
 };
 
-export default function TableToolbar({ filterName, onFilterName }: TableToolbarProps) {
+export default function DashTableToolbar({ filterName, onFilterName, action }: TableToolbarProps) {
+  const { closeToggle, openToggle, toggleState } = useToggle();
   return (
     <Toolbar
       component={Stack}
@@ -21,7 +28,7 @@ export default function TableToolbar({ filterName, onFilterName }: TableToolbarP
         px: '8px !important',
       }}
       direction="row"
-      spacing={3}
+      spacing={2}
     >
       <OutlinedInput
         fullWidth
@@ -31,11 +38,19 @@ export default function TableToolbar({ filterName, onFilterName }: TableToolbarP
         placeholder="Search name..."
         startAdornment={
           <InputAdornment position="start">
-            <Iconify icon="eva:search-fill" sx={{ color: 'text.disabled', width: 20, height: 20 }} />
+            <Iconify icon="eva:search-fill" sx={{ color: 'text.disabled' }} />
           </InputAdornment>
         }
         sx={{ fieldset: { border: '0 !important' }, pl: 0 }}
       />
+
+      {action}
+
+      <Button variant="contained" color="primary" onClick={openToggle} sx={{ whiteSpace: 'nowrap' }}>
+        Buy / Sell
+      </Button>
+
+      <BuySellDialog handleDialogClose={closeToggle} open={toggleState} />
     </Toolbar>
   );
 }

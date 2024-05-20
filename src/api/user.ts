@@ -1,11 +1,11 @@
-import { IUserDBModel, UsersDBModel } from 'db/models/UserDBModel';
+import axios from 'axios';
 
-export const getUserData = async (): Promise<[Error | null, Array<IUserDBModel>]> => {
-  try {
-    const users = UsersDBModel();
+import { DB_HOST } from '@/config';
+import { IUser } from '@/models/UserModel';
 
-    return [null, users.getAllRecords()];
-  } catch (err: any) {
-    return [err as Error, []];
-  }
-};
+export default class UserAPI {
+  getAllUsers = async (): Promise<Array<IUser>> =>
+    axios(DB_HOST + '/users')
+      .then((response) => response.data)
+      .catch((error) => error);
+}

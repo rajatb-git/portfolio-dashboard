@@ -1,4 +1,4 @@
-import { IHoldingsModel } from '@/models/HoldingsModel';
+import { IHoldings } from '@/models/HoldingsModel';
 
 export const visuallyHidden = {
   border: 0,
@@ -59,7 +59,7 @@ export function applyFilter({
 
   if (filterName) {
     inputData = inputData.filter(
-      (x: IHoldingsModel) =>
+      (x: IHoldings) =>
         x.name.toLowerCase().indexOf(filterName.toLowerCase()) !== -1 ||
         x.symbol.toLowerCase().indexOf(filterName.toLowerCase()) !== -1
     );

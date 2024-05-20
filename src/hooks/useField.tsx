@@ -3,7 +3,7 @@ import React from 'react';
 import debounce from 'lodash/debounce';
 
 type useFieldProps = {
-  initValue: string | number;
+  initValue: string;
   // eslint-disable-next-line no-unused-vars
   validate: (value: string) => string | boolean;
   required?: boolean;

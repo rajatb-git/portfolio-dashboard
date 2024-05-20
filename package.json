@@ -1,7 +1,9 @@
 {
-  "name": "material-ui-nextjs-ts",
-  "version": "5.0.0",
+  "name": "portfolio-dashboard",
+  "version": "1.0.0",
   "private": true,
+  "license": "ISC",
+  "author": "Rajat Bansal",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -9,8 +11,7 @@
     "clean": "rimraf .next",
     "lint": "next lint",
     "do": "./scripts/do.sh",
-    "lint-fix": "eslint --fix --ext .ts,.tsx .",
-    "post-update": "echo \"codesandbox preview only, need an update\" && yarn upgrade --latest"
+    "lint-fix": "eslint --fix --ext .ts,.tsx ."
   },
   "dependencies": {
     "@emotion/cache": "latest",
@@ -18,11 +19,12 @@
     "@emotion/styled": "latest",
     "@iconify/react": "latest",
     "@mui/icons-material": "latest",
+    "@mui/lab": "^5.0.0-alpha.170",
     "@mui/material": "latest",
     "axios": "latest",
-    "case": "^1.6.3",
-    "csvtojson": "^2.0.10",
-    "framer-motion": "^10.18.0",
+    "case": "latest",
+    "csvtojson": "latest",
+    "framer-motion": "latest",
     "moment": "latest",
     "next": "latest",
     "notistack": "^3.0.1",
@@ -30,15 +32,15 @@
     "react": "latest",
     "react-dom": "latest",
     "simplebar-react": "latest",
-    "uuid": "latest",
     "typescript": "latest"
   },
   "devDependencies": {
-    "@types/node": "20.10.8",
+    "@types/node": "latest",
     "@types/numeral": "latest",
     "@types/react": "latest",
     "@types/react-dom": "latest",
     "@types/uuid": "latest",
+    "@typescript-eslint/parser": "^6.21.0",
     "eslint": "latest",
     "eslint-config-next": "latest",
     "eslint-config-prettier": "latest",

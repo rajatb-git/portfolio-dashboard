@@ -11,12 +11,15 @@ import TablePagination from '@mui/material/TablePagination';
 import Case from 'case';
 
 import { HoldingTypesEnum } from '@/lib/enums';
-import { IUserDBModel } from 'db/models/UserDBModel';
+import { IUser } from '@/models/UserModel';
 
 import TableHead from './DashTableHead';
 import TableRow from './DashTableRow';
 import TableToolbar from './DashTableToolbar';
 import { applyFilter, getComparator } from './dashTableUtils';
+import TableNoData from '../DatabaseTable/DBTableNoData';
+import { Iconify } from '../Iconify';
+import { TableSkeleton } from '../Table/TableSkeleton';
 import TotalCard from '../TotalCard';
 
 export type Total = {
@@ -34,16 +37,17 @@ export type Column = {
 type TableProps<T> = {
   rows: Array<T>;
   columns: Array<Column>;
-  users: Array<IUserDBModel>;
-  refreshSymbolData: () => void;
+  users: Array<IUser>;
+  refreshData: () => void;
+  isLoading: boolean;
 };
 
-export default function Table<T>({ rows, columns, users, refreshSymbolData }: TableProps<T>) {
+export default function Table<T>({ rows, columns, users, refreshData, isLoading }: TableProps<T>) {
   const [page, setPage] = useState(0);
   const [order, setOrder] = useState<'asc' | 'desc'>('asc');
   const [orderBy, setOrderBy] = useState('symbol');
   const [filterName, setFilterName] = useState('');
-  const [rowsPerPage, setRowsPerPage] = useState(25);
+  const [rowsPerPage, setRowsPerPage] = useState(50);
   const [filterType, setFilterType] = useState<string>('all');
   const [filterUser, setFilterUser] = useState('all');
 
@@ -88,12 +92,10 @@ export default function Table<T>({ rows, columns, users, refreshSymbolData }: Ta
     filterType,
   });
 
-  // const notFound = !dataFiltered.length;
+  const notFound = !dataFiltered.length;
 
   return (
     <>
-      <Button onClick={refreshSymbolData}>Refresh</Button>
-
       <Grid container spacing={3}>
         {totals.map((total) => (
           <Grid key={total.userId} item xs={12} sm={6} lg={4} xl={3}>
@@ -154,7 +156,15 @@ export default function Table<T>({ rows, columns, users, refreshSymbolData }: Ta
       </Box>
 
       <Card elevation={3}>
-        <TableToolbar filterName={filterName} onFilterName={handleFilterByName} />
+        <TableToolbar
+          filterName={filterName}
+          onFilterName={handleFilterByName}
+          action={
+            <Button variant="contained" onClick={refreshData} color="secondary">
+              <Iconify icon="mynaui:refresh" /> Refresh
+            </Button>
+          }
+        />
 
         <TableContainer>
           <MuiTable>
@@ -166,11 +176,15 @@ export default function Table<T>({ rows, columns, users, refreshSymbolData }: Ta
               headLabel={columns}
             />
             <TableBody>
-              {dataFiltered.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((row: any) => (
-                <TableRow key={row.id} row={row} />
-              ))}
+              {isLoading ? (
+                <TableSkeleton />
+              ) : (
+                dataFiltered
+                  .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+                  .map((row: any) => <TableRow key={row.id} row={row} />)
+              )}
 
-              {/* {notFound && <TableNoData query={filterName} />} */}
+              {notFound && <TableNoData query={filterName} />}
             </TableBody>
           </MuiTable>
         </TableContainer>
@@ -181,7 +195,7 @@ export default function Table<T>({ rows, columns, users, refreshSymbolData }: Ta
           count={rows.length}
           rowsPerPage={rowsPerPage}
           onPageChange={handleChangePage}
-          rowsPerPageOptions={[25, 50, 100]}
+          rowsPerPageOptions={[50, 100, 200]}
           onRowsPerPageChange={handleChangeRowsPerPage}
         />
       </Card>

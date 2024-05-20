@@ -1,4 +1,5 @@
-import { IHoldingsModel } from '@/models/HoldingsModel';
+import { HoldingAggregate } from '@/api/dashboard';
+import { IHoldings } from '@/models/HoldingsModel';
 
 export const visuallyHidden = {
   border: 0,
@@ -44,7 +45,7 @@ export type Total = {
 const calculateTotals = (inputData: any) => {
   const tempMap: { [key: string]: Total } = {};
 
-  inputData.forEach((x: IHoldingsModel) => {
+  inputData.forEach((x: HoldingAggregate) => {
     if (!tempMap[x.userId]) {
       tempMap[x.userId] = { userId: x.userId, totalGL: 0, percentGL: 0, totalInvestment: 0 };
     }
@@ -86,18 +87,18 @@ export function applyFilter({
 
   if (filterName) {
     inputData = inputData.filter(
-      (x: IHoldingsModel) =>
+      (x: IHoldings) =>
         x.name.toLowerCase().indexOf(filterName.toLowerCase()) !== -1 ||
         x.symbol.toLowerCase().indexOf(filterName.toLowerCase()) !== -1
     );
   }
 
   if (filterType && filterType !== 'all') {
-    inputData = inputData.filter((x: IHoldingsModel) => x.type === filterType);
+    inputData = inputData.filter((x: IHoldings) => x.type === filterType);
   }
 
   if (filterUser && filterUser !== 'all') {
-    inputData = inputData.filter((x: IHoldingsModel) => x.userId === filterUser);
+    inputData = inputData.filter((x: IHoldings) => x.userId === filterUser);
   }
 
   return { dataFiltered: inputData, totals: calculateTotals(inputData) };

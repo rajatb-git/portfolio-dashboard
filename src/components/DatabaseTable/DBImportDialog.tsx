@@ -3,10 +3,11 @@ import * as React from 'react';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import {
   Alert,
+  Box,
+  DialogContentText,
   DialogTitle,
   Divider,
   FormControl,
-  Grid,
   InputLabel,
   MenuItem,
   Select,
@@ -20,9 +21,9 @@ import DialogContent from '@mui/material/DialogContent';
 import { styled } from '@mui/material/styles';
 import csvtojson from 'csvtojson';
 
+import { IHoldings } from '@/models/HoldingsModel';
+import { IUser } from '@/models/UserModel';
 import { fnBytes } from '@/utils/formatNumber';
-import { IHoldingsDBModel } from 'db/models/HoldingsDBModel';
-import { IUserDBModel } from 'db/models/UserDBModel';
 
 const VisuallyHiddenInput = styled('input')({
   clip: 'rect(0 0 0 0)',
@@ -40,8 +41,8 @@ type AddEditDialogProps = {
   open: boolean;
   handleDialogClose: () => void;
   // eslint-disable-next-line no-unused-vars
-  insertHoldingsData: (newData: Array<IHoldingsDBModel>) => void;
-  usersData: Array<IUserDBModel>;
+  insertHoldingsData: (newData: Array<IHoldings>) => void;
+  usersData: Array<IUser>;
   refreshPage: () => void;
 };
 
@@ -54,6 +55,7 @@ export default function ImportDialog({
 }: AddEditDialogProps) {
   const [file, setFile] = React.useState<File | undefined>();
   const [owner, setOwner] = React.useState('');
+  const [type, setType] = React.useState('');
   const [error, setError] = React.useState('');
 
   const handleUpload = async () => {
@@ -69,6 +71,7 @@ export default function ImportDialog({
       .then((resp) => {
         resp.map((x) => {
           x.userId = owner;
+          x.type = type;
         });
         console.log(resp);
         insertHoldingsData(resp);
@@ -98,45 +101,57 @@ export default function ImportDialog({
             {error}
           </Alert>
         )}
-        <Stack spacing={2} direction="row" sx={{ mb: 3 }}>
+
+        <DialogContentText sx={{ mb: 2 }}>
+          Following columns are required: symbol, name, qty, averagePrice
+        </DialogContentText>
+        <Stack spacing={2} direction="row" sx={{ mb: 2 }}>
+          <Button variant="contained" component="label" startIcon={<CloudUploadIcon />}>
+            Select file
+            <VisuallyHiddenInput type="file" accept=".csv" onChange={(event) => setFile(event.target.files?.[0])} />
+          </Button>
+
           {file?.name && (
             <Stack direction="column">
               <Typography variant="subtitle2">{file?.name}</Typography>
               <Typography variant="caption">{fnBytes(file?.size)}</Typography>
             </Stack>
           )}
-
-          <Button variant="contained" component="label" startIcon={<CloudUploadIcon />}>
-            Select file
-            <VisuallyHiddenInput type="file" accept=".csv" onChange={(event) => setFile(event.target.files?.[0])} />
-          </Button>
         </Stack>
 
-        {/* <DialogContentText sx={{ mb: 1 }}>Accepts a csv file in the following structure</DialogContentText> */}
+        <Box sx={{ display: 'flex', direction: 'row', gap: '8px' }}>
+          <FormControl fullWidth size="small">
+            <InputLabel id="select-user-label">Owner</InputLabel>
+            <Select
+              labelId="select-user-label"
+              value={owner}
+              onChange={(ev) => setOwner(ev.target.value)}
+              label="Owner"
+            >
+              <MenuItem disabled value="">
+                Select Owner
+              </MenuItem>
 
-        <Grid container spacing={2}>
-          <Grid item sm={6} xs={12}>
-            <FormControl fullWidth size="small">
-              <InputLabel id="select-user-label">Owner</InputLabel>
-              <Select
-                labelId="select-user-label"
-                value={owner}
-                onChange={(ev) => setOwner(ev.target.value)}
-                label="Owner"
-              >
-                <MenuItem disabled value="">
-                  Select Owner
+              {usersData.map((user) => (
+                <MenuItem value={user.id} key={user.id}>
+                  {user.name}
                 </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
 
-                {usersData.map((user) => (
-                  <MenuItem value={user.id} key={user.id}>
-                    {user.name}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          </Grid>
-        </Grid>
+          <FormControl fullWidth size="small">
+            <InputLabel id="select-type-label">Type</InputLabel>
+            <Select labelId="select-type-label" value={type} onChange={(ev) => setType(ev.target.value)} label="Type">
+              <MenuItem disabled value="">
+                Select Type
+              </MenuItem>
+
+              <MenuItem value="stock">stock</MenuItem>
+              <MenuItem value="crypto">crypto</MenuItem>
+            </Select>
+          </FormControl>
+        </Box>
       </DialogContent>
 
       <Divider />

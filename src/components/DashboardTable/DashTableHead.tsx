@@ -1,10 +1,10 @@
 import Box from '@mui/material/Box';
-import TableCell from '@mui/material/TableCell';
 import { default as MuiTableHead } from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
 import TableSortLabel from '@mui/material/TableSortLabel';
 
 import { visuallyHidden } from './dashTableUtils';
+import { TableCell } from '../Table/TableCell';
 import theme from '../ThemeRegistry/theme';
 
 type TableHeadProps = {

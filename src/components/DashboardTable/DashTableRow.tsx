@@ -1,14 +1,15 @@
+import { Theme, styled } from '@mui/material';
 import Stack from '@mui/material/Stack';
-import TableCell from '@mui/material/TableCell';
 import { default as MuiTableRow } from '@mui/material/TableRow';
 import Typography from '@mui/material/Typography';
 
+import { HoldingAggregate } from '@/api/dashboard';
 import Label from '@/components/Label';
-import { IHoldingsModel } from '@/models/HoldingsModel';
+import { TableCell } from '@/components/Table/TableCell';
 import { fnCurrency } from '@/utils/formatNumber';
 
 type TableRowProps = {
-  row: IHoldingsModel;
+  row: HoldingAggregate;
 };
 
 export default function TableRow({ row }: TableRowProps) {

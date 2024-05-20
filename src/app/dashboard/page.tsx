@@ -1,58 +1,21 @@
+'use client';
+
 import * as React from 'react';
 
 import { Alert } from '@mui/material';
-import moment from 'moment';
+import { enqueueSnackbar } from 'notistack';
 
-import { getPriceForSymbol, getPriceForSymbolRevalidate } from '@/api/finnHub';
-import { getHoldingsData } from '@/api/holdings';
-import { getUserData } from '@/api/user';
+import apis from '@/api';
+import { HoldingAggregate } from '@/api/dashboard';
 import DashboardTable from '@/components/DashboardTable/DashTable';
-import { IHoldingsModel } from '@/models/HoldingsModel';
-import { IUserDBModel } from 'db/models/UserDBModel';
+import { IHoldings } from '@/models/HoldingsModel';
+import { IUser } from '@/models/UserModel';
 
-type Data = {
-  rows: Array<IHoldingsModel>;
-  users: Array<IUserDBModel>;
-};
-
-const getData = async (): Promise<[Error | null, Data | null]> => {
-  const [holdingsError, holdingsData] = await getHoldingsData();
-  const [usersError, usersData] = await getUserData();
-
-  if (holdingsError || usersError) {
-    return [holdingsError || usersError, null];
-  }
-
-  try {
-    await Promise.all(
-      holdingsData.map((x: any) =>
-        getPriceForSymbol(x.symbol).then((response) => {
-          const priceDate = moment.unix(response.t);
-
-          x.currentPrice = response.c;
-          x.priceDate = priceDate.isValid() ? priceDate.format('MMM DD, hh:mma') : '';
-          x.percentChange = response.dp;
-          x.dayHigh = response.h;
-          x.dayLow = response.l;
-
-          const currentValue = x.qty * response.c;
-          x.originalValue = x.qty * x.averagePrice;
-
-          x.totalGL = currentValue - x.originalValue;
-          x.totalGLPercent = (x.totalGL / x.originalValue) * 100;
-          x.marketValue = x.qty * response.c;
-        })
-      )
-    );
-  } catch (err: any) {
-    return [err as Error, null];
-  }
-
-  return [null, { rows: holdingsData, users: usersData }];
-};
-
-export default async function DashboardPage() {
-  const [error, data]: [Error | null, Data | null] = await getData();
+export default function DashboardPage() {
+  const [isLoading, setIsLoading] = React.useState(true);
+  const [users, setUsers] = React.useState<Array<IUser>>([]);
+  const [dashboardData, setDashboardData] = React.useState<Array<HoldingAggregate>>();
+  const [error, setError] = React.useState('');
 
   const columns = [
     {
@@ -78,21 +41,52 @@ export default async function DashboardPage() {
     { id: 'userId', label: 'Owner' },
   ];
 
-  const refreshSymbolData = async () => {
-    'use server';
-    await getPriceForSymbolRevalidate();
+  const loadUsers = async () => {
+    return apis.user
+      .getAllUsers()
+      .then((response) => {
+        setUsers(response);
+      })
+      .catch((err) => {
+        enqueueSnackbar({ message: err.message, variant: 'error' });
+      });
   };
+
+  const loadData = async () => {
+    setIsLoading(true);
+    await loadUsers();
+
+    apis.dashboard
+      .getDashboard()
+      .then((response) => setDashboardData(response))
+      .catch((err) => {
+        setError(err.message);
+      })
+      .finally(() => {
+        setIsLoading(false);
+      });
+  };
+
+  React.useEffect(() => {
+    loadData();
+  }, []);
 
   return (
     <>
       {error && (
         <Alert variant="filled" color="error" sx={{ my: 2 }}>
-          {error.message}
+          {error}
         </Alert>
       )}
 
-      {data && (
-        <DashboardTable refreshSymbolData={refreshSymbolData} rows={data.rows} users={data.users} columns={columns} />
+      {dashboardData && (
+        <DashboardTable
+          isLoading={isLoading}
+          refreshData={loadData}
+          rows={dashboardData}
+          users={users}
+          columns={columns}
+        />
       )}
     </>
   );

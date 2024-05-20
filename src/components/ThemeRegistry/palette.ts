@@ -111,7 +111,7 @@ const COMMON = {
 export default function palette(themeMode: 'light' | 'dark') {
   const light = {
     ...COMMON,
-    mode: 'light',
+    mode: 'dark',
     text: {
       primary: GREY[800],
       secondary: GREY[600],

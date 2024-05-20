@@ -48,8 +48,14 @@ export default function TableToolbar({ filterName, onFilterName, openNewDialog, 
           Import file
         </Button>
 
-        <Button variant="contained" size="small" onClick={openNewDialog}>
-          + Add New
+        <Button
+          variant="contained"
+          size="small"
+          onClick={openNewDialog}
+          color="primary"
+          startIcon={<Iconify icon="ri:shopping-cart-fill" />}
+        >
+          Buy / Sell
         </Button>
       </Stack>
     </Toolbar>
