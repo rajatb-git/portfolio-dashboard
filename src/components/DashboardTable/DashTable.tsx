@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 
-import { Box, Button, Grid, ToggleButton, ToggleButtonGroup } from '@mui/material';
+import { Box, Grid, ToggleButton, ToggleButtonGroup } from '@mui/material';
 import Card from '@mui/material/Card';
 import { default as MuiTable } from '@mui/material/Table';
 import TableBody from '@mui/material/TableBody';
@@ -17,8 +17,7 @@ import TableHead from './DashTableHead';
 import TableRow from './DashTableRow';
 import TableToolbar from './DashTableToolbar';
 import { applyFilter, getComparator } from './dashTableUtils';
-import TableNoData from '../DatabaseTable/DBTableNoData';
-import { Iconify } from '../Iconify';
+import TableNoData from '../Table/TableNoData';
 import { TableSkeleton } from '../Table/TableSkeleton';
 import TotalCard from '../TotalCard';
 
@@ -70,7 +69,6 @@ export default function Table<T>({ rows, columns, users, refreshData, isLoading 
 
   const handleFilterByName = (event: any) => {
     setPage(0);
-    console.log(event.target.value);
     setFilterName(event.target.value);
   };
 
@@ -156,15 +154,7 @@ export default function Table<T>({ rows, columns, users, refreshData, isLoading 
       </Box>
 
       <Card elevation={3}>
-        <TableToolbar
-          filterName={filterName}
-          onFilterName={handleFilterByName}
-          action={
-            <Button variant="contained" onClick={refreshData} color="secondary">
-              <Iconify icon="mynaui:refresh" /> Refresh
-            </Button>
-          }
-        />
+        <TableToolbar filterName={filterName} onFilterName={handleFilterByName} refreshData={refreshData} />
 
         <TableContainer>
           <MuiTable>

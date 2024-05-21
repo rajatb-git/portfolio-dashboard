@@ -3,12 +3,12 @@
 import * as React from 'react';
 
 import { Alert } from '@mui/material';
-import { enqueueSnackbar } from 'notistack';
+import { SnackbarProvider, enqueueSnackbar } from 'notistack';
 
 import apis from '@/api';
 import { HoldingAggregate } from '@/api/dashboard';
 import DashboardTable from '@/components/DashboardTable/DashTable';
-import { IHoldings } from '@/models/HoldingsModel';
+import { SNACKBAR_AUTOHIDE_DURATION } from '@/config';
 import { IUser } from '@/models/UserModel';
 
 export default function DashboardPage() {
@@ -88,6 +88,8 @@ export default function DashboardPage() {
           columns={columns}
         />
       )}
+
+      <SnackbarProvider autoHideDuration={SNACKBAR_AUTOHIDE_DURATION} />
     </>
   );
 }

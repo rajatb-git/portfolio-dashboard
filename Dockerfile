@@ -1,5 +1,5 @@
-# first install and build layer
-FROM node:18.19.0-alpine3.17 as builder
+ARG BUILD_FROM
+FROM $BUILD_FROM
 
 ENV APP_ENV production
 ENV NODE_ENV production
@@ -13,20 +13,12 @@ COPY . .
 RUN npm ci --omit=dev
 RUN npm run build
 
-#final layer to run
-FROM node:18.19.0-alpine3.17 as runner
-
-WORKDIR /app
-
-# This will ensure that we opt out of the anonymous data collection by Next
-ENV NEXT_TELEMETRY_DISABLED 1
 ENV PORT 3000
 
 # a standalone build automatically imports the needed files from node modules
-COPY --from=builder /app/.next/standalone /app
-COPY --from=builder /app/public /app/public
-COPY --from=builder /app/.next/static /app/.next/static
-# COPY --from=builder /app/db /app/db
+COPY /app/.next/standalone /app
+COPY /app/public /app/public
+COPY /app/.next/static /app/.next/static
 
 EXPOSE ${PORT}
-CMD ["node", "/app/server.js"]
+CMD ["/run.sh"]

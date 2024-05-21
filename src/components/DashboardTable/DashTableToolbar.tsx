@@ -13,10 +13,10 @@ import BuySellDialog from '../BuySellDialog';
 type TableToolbarProps = {
   filterName: string;
   onFilterName: any;
-  action?: React.ReactNode;
+  refreshData: () => void;
 };
 
-export default function DashTableToolbar({ filterName, onFilterName, action }: TableToolbarProps) {
+export default function DashTableToolbar({ filterName, onFilterName, refreshData }: TableToolbarProps) {
   const { closeToggle, openToggle, toggleState } = useToggle();
   return (
     <Toolbar
@@ -44,13 +44,15 @@ export default function DashTableToolbar({ filterName, onFilterName, action }: T
         sx={{ fieldset: { border: '0 !important' }, pl: 0 }}
       />
 
-      {action}
+      <Button variant="contained" onClick={refreshData} color="secondary">
+        Refresh
+      </Button>
 
       <Button variant="contained" color="primary" onClick={openToggle} sx={{ whiteSpace: 'nowrap' }}>
         Buy / Sell
       </Button>
 
-      <BuySellDialog handleDialogClose={closeToggle} open={toggleState} />
+      <BuySellDialog handleDialogClose={closeToggle} open={toggleState} refreshData={refreshData} />
     </Toolbar>
   );
 }

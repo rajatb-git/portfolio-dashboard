@@ -32,7 +32,7 @@
     "react": "latest",
     "react-dom": "latest",
     "simplebar-react": "latest",
-    "typescript": "latest"
+    "typescript": "5.3.3"
   },
   "devDependencies": {
     "@types/node": "latest",

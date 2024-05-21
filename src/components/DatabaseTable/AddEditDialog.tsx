@@ -84,17 +84,17 @@ export default function AddEditDialog({
       required: true,
     }),
     qty: useField({
-      initValue: editValues?.qty || '',
+      initValue: editValues?.qty?.toString() || '',
       validate: () => '',
       required: true,
     }),
     averagePrice: useField({
-      initValue: editValues?.averagePrice || '',
+      initValue: editValues?.averagePrice?.toString() || '',
       validate: () => '',
       required: true,
     }),
     targetPrice: useField({
-      initValue: editValues?.targetPrice || '',
+      initValue: editValues?.targetPrice?.toString() || '',
       validate: () => '',
       required: false,
     }),

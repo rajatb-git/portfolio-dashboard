@@ -10,16 +10,11 @@ import TablePagination from '@mui/material/TablePagination';
 import { useRouter } from 'next/navigation';
 import { enqueueSnackbar } from 'notistack';
 
-import { IHoldings } from '@/models/HoldingsModel';
-import { IUser } from '@/models/UserModel';
-
-import AddDialog from './AddEditDialog';
-import ImportDialog from './DBImportDialog';
-import TableHead from './DBTableHead';
-import TableRow from './DBTableRow';
-import TableToolbar from './DBTableToolbar';
-import { emptyRows, applyFilter, getComparator } from './dbTableUtils';
+import TableRow from './TransTableRow';
+import TableToolbar from './TransTableToolbar';
+import { emptyRows, applyFilter, getComparator } from './TransTableUtils';
 import TableEmptyRows from '../Table/TableEmptyRows';
+import TableHead from '../Table/TableHead';
 import TableNoData from '../Table/TableNoData';
 
 export type Column = {
@@ -30,20 +25,10 @@ export type Column = {
 type TableProps<T> = {
   rows: Array<T>;
   columns: Array<Column>;
-  // eslint-disable-next-line no-unused-vars
   handleDelete: (recordId: string) => Promise<any>;
-  // eslint-disable-next-line no-unused-vars
-  insertHoldingsData: (newData: Array<IHoldings>) => void;
-  usersData: Array<IUser>;
 };
 
-export default function DatabaseTable<T>({
-  rows,
-  columns,
-  handleDelete,
-  insertHoldingsData,
-  usersData,
-}: TableProps<T>) {
+export default function TransactionsTable<T>({ rows, columns, handleDelete }: TableProps<T>) {
   const router = useRouter();
 
   const [page, setPage] = useState(0);
@@ -51,9 +36,6 @@ export default function DatabaseTable<T>({
   const [orderBy, setOrderBy] = useState('name');
   const [filterName, setFilterName] = useState('');
   const [rowsPerPage, setRowsPerPage] = useState(50);
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [importDialogOpen, setImportDialogOpen] = useState(false);
-  const [addEdit, setAddEdit] = useState<'Add' | 'Edit'>('Add');
 
   const handleRowDelete = (recordId: string) => {
     const deleteResponse = handleDelete(recordId);
@@ -76,16 +58,6 @@ export default function DatabaseTable<T>({
       setOrder(isAsc ? 'desc' : 'asc');
       setOrderBy(id);
     }
-  };
-
-  const openEditDialog = () => {
-    setAddEdit('Edit');
-    setDialogOpen(true);
-  };
-
-  const openAddDialog = () => {
-    setAddEdit('Add');
-    setDialogOpen(true);
   };
 
   const handleChangePage = (event: React.MouseEvent<HTMLButtonElement, MouseEvent> | null, newPage: number) => {
@@ -113,12 +85,7 @@ export default function DatabaseTable<T>({
   return (
     <React.Fragment>
       <Card elevation={3}>
-        <TableToolbar
-          filterName={filterName}
-          onFilterName={handleFilterByName}
-          openNewDialog={openAddDialog}
-          openImportDialog={() => setImportDialogOpen(true)}
-        />
+        <TableToolbar filterName={filterName} onFilterName={handleFilterByName} />
 
         <TableContainer>
           <MuiTable>
@@ -131,7 +98,7 @@ export default function DatabaseTable<T>({
             />
             <TableBody>
               {dataFiltered.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((row: any) => (
-                <TableRow key={row.id} row={row} openEditDialog={openEditDialog} handleDelete={handleRowDelete} />
+                <TableRow key={row.id} row={row} handleDelete={handleRowDelete} />
               ))}
 
               <TableEmptyRows height={77} emptyRows={emptyRows(page, rowsPerPage, rows.length)} />
@@ -151,23 +118,6 @@ export default function DatabaseTable<T>({
           onRowsPerPageChange={handleChangeRowsPerPage}
         />
       </Card>
-
-      <AddDialog
-        addEdit={addEdit}
-        insertHoldingsData={insertHoldingsData}
-        open={dialogOpen}
-        handleDialogClose={() => setDialogOpen(false)}
-        refreshPage={refreshPage}
-        usersData={usersData}
-      />
-
-      <ImportDialog
-        open={importDialogOpen}
-        handleDialogClose={() => setImportDialogOpen(false)}
-        insertHoldingsData={insertHoldingsData}
-        usersData={usersData}
-        refreshPage={refreshPage}
-      />
     </React.Fragment>
   );
 }

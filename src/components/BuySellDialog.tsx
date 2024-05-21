@@ -1,7 +1,7 @@
 import * as React from 'react';
 
 import { LoadingButton } from '@mui/lab';
-import { DialogTitle, Stack } from '@mui/material';
+import { Button, DialogTitle, Stack } from '@mui/material';
 import Box from '@mui/material/Box';
 import Dialog from '@mui/material/Dialog';
 import DialogActions from '@mui/material/DialogActions';
@@ -43,9 +43,10 @@ type BuySellDialogProps = {
   open: boolean;
   initialValues?: IHoldings;
   handleDialogClose: () => void;
+  refreshData: () => void;
 };
 
-export default function BuySellDialog({ open, handleDialogClose, initialValues }: BuySellDialogProps) {
+export default function BuySellDialog({ open, handleDialogClose, initialValues, refreshData }: BuySellDialogProps) {
   const [users, setUsers] = React.useState<Array<IUser>>([]);
   const [isLoading, setIsLoading] = React.useState(false);
 
@@ -121,6 +122,9 @@ export default function BuySellDialog({ open, handleDialogClose, initialValues }
           } as any);
 
           enqueueSnackbar('Sold', { variant: 'success' });
+
+          closeAndResetDialog();
+          refreshData();
         } else if (formFields.buySell.value === 'buy') {
           await apis.holdings.buyHolding({
             userId: formFields.userId.value,
@@ -133,16 +137,20 @@ export default function BuySellDialog({ open, handleDialogClose, initialValues }
           } as any);
 
           enqueueSnackbar('Bought', { variant: 'success' });
+
+          closeAndResetDialog();
+          refreshData();
         }
       }
     } catch (err: any) {
-      enqueueSnackbar({ variant: 'error', message: err.message });
+      enqueueSnackbar(`${err.response.status} - ${err.response.data}`, { variant: 'error' });
     } finally {
       setIsLoading(false);
     }
   };
 
-  const resetDialog = () => {
+  const closeAndResetDialog = () => {
+    handleDialogClose();
     Object.values(formFields).map((x) => x.resetValue());
   };
 
@@ -151,7 +159,7 @@ export default function BuySellDialog({ open, handleDialogClose, initialValues }
   }, []);
 
   return (
-    <Dialog open={open} onClose={handleDialogClose} maxWidth="md">
+    <Dialog open={open} maxWidth="md">
       <DialogTitle>Buy / Sell</DialogTitle>
 
       <DialogContent>
@@ -273,7 +281,7 @@ export default function BuySellDialog({ open, handleDialogClose, initialValues }
           </Stack>
 
           <Stack direction="column" spacing={0.5} sx={{ flexGrow: 1 }}>
-            <FormLabel>Purchase Price</FormLabel>
+            <FormLabel>Price</FormLabel>
             <TextField
               placeholder="Average Price"
               id="averagePrice"
@@ -309,6 +317,10 @@ export default function BuySellDialog({ open, handleDialogClose, initialValues }
       </DialogContent>
 
       <DialogActions sx={{ padding: '16px 24px' }}>
+        <Button variant="outlined" onClick={closeAndResetDialog} color="warning">
+          Cancel
+        </Button>
+
         <LoadingButton type="submit" variant="contained" onClick={handleSubmit} loading={isLoading}>
           Submit
         </LoadingButton>

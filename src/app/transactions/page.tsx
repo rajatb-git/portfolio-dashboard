@@ -8,23 +8,15 @@ import { ErrorBoundary } from 'next/dist/client/components/error-boundary';
 import { SnackbarProvider, enqueueSnackbar } from 'notistack';
 
 import apis from '@/api';
-import DatabaseTable from '@/components/DatabaseTable/DBTable';
 import { Iconify } from '@/components/Iconify';
+import TransactionsTable from '@/components/TransactionsTable/TransTable';
 import { SNACKBAR_AUTOHIDE_DURATION } from '@/config';
-import { IHoldings } from '@/models/HoldingsModel';
-import { IUser } from '@/models/UserModel';
+import { ITransaction } from '@/models/TransactionsModel';
 
 import Error from './error';
 
 const columns = [
-  {
-    id: 'userId',
-    label: 'User',
-  },
-  {
-    id: 'name',
-    label: 'Name',
-  },
+  { id: 'action', label: 'Action' },
   {
     id: 'symbol',
     label: 'SYM',
@@ -35,43 +27,35 @@ const columns = [
     align: 'right',
   },
   {
-    id: 'averagePrice',
-    label: 'Average Price',
+    id: 'price',
+    label: 'Price',
     align: 'right',
   },
-  {
-    id: 'targetPrice',
-    label: 'Target Price',
-    align: 'right',
-  },
-  {
-    id: 'type',
-    label: 'Type',
-  },
-  { id: 'actions', label: '' },
+  { id: 'createdAt', label: 'Created At' },
+  { id: '', label: '' },
 ];
 
-export default function DataPage() {
+export default function TransactionsPage() {
   const [isLoading, setIsLoading] = React.useState(true);
-  const [holdings, setHoldings] = React.useState<Array<IHoldings>>();
-  const [users, setUsers] = React.useState<Array<IUser>>();
+  const [transactions, setTransactions] = React.useState<Array<ITransaction>>();
 
   const deleteRecord = async (recordId: string) => {
-    const deleteResponse = await apis.holdings.deleteHoldingById(recordId);
-    return deleteResponse;
-  };
+    setIsLoading(true);
 
-  const insertHoldingsData = async (newData: Array<IHoldings>) => {
-    await apis.holdings.insertHoldings(newData);
+    const deleteResponse = await apis.transactions.deleteTransaction(recordId);
+
+    loadData();
+
+    return deleteResponse;
   };
 
   const loadData = () => {
     setIsLoading(true);
 
-    Promise.all([apis.holdings.getAllHoldings(), apis.user.getAllUsers()])
+    apis.transactions
+      .getAllTransactions()
       .then((response) => {
-        setHoldings(response[0]);
-        setUsers(response[1]);
+        setTransactions(response);
       })
       .catch((err) => {
         enqueueSnackbar({ message: err.message, variant: 'error' });
@@ -100,13 +84,7 @@ export default function DataPage() {
         </LoadingButton>
       </Box>
 
-      <DatabaseTable
-        rows={holdings || []}
-        columns={columns}
-        handleDelete={deleteRecord}
-        insertHoldingsData={insertHoldingsData}
-        usersData={users || []}
-      />
+      <TransactionsTable rows={transactions || []} columns={columns} handleDelete={deleteRecord} />
 
       <SnackbarProvider autoHideDuration={SNACKBAR_AUTOHIDE_DURATION} />
     </ErrorBoundary>
