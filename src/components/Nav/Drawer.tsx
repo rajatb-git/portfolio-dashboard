@@ -35,11 +35,11 @@ export default function Drawer() {
       anchor="left"
     >
       <List>
-        <ListItem sx={{ fontWeight: 700, justifyContent: 'center' }}>
-          <Image src="/images/logo.png" alt="Portfolio Dashboard" width={180} height={40} />
+        <ListItem sx={{ fontWeight: 700, justifyContent: 'center', p: 0, mt: 1 }}>
+          <Image src="/images/icon.png" alt="Portfolio Dashboard" width={30} height={32} />
         </ListItem>
 
-        <Divider sx={{ borderColor: 'transparent', my: 2 }} />
+        <Divider sx={{ my: 2 }} />
 
         {NAV_CONFIG.map(({ href, icon, text }) => (
           <SideNavItem currentPath={pathname} key={text} href={href} icon={icon} text={text} />

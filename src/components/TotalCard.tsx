@@ -24,24 +24,22 @@ export default function TotalCard({ total }: TotalCardProps) {
       }}
     >
       <Stack direction="row" justifyContent="space-between">
-        <div>
-          <Typography sx={{ mb: 2, typography: 'subtitle2' }}>{total.userId}</Typography>
-          <Typography sx={{ typography: 'h5' }}>{fnCurrency(total.totalGL)}</Typography>
-        </div>
+        <Typography sx={{ typography: 'h5' }}>{fnCurrency(total.totalGL)}</Typography>
+        {/* <Typography sx={{ mb: 0, typography: 'subtitle2' }}>{total.userId}</Typography> */}
 
-        <div>
-          <Stack direction="row" alignItems="center" justifyContent="flex-end">
-            <Iconify icon={total.percentGL >= 0 ? 'eva:trending-up-fill' : 'eva:trending-down-fill'} />
+        <Stack direction="row" alignItems="center" justifyContent="flex-end">
+          <Iconify icon={total.percentGL >= 0 ? 'eva:trending-up-fill' : 'eva:trending-down-fill'} />
 
-            <Typography variant="subtitle2" component="span" sx={{ ml: 0.5 }}>
-              {total.percentGL > 0 && '+'}
-              {fnPercent(total.percentGL)}
-            </Typography>
-          </Stack>
-        </div>
+          <Typography variant="subtitle2" component="span" sx={{ ml: 0.5 }}>
+            {total.percentGL > 0 && '+'}
+            {fnPercent(total.percentGL)}
+          </Typography>
+        </Stack>
       </Stack>
 
-      <Divider sx={{ my: 1 }} />
+      <Divider sx={{ my: 0 }}>
+        <Typography sx={{ mb: 0, typography: 'subtitle2' }}>{total.userId}</Typography>
+      </Divider>
 
       <Stack direction="row" justifyContent="space-between">
         <Stack direction="column">

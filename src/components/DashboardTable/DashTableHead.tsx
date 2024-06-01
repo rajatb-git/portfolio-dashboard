@@ -21,14 +21,18 @@ export default function TableHead({ order, orderBy, headLabel, onRequestSort }: 
   };
 
   return (
-    <MuiTableHead sx={{ backgroundColor: theme.palette.background.neutral }}>
+    <MuiTableHead>
       <TableRow>
         {headLabel.map((headCell) => (
           <TableCell
             key={headCell.id}
             align={headCell.align || 'left'}
             sortDirection={orderBy === headCell.id ? order : false}
-            sx={{ width: headCell.width, minWidth: headCell.minWidth }}
+            sx={{
+              width: headCell.width,
+              minWidth: headCell.minWidth,
+              backgroundColor: '#454F5B',
+            }}
           >
             <TableSortLabel
               hideSortIcon

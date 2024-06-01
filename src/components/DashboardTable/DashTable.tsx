@@ -19,6 +19,7 @@ import TableToolbar from './DashTableToolbar';
 import { applyFilter, getComparator } from './dashTableUtils';
 import TableNoData from '../Table/TableNoData';
 import { TableSkeleton } from '../Table/TableSkeleton';
+import theme from '../ThemeRegistry/theme';
 import TotalCard from '../TotalCard';
 
 export type Total = {
@@ -44,7 +45,7 @@ type TableProps<T> = {
 export default function Table<T>({ rows, columns, users, refreshData, isLoading }: TableProps<T>) {
   const [page, setPage] = useState(0);
   const [order, setOrder] = useState<'asc' | 'desc'>('asc');
-  const [orderBy, setOrderBy] = useState('symbol');
+  const [orderBy, setOrderBy] = useState('totalGLPercent');
   const [filterName, setFilterName] = useState('');
   const [rowsPerPage, setRowsPerPage] = useState(50);
   const [filterType, setFilterType] = useState<string>('all');
@@ -154,10 +155,15 @@ export default function Table<T>({ rows, columns, users, refreshData, isLoading 
       </Box>
 
       <Card elevation={3}>
-        <TableToolbar filterName={filterName} onFilterName={handleFilterByName} refreshData={refreshData} />
+        <TableToolbar
+          users={users}
+          filterName={filterName}
+          onFilterName={handleFilterByName}
+          refreshData={refreshData}
+        />
 
-        <TableContainer>
-          <MuiTable>
+        <TableContainer sx={{ maxHeight: '60vh' }}>
+          <MuiTable stickyHeader>
             <TableHead
               order={order}
               orderBy={orderBy}
@@ -180,6 +186,7 @@ export default function Table<T>({ rows, columns, users, refreshData, isLoading 
         </TableContainer>
 
         <TablePagination
+          sx={{ backgroundColor: theme.palette.background.neutral }}
           page={page}
           component="div"
           count={rows.length}

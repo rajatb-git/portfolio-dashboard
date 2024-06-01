@@ -32,8 +32,8 @@ export default function TransactionsTable<T>({ rows, columns, handleDelete }: Ta
   const router = useRouter();
 
   const [page, setPage] = useState(0);
-  const [order, setOrder] = useState<'asc' | 'desc'>('asc');
-  const [orderBy, setOrderBy] = useState('name');
+  const [order, setOrder] = useState<'asc' | 'desc'>('desc');
+  const [orderBy, setOrderBy] = useState('createdAt');
   const [filterName, setFilterName] = useState('');
   const [rowsPerPage, setRowsPerPage] = useState(50);
 

@@ -44,10 +44,16 @@ type BuySellDialogProps = {
   initialValues?: IHoldings;
   handleDialogClose: () => void;
   refreshData: () => void;
+  users: Array<IUser>;
 };
 
-export default function BuySellDialog({ open, handleDialogClose, initialValues, refreshData }: BuySellDialogProps) {
-  const [users, setUsers] = React.useState<Array<IUser>>([]);
+export default function BuySellDialog({
+  open,
+  handleDialogClose,
+  initialValues,
+  refreshData,
+  users,
+}: BuySellDialogProps) {
   const [isLoading, setIsLoading] = React.useState(false);
 
   const formFields = {
@@ -63,7 +69,7 @@ export default function BuySellDialog({ open, handleDialogClose, initialValues, 
     }),
     symbol: useField({
       initValue: initialValues?.symbol || '',
-      validate: (value: string) => value.length < 3 && 'Symbol has to be minimum 3 characters long',
+      validate: (value: string) => value.length < 2 && 'Symbol has to be minimum 2 characters long',
       required: true,
     }),
     userId: useField({
@@ -91,17 +97,6 @@ export default function BuySellDialog({ open, handleDialogClose, initialValues, 
       validate: () => '',
       required: false,
     }),
-  };
-
-  const loadUsers = async () => {
-    return apis.user
-      .getAllUsers()
-      .then((response) => {
-        setUsers(response);
-      })
-      .catch((err) => {
-        enqueueSnackbar({ message: err.message, variant: 'error' });
-      });
   };
 
   const isFormValid = () => (Object.values(formFields).find((x) => x.isValid() === false) === undefined ? true : false);
@@ -153,10 +148,6 @@ export default function BuySellDialog({ open, handleDialogClose, initialValues, 
     handleDialogClose();
     Object.values(formFields).map((x) => x.resetValue());
   };
-
-  React.useEffect(() => {
-    loadUsers();
-  }, []);
 
   return (
     <Dialog open={open} maxWidth="md">

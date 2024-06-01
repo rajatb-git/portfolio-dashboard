@@ -14,7 +14,7 @@ export const NAV_CONFIG = [
 
 // APP Config
 // ---------------------------------------------
-export const DRAWER_WIDTH = 200;
+export const DRAWER_WIDTH = 50;
 
 // Notistack
 export const SNACKBAR_AUTOHIDE_DURATION = 5000;

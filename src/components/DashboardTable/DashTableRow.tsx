@@ -1,4 +1,5 @@
-import { Theme, styled } from '@mui/material';
+import { Avatar, Tooltip } from '@mui/material';
+import { blue, green, red } from '@mui/material/colors';
 import Stack from '@mui/material/Stack';
 import { default as MuiTableRow } from '@mui/material/TableRow';
 import Typography from '@mui/material/Typography';
@@ -60,15 +61,58 @@ export default function TableRow({ row }: TableRowProps) {
 
       <TableCell align="right">
         <Stack direction="column" spacing={0} alignItems="flex-end">
-          {row.currentPrice}
-
+          {fnCurrency(row.currentPrice)}
           <Typography variant="caption" noWrap sx={{ fontSize: '11px' }}>
             {row.dayHigh?.toFixed(2)} - {row.dayLow?.toFixed(2)}
           </Typography>
         </Stack>
       </TableCell>
 
+      <TableCell align="right">{fnCurrency(row.marketValue)}</TableCell>
+
       <TableCell>{row.userId}</TableCell>
+
+      <TableCell>
+        {row.strongBuy >= 0 && (
+          <>
+            <Tooltip title="Strong Buy">
+              <Avatar sx={{ display: 'inline-flex', height: 24, width: 24, mr: '4px', bgcolor: green[900] }}>
+                <Typography sx={{ fontWeight: 700, color: 'white' }} variant="caption">
+                  {row.strongBuy}
+                </Typography>
+              </Avatar>
+            </Tooltip>
+            <Tooltip title="Buy">
+              <Avatar sx={{ display: 'inline-flex', height: 24, width: 24, mr: '4px', bgcolor: green[700] }}>
+                <Typography sx={{ fontWeight: 700, color: 'white' }} variant="caption">
+                  {row.buy}
+                </Typography>
+              </Avatar>
+            </Tooltip>
+            <Tooltip title="Hold">
+              <Avatar sx={{ display: 'inline-flex', height: 24, width: 24, mr: '4px', bgcolor: blue[500] }}>
+                <Typography sx={{ fontWeight: 700, color: 'white' }} variant="caption">
+                  {row.hold}
+                </Typography>
+              </Avatar>
+            </Tooltip>
+            <Tooltip title="Sell">
+              <Avatar sx={{ display: 'inline-flex', height: 24, width: 24, mr: '4px', bgcolor: red[500] }}>
+                <Typography sx={{ fontWeight: 700, color: 'white' }} variant="caption">
+                  {row.sell}
+                </Typography>
+              </Avatar>
+            </Tooltip>
+            <Tooltip title="Strong Sell">
+              <Avatar sx={{ display: 'inline-flex', height: 24, width: 24, mr: '4px', bgcolor: red[900] }}>
+                <Typography sx={{ fontWeight: 700, color: 'white' }} variant="caption">
+                  {row.strongSell}
+                </Typography>
+              </Avatar>
+            </Tooltip>
+          </>
+        )}
+      </TableCell>
     </MuiTableRow>
   );
 }

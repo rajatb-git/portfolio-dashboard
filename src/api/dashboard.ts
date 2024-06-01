@@ -19,6 +19,11 @@ export type HoldingAggregate = {
   totalGL: number;
   totalGLPercent: number;
   marketValue: number;
+  buy: number;
+  hold: number;
+  sell: number;
+  strongBuy: number;
+  strongSell: number;
 };
 
 export class DashboardAPI {

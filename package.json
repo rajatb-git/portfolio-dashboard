@@ -21,6 +21,7 @@
     "@mui/icons-material": "latest",
     "@mui/lab": "^5.0.0-alpha.170",
     "@mui/material": "latest",
+    "apexcharts": "^3.49.1",
     "axios": "latest",
     "case": "latest",
     "csvtojson": "latest",
@@ -30,6 +31,7 @@
     "notistack": "^3.0.1",
     "numeral": "latest",
     "react": "latest",
+    "react-apexcharts": "^1.4.1",
     "react-dom": "latest",
     "simplebar-react": "latest",
     "typescript": "5.3.3"

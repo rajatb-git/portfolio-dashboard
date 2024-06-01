@@ -37,24 +37,13 @@ export default function DashboardPage() {
       label: 'Current Price',
       align: 'right',
     },
-
+    { id: 'marketValue', label: 'Market Value', align: 'right' },
     { id: 'userId', label: 'Owner' },
+    { id: '', label: 'Recommendation' },
   ];
-
-  const loadUsers = async () => {
-    return apis.user
-      .getAllUsers()
-      .then((response) => {
-        setUsers(response);
-      })
-      .catch((err) => {
-        enqueueSnackbar({ message: err.message, variant: 'error' });
-      });
-  };
 
   const loadData = async () => {
     setIsLoading(true);
-    await loadUsers();
 
     apis.dashboard
       .getDashboard()
@@ -64,6 +53,15 @@ export default function DashboardPage() {
       })
       .finally(() => {
         setIsLoading(false);
+      });
+
+    apis.user
+      .getAllUsers()
+      .then((response) => {
+        setUsers(response);
+      })
+      .catch((err) => {
+        enqueueSnackbar({ message: err.message, variant: 'error' });
       });
   };
 

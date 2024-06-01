@@ -6,6 +6,7 @@ import OutlinedInput from '@mui/material/OutlinedInput';
 import Toolbar from '@mui/material/Toolbar';
 
 import { Iconify } from '@/components/Iconify';
+import { IUser } from '@/models/UserModel';
 import { useToggle } from '@/utils/useToggle';
 
 import BuySellDialog from '../BuySellDialog';
@@ -14,9 +15,10 @@ type TableToolbarProps = {
   filterName: string;
   onFilterName: any;
   refreshData: () => void;
+  users: Array<IUser>;
 };
 
-export default function DashTableToolbar({ filterName, onFilterName, refreshData }: TableToolbarProps) {
+export default function DashTableToolbar({ filterName, onFilterName, refreshData, users }: TableToolbarProps) {
   const { closeToggle, openToggle, toggleState } = useToggle();
   return (
     <Toolbar
@@ -44,15 +46,15 @@ export default function DashTableToolbar({ filterName, onFilterName, refreshData
         sx={{ fieldset: { border: '0 !important' }, pl: 0 }}
       />
 
-      <Button variant="contained" onClick={refreshData} color="secondary">
+      <Button variant="contained" size="small" onClick={refreshData} color="secondary">
         Refresh
       </Button>
 
-      <Button variant="contained" color="primary" onClick={openToggle} sx={{ whiteSpace: 'nowrap' }}>
+      <Button variant="contained" size="small" color="primary" onClick={openToggle} sx={{ whiteSpace: 'nowrap' }}>
         Buy / Sell
       </Button>
 
-      <BuySellDialog handleDialogClose={closeToggle} open={toggleState} refreshData={refreshData} />
+      <BuySellDialog handleDialogClose={closeToggle} open={toggleState} refreshData={refreshData} users={users} />
     </Toolbar>
   );
 }
