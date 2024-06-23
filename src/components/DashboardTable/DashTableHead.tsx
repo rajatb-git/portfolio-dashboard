@@ -31,7 +31,6 @@ export default function TableHead({ order, orderBy, headLabel, onRequestSort }: 
             sx={{
               width: headCell.width,
               minWidth: headCell.minWidth,
-              backgroundColor: '#454F5B',
             }}
           >
             <TableSortLabel

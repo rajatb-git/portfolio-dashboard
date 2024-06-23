@@ -3,7 +3,7 @@
 import * as React from 'react';
 
 import LoadingButton from '@mui/lab/LoadingButton';
-import { Box } from '@mui/material';
+import { Box, MenuItem, Select, Typography } from '@mui/material';
 import { ErrorBoundary } from 'next/dist/client/components/error-boundary';
 import { SnackbarProvider, enqueueSnackbar } from 'notistack';
 
@@ -12,66 +12,104 @@ import DatabaseTable from '@/components/DatabaseTable/DBTable';
 import { Iconify } from '@/components/Iconify';
 import { SNACKBAR_AUTOHIDE_DURATION } from '@/config';
 import { IHoldings } from '@/models/HoldingsModel';
+import { ITransaction } from '@/models/TransactionsModel';
 import { IUser } from '@/models/UserModel';
+import { Column } from '@/types';
 
 import Error from './error';
 
-const columns = [
-  {
-    id: 'userId',
-    label: 'User',
-  },
-  {
-    id: 'name',
-    label: 'Name',
-  },
-  {
-    id: 'symbol',
-    label: 'SYM',
-  },
-  {
-    id: 'qty',
-    label: 'Quantity',
-    align: 'right',
-  },
-  {
-    id: 'averagePrice',
-    label: 'Average Price',
-    align: 'right',
-  },
-  {
-    id: 'targetPrice',
-    label: 'Target Price',
-    align: 'right',
-  },
-  {
-    id: 'type',
-    label: 'Type',
-  },
-  { id: 'actions', label: '' },
-];
+const columns: { [collection: string]: Array<Column> } = {
+  holdings: [
+    {
+      id: 'userId',
+      label: 'User',
+    },
+    {
+      id: 'name',
+      label: 'Name',
+    },
+    {
+      id: 'symbol',
+      label: 'SYM',
+    },
+    {
+      id: 'qty',
+      label: 'Quantity',
+      align: 'right',
+    },
+    {
+      id: 'averagePrice',
+      label: 'Average Price',
+      align: 'right',
+    },
+    {
+      id: 'type',
+      label: 'Type',
+    },
+  ],
+  user: [
+    {
+      id: 'id',
+      label: 'Id',
+    },
+    {
+      id: 'name',
+      label: 'Name',
+    },
+  ],
+  transactions: [
+    {
+      id: 'userId',
+      label: 'User',
+    },
+    {
+      id: 'symbol',
+      label: 'SYM',
+    },
+    {
+      id: 'qty',
+      label: 'Quantity',
+      align: 'right',
+    },
+    {
+      id: 'action',
+      label: 'Action',
+    },
+    {
+      id: 'price',
+      label: 'Price',
+      align: 'right',
+    },
+    {
+      id: 'type',
+      label: 'Type',
+    },
+  ],
+};
 
 export default function DataPage() {
   const [isLoading, setIsLoading] = React.useState(true);
-  const [holdings, setHoldings] = React.useState<Array<IHoldings>>();
-  const [users, setUsers] = React.useState<Array<IUser>>();
+  const [activeCollection, setActiveCollection] = React.useState<'user' | 'transactions' | 'holdings'>('transactions');
+  const [records, setRecords] = React.useState<Array<IUser | IHoldings | ITransaction>>([]);
 
   const deleteRecord = async (recordId: string) => {
-    const deleteResponse = await apis.holdings.deleteHoldingById(recordId);
+    const deleteResponse = await apis[activeCollection].deleteById(recordId);
     return deleteResponse;
   };
 
-  const insertHoldingsData = async (newData: Array<IHoldings>) => {
-    await apis.holdings.insertHoldings(newData);
+  const updateRecord = async (record: IUser | ITransaction | IHoldings) => {
+    const updateResponse = await apis[activeCollection].updateById(record as any);
+    return updateResponse;
   };
 
-  const loadData = () => {
+  const loadData = async () => {
+    setRecords([]);
     setIsLoading(true);
 
-    Promise.all([apis.holdings.getAllHoldings(), apis.user.getAllUsers()])
+    await apis[activeCollection]
+      .getAll()
       .then((response) => {
-        setHoldings(response[0]);
-        setUsers(response[1]);
+        setRecords(response);
       })
       .catch((err) => {
         enqueueSnackbar({ message: err.message, variant: 'error' });
@@ -83,11 +121,27 @@ export default function DataPage() {
 
   React.useEffect(() => {
     loadData();
-  }, []);
+  }, [activeCollection]);
 
   return (
     <ErrorBoundary errorComponent={Error}>
-      <Box sx={{ display: 'flex', direction: 'row', justifyContent: 'flex-end', mb: '8px' }}>
+      <Typography variant="h5">Database</Typography>
+
+      <Box sx={{ display: 'flex', direction: 'row', justifyContent: 'flex-end', mb: '8px', gap: '8px' }}>
+        <Select
+          value={activeCollection}
+          displayEmpty
+          onChange={(e) => setActiveCollection(e.target.value as any)}
+          size="small"
+          disabled={isLoading}
+        >
+          {['user', 'holdings', 'transactions'].map((x) => (
+            <MenuItem key={x} value={x}>
+              {x}
+            </MenuItem>
+          ))}
+        </Select>
+
         <LoadingButton
           variant="contained"
           startIcon={<Iconify icon="mynaui:refresh" />}
@@ -101,11 +155,12 @@ export default function DataPage() {
       </Box>
 
       <DatabaseTable
-        rows={holdings || []}
-        columns={columns}
+        rows={records}
+        columns={columns[activeCollection]}
         handleDelete={deleteRecord}
-        insertHoldingsData={insertHoldingsData}
-        usersData={users || []}
+        handleUpdate={updateRecord}
+        refreshData={loadData}
+        isLoading={isLoading}
       />
 
       <SnackbarProvider autoHideDuration={SNACKBAR_AUTOHIDE_DURATION} />

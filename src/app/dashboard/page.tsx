@@ -10,14 +10,15 @@ import { HoldingAggregate } from '@/api/dashboard';
 import DashboardTable from '@/components/DashboardTable/DashTable';
 import { SNACKBAR_AUTOHIDE_DURATION } from '@/config';
 import { IUser } from '@/models/UserModel';
+import { Column } from '@/types';
 
 export default function DashboardPage() {
   const [isLoading, setIsLoading] = React.useState(true);
   const [users, setUsers] = React.useState<Array<IUser>>([]);
-  const [dashboardData, setDashboardData] = React.useState<Array<HoldingAggregate>>();
+  const [dashboardData, setDashboardData] = React.useState<Array<HoldingAggregate>>([]);
   const [error, setError] = React.useState('');
 
-  const columns = [
+  const columns: Array<Column> = [
     {
       id: 'symbol',
       label: 'SYM',
@@ -56,7 +57,7 @@ export default function DashboardPage() {
       });
 
     apis.user
-      .getAllUsers()
+      .getAll()
       .then((response) => {
         setUsers(response);
       })
@@ -77,15 +78,13 @@ export default function DashboardPage() {
         </Alert>
       )}
 
-      {dashboardData && (
-        <DashboardTable
-          isLoading={isLoading}
-          refreshData={loadData}
-          rows={dashboardData}
-          users={users}
-          columns={columns}
-        />
-      )}
+      <DashboardTable
+        isLoading={isLoading}
+        refreshData={loadData}
+        rows={dashboardData}
+        users={users}
+        columns={columns}
+      />
 
       <SnackbarProvider autoHideDuration={SNACKBAR_AUTOHIDE_DURATION} />
     </>

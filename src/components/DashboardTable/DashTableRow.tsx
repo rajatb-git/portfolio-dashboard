@@ -11,11 +11,12 @@ import { fnCurrency } from '@/utils/formatNumber';
 
 type TableRowProps = {
   row: HoldingAggregate;
+  onRowClick: (symbol: string) => void;
 };
 
-export default function TableRow({ row }: TableRowProps) {
+export default function DashTableRow({ row, onRowClick }: TableRowProps) {
   return (
-    <MuiTableRow hover tabIndex={-1}>
+    <MuiTableRow hover tabIndex={-1} onClick={() => onRowClick(row.symbol)} sx={{ cursor: 'pointer' }}>
       <TableCell component="th" scope="row">
         <Stack direction="column" spacing={0}>
           <Typography variant="subtitle2" noWrap>

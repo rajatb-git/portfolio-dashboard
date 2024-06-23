@@ -1,6 +1,8 @@
 import { createTheme } from '@mui/material/styles';
 import { M_PLUS_Rounded_1c } from 'next/font/google';
 
+import { THEME_MODE } from '@/config';
+
 import { overrides } from './overrides';
 import palette from './palette';
 
@@ -12,7 +14,7 @@ const roboto = M_PLUS_Rounded_1c({
 });
 
 const theme = createTheme({
-  palette: palette('dark'),
+  palette: palette(THEME_MODE),
   typography: {
     fontFamily: roboto.style.fontFamily,
   },
@@ -24,6 +26,20 @@ const theme = createTheme({
             backgroundColor: '#60a5fa',
           }),
         }),
+      },
+    },
+    // MuiPaper: {
+    //   styleOverrides: {
+    //     MuiCard: {
+    //       backgroundColor: palette(THEME_MODE).background.paper,
+    //     },
+    //   },
+    // },
+    MuiTablePagination: {
+      styleOverrides: {
+        root: {
+          backgroundColor: palette(THEME_MODE).background.paper,
+        },
       },
     },
   },

@@ -9,12 +9,14 @@ import TableBody from '@mui/material/TableBody';
 import TableContainer from '@mui/material/TableContainer';
 import TablePagination from '@mui/material/TablePagination';
 import Case from 'case';
+import { useRouter } from 'next/navigation';
 
 import { HoldingTypesEnum } from '@/lib/enums';
 import { IUser } from '@/models/UserModel';
+import { Column } from '@/types';
 
 import TableHead from './DashTableHead';
-import TableRow from './DashTableRow';
+import DashTableRow from './DashTableRow';
 import TableToolbar from './DashTableToolbar';
 import { applyFilter, getComparator } from './dashTableUtils';
 import TableNoData from '../Table/TableNoData';
@@ -29,11 +31,6 @@ export type Total = {
   totalInvestment: number;
 };
 
-export type Column = {
-  id: string;
-  label: string;
-};
-
 type TableProps<T> = {
   rows: Array<T>;
   columns: Array<Column>;
@@ -43,6 +40,7 @@ type TableProps<T> = {
 };
 
 export default function Table<T>({ rows, columns, users, refreshData, isLoading }: TableProps<T>) {
+  const router = useRouter();
   const [page, setPage] = useState(0);
   const [order, setOrder] = useState<'asc' | 'desc'>('asc');
   const [orderBy, setOrderBy] = useState('totalGLPercent');
@@ -57,6 +55,10 @@ export default function Table<T>({ rows, columns, users, refreshData, isLoading 
       setOrder(isAsc ? 'desc' : 'asc');
       setOrderBy(id);
     }
+  };
+
+  const goToResearchPage = (symbol: string) => {
+    router.push(`/research?searchText=${symbol}`);
   };
 
   const handleChangePage = (event: React.MouseEvent<HTMLButtonElement, MouseEvent> | null, newPage: number) => {
@@ -95,15 +97,15 @@ export default function Table<T>({ rows, columns, users, refreshData, isLoading 
 
   return (
     <>
-      <Grid container spacing={3}>
+      <Grid container spacing={1}>
         {totals.map((total) => (
-          <Grid key={total.userId} item xs={12} sm={6} lg={4} xl={3}>
+          <Grid key={total.userId} item xs={12} sm={6} md={4} lg={3} xl={2}>
             <TotalCard total={total} />
           </Grid>
         ))}
       </Grid>
 
-      <Box sx={{ pt: 2, pb: 0.5, display: 'flex', justifyContent: 'space-between' }}>
+      <Box sx={{ mt: 1, pb: 0.5, display: 'flex', justifyContent: 'space-between' }}>
         <ToggleButtonGroup
           color="warning"
           size="small"
@@ -154,7 +156,7 @@ export default function Table<T>({ rows, columns, users, refreshData, isLoading 
         </ToggleButtonGroup>
       </Box>
 
-      <Card elevation={3}>
+      <Card elevation={3} sx={{ backgroundImage: 'none' }}>
         <TableToolbar
           users={users}
           filterName={filterName}
@@ -177,10 +179,10 @@ export default function Table<T>({ rows, columns, users, refreshData, isLoading 
               ) : (
                 dataFiltered
                   .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-                  .map((row: any) => <TableRow key={row.id} row={row} />)
+                  .map((row: any) => <DashTableRow key={row.id} row={row} onRowClick={goToResearchPage} />)
               )}
 
-              {notFound && <TableNoData query={filterName} />}
+              {notFound && !isLoading && <TableNoData query={filterName} />}
             </TableBody>
           </MuiTable>
         </TableContainer>

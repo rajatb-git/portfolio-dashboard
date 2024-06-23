@@ -1,4 +1,6 @@
+docker stop portfolio-dashboard-container
 docker rm portfolio-dashboard-container
+docker rmi portfolio-dashboard
 
 docker build . -t portfolio-dashboard
 

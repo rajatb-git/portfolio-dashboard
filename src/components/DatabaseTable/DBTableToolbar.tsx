@@ -10,11 +10,9 @@ import { Iconify } from '@/components/Iconify';
 type TableToolbarProps = {
   filterName: string;
   onFilterName: any;
-  openNewDialog: () => void;
-  openImportDialog: () => void;
 };
 
-export default function TableToolbar({ filterName, onFilterName, openNewDialog, openImportDialog }: TableToolbarProps) {
+export default function TableToolbar({ filterName, onFilterName }: TableToolbarProps) {
   return (
     <Toolbar
       sx={{
@@ -37,27 +35,7 @@ export default function TableToolbar({ filterName, onFilterName, openNewDialog, 
         sx={{ fieldset: { border: '0 !important' }, pl: 0 }}
       />
 
-      <Stack direction="row" spacing={2}>
-        <Button
-          variant="contained"
-          size="small"
-          onClick={openImportDialog}
-          component="label"
-          startIcon={<CloudUploadIcon />}
-        >
-          Import file
-        </Button>
-
-        <Button
-          variant="contained"
-          size="small"
-          onClick={openNewDialog}
-          color="primary"
-          startIcon={<Iconify icon="ri:shopping-cart-fill" />}
-        >
-          Buy / Sell
-        </Button>
-      </Stack>
+      <Stack direction="row" spacing={2}></Stack>
     </Toolbar>
   );
 }

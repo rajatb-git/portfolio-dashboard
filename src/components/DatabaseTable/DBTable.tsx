@@ -11,10 +11,10 @@ import { useRouter } from 'next/navigation';
 import { enqueueSnackbar } from 'notistack';
 
 import { IHoldings } from '@/models/HoldingsModel';
+import { ITransaction } from '@/models/TransactionsModel';
 import { IUser } from '@/models/UserModel';
+import { Column } from '@/types';
 
-import AddDialog from './AddEditDialog';
-import ImportDialog from './DBImportDialog';
 import TableHead from './DBTableHead';
 import TableRow from './DBTableRow';
 import TableToolbar from './DBTableToolbar';
@@ -22,27 +22,22 @@ import { emptyRows, applyFilter, getComparator } from './dbTableUtils';
 import TableEmptyRows from '../Table/TableEmptyRows';
 import TableNoData from '../Table/TableNoData';
 
-export type Column = {
-  id: string;
-  label: string;
-};
-
 type TableProps<T> = {
   rows: Array<T>;
   columns: Array<Column>;
-  // eslint-disable-next-line no-unused-vars
+  refreshData: () => Promise<void>;
+  isLoading: boolean;
   handleDelete: (recordId: string) => Promise<any>;
-  // eslint-disable-next-line no-unused-vars
-  insertHoldingsData: (newData: Array<IHoldings>) => void;
-  usersData: Array<IUser>;
+  handleUpdate: (record: IUser | ITransaction | IHoldings) => Promise<any>;
 };
 
 export default function DatabaseTable<T>({
   rows,
   columns,
   handleDelete,
-  insertHoldingsData,
-  usersData,
+  handleUpdate,
+  refreshData,
+  isLoading,
 }: TableProps<T>) {
   const router = useRouter();
 
@@ -51,9 +46,6 @@ export default function DatabaseTable<T>({
   const [orderBy, setOrderBy] = useState('name');
   const [filterName, setFilterName] = useState('');
   const [rowsPerPage, setRowsPerPage] = useState(50);
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [importDialogOpen, setImportDialogOpen] = useState(false);
-  const [addEdit, setAddEdit] = useState<'Add' | 'Edit'>('Add');
 
   const handleRowDelete = (recordId: string) => {
     const deleteResponse = handleDelete(recordId);
@@ -66,8 +58,19 @@ export default function DatabaseTable<T>({
     }
   };
 
-  const refreshPage = () => {
-    router.refresh();
+  const handleRowUpdate = (record: IUser | ITransaction | IHoldings) => {
+    const updateResponse = handleUpdate(record);
+
+    if (updateResponse instanceof Error) {
+      enqueueSnackbar({ message: updateResponse.message, variant: 'error' });
+      refreshPage();
+    } else {
+      enqueueSnackbar({ message: 'deleted', variant: 'success' });
+    }
+  };
+
+  const refreshPage = async () => {
+    await refreshData();
   };
 
   const handleSort = (event: any, id: string) => {
@@ -76,16 +79,6 @@ export default function DatabaseTable<T>({
       setOrder(isAsc ? 'desc' : 'asc');
       setOrderBy(id);
     }
-  };
-
-  const openEditDialog = () => {
-    setAddEdit('Edit');
-    setDialogOpen(true);
-  };
-
-  const openAddDialog = () => {
-    setAddEdit('Add');
-    setDialogOpen(true);
   };
 
   const handleChangePage = (event: React.MouseEvent<HTMLButtonElement, MouseEvent> | null, newPage: number) => {
@@ -112,26 +105,21 @@ export default function DatabaseTable<T>({
 
   return (
     <React.Fragment>
-      <Card elevation={3}>
-        <TableToolbar
-          filterName={filterName}
-          onFilterName={handleFilterByName}
-          openNewDialog={openAddDialog}
-          openImportDialog={() => setImportDialogOpen(true)}
-        />
+      <Card elevation={3} sx={{ backgroundImage: 'none' }}>
+        <TableToolbar filterName={filterName} onFilterName={handleFilterByName} />
 
-        <TableContainer>
-          <MuiTable>
+        <TableContainer sx={{ maxHeight: '70vh' }}>
+          <MuiTable stickyHeader>
             <TableHead
               order={order}
               orderBy={orderBy}
               rowCount={rows.length}
               onRequestSort={handleSort}
-              headLabel={columns}
+              columnsConfig={columns}
             />
             <TableBody>
               {dataFiltered.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((row: any) => (
-                <TableRow key={row.id} row={row} openEditDialog={openEditDialog} handleDelete={handleRowDelete} />
+                <TableRow key={row.id} row={row} columnsConfig={columns} />
               ))}
 
               <TableEmptyRows height={77} emptyRows={emptyRows(page, rowsPerPage, rows.length)} />
@@ -151,23 +139,6 @@ export default function DatabaseTable<T>({
           onRowsPerPageChange={handleChangeRowsPerPage}
         />
       </Card>
-
-      <AddDialog
-        addEdit={addEdit}
-        insertHoldingsData={insertHoldingsData}
-        open={dialogOpen}
-        handleDialogClose={() => setDialogOpen(false)}
-        refreshPage={refreshPage}
-        usersData={usersData}
-      />
-
-      <ImportDialog
-        open={importDialogOpen}
-        handleDialogClose={() => setImportDialogOpen(false)}
-        insertHoldingsData={insertHoldingsData}
-        usersData={usersData}
-        refreshPage={refreshPage}
-      />
     </React.Fragment>
   );
 }

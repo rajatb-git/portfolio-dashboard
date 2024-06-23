@@ -11,11 +11,11 @@ type TableHeadProps = {
   order: 'asc' | 'desc';
   orderBy: string;
   rowCount: number;
-  headLabel: Array<any>;
+  columnsConfig: Array<any>;
   onRequestSort: any;
 };
 
-export default function TableHead({ order, orderBy, headLabel, onRequestSort }: TableHeadProps) {
+export default function TableHead({ order, orderBy, columnsConfig, onRequestSort }: TableHeadProps) {
   const onSort = (property: any) => (event: any) => {
     onRequestSort(event, property);
   };
@@ -23,21 +23,24 @@ export default function TableHead({ order, orderBy, headLabel, onRequestSort }: 
   return (
     <MuiTableHead sx={{ backgroundColor: theme.palette.background.neutral }}>
       <TableRow>
-        {headLabel.map((headCell) => (
+        {columnsConfig.map((x) => (
           <TableCell
-            key={headCell.id}
-            align={headCell.align || 'left'}
-            sortDirection={orderBy === headCell.id ? order : false}
-            sx={{ width: headCell.width, minWidth: headCell.minWidth }}
+            key={x.id}
+            align={x.align || 'left'}
+            sortDirection={orderBy === x.id ? order : false}
+            sx={{
+              width: x.width,
+              minWidth: x.minWidth,
+            }}
           >
             <TableSortLabel
               hideSortIcon
-              active={orderBy === headCell.id}
-              direction={orderBy === headCell.id ? order : 'asc'}
-              onClick={onSort(headCell.id)}
+              active={orderBy === x.id}
+              direction={orderBy === x.id ? order : 'asc'}
+              onClick={onSort(x.id)}
             >
-              {headCell.label}
-              {orderBy === headCell.id ? (
+              {x.label}
+              {orderBy === x.id ? (
                 <Box sx={{ ...visuallyHidden }}>{order === 'desc' ? 'sorted descending' : 'sorted ascending'}</Box>
               ) : null}
             </TableSortLabel>

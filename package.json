@@ -17,6 +17,11 @@
     "@emotion/cache": "latest",
     "@emotion/react": "latest",
     "@emotion/styled": "latest",
+    "@fullcalendar/core": "^6.1.14",
+    "@fullcalendar/daygrid": "^6.1.14",
+    "@fullcalendar/interaction": "^6.1.14",
+    "@fullcalendar/list": "^6.1.14",
+    "@fullcalendar/react": "^6.1.14",
     "@iconify/react": "latest",
     "@mui/icons-material": "latest",
     "@mui/lab": "^5.0.0-alpha.170",
@@ -34,7 +39,7 @@
     "react-apexcharts": "^1.4.1",
     "react-dom": "latest",
     "simplebar-react": "latest",
-    "typescript": "5.3.3"
+    "typescript": "5.4.5"
   },
   "devDependencies": {
     "@types/node": "latest",
@@ -42,7 +47,7 @@
     "@types/react": "latest",
     "@types/react-dom": "latest",
     "@types/uuid": "latest",
-    "@typescript-eslint/parser": "^6.21.0",
+    "@typescript-eslint/parser": "^7.13.0",
     "eslint": "latest",
     "eslint-config-next": "latest",
     "eslint-config-prettier": "latest",

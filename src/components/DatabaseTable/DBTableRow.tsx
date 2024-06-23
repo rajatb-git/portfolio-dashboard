@@ -1,22 +1,26 @@
-import { IconButton, Stack } from '@mui/material';
 import TableCell from '@mui/material/TableCell';
 import { default as MuiTableRow } from '@mui/material/TableRow';
 
 import { IHoldings } from '@/models/HoldingsModel';
-
-import { Iconify } from '../Iconify';
+import { ITransaction } from '@/models/TransactionsModel';
+import { IUser } from '@/models/UserModel';
+import { Column } from '@/types';
 
 type TableRowProps = {
-  row: IHoldings;
-  openEditDialog: () => void;
-  // eslint-disable-next-line no-unused-vars
-  handleDelete: (recordId: string) => void;
+  row: any;
+  columnsConfig: Array<Column>;
 };
 
-export default function TableRow({ row, openEditDialog, handleDelete }: TableRowProps) {
+export default function TableRow({ row, columnsConfig }: TableRowProps) {
   return (
     <MuiTableRow hover tabIndex={-1} sx={{ cursor: 'pointer' }}>
-      <TableCell>{row.userId}</TableCell>
+      {columnsConfig.map((x) => (
+        <TableCell key={x.id} align={x.align || 'left'}>
+          {row[x.id]}
+        </TableCell>
+      ))}
+
+      {/* <TableCell>{row.userId}</TableCell>
 
       <TableCell>{row.name}</TableCell>
 
@@ -28,19 +32,7 @@ export default function TableRow({ row, openEditDialog, handleDelete }: TableRow
 
       <TableCell align="right">{row.targetPrice || '-'}</TableCell>
 
-      <TableCell>{row.type}</TableCell>
-
-      <TableCell sx={{ p: 0 }}>
-        <Stack direction="row">
-          <IconButton size="small" onClick={openEditDialog}>
-            <Iconify icon="fluent:edit-16-filled"></Iconify>
-          </IconButton>
-
-          <IconButton size="small" onClick={() => handleDelete(row.id)}>
-            <Iconify icon="ic:baseline-delete"></Iconify>
-          </IconButton>
-        </Stack>
-      </TableCell>
+      <TableCell>{row.type}</TableCell> */}
     </MuiTableRow>
   );
 }

@@ -10,7 +10,7 @@ type TableNoDataProps = {
 export default function TableNoData({ query }: TableNoDataProps) {
   return (
     <TableRow>
-      <TableCell align="center" colSpan={100} sx={{ py: 3 }}>
+      <TableCell align="center" colSpan={100} sx={{ py: 2 }}>
         <Paper
           sx={{
             textAlign: 'center',
@@ -29,7 +29,7 @@ export default function TableNoData({ query }: TableNoDataProps) {
               </Typography>
             </>
           ) : (
-            <Typography variant="h6" paragraph color="error">
+            <Typography variant="subtitle1" paragraph color="disabled">
               No data
             </Typography>
           )}

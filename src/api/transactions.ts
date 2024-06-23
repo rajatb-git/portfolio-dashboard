@@ -4,19 +4,34 @@ import { DB_HOST } from '@/config';
 import { ITransaction } from '@/models/TransactionsModel';
 
 export default class TransactionsAPI {
-  getAllTransactions = async (): Promise<Array<ITransaction>> =>
+  // create
+  create = async (transaction: ITransaction): Promise<ITransaction> =>
+    axios
+      .put(DB_HOST + '/transactions', { data: transaction })
+      .then((response) => response.data)
+      .catch((error) => error);
+
+  // read
+  getAll = async (): Promise<Array<ITransaction>> =>
     axios
       .get(DB_HOST + '/transactions')
       .then((response) => response.data)
       .catch((error) => error);
-
-  getTransaction = async (id: string): Promise<Array<ITransaction>> =>
+  getById = async (id: string): Promise<ITransaction> =>
     axios
       .get(DB_HOST + `/transactions/${id}`)
       .then((response) => response.data)
       .catch((error) => error);
 
-  deleteTransaction = async (id: string): Promise<Array<ITransaction>> =>
+  // update
+  updateById = async (transaction: ITransaction): Promise<ITransaction> =>
+    axios
+      .post(DB_HOST + '/transactions', { data: transaction })
+      .then((response) => response.data)
+      .catch((error) => error);
+
+  // delete
+  deleteById = async (id: string): Promise<ITransaction> =>
     axios
       .delete(DB_HOST + '/transactions', { data: { id } })
       .then((response) => response.data)
