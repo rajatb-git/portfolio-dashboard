@@ -1,10 +1,10 @@
+import { IconButton } from '@mui/material';
 import TableCell from '@mui/material/TableCell';
 import { default as MuiTableRow } from '@mui/material/TableRow';
 
-import { IHoldings } from '@/models/HoldingsModel';
-import { ITransaction } from '@/models/TransactionsModel';
-import { IUser } from '@/models/UserModel';
 import { Column } from '@/types';
+
+import { Iconify } from '../Iconify';
 
 type TableRowProps = {
   row: any;
@@ -13,26 +13,17 @@ type TableRowProps = {
 
 export default function TableRow({ row, columnsConfig }: TableRowProps) {
   return (
-    <MuiTableRow hover tabIndex={-1} sx={{ cursor: 'pointer' }}>
+    <MuiTableRow hover tabIndex={-1}>
       {columnsConfig.map((x) => (
         <TableCell key={x.id} align={x.align || 'left'}>
+          {x.icon && (
+            <IconButton sx={{ px: 0 }}>
+              <Iconify icon={x.icon} />
+            </IconButton>
+          )}
           {row[x.id]}
         </TableCell>
       ))}
-
-      {/* <TableCell>{row.userId}</TableCell>
-
-      <TableCell>{row.name}</TableCell>
-
-      <TableCell>{row.symbol}</TableCell>
-
-      <TableCell align="right">{row.qty}</TableCell>
-
-      <TableCell align="right">{row.averagePrice}</TableCell>
-
-      <TableCell align="right">{row.targetPrice || '-'}</TableCell>
-
-      <TableCell>{row.type}</TableCell> */}
     </MuiTableRow>
   );
 }

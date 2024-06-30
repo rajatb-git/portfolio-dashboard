@@ -7,10 +7,6 @@ export const StyledCalendar = styled('div')(({ theme }) => ({
   marginRight: -1,
   marginBottom: -1,
   // Header styles
-  '.fc-scrollgrid-sync-inner': {
-    backgroundColor: theme.palette.background.paper,
-    color: theme.palette.text.primary,
-  },
 
   '.fc-theme-standard td, .fc-theme-standard th': {
     border: `1px solid ${theme.palette.divider}`,

@@ -4,6 +4,8 @@ import { default as MuiTableHead } from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
 import TableSortLabel from '@mui/material/TableSortLabel';
 
+import { Column } from '@/types';
+
 import { visuallyHidden } from './dbTableUtils';
 import theme from '../ThemeRegistry/theme';
 
@@ -11,7 +13,7 @@ type TableHeadProps = {
   order: 'asc' | 'desc';
   orderBy: string;
   rowCount: number;
-  columnsConfig: Array<any>;
+  columnsConfig: Array<Column>;
   onRequestSort: any;
 };
 

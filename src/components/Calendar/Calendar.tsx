@@ -7,20 +7,22 @@ import dayGridPlugin from '@fullcalendar/daygrid';
 import interactionPlugin from '@fullcalendar/interaction';
 import listPlugin from '@fullcalendar/list';
 import FullCalendar from '@fullcalendar/react';
-import { Box, Popover } from '@mui/material';
+import { Box, Button, Popover } from '@mui/material';
 import Card from '@mui/material/Card';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 
 import { useOpenClose } from '@/hooks/useOpenClose';
+import { fnCurrency, fnShortenCurrency, fnShortenNumber } from '@/utils/formatNumber';
 
 import { StyledCalendar } from './styles';
 import { ICalendarEvent } from './types';
+import { Iconify } from '../Iconify';
 import theme from '../ThemeRegistry/theme';
 
-type Props = { events: Array<ICalendarEvent> };
+type Props = { events: Array<ICalendarEvent>; refreshData: () => void; isLoading: boolean };
 
-export default function CalendarView({ events }: Props) {
+export default function CalendarView({ events, refreshData, isLoading }: Props) {
   const calendarRef = React.useRef<FullCalendar>(null);
   const [popoverOpen, setPopoverOpen] = React.useState(false);
   const [anchorEl, setAnchorEl] = React.useState<HTMLElement | null>(null);
@@ -39,28 +41,41 @@ export default function CalendarView({ events }: Props) {
 
   return (
     <>
-      {/* <Stack
+      <Stack
         direction="row"
         alignItems="center"
-        justifyContent="space-between"
+        justifyContent="flex-start"
         sx={{
-          mb: { xs: 3, md: 5 },
+          mb: 2,
         }}
       >
-        <Typography variant="h4">Calendar</Typography>
-      </Stack> */}
+        <Typography variant="h6" flexGrow={1}>
+          Calendar
+        </Typography>
+
+        <Button
+          variant="contained"
+          startIcon={<Iconify icon="mynaui:refresh" />}
+          onClick={refreshData}
+          size="small"
+          color="secondary"
+          disabled={isLoading}
+        >
+          Refresh
+        </Button>
+      </Stack>
 
       <Card variant="outlined">
         <StyledCalendar>
           <FullCalendar
             weekends
-            selectable
             rerenderDelay={10}
             allDayMaintainDuration
             eventResizableFromStart
             events={events as any}
             ref={calendarRef}
             initialDate={new Date()}
+            now={new Date()}
             dayMaxEventRows={3}
             eventDisplay="block"
             height="auto"
@@ -104,26 +119,26 @@ export default function CalendarView({ events }: Props) {
           <Box sx={{ p: 2 }}>
             <Stack direction="row" spacing={4}>
               <Stack direction="column">
-                numberOfShares
+                numberOfShares:
                 <br />
-                exchange
+                exchange:
                 <br />
-                price
+                price:
                 <br />
-                status
+                status:
                 <br />
-                symbol
+                symbol:
                 <br />
-                totalSharesValue
+                totalSharesValue:
                 <br />
               </Stack>
               <Stack direction="column">
-                {selectedEvent?.numberOfShares} <br />
+                {selectedEvent?.numberOfShares ? fnShortenNumber(selectedEvent.numberOfShares) : '-'} <br />
                 {selectedEvent?.exchange} <br />
-                {selectedEvent?.price} <br />
+                {selectedEvent?.price ? fnCurrency(parseInt(selectedEvent.price)) : '-'} <br />
                 {selectedEvent?.status} <br />
                 {selectedEvent?.symbol} <br />
-                {selectedEvent?.totalSharesValue} <br />
+                {selectedEvent?.totalSharesValue ? fnShortenCurrency(selectedEvent.totalSharesValue) : '-'} <br />
               </Stack>
             </Stack>
           </Box>

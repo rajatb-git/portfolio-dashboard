@@ -4,8 +4,8 @@ import { default as MuiTableHead } from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
 import TableSortLabel from '@mui/material/TableSortLabel';
 
+import { visuallyHidden } from '../DashboardTable/dashTableUtils';
 import theme from '../ThemeRegistry/theme';
-import { visuallyHidden } from '../TransactionsTable/TransTableUtils';
 
 type TableHeadProps = {
   order: 'asc' | 'desc';

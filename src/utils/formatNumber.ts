@@ -2,6 +2,8 @@ import numeral from 'numeral';
 
 export const fnCurrency = (value = 0) => numeral(value).format('$0,0.00');
 
+export const fnShortenCurrency = (value = 0) => numeral(value).format('$0,0.00a');
+
 export const fnPercent = (value = 0) => numeral(value).format('0.00%');
 
 export const fnBytes = (value = 0) => {
@@ -14,3 +16,5 @@ export const fnBytes = (value = 0) => {
 
   return `${parseFloat((value / Math.pow(k, i)).toFixed(2))} ${sizes[i]}`;
 };
+
+export const fnShortenNumber = (value = 0) => numeral(value).format('0.00a');

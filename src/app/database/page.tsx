@@ -3,7 +3,7 @@
 import * as React from 'react';
 
 import LoadingButton from '@mui/lab/LoadingButton';
-import { Box, MenuItem, Select, Typography } from '@mui/material';
+import { Box, Button, MenuItem, Select, Typography } from '@mui/material';
 import { ErrorBoundary } from 'next/dist/client/components/error-boundary';
 import { SnackbarProvider, enqueueSnackbar } from 'notistack';
 
@@ -46,6 +46,18 @@ const columns: { [collection: string]: Array<Column> } = {
       id: 'type',
       label: 'Type',
     },
+    {
+      id: 'edit',
+      label: '',
+      icon: 'line-md:pencil',
+      width: '4px',
+    },
+    {
+      id: 'delete',
+      label: '',
+      icon: 'solar:trash-bin-minimalistic-linear',
+      width: '4px',
+    },
   ],
   user: [
     {
@@ -55,6 +67,14 @@ const columns: { [collection: string]: Array<Column> } = {
     {
       id: 'name',
       label: 'Name',
+    },
+    {
+      id: 'edit',
+      label: '',
+    },
+    {
+      id: 'delete',
+      label: '',
     },
   ],
   transactions: [
@@ -84,12 +104,20 @@ const columns: { [collection: string]: Array<Column> } = {
       id: 'type',
       label: 'Type',
     },
+    {
+      id: 'edit',
+      label: '',
+    },
+    {
+      id: 'delete',
+      label: '',
+    },
   ],
 };
 
 export default function DataPage() {
   const [isLoading, setIsLoading] = React.useState(true);
-  const [activeCollection, setActiveCollection] = React.useState<'user' | 'transactions' | 'holdings'>('transactions');
+  const [activeCollection, setActiveCollection] = React.useState<'user' | 'transactions' | 'holdings'>('holdings');
   const [records, setRecords] = React.useState<Array<IUser | IHoldings | ITransaction>>([]);
 
   const deleteRecord = async (recordId: string) => {
@@ -125,9 +153,11 @@ export default function DataPage() {
 
   return (
     <ErrorBoundary errorComponent={Error}>
-      <Typography variant="h5">Database</Typography>
+      <Box sx={{ display: 'flex', direction: 'row', justifyContent: 'flex-start', mb: 2, gap: '8px' }}>
+        <Typography variant="h6" flexGrow={1}>
+          Database
+        </Typography>
 
-      <Box sx={{ display: 'flex', direction: 'row', justifyContent: 'flex-end', mb: '8px', gap: '8px' }}>
         <Select
           value={activeCollection}
           displayEmpty
@@ -142,16 +172,16 @@ export default function DataPage() {
           ))}
         </Select>
 
-        <LoadingButton
+        <Button
           variant="contained"
           startIcon={<Iconify icon="mynaui:refresh" />}
           onClick={loadData}
-          loading={isLoading}
           size="small"
           color="secondary"
+          disabled={isLoading}
         >
           Refresh
-        </LoadingButton>
+        </Button>
       </Box>
 
       <DatabaseTable

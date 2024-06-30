@@ -1,8 +1,6 @@
 // API Config
 // ---------------------------------------------
-export const FINN_HUB_API_KEY = 'cmaaj21r01qid8gebt50cmaaj21r01qid8gebt5g';
-export const FINN_HUB_API = `https://www.finnhub.io/api/v1`;
-export const DB_HOST = 'http://localhost:3001';
+export const DB_HOST = 'http://192.168.5.12:3001';
 
 // NAV
 // ---------------------------------------------

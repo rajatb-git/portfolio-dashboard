@@ -52,7 +52,7 @@ export default function IPOCalendarPage() {
 
   return (
     <ErrorBoundary errorComponent={Error}>
-      <Calendar events={events} />
+      <Calendar events={events} refreshData={loadData} isLoading={isLoading} />
     </ErrorBoundary>
   );
 }
