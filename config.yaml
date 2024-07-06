@@ -1,6 +1,6 @@
 name: "Portflolio Dashboard"
 description: "A dashboard to manage and track your stock movements!"
-version: "1.0.5"
+version: "1.0.9"
 slug: "portfolio-dasboard"
 init: false
 stage: stable
@@ -20,3 +20,5 @@ options:
 schema:
   DB_HOST: str
 panel_icon: mdi:chart-line-stacked
+ingress: true
+ingress_port: 3000

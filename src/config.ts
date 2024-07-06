@@ -16,7 +16,7 @@ export const NAV_CONFIG = [
 export const DRAWER_WIDTH = 52;
 
 // Notistack
-export const SNACKBAR_AUTOHIDE_DURATION = 5000;
+export const SNACKBAR_AUTOHIDE_DURATION = 6000;
 
 // Theme
 export const THEME_MODE = 'dark';

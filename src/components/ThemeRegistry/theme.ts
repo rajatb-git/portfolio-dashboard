@@ -1,16 +1,49 @@
 import { createTheme } from '@mui/material/styles';
-import { M_PLUS_Rounded_1c } from 'next/font/google';
+import localFont from 'next/font/local';
 
 import { THEME_MODE } from '@/config';
 
 import { overrides } from './overrides';
 import palette from './palette';
 
-const roboto = M_PLUS_Rounded_1c({
-  weight: ['100', '300', '400', '500', '700', '800', '900'],
-  subsets: ['latin'],
-  display: 'swap',
-  adjustFontFallback: false,
+const roboto = localFont({
+  src: [
+    {
+      path: '../../../public/fonts/MPLUSRounded1c-Thin.ttf',
+      weight: '100',
+      style: 'normal',
+    },
+    {
+      path: '../../../public/fonts/MPLUSRounded1c-Light.ttf',
+      weight: '300',
+      style: 'normal',
+    },
+    {
+      path: '../../../public/fonts/MPLUSRounded1c-Regular.ttf',
+      weight: '400',
+      style: 'normal',
+    },
+    {
+      path: '../../../public/fonts/MPLUSRounded1c-Medium.ttf',
+      weight: '500',
+      style: 'normal',
+    },
+    {
+      path: '../../../public/fonts/MPLUSRounded1c-Bold.ttf',
+      weight: '700',
+      style: 'normal',
+    },
+    {
+      path: '../../../public/fonts/MPLUSRounded1c-ExtraBold.ttf',
+      weight: '800',
+      style: 'normal',
+    },
+    {
+      path: '../../../public/fonts/MPLUSRounded1c-Black.ttf',
+      weight: '900',
+      style: 'normal',
+    },
+  ],
 });
 
 const theme = createTheme({

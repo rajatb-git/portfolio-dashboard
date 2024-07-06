@@ -1,2 +1,3 @@
 node_modules
-dist
+.next
+.DS_store

@@ -2,4 +2,9 @@
 
 export DB_HOST=$(bashio::config 'DB_HOST')
 
-node /app/server.js
+ls
+echo 'zzzzzzzzzzzzzz'
+
+ls standalone
+
+node standalone/server.js
