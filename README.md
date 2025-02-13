@@ -2,7 +2,7 @@
 
 A dashboard to manage and track your stock movements!
 
-![dashboard](docs/images/dashboard.png) ![dashboard-filtered](docs/images/dashboard-filtered.png) ![database-holdings](docs/images/database-holdings.png) ![database-users](docs/images/database-users.png) ![ipo-calendar](docs/images/ipo-calendar.png) ![logs](docs/images/logs.png)
+<img src="docs/images/dashboard.png" alt="dashboard" width="400"/> <img src="docs/images/dashboard-filtered.png" alt="dashboard-filtered" width="400"/> <img src="docs/images/database-holdings.png" alt="database-holdings" width="400"/> <img src="docs/images/database-users.png" alt="database-users" width="400"/> <img src="docs/images/ipo-calendar.png" alt="ipo-calendar" width="400"/> <img src="docs/images/logs.png" alt="logs" width="400"/>
 
 ## Features
 
