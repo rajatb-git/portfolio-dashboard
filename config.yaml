@@ -1,0 +1,19 @@
+name: "Portflolio Dashboard"
+description: "A dashboard to manage and track your stock movements!"
+version: "1.0.22"
+slug: "portfolio-dasboard"
+init: false
+stage: stable
+arch:
+  - aarch64
+  - amd64
+  - armhf
+  - armv7
+  - i386
+startup: application
+options:
+  DB_HOST: http://[HOST]:[PORT:3001]
+schema:
+  DB_HOST: str
+panel_icon: mdi:chart-line-stacked
+ingress: true
