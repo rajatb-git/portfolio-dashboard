@@ -13,7 +13,7 @@ This project is for people who have multiple investment / crypto / retirement ac
 - View IPOs
 
 ## Setup
-1. Clone, install and run the backend for this application [portfioli-dashboard-db](https://github.com/rajatb-git/portfolio-dashboard-db)
+1. Clone, install and run the backend for this application [portfolio-dashboard-db](https://github.com/rajatb-git/portfolio-dashboard-db)
 2. Install this repo using pnpm and run
 
 ## Contributing
