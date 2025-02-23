@@ -36,27 +36,29 @@ export function getComparator(order: 'asc' | 'desc', orderBy: string) {
 }
 
 export type Total = {
-  userId: string;
+  accountId: string;
   totalGL: number;
   percentGL: number;
   totalInvestment: number;
+  totalValue: number;
 };
 
-const calculateTotals = (inputData: any) => {
+const calculateTotals = (inputData: any): Array<Total> => {
   const tempMap: { [key: string]: Total } = {};
 
   inputData.forEach((x: HoldingAggregate) => {
-    if (!tempMap[x.userId]) {
-      tempMap[x.userId] = { userId: x.userId, totalGL: 0, percentGL: 0, totalInvestment: 0 };
+    if (!tempMap[x.accountId]) {
+      tempMap[x.accountId] = { accountId: x.accountId, totalGL: 0, percentGL: 0, totalInvestment: 0, totalValue: 0 };
     }
 
-    tempMap[x.userId].totalGL += x.totalGL || 0;
-    tempMap[x.userId].totalInvestment += x.originalValue || 0;
+    tempMap[x.accountId].totalGL += x.totalGL || 0;
+    tempMap[x.accountId].totalInvestment += x.originalValue || 0;
   });
 
   const tempArray = Object.values(tempMap);
   tempArray.forEach((x) => {
     x.percentGL = x.totalGL / x.totalInvestment;
+    x.totalValue = x.totalGL + x.totalInvestment;
   });
 
   return tempArray;
@@ -66,13 +68,13 @@ export function applyFilter({
   inputData,
   comparator,
   filterName,
-  filterUser,
+  filterAccount,
   filterType,
 }: {
   filterName: string;
   comparator: Function;
   inputData: any;
-  filterUser: string;
+  filterAccount: string;
   filterType: string;
 }) {
   const stabilizedThis = inputData.map((el: any, index: number) => [el, index]);
@@ -97,8 +99,8 @@ export function applyFilter({
     inputData = inputData.filter((x: IHoldings) => x.type === filterType);
   }
 
-  if (filterUser && filterUser !== 'all') {
-    inputData = inputData.filter((x: IHoldings) => x.userId === filterUser);
+  if (filterAccount && filterAccount !== 'all') {
+    inputData = inputData.filter((x: IHoldings) => x.accountId === filterAccount);
   }
 
   return { dataFiltered: inputData, totals: calculateTotals(inputData) };

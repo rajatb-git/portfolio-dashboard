@@ -1,6 +1,6 @@
 export interface IHoldings {
   id: string;
-  userId: string;
+  accountId: string;
   name: string;
   symbol: string;
   qty: number;

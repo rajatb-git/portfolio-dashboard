@@ -1,7 +1,6 @@
 import * as React from 'react';
 
 import AddIcon from '@mui/icons-material/Add';
-import CancelIcon from '@mui/icons-material/Close';
 import DeleteIcon from '@mui/icons-material/DeleteOutlined';
 import EditIcon from '@mui/icons-material/Edit';
 import SaveIcon from '@mui/icons-material/Save';
@@ -66,7 +65,7 @@ export default function GenericGrid(props: {
   deleteRecord: any;
   insertOrUpdateRecord: any;
   loadData: any;
-  activeCollection: 'user' | 'transactions' | 'holdings';
+  activeCollection: 'accounts' | 'transactions' | 'holdings';
   dynamicColumns: Array<GridColDef>;
   refreshPage: any;
 }) {
@@ -134,6 +133,8 @@ export default function GenericGrid(props: {
       toast.error(`${err.name} \n ${err.message}`);
     }
 
+    await props.refreshPage();
+
     return updatedRow;
   };
 
@@ -166,7 +167,7 @@ export default function GenericGrid(props: {
               onClick={handleSaveClick(row.id)}
             />,
             <GridActionsCellItem
-              icon={<CancelIcon />}
+              icon={<Iconify icon="fa:close" />}
               key={row.id}
               label="Cancel"
               className="textPrimary"
@@ -210,7 +211,7 @@ export default function GenericGrid(props: {
         },
       }}
     >
-      <Card variant="outlined" sx={{ background: 'transparent' }}>
+      <Card variant="outlined" sx={{ background: 'transparent', height: '80vh' }}>
         <DataGrid
           rows={rows}
           columns={columns}
@@ -223,7 +224,7 @@ export default function GenericGrid(props: {
             toolbar: EditToolbar,
           }}
           slotProps={{
-            toolbar: { setRows, setRowModesModel, refreshData: props.loadData },
+            toolbar: { setRows: setRows as any, setRowModesModel, refreshData: props.loadData },
           }}
         />
       </Card>

@@ -14,12 +14,11 @@ const ReactApexChart = dynamic(() => import('react-apexcharts'), { ssr: false })
 
 type Props = {
   symbol: string;
-  price: number;
 };
 
 const RangeOptions = ['1d', '5d', '1M', '3M', '6M', '1y', '2y', '3y'];
 
-export const PriceHistoryGraph = ({ symbol, price }: Props) => {
+export const PriceHistoryGraph = ({ symbol }: Props) => {
   const [series, setSeries] = React.useState<any>();
   const [range, setRange] = React.useState<Range>('6M');
 
@@ -56,7 +55,7 @@ export const PriceHistoryGraph = ({ symbol, price }: Props) => {
         format: 'dd MMM yyyy',
       },
       style: {
-        fontSize: '12px',
+        fontSize: '1rem',
       },
       fillSeriesColor: false,
       fixed: {
@@ -79,22 +78,9 @@ export const PriceHistoryGraph = ({ symbol, price }: Props) => {
     dataLabels: {
       enabled: false,
     },
-    // annotations: {
-    //   yaxis: [
-    //     {
-    //       y: price,
-    //       label: {
-    //         style: {
-    //           fontSize: '10px',
-    //         },
-    //         orientation: 'horizontal',
-    //         text: fnCurrency(price),
-    //       },
-    //     },
-    //   ],
-    // },
   };
 
+  // biome-ignore lint/correctness/noUnusedVariables: <explanation>
   const handleRangeChange = (event: React.MouseEvent<HTMLElement>, newRange: Range) => {
     setRange(newRange);
   };
@@ -104,7 +90,7 @@ export const PriceHistoryGraph = ({ symbol, price }: Props) => {
   }, [symbol, range]);
 
   return (
-    <Card sx={{ my: 2 }}>
+    <Card variant="outlined" sx={{ minWidth: 400 }}>
       <CardContent>
         <ToggleButtonGroup
           color="primary"

@@ -15,14 +15,12 @@ export default function TableNoData({ query }: TableNoDataProps) {
         <Paper
           sx={{
             textAlign: 'center',
-            p: 1
+            p: 1,
           }}
         >
           {query ? (
             <>
-              <Typography variant="h6">
-                Not found
-              </Typography>
+              <Typography variant="h6">Not found</Typography>
 
               <Typography variant="body2">
                 No results found for &nbsp;

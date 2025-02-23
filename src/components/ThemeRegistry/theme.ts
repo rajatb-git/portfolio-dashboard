@@ -9,21 +9,6 @@ import palette from './palette';
 const mplus = localFont({
   src: [
     {
-      path: '../../../public/fonts/MPLUSRounded1c-Thin.ttf',
-      weight: '100',
-      style: 'normal',
-    },
-    {
-      path: '../../../public/fonts/MPLUSRounded1c-Light.ttf',
-      weight: '300',
-      style: 'normal',
-    },
-    {
-      path: '../../../public/fonts/MPLUSRounded1c-Regular.ttf',
-      weight: '400',
-      style: 'normal',
-    },
-    {
       path: '../../../public/fonts/MPLUSRounded1c-Medium.ttf',
       weight: '500',
       style: 'normal',

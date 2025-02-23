@@ -6,7 +6,7 @@ import OutlinedInput from '@mui/material/OutlinedInput';
 import Toolbar from '@mui/material/Toolbar';
 
 import { Iconify } from '@/components/Iconify';
-import { IUser } from '@/models/UserModel';
+import { IAccount } from '@/models/AccountsModel';
 import { useToggle } from '@/utils/useToggle';
 
 import BuySellDialog from '../BuySellDialog';
@@ -15,10 +15,10 @@ type TableToolbarProps = {
   filterName: string;
   onFilterName: any;
   refreshData: () => void;
-  users: Array<IUser>;
+  accounts: Array<IAccount>;
 };
 
-export default function DashTableToolbar({ filterName, onFilterName, refreshData, users }: TableToolbarProps) {
+export default function DashTableToolbar({ filterName, onFilterName, refreshData, accounts }: TableToolbarProps) {
   const { closeToggle, openToggle, toggleState } = useToggle();
   return (
     <Toolbar
@@ -60,7 +60,7 @@ export default function DashTableToolbar({ filterName, onFilterName, refreshData
         <Iconify icon="fa:refresh" />
       </IconButton>
 
-      <BuySellDialog handleDialogClose={closeToggle} open={toggleState} refreshData={refreshData} users={users} />
+      <BuySellDialog handleDialogClose={closeToggle} open={toggleState} refreshData={refreshData} accounts={accounts} />
     </Toolbar>
   );
 }

@@ -27,7 +27,7 @@ export default function TotalCard({ total }: TotalCardProps) {
       <Stack direction="column" justifyContent="space-between">
         <Stack direction="row" justifyContent="space-between">
           <Typography sx={{ typography: 'h5', mr: 6 }}>{fnCurrency(total.totalGL)}</Typography>
-          {/* <Typography sx={{ mb: 0, typography: 'subtitle2' }}>{total.userId}</Typography> */}
+          {/* <Typography sx={{ mb: 0, typography: 'subtitle2' }}>{total.accountId}</Typography> */}
 
           <Stack direction="row" alignItems="center" justifyContent="flex-end">
             <Iconify icon={total.percentGL >= 0 ? 'eva:trending-up-fill' : 'eva:trending-down-fill'} />
@@ -40,18 +40,18 @@ export default function TotalCard({ total }: TotalCardProps) {
         </Stack>
 
         <Divider sx={{ my: 0 }}>
-          <Typography sx={{ mb: 0, typography: 'caption' }}>{total.userId}</Typography>
+          <Typography sx={{ mb: 0, typography: 'caption' }}>{total.accountId}</Typography>
         </Divider>
 
         <Stack direction="row" justifyContent="space-between">
           <Stack direction="column">
-            <Typography variant="caption" sx={{ fontSize: '10px' }}>
+            <Typography variant="caption" sx={{ fontSize: '0.9rem' }}>
               Total Investment
             </Typography>
             <Typography>{fnCurrency(total.totalInvestment)}</Typography>
           </Stack>
           <Stack direction="column">
-            <Typography variant="caption" sx={{ fontSize: '10px' }}>
+            <Typography variant="caption" sx={{ fontSize: '0.9rem' }}>
               Total Value
             </Typography>
             <Typography>{fnCurrency(total.totalInvestment + total.totalGL)}</Typography>

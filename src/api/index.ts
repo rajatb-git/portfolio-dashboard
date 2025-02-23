@@ -3,13 +3,13 @@ import HoldingsAPI from './holdings';
 import LiveAPI from './live';
 import LogsAPI from './logs';
 import TransactionsAPI from './transactions';
-import UserAPI from './user';
+import AccountsAPI from './account';
 
 const apis = {
   dashboard: new DashboardAPI(),
   holdings: new HoldingsAPI(),
   live: new LiveAPI(),
-  user: new UserAPI(),
+  accounts: new AccountsAPI(),
   transactions: new TransactionsAPI(),
   logs: new LogsAPI(),
 };

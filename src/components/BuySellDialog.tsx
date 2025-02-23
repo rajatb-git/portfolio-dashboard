@@ -14,7 +14,7 @@ import apis from '@/api';
 import { useField } from '@/hooks/useField';
 import { HoldingTypesEnum } from '@/lib/enums';
 import { IHoldings } from '@/models/HoldingsModel';
-import { IUser } from '@/models/UserModel';
+import { IAccount } from '@/models/AccountsModel';
 import { Iconify } from './Iconify';
 import { OverlayButton } from './OverlayButton';
 
@@ -34,26 +34,15 @@ const TextField = styled(MuiTextField)(({ theme }: { theme: Theme }) => ({
   },
 }));
 
-const FormLabel = styled('div')(({ theme }: { theme: Theme }) => ({
-  ...theme.typography.button,
-  textTransform: 'none',
-}));
-
-type BuySellDialogProps = {
+type Props = {
   open: boolean;
   initialValues?: IHoldings;
   handleDialogClose: () => void;
   refreshData: () => void;
-  users: Array<IUser>;
+  accounts: Array<IAccount>;
 };
 
-export default function BuySellDialog({
-  open,
-  handleDialogClose,
-  initialValues,
-  refreshData,
-  users,
-}: BuySellDialogProps) {
+export default function BuySellDialog({ open, handleDialogClose, initialValues, refreshData, accounts }: Props) {
   const [isLoading, setIsLoading] = React.useState(false);
 
   const formFields = {
@@ -72,8 +61,8 @@ export default function BuySellDialog({
       validate: (value: string) => value.length < 2 && 'Symbol has to be minimum 2 characters long',
       required: true,
     }),
-    userId: useField({
-      initValue: initialValues?.userId || '',
+    accountId: useField({
+      initValue: initialValues?.accountId || '',
       validate: () => '',
       required: true,
     }),
@@ -107,7 +96,7 @@ export default function BuySellDialog({
         setIsLoading(true);
         if (formFields.buySell.value === 'sell') {
           await apis.holdings.sellHolding({
-            userId: formFields.userId.value,
+            accountId: formFields.accountId.value,
             name: formFields.name.value,
             symbol: formFields.symbol.value,
             qty: parseFloat(formFields.qty.value),
@@ -126,7 +115,7 @@ export default function BuySellDialog({
           refreshData();
         } else if (formFields.buySell.value === 'buy') {
           await apis.holdings.buyHolding({
-            userId: formFields.userId.value,
+            accountId: formFields.accountId.value,
             name: formFields.name.value,
             symbol: formFields.symbol.value,
             qty: parseFloat(formFields.qty.value),
@@ -162,7 +151,7 @@ export default function BuySellDialog({
   };
 
   return (
-    <Dialog open={open} maxWidth="md">
+    <Dialog open={open} maxWidth="md" onClose={handleDialogClose}>
       <Typography sx={{ m: 2 }} variant="h6">
         Buy / Sell
       </Typography>
@@ -214,21 +203,21 @@ export default function BuySellDialog({
           </Stack>
 
           <Stack direction="column" spacing={0.5} sx={{ flexGrow: 1 }}>
-            {/* <FormLabel>User</FormLabel> */}
+            {/* <FormLabel>Associated Account</FormLabel> */}
             <Select
-              value={formFields.userId.value}
+              value={formFields.accountId.value}
               displayEmpty
-              onChange={formFields.userId.onChange}
-              error={!!formFields.userId.error}
+              onChange={formFields.accountId.onChange}
+              error={!!formFields.accountId.error}
               size="small"
               disabled={isLoading}
             >
               <MenuItem disabled value="">
                 Owner
               </MenuItem>
-              {users.map((user) => (
-                <MenuItem value={user.id} key={user.id}>
-                  {user.name}
+              {accounts.map((account) => (
+                <MenuItem value={account.id} key={account.id}>
+                  {account.name}
                 </MenuItem>
               ))}
             </Select>

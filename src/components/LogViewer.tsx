@@ -58,12 +58,12 @@ export const LogsViewer = ({ data }: Props) => {
         borderBottom: `1px solid ${theme.palette.divider}`,
         overflow: 'auto',
         whiteSpace: 'pre',
-        fontSize: '12px',
+        fontSize: '0.9rem',
         p: 2,
         pl: 0,
         lineHeight: 1.75,
         maxHeight: '85vh',
-        backgroundColor: theme.palette.background.paper,
+        backgroundColor: theme.palette.grey[900],
       }}
     >
       {data

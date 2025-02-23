@@ -5,14 +5,17 @@ import { IIPO } from '@/models/IPOModel';
 import { IMarketNews } from '@/models/MarketNews';
 import { IPriceStore } from '@/models/PriceStoreModel';
 import { IRecommendation } from '@/models/RecommendationModel';
+import { catchCustomError } from './apiUtil';
 
 export type Range = '1d' | '5d' | '1M' | '3M' | '6M' | '1y' | '2y' | '3y';
 
 export default class LiveAPI {
   getLivePrice = async (symbol: string): Promise<IPriceStore> =>
-    axios(DB_HOST + `/live/quote/${symbol}`).then((response) => {
-      return response.data;
-    });
+    axios(DB_HOST + `/live/quote/${symbol}`)
+      .then((response) => {
+        return response.data;
+      })
+      .catch(catchCustomError);
 
   getLiveRecommendation = async (symbol: string): Promise<IRecommendation> =>
     axios(DB_HOST + `/live/recommendation/${symbol}`).then((response) => {
@@ -20,17 +23,30 @@ export default class LiveAPI {
     });
 
   getLiveNews = async (symbol: string): Promise<Array<IMarketNews>> =>
-    axios(DB_HOST + `/live/news/${symbol}`).then((response) => {
-      return response.data;
-    });
+    axios(DB_HOST + `/live/news/${symbol}`)
+      .then((response) => {
+        return response.data;
+      })
+      .catch(catchCustomError);
 
   getPriceHistory = async (symbol: string, timePeriod: Range): Promise<Array<[number, number]>> =>
-    axios(DB_HOST + `/live/history/${symbol}?range=${timePeriod}`).then((response) => {
-      return response.data;
-    });
+    axios(DB_HOST + `/live/history/${symbol}?range=${timePeriod}`)
+      .then((response) => {
+        return response.data;
+      })
+      .catch(catchCustomError);
 
   getIPOs = async (): Promise<Array<IIPO>> =>
-    axios(DB_HOST + '/live/ipos').then((response) => {
-      return response.data;
-    });
+    axios(DB_HOST + '/live/ipos')
+      .then((response) => {
+        return response.data;
+      })
+      .catch(catchCustomError);
+
+  getCompanyProfile = async (symbol: string): Promise<any> =>
+    axios(DB_HOST + `/live/company-profile/${symbol}`)
+      .then((response) => {
+        return response.data;
+      })
+      .catch(catchCustomError);
 }

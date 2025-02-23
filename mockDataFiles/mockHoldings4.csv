@@ -1,0 +1,19 @@
+symbol,name,qty,averagePrice
+AAPL,Apple Inc.,100,150.25
+MSFT,Microsoft Corporation,50,280.75
+GOOG,Alphabet Inc Class C,25,2500.50
+AMZN,Amazon.com Inc.,75,120.80
+TSLA,Tesla Inc.,150,700.00
+NVDA,NVIDIA Corporation,40,450.30
+JPM,JPMorgan Chase & Co.,60,140.90
+BAC,Bank of America Corp,200,35.15
+WFC,Wells Fargo & Company,120,45.60
+UNH,UnitedHealth Group Incorporated,30,500.20
+PFE,Pfizer Inc.,180,40.50
+JNJ,Johnson & Johnson,90,175.80
+PG,Procter & Gamble Company,110,150.70
+KO,Coca-Cola Company,250,55.25
+PEP,PepsiCo Inc.,130,170.90
+HD,Home Depot Inc.,80,300.60
+LOW,Lowe's Companies Inc.,160,200.40
+MCD,McDonald's Corporation,100,250.35

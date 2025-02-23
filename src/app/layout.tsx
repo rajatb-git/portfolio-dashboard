@@ -27,6 +27,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               bgcolor: 'background.default',
               ml: `${DRAWER_WIDTH}px`,
               p: 3,
+              mt: '40px',
             }}
           >
             {children}

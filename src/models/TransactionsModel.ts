@@ -1,6 +1,6 @@
 export interface ITransaction {
   id: string;
-  userId: string;
+  accountId: string;
   symbol: string;
   qty: number;
   price: number;

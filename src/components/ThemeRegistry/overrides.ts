@@ -1,5 +1,5 @@
 import { outlinedInputClasses } from '@mui/material/OutlinedInput';
-import { Theme, alpha } from '@mui/material/styles';
+import { Theme } from '@mui/material/styles';
 
 // ----------------------------------------------------------------------
 
@@ -21,7 +21,7 @@ export function overrides(theme: Theme) {
           margin: 0,
           padding: 0,
           width: '100%',
-          height: '100%',
+          height: 'auto',
         },
         '#root': {
           width: '100%',
@@ -102,6 +102,7 @@ export function overrides(theme: Theme) {
       styleOverrides: {
         root: {
           backgroundImage: 'none',
+          backgroundColor: theme.palette.grey[900],
         },
       },
     },
@@ -116,8 +117,37 @@ export function overrides(theme: Theme) {
     MuiButton: {
       styleOverrides: {
         root: {
-          borderRadius: '6px',
-          textTransform: 'none',
+          variants: [
+            {
+              style: {
+                textTransform: 'none',
+              },
+            },
+          ],
+        },
+      },
+    },
+    MuiIconButton: {
+      styleOverrides: {
+        root: {
+          // ':hover': {
+          //   backgroundColor: theme.palette.grey[800],
+          //   transform: 'scale(1.2)',
+          // },
+          ':active': {
+            backgroundColor: theme.palette.grey[800],
+            transform: 'scale(0.8)',
+          },
+        },
+      },
+    },
+    MuiDataGrid: {
+      styleOverrides: {
+        footerContainer: {
+          backgroundColor: theme.palette.grey[900],
+        },
+        columnHeader: {
+          backgroundColor: theme.palette.grey[900],
         },
       },
     },

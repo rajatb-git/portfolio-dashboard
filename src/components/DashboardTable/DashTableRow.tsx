@@ -43,7 +43,7 @@ export default function DashTableRow({ row, onRowClick }: TableRowProps) {
         <Stack direction="column" spacing={0} alignItems="flex-end">
           <Label
             color={row.percentChange === 0 ? 'default' : row.percentChange! > 0 ? 'success' : 'error'}
-            sx={{ fontSize: '13px' }}
+            sx={{ fontSize: '0.9rem' }}
           >
             {row.percentChange?.toFixed(2)}%
           </Label>
@@ -58,7 +58,7 @@ export default function DashTableRow({ row, onRowClick }: TableRowProps) {
         <Stack direction="column" spacing={0} alignItems="flex-end">
           <Label
             color={row.totalGLPercent === 0 ? 'default' : row.totalGLPercent! > 0 ? 'success' : 'error'}
-            sx={{ fontSize: '13px' }}
+            sx={{ fontSize: '0.9rem' }}
           >
             {(row.totalGLPercent || 0) > 0 && '+'}
             {row.totalGLPercent?.toFixed(2)}%
@@ -73,15 +73,15 @@ export default function DashTableRow({ row, onRowClick }: TableRowProps) {
       <TableCell align="right">
         <Stack direction="column" spacing={0} alignItems="flex-end">
           {fnCurrency(row.currentPrice)}
-          <Typography variant="caption" noWrap sx={{ fontSize: '11px' }}>
-            {row.dayHigh?.toFixed(2)} - {row.dayLow?.toFixed(2)}
+          <Typography variant="caption" noWrap>
+            {row.dayLow?.toFixed(2)} - {row.dayHigh?.toFixed(2)}
           </Typography>
         </Stack>
       </TableCell>
 
       <TableCell align="right">{fnCurrency(row.marketValue)}</TableCell>
 
-      <TableCell>{row.userId}</TableCell>
+      <TableCell>{row.accountId}</TableCell>
 
       <TableCell>
         {row.strongBuy >= 0 && (

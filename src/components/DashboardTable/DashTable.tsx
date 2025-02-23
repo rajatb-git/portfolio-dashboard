@@ -12,7 +12,7 @@ import Case from 'case';
 import { useRouter } from 'next/navigation';
 
 import { HoldingTypesEnum } from '@/lib/enums';
-import { IUser } from '@/models/UserModel';
+import { IAccount } from '@/models/AccountsModel';
 import { Column } from '@/types';
 
 import TableHead from './DashTableHead';
@@ -25,7 +25,7 @@ import TotalCard from '../TotalCard';
 import theme from '../ThemeRegistry/theme';
 
 export type Total = {
-  userId: string;
+  accountId: string;
   totalGL: number;
   percentGL: number;
   totalInvestment: number;
@@ -34,12 +34,12 @@ export type Total = {
 type TableProps<T> = {
   rows: Array<T>;
   columns: Array<Column>;
-  users: Array<IUser>;
+  accounts: Array<IAccount>;
   refreshData: () => void;
   isLoading: boolean;
 };
 
-export default function Table<T>({ rows, columns, users, refreshData, isLoading }: TableProps<T>) {
+export default function Table<T>({ rows, columns, accounts, refreshData, isLoading }: TableProps<T>) {
   const router = useRouter();
   const [page, setPage] = useState(0);
   const [order, setOrder] = useState<'asc' | 'desc'>('asc');
@@ -47,8 +47,9 @@ export default function Table<T>({ rows, columns, users, refreshData, isLoading 
   const [filterName, setFilterName] = useState('');
   const [rowsPerPage, setRowsPerPage] = useState(50);
   const [filterType, setFilterType] = useState<string>('all');
-  const [filterUser, setFilterUser] = useState('all');
+  const [filterAccount, setFilterAccount] = useState('all');
 
+  // biome-ignore lint/correctness/noUnusedVariables: <explanation>
   const handleSort = (event: any, id: string) => {
     const isAsc = orderBy === id && order === 'asc';
     if (id !== '') {
@@ -61,6 +62,7 @@ export default function Table<T>({ rows, columns, users, refreshData, isLoading 
     router.push(`/research?searchText=${symbol}`);
   };
 
+  // biome-ignore lint/correctness/noUnusedVariables: <explanation>
   const handleChangePage = (event: React.MouseEvent<HTMLButtonElement, MouseEvent> | null, newPage: number) => {
     setPage(newPage);
   };
@@ -80,16 +82,16 @@ export default function Table<T>({ rows, columns, users, refreshData, isLoading 
     setFilterType(event.target.value);
   };
 
-  const handleUserFilterChange = (event: any) => {
+  const handleAccountFilterChange = (event: any) => {
     setPage(0);
-    setFilterUser(event.target.value);
+    setFilterAccount(event.target.value);
   };
 
   const { dataFiltered, totals } = applyFilter({
     inputData: rows,
     comparator: getComparator(order, orderBy),
     filterName,
-    filterUser,
+    filterAccount,
     filterType,
   });
 
@@ -99,7 +101,7 @@ export default function Table<T>({ rows, columns, users, refreshData, isLoading 
     <>
       <Grid2 container spacing={1}>
         {totals.map((total) => (
-          <Grid2 key={total.userId} size={{ xs: 12, sm: 6, md: 4, lg: 3, xl: 2 }}>
+          <Grid2 key={total.accountId} size={{ xs: 12, sm: 6, md: 4, lg: 2.5 }}>
             <TotalCard total={total} />
           </Grid2>
         ))}
@@ -132,9 +134,9 @@ export default function Table<T>({ rows, columns, users, refreshData, isLoading 
         <ToggleButtonGroup
           color="warning"
           size="small"
-          value={filterUser}
+          value={filterAccount}
           exclusive
-          onChange={handleUserFilterChange}
+          onChange={handleAccountFilterChange}
           aria-label="type-filter"
         >
           <ToggleButton
@@ -144,7 +146,7 @@ export default function Table<T>({ rows, columns, users, refreshData, isLoading 
             All
           </ToggleButton>
 
-          {users.map((x) => (
+          {accounts.map((x) => (
             <ToggleButton
               key={x.id}
               value={x.id}
@@ -162,7 +164,7 @@ export default function Table<T>({ rows, columns, users, refreshData, isLoading 
         variant="outlined"
       >
         <TableToolbar
-          users={users}
+          accounts={accounts}
           filterName={filterName}
           onFilterName={handleFilterByName}
           refreshData={refreshData}
@@ -200,7 +202,7 @@ export default function Table<T>({ rows, columns, users, refreshData, isLoading 
           sx={{ backgroundColor: theme.palette.grey[900] }}
           page={page}
           component="div"
-          count={rows.length}
+          count={dataFiltered.length}
           rowsPerPage={rowsPerPage}
           onPageChange={handleChangePage}
           rowsPerPageOptions={[50, 100, 200]}

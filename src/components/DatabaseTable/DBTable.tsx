@@ -7,15 +7,12 @@ import { default as MuiTable } from '@mui/material/Table';
 import TableBody from '@mui/material/TableBody';
 import TableContainer from '@mui/material/TableContainer';
 import TablePagination from '@mui/material/TablePagination';
-import { useRouter } from 'next/navigation';
-import { toast } from 'react-toastify';
 
 import { IHoldings } from '@/models/HoldingsModel';
 import { ITransaction } from '@/models/TransactionsModel';
-import { IUser } from '@/models/UserModel';
+import { IAccount } from '@/models/AccountsModel';
 import { Column } from '@/types';
 
-import ImportDialog from './DBImportDialog';
 import TableHead from './DBTableHead';
 import TableRow from './DBTableRow';
 import TableToolbar from './DBTableToolbar';
@@ -29,51 +26,17 @@ type TableProps<T> = {
   refreshData: () => Promise<void>;
   isLoading: boolean;
   handleDelete: (recordId: string) => Promise<any>;
-  handleUpdate: (record: IUser | ITransaction | IHoldings) => Promise<any>;
+  handleUpdate: (record: IAccount | ITransaction | IHoldings) => Promise<any>;
 };
 
-export default function DatabaseTable<T>({
-  rows,
-  columns,
-  handleDelete,
-  handleUpdate,
-  refreshData,
-  isLoading,
-}: TableProps<T>) {
-  const router = useRouter();
-
+export default function DatabaseTable<T>({ rows, columns }: TableProps<T>) {
   const [page, setPage] = useState(0);
   const [order, setOrder] = useState<'asc' | 'desc'>('asc');
   const [orderBy, setOrderBy] = useState('name');
   const [filterName, setFilterName] = useState('');
   const [rowsPerPage, setRowsPerPage] = useState(50);
 
-  const handleRowDelete = (recordId: string) => {
-    const deleteResponse = handleDelete(recordId);
-
-    if (deleteResponse instanceof Error) {
-      toast.error(deleteResponse.message);
-      refreshPage();
-    } else {
-      toast.success('Deleted!');
-    }
-  };
-
-  const handleRowUpdate = (record: IUser | ITransaction | IHoldings) => {
-    const updateResponse = handleUpdate(record);
-
-    if (updateResponse instanceof Error) {
-      toast.error(updateResponse.message);
-      refreshPage();
-    } else {
-      toast.success('Deleted!');
-    }
-  };
-
-  const refreshPage = async () => {
-    await refreshData();
-  };
-
+  // biome-ignore lint/correctness/noUnusedVariables: <explanation>
   const handleSort = (event: any, id: string) => {
     const isAsc = orderBy === id && order === 'asc';
     if (id !== '') {
@@ -82,6 +45,7 @@ export default function DatabaseTable<T>({
     }
   };
 
+  // biome-ignore lint/correctness/noUnusedVariables: <explanation>
   const handleChangePage = (event: React.MouseEvent<HTMLButtonElement, MouseEvent> | null, newPage: number) => {
     setPage(newPage);
   };

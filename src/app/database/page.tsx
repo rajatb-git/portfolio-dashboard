@@ -8,20 +8,20 @@ import { ErrorBoundary } from 'next/dist/client/components/error-boundary';
 import { toast } from 'react-toastify';
 
 import apis from '@/api';
-import ImportDialog from '@/components/DatabaseTable/DBImportDialog';
+import ImportDialog from '@/components/DataGrid/DBImportDialog';
 import GenericGrid from '@/components/DataGrid';
 import { Iconify } from '@/components/Iconify';
 import { IHoldings } from '@/models/HoldingsModel';
 import { ITransaction } from '@/models/TransactionsModel';
-import { IUser } from '@/models/UserModel';
+import { IAccount } from '@/models/AccountsModel';
 
-import Error from './error';
+import DatabaseError from './error';
 
 const columns: { [collection: string]: Array<GridColDef> } = {
   holdings: [
     {
-      field: 'userId',
-      headerName: 'User',
+      field: 'accountId',
+      headerName: 'Account',
       flex: 1,
       editable: true,
     },
@@ -58,7 +58,7 @@ const columns: { [collection: string]: Array<GridColDef> } = {
       editable: true,
     },
   ],
-  user: [
+  accounts: [
     {
       field: 'id',
       headerName: 'Id',
@@ -74,8 +74,8 @@ const columns: { [collection: string]: Array<GridColDef> } = {
   ],
   transactions: [
     {
-      field: 'userId',
-      headerName: 'User',
+      field: 'accountId',
+      headerName: 'Account',
       flex: 1,
       editable: true,
     },
@@ -117,18 +117,18 @@ const columns: { [collection: string]: Array<GridColDef> } = {
 
 export default function DataPage() {
   const [isLoading, setIsLoading] = React.useState(true);
-  const [activeCollection, setActiveCollection] = React.useState<'user' | 'transactions' | 'holdings'>('holdings');
-  const [records, setRecords] = React.useState<Array<IUser | IHoldings | ITransaction>>([]);
+  const [activeCollection, setActiveCollection] = React.useState<'accounts' | 'transactions' | 'holdings'>('holdings');
+  const [records, setRecords] = React.useState<Array<IAccount | IHoldings | ITransaction>>([]);
   const [importDialogOpen, setImportDialogOpen] = React.useState(false);
-  const [usersData, setUsersData] = React.useState<Array<IUser>>([]);
+  const [accountsData, setAccountsData] = React.useState<Array<IAccount>>([]);
 
   const deleteRecord = async (recordId: string) => {
     return apis[activeCollection].deleteById(recordId);
   };
 
   const openImportDialog = async () => {
-    await apis.user.getAll().then((response) => {
-      setUsersData(response);
+    await apis.accounts.getAll().then((response) => {
+      setAccountsData(response);
     });
 
     setImportDialogOpen(true);
@@ -136,10 +136,10 @@ export default function DataPage() {
 
   const closeImportDialog = () => {
     setImportDialogOpen(false);
-    setUsersData([]);
+    setAccountsData([]);
   };
 
-  const insertOrUpdateRecord = async (record: IUser | ITransaction | IHoldings) => {
+  const insertOrUpdateRecord = async (record: IAccount | ITransaction | IHoldings) => {
     return apis[activeCollection].insertOrUpdateById(record as any);
   };
 
@@ -176,7 +176,7 @@ export default function DataPage() {
   }, [activeCollection]);
 
   return (
-    <ErrorBoundary errorComponent={Error}>
+    <ErrorBoundary errorComponent={DatabaseError}>
       <Box sx={{ display: 'flex', direction: 'row', justifyContent: 'flex-start', mb: 2, gap: '8px' }}>
         <Typography variant="h6" flexGrow={1}>
           Database
@@ -193,7 +193,7 @@ export default function DataPage() {
           size="small"
           disabled={isLoading}
         >
-          {['user', 'holdings', 'transactions'].map((x) => (
+          {['accounts', 'holdings', 'transactions'].map((x) => (
             <MenuItem key={x} value={x}>
               {x}
             </MenuItem>
@@ -217,7 +217,7 @@ export default function DataPage() {
         open={importDialogOpen}
         handleDialogClose={closeImportDialog}
         insertHoldingsData={insertHoldingsData}
-        usersData={usersData}
+        accountsData={accountsData}
         refreshPage={loadData}
       />
     </ErrorBoundary>

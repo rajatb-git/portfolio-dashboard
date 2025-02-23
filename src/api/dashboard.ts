@@ -5,7 +5,7 @@ import { DB_HOST } from '@/config';
 import { catchCustomError } from './apiUtil';
 
 export type HoldingAggregate = {
-  userId: string;
+  accountId: string;
   name: string;
   symbol: string;
   qty: number;

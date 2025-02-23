@@ -7,12 +7,12 @@ import { toast } from 'react-toastify';
 import apis from '@/api';
 import { HoldingAggregate } from '@/api/dashboard';
 import DashboardTable from '@/components/DashboardTable/DashTable';
-import { IUser } from '@/models/UserModel';
+import { IAccount } from '@/models/AccountsModel';
 import { Column } from '@/types';
 
 export default function DashboardPage() {
   const [isLoading, setIsLoading] = React.useState(true);
-  const [users, setUsers] = React.useState<Array<IUser>>([]);
+  const [accounts, setAccounts] = React.useState<Array<IAccount>>([]);
   const [dashboardData, setDashboardData] = React.useState<Array<HoldingAggregate>>([]);
 
   const columns: Array<Column> = [
@@ -36,7 +36,7 @@ export default function DashboardPage() {
       align: 'right',
     },
     { id: 'marketValue', label: 'Market Value', align: 'right' },
-    { id: 'userId', label: 'Owner' },
+    { id: 'accountId', label: 'Owner' },
     { id: '', label: 'Recommendation' },
   ];
 
@@ -53,10 +53,10 @@ export default function DashboardPage() {
         setIsLoading(false);
       });
 
-    apis.user
+    apis.accounts
       .getAll()
       .then((response) => {
-        setUsers(response);
+        setAccounts(response);
       })
       .catch((err) => {
         toast.error(err.message);
@@ -68,6 +68,12 @@ export default function DashboardPage() {
   }, []);
 
   return (
-    <DashboardTable isLoading={isLoading} refreshData={loadData} rows={dashboardData} users={users} columns={columns} />
+    <DashboardTable
+      isLoading={isLoading}
+      refreshData={loadData}
+      rows={dashboardData}
+      accounts={accounts}
+      columns={columns}
+    />
   );
 }

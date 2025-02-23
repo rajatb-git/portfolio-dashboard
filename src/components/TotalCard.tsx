@@ -26,16 +26,16 @@ export default function TotalCard({ total }: TotalCardProps) {
       <Stack direction="column" justifyContent="space-between">
         <Stack direction="row" alignItems="center">
           <Typography alignSelf="start" flexGrow={1} variant="subtitle2">
-            {total.userId}
+            {total.accountId}
           </Typography>
 
           <Typography variant="subtitle2" component="span" sx={{ mr: 0.5 }}>
-            {total.totalGL > 0 ? '+' : '-'}
+            {total.totalGL > 0 ? '+' : ''}
           </Typography>
 
           <Typography variant="body1">{fnCurrency(total.totalGL)}</Typography>
           <Typography variant="subtitle2" component="span" sx={{ ml: 0.5 }}>
-            ({total.percentGL > 0 ? '+' : '-'}
+            ({total.percentGL > 0 ? '+' : ''}
             {fnPercent(total.percentGL)})
           </Typography>
         </Stack>
@@ -52,7 +52,7 @@ export default function TotalCard({ total }: TotalCardProps) {
             <Typography variant="caption" textAlign="right">
               Value
             </Typography>
-            <Typography variant="body2">{fnCurrency(total.totalInvestment + total.totalGL)}</Typography>
+            <Typography variant="body2">{fnCurrency(total.totalValue)}</Typography>
           </Stack>
         </Stack>
       </Stack>

@@ -11,7 +11,7 @@ import { ICalendarEvent } from '@/components/Calendar/types';
 import theme from '@/components/ThemeRegistry/theme';
 import { IIPO } from '@/models/IPOModel';
 
-import Error from './error';
+import IPOCalendarError from './error';
 
 export default function IPOCalendarPage() {
   const [isLoading, setIsLoading] = React.useState(true);
@@ -51,7 +51,7 @@ export default function IPOCalendarPage() {
   }, []);
 
   return (
-    <ErrorBoundary errorComponent={Error}>
+    <ErrorBoundary errorComponent={IPOCalendarError}>
       <Calendar events={events} refreshData={loadData} isLoading={isLoading} />
     </ErrorBoundary>
   );

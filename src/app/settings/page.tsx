@@ -10,7 +10,7 @@ import apis from '@/api';
 import { Iconify } from '@/components/Iconify';
 import { LogsViewer } from '@/components/LogViewer';
 
-import Error from './error';
+import SettingsError from './error';
 
 type File = 'error' | 'combined';
 
@@ -56,7 +56,7 @@ export default function SettingsPage() {
   }, [file]);
 
   return (
-    <ErrorBoundary errorComponent={Error}>
+    <ErrorBoundary errorComponent={SettingsError}>
       <Box sx={{ display: 'flex', direction: 'row', justifyContent: 'space-between', mb: 2 }}>
         <Select value={file} onChange={(e) => setFile(e.target.value as File)} size="small" disabled={isLoading}>
           <MenuItem value="error">error.log</MenuItem>

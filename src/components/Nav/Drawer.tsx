@@ -2,32 +2,87 @@
 
 import * as React from 'react';
 
-import { TextField, ListItemButton, Box } from '@mui/material';
-import Divider from '@mui/material/Divider';
+import { Box, Toolbar, Button, IconButton, Link } from '@mui/material';
+import MuiAppBar from '@mui/material/AppBar';
 import { default as MuiDrawer } from '@mui/material/Drawer';
 import List from '@mui/material/List';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 
 import { DRAWER_WIDTH, NAV_CONFIG, NAV_SETTINGS_CONFIG } from '@/config';
 
 import SideNavItem from './SideNavItem';
 import { Iconify } from '../Iconify';
+import { SearchTickerModal } from '../SearchTickerModal';
 import theme from '../ThemeRegistry/theme';
+import LocalStorageArray from '@/utils/localStorageArray';
 
 export default function Drawer() {
-  const router = useRouter();
   const pathname = usePathname();
   const [showSearch, setShowSearch] = React.useState(false);
-  const [searchText, setSearchText] = React.useState('');
+  const [searchHistory, setSearchHistory] = React.useState<Array<string> | null>(
+    LocalStorageArray.getAll('searchText')
+  );
 
-  const onSearchEnter = () => {
-    router.push(`/research?searchText=${searchText}`);
+  const refreshSearchHistory = () => {
+    setSearchHistory(LocalStorageArray.getAll('searchText'));
+  };
 
+  const openSearchTickerModal = () => {
+    refreshSearchHistory();
+    setShowSearch(true);
+  };
+
+  const closeSearchTickerModal = () => {
     setShowSearch(false);
   };
 
+  const handleKeyDown = (event: KeyboardEvent) => {
+    if (event.metaKey && event.key === 'k') {
+      setShowSearch(true);
+    }
+  };
+
+  React.useEffect(() => {
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, []);
+
   return (
     <>
+      <MuiAppBar position="fixed" sx={{ backgroundColor: 'rgba(0,0,0, 0.8)', backdropFilter: 'blur(10px)' }}>
+        <Toolbar sx={{ minHeight: '48px !important', gap: 1 }}>
+          <Box sx={{ flexGrow: 1 }} />
+
+          <Button
+            startIcon={<Iconify icon="eva:search-fill" sx={{ color: theme.palette.primary.main }} />}
+            variant="outlined"
+            disableElevation
+            size="small"
+            onClick={openSearchTickerModal}
+            sx={{ border: `2px solid ${theme.palette.grey[800]}`, color: theme.palette.grey[400] }}
+          >
+            Search...
+            <Box
+              sx={{
+                ml: 2,
+                border: `2px solid ${theme.palette.grey[850]}`,
+                borderRadius: '4px',
+                p: '2px 4px',
+                lineHeight: 1,
+              }}
+            >
+              <Iconify icon="mynaui:command" width={12} />K
+            </Box>
+          </Button>
+
+          <IconButton component={Link} href={NAV_SETTINGS_CONFIG.href}>
+            <Iconify icon={NAV_SETTINGS_CONFIG.icon} />
+          </IconButton>
+        </Toolbar>
+      </MuiAppBar>
+
       <MuiDrawer
         sx={{
           width: DRAWER_WIDTH,
@@ -38,57 +93,28 @@ export default function Drawer() {
             height: 'auto',
             bottom: 0,
             border: 0,
-            boxShadow: `0px 0px 5px ${theme.palette.divider}`,
             display: 'flex',
             flexDirection: 'row',
+            justifyContent: 'center',
           },
         }}
         variant="permanent"
         anchor="left"
       >
-        <List sx={{ display: 'flex', flexDirection: 'column' }}>
-          <ListItemButton
-            sx={{ fontWeight: 700, justifyContent: 'center', p: 0, zIndex: 999, flexGrow: 0 }}
-            onClick={() => setShowSearch(!showSearch)}
-          >
-            <Iconify icon="eva:search-fill" sx={{ height: '30px', width: '30px' }} />
-          </ListItemButton>
-
-          <Divider sx={{ my: 2 }} />
-
+        <List sx={{ display: 'flex', flexDirection: 'column', width: DRAWER_WIDTH }}>
           {NAV_CONFIG.map(({ href, icon, text }) => (
             <SideNavItem currentPath={pathname} key={text} href={href} icon={icon} text={text} />
           ))}
 
           <Box sx={{ flexGrow: 1 }}> </Box>
-
-          <SideNavItem
-            currentPath={pathname}
-            key={NAV_SETTINGS_CONFIG.text}
-            href={NAV_SETTINGS_CONFIG.href}
-            icon={NAV_SETTINGS_CONFIG.icon}
-            text={NAV_SETTINGS_CONFIG.text}
-          />
         </List>
       </MuiDrawer>
 
-      <TextField
-        fullWidth
-        variant="filled"
-        onKeyDown={(e) => e.key === 'Enter' && onSearchEnter()}
-        placeholder="Search..."
-        autoFocus
-        value={searchText}
-        onChange={(e) => setSearchText(e.target.value)}
-        sx={{
-          position: 'fixed',
-          top: 0,
-          right: showSearch ? '-50px' : 'calc(100vw - 50px)',
-          backgroundColor: theme.palette.background.default,
-          opacity: showSearch ? 1 : 0,
-          visibility: showSearch ? 'visible' : 'hidden',
-          transition: 'all 0.3s ease-in',
-        }}
+      <SearchTickerModal
+        refreshSearchHistory={refreshSearchHistory}
+        searchHistory={searchHistory}
+        isOpen={showSearch}
+        onClose={closeSearchTickerModal}
       />
     </>
   );

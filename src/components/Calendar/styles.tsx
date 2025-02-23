@@ -51,6 +51,23 @@ export const StyledCalendar = styled('div')(({ theme }) => ({
     },
   },
 
+  '.fc-popover': {
+    border: '1px solid black',
+    '.fc-popover-header': {
+      backgroundColor: 'black',
+    },
+    '.fc-popover-body': {
+      backgroundColor: theme.palette.grey[700],
+    },
+    '.fc-popover-title': {
+      ...theme.typography.caption,
+    },
+  },
+
+  '.fc-event-title-container': {
+    marginLeft: '8px',
+  },
+
   '.fc-event-main': {
     cursor: 'pointer',
   },

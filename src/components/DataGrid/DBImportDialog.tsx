@@ -19,7 +19,7 @@ import csvtojson from 'csvtojson';
 
 import { OverlayButton } from '@/components/OverlayButton';
 import { IHoldings } from '@/models/HoldingsModel';
-import { IUser } from '@/models/UserModel';
+import { IAccount } from '@/models/AccountsModel';
 import { Iconify } from '../Iconify';
 import theme from '../ThemeRegistry/theme';
 import { fnBytes } from '@/utils/formatNumber';
@@ -29,14 +29,14 @@ type AddEditDialogProps = {
   handleDialogClose: () => void;
   // eslint-disable-next-line no-unused-vars
   insertHoldingsData: (newData: Array<IHoldings>) => void;
-  usersData: Array<IUser>;
+  accountsData: Array<IAccount>;
   refreshPage: () => void;
 };
 
 export default function ImportDialog({
   open,
   handleDialogClose,
-  usersData,
+  accountsData,
   insertHoldingsData,
   refreshPage,
 }: AddEditDialogProps) {
@@ -74,7 +74,7 @@ export default function ImportDialog({
       .fromString(fileContent!)
       .then((resp) => {
         resp.map((x) => {
-          x.userId = owner;
+          x.accountId = owner;
           x.type = type;
         });
         insertHoldingsData(resp);
@@ -89,6 +89,7 @@ export default function ImportDialog({
     setFile(undefined);
     setOwner('');
     setError('');
+    setType('');
 
     handleDialogClose();
   };
@@ -123,7 +124,7 @@ export default function ImportDialog({
             <ListItem
               secondaryAction={
                 <IconButton onClick={() => setFile(undefined)}>
-                  <Iconify icon="eva:close-fill" />
+                  <Iconify icon="fa:close" />
                 </IconButton>
               }
               sx={{ p: 0.5 }}
@@ -134,7 +135,7 @@ export default function ImportDialog({
 
               <Box>
                 <Typography variant="body2">{file.name}</Typography>
-                <Typography fontSize={10} fontWeight={600}>
+                <Typography fontSize={theme.typography.pxToRem(10)} fontWeight={600}>
                   {fnBytes(file?.size)}
                 </Typography>
               </Box>
@@ -173,20 +174,20 @@ export default function ImportDialog({
 
         <Box sx={{ display: 'flex', direction: 'row', gap: '8px', mt: 2 }}>
           <FormControl fullWidth size="small" required>
-            <InputLabel id="select-user-label">Owner</InputLabel>
+            <InputLabel id="select-account-label">Associated Account</InputLabel>
             <Select
-              labelId="select-user-label"
+              labelId="select-account-label"
               value={owner}
               onChange={(ev) => setOwner(ev.target.value)}
-              label="Owner"
+              label="Account"
             >
               <MenuItem disabled value="">
                 Select Owner
               </MenuItem>
 
-              {usersData.map((user) => (
-                <MenuItem value={user.id} key={user.id}>
-                  {user.name}
+              {accountsData.map((account) => (
+                <MenuItem value={account.id} key={account.id}>
+                  {account.name}
                 </MenuItem>
               ))}
             </Select>

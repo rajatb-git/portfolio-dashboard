@@ -1,6 +1,6 @@
 import React from 'react';
 
-import { ListItem, ListItemButton, ListItemIcon, ListItemText, Tooltip, alpha } from '@mui/material';
+import { ListItem, ListItemButton, ListItemIcon, Tooltip, Typography } from '@mui/material';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
 
@@ -13,38 +13,54 @@ export default function SideNavItem({ href, currentPath, icon, text }: SideNavIt
   const active = currentPath === href;
 
   return (
-    <ListItem key={href} disablePadding sx={{justifyContent: 'center', mb: 1}}>
-      <motion.div whileHover={{ scale: 1.3 }} whileTap={{ scale: 0.9 }}>
-        <Tooltip title={text} placement="right">
-          <ListItemButton
-            component={Link}
-            href={href}
+    <ListItem
+      key={href}
+      disablePadding
+      sx={{ justifyContent: 'center' }}
+      component={motion.div}
+      whileHover={{ scale: 1.3 }}
+      whileTap={{ scale: 0.9 }}
+    >
+      <Tooltip title={text} placement="right">
+        <ListItemButton
+          component={Link}
+          href={href}
+          sx={{
+            justifyContent: 'center',
+            margin: active ? '0px' : '6px',
+            ...(active && {
+              backgroundColor: theme.palette.grey[900],
+              color: theme.palette.primary.main,
+            }),
+          }}
+        >
+          <ListItemIcon
             sx={{
-              margin: '6px',
-              borderRadius: theme.spacing(1),
-              p: 0.8,
+              minWidth: 'auto',
+              flexDirection: 'column',
+              alignItems: 'center',
               ...(active && {
-                backgroundColor: theme.palette.grey[700],
                 color: theme.palette.primary.main,
-                boxShadow: `0px 0px 5px ${theme.palette.divider}`,
               }),
             }}
           >
-            <ListItemIcon
+            <Iconify icon={icon} width={active ? 30 : 26} />
+            <Typography
+              variant="caption"
               sx={{
-                minWidth: 'auto',
-                ...(active && {
-                  color: theme.palette.primary.main,
-                }),
+                fontSize: '0.6rem',
+                fontWeight: '700',
+                maxWidth: '62px',
+                padding: '3px 1px 0px 1px',
+                textAlign: 'center',
+                lineHeight: '1.2',
               }}
             >
-              <Iconify icon={icon} width={active ? 36 : 30} />
-            </ListItemIcon>
-
-            {/* <ListItemText primary={text} primaryTypographyProps={{ sx: { fontWeight: 500 } }} /> */}
-          </ListItemButton>
-        </Tooltip>
-      </motion.div>
+              {text}
+            </Typography>
+          </ListItemIcon>
+        </ListItemButton>
+      </Tooltip>
     </ListItem>
   );
 }

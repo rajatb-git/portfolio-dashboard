@@ -114,7 +114,7 @@ export default function CalendarView({ events, refreshData, isLoading }: Props) 
           onClose={handlePopoverClose}
           disableRestoreFocus
         >
-          <Box sx={{ p: 2 }}>
+          <Box sx={{ p: 2, backgroundColor: 'black' }}>
             <Stack direction="row" spacing={4}>
               <Stack direction="column">
                 numberOfShares:
