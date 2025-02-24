@@ -1,6 +1,10 @@
 # first install and build layer
 FROM node:22-alpine as builder
 
+ENV PNPM_HOME="/pnpm"
+ENV PATH="$PNPM_HOME:$PATH"
+RUN corepack enable
+
 ENV APP_ENV production
 ENV NODE_ENV production
 # This will ensure that we opt out of the anonymous data collection by Next
@@ -10,8 +14,8 @@ WORKDIR /app
 COPY . .
 
 #Installing only production and build dependencies
-RUN npm ci --omit=dev
-RUN npm run build
+RUN pnpm ci --omit=dev
+RUN pnpm run build
 
 #final layer to run
 FROM node:22-alpine as runner
