@@ -1,26 +1,32 @@
-ARG BUILD_FROM
-FROM $BUILD_FROM
+# first install and build layer
+FROM node:22-alpine as builder
 
-# FROM node:22-alpine
-
-ENV LANG C.UTF-8
-SHELL ["/bin/bash", "-o", "pipefail", "-c"]
-
-RUN apk add --no-cache nodejs npm nginx && mkdir -p /run/nginx
-
-COPY ingress.conf /etc/nginx/http.d/
-
-# This will ensure that we opt out of the anonymous data collection by Next
-ENV NEXT_TELEMETRY_DISABLED 1
 ENV APP_ENV production
 ENV NODE_ENV production
-ENV PORT 8099
+# This will ensure that we opt out of the anonymous data collection by Next
+ENV NEXT_TELEMETRY_DISABLED 1
 
 WORKDIR /app
 COPY . .
 
-RUN npm ci --omit=dev --unsafe-perm && npm run build
+#Installing only production and build dependencies
+RUN npm ci --omit=dev
+RUN npm run build
 
-RUN rm -rf node_modules && cp -R /app/.next/standalone /app && cp -R /app/public /app/standalone && cp -R /app/.next/static /app/standalone/.next && chmod a+x /app/scripts/run.sh
+#final layer to run
+FROM node:22-alpine as runner
 
-CMD [ "scripts/run.sh" ]
+WORKDIR /app
+
+# This will ensure that we opt out of the anonymous data collection by Next
+ENV NEXT_TELEMETRY_DISABLED 1
+ENV PORT 3000
+
+# a standalone build automatically imports the needed files from node modules
+COPY --from=builder /app/.next/standalone /app
+COPY --from=builder /app/public /app/public
+COPY --from=builder /app/.next/static /app/.next/static
+# COPY --from=builder /app/db /app/db
+
+EXPOSE ${PORT}
+CMD ["node", "/app/server.js"]
