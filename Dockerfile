@@ -14,8 +14,8 @@ WORKDIR /app
 COPY . .
 
 #Installing only production and build dependencies
-RUN pnpm ci --omit=dev
-RUN pnpm run build
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --prod
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm run build
 
 #final layer to run
 FROM node:22-alpine as runner
