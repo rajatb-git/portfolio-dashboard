@@ -51,7 +51,7 @@ export default function Drawer() {
 
   return (
     <>
-      <MuiAppBar position="fixed" sx={{ backgroundColor: 'rgba(0,0,0, 0.8)', backdropFilter: 'blur(10px)' }}>
+      <MuiAppBar position="fixed" sx={{ backgroundColor: 'rgba(0,0,0, 0.6)', backdropFilter: 'blur(10px)' }}>
         <Toolbar sx={{ minHeight: '48px !important', gap: 1 }}>
           <Box sx={{ flexGrow: 1 }} />
 
