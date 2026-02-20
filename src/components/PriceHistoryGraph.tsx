@@ -2,7 +2,6 @@ import React from 'react';
 
 import { ToggleButtonGroup, ToggleButton, Card, CardContent } from '@mui/material';
 import { ApexOptions } from 'apexcharts';
-import dynamic from 'next/dynamic';
 
 import apis from '@/api';
 import { Range } from '@/api/live';
@@ -10,7 +9,7 @@ import { THEME_MODE } from '@/config';
 
 import theme from './ThemeRegistry/theme';
 
-const ReactApexChart = dynamic(() => import('react-apexcharts'), { ssr: false });
+const ReactApexChart = React.lazy(() => import('react-apexcharts'));
 
 type Props = {
   symbol: string;
@@ -115,7 +114,11 @@ export const PriceHistoryGraph = ({ symbol }: Props) => {
           ))}
         </ToggleButtonGroup>
 
-        {series && <ReactApexChart options={options} series={series} type="candlestick" height={450} width="100%" />}
+        {series && (
+          <React.Suspense fallback={<div>Loading chart...</div>}>
+            <ReactApexChart options={options} series={series} type="candlestick" height={450} width="100%" />
+          </React.Suspense>
+        )}
       </CardContent>
     </Card>
   );

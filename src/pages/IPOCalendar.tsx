@@ -1,8 +1,5 @@
-'use client';
-
 import * as React from 'react';
 
-import { ErrorBoundary } from 'next/dist/client/components/error-boundary';
 import { toast } from 'react-toastify';
 
 import apis from '@/api';
@@ -11,9 +8,7 @@ import { ICalendarEvent } from '@/components/Calendar/types';
 import theme from '@/components/ThemeRegistry/theme';
 import { IIPO } from '@/models/IPOModel';
 
-import IPOCalendarError from './error';
-
-export default function IPOCalendarPage() {
+export default function IPOCalendar() {
   const [isLoading, setIsLoading] = React.useState(true);
   const [events, setEvents] = React.useState<Array<ICalendarEvent>>([]);
 
@@ -50,11 +45,7 @@ export default function IPOCalendarPage() {
     loadData();
   }, []);
 
-  return (
-    <ErrorBoundary errorComponent={IPOCalendarError}>
-      <Calendar events={events} refreshData={loadData} isLoading={isLoading} />
-    </ErrorBoundary>
-  );
+  return <Calendar events={events} refreshData={loadData} isLoading={isLoading} />;
 }
 
 const getEventColor = (event: ICalendarEvent | IIPO) => {

@@ -1,15 +1,13 @@
-'use client';
-
 import React, { useState } from 'react';
 
-import { Box, Divider, Grid2, ToggleButton, ToggleButtonGroup } from '@mui/material';
+import { Box, Divider, Grid, ToggleButton, ToggleButtonGroup } from '@mui/material';
 import Card from '@mui/material/Card';
 import { default as MuiTable } from '@mui/material/Table';
 import TableBody from '@mui/material/TableBody';
 import TableContainer from '@mui/material/TableContainer';
 import TablePagination from '@mui/material/TablePagination';
 import Case from 'case';
-import { useRouter } from 'next/navigation';
+import { useNavigate } from 'react-router-dom';
 
 import { HoldingTypesEnum } from '@/lib/enums';
 import { IAccount } from '@/models/AccountsModel';
@@ -40,7 +38,7 @@ type TableProps<T> = {
 };
 
 export default function Table<T>({ rows, columns, accounts, refreshData, isLoading }: TableProps<T>) {
-  const router = useRouter();
+  const navigate = useNavigate();
   const [page, setPage] = useState(0);
   const [order, setOrder] = useState<'asc' | 'desc'>('asc');
   const [orderBy, setOrderBy] = useState('totalGLPercent');
@@ -59,7 +57,7 @@ export default function Table<T>({ rows, columns, accounts, refreshData, isLoadi
   };
 
   const goToResearchPage = (symbol: string) => {
-    router.push(`/research?searchText=${symbol}`);
+    navigate(`/research?searchText=${symbol}`);
   };
 
   // biome-ignore lint/correctness/noUnusedVariables: <explanation>
@@ -99,13 +97,13 @@ export default function Table<T>({ rows, columns, accounts, refreshData, isLoadi
 
   return (
     <>
-      <Grid2 container spacing={1}>
+      <Grid container spacing={1}>
         {totals.map((total) => (
-          <Grid2 key={total.accountId} size={{ xs: 12, sm: 6, md: 4, lg: 2.5 }}>
+          <Grid key={total.accountId} size={{ xs: 12, sm: 6, md: 4, lg: 2.5 }}>
             <TotalCard total={total} />
-          </Grid2>
+          </Grid>
         ))}
-      </Grid2>
+      </Grid>
 
       <Box sx={{ mt: 2, mb: 1, display: 'flex', justifyContent: 'space-between' }}>
         <ToggleButtonGroup

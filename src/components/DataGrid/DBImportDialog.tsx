@@ -146,7 +146,7 @@ export default function ImportDialog({
             sx={{
               border: `1px dashed ${theme.palette.grey[700]}`,
               p: 2,
-              backgroundColor: theme.palette.grey[850],
+              backgroundColor: theme.palette.grey[900],
               borderRadius: '8px',
               color: theme.palette.grey[300],
               cursor: 'pointer',
@@ -156,9 +156,20 @@ export default function ImportDialog({
               textAlign: 'center',
             }}
             onClick={() => hiddenFileInput.current?.click()}
-            {...getRootProps()}
+            {...(() => {
+              const { ref, ...rootProps } = getRootProps();
+              // eslint-disable-next-line @typescript-eslint/no-unused-vars
+              const { style, ...rest } = rootProps;
+              return rest;
+            })()}
           >
-            <input {...getInputProps()} />
+            <input
+              {...(() => {
+                // eslint-disable-next-line @typescript-eslint/no-unused-vars
+                const { style, ...inputProps } = getInputProps();
+                return inputProps;
+              })()}
+            />
 
             <Iconify icon="fluent-color:document-folder-20" sx={{ height: 72, width: 72 }} />
 

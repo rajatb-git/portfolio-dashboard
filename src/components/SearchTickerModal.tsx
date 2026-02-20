@@ -14,7 +14,7 @@ import {
 } from '@mui/material';
 import { Iconify } from './Iconify';
 import theme from './ThemeRegistry/theme';
-import { redirect } from 'next/navigation';
+import { useNavigate } from 'react-router-dom';
 import LocalStorageArray from '@/utils/localStorageArray';
 
 type SearchTickerModalProps = {
@@ -25,12 +25,14 @@ type SearchTickerModalProps = {
 };
 
 export function SearchTickerModal({ refreshSearchHistory, searchHistory, isOpen, onClose }: SearchTickerModalProps) {
+  const navigate = useNavigate();
+
   const onSearchEnter = (searchText: string) => {
     onClose();
 
     LocalStorageArray.add('searchText', searchText.toUpperCase());
 
-    redirect(`/research?searchText=${searchText}`);
+    navigate(`/research?searchText=${searchText}`);
   };
 
   const removeItemFromSearchHistory = (searchText: string) => {

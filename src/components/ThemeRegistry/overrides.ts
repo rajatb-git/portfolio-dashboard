@@ -117,13 +117,7 @@ export function overrides(theme: Theme) {
     MuiButton: {
       styleOverrides: {
         root: {
-          variants: [
-            {
-              style: {
-                textTransform: 'none',
-              },
-            },
-          ],
+          textTransform: 'none',
         },
       },
     },

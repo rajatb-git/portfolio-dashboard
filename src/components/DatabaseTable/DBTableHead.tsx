@@ -23,7 +23,7 @@ export default function TableHead({ order, orderBy, columnsConfig, onRequestSort
   };
 
   return (
-    <MuiTableHead sx={{ backgroundColor: theme.palette.background.neutral }}>
+    <MuiTableHead sx={{ backgroundColor: theme.palette.background.default }}>
       <TableRow>
         {columnsConfig.map((x) => (
           <TableCell

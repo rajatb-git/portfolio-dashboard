@@ -1,20 +1,15 @@
-'use client';
-
 import * as React from 'react';
 
 import { Box, Button, MenuItem, Select } from '@mui/material';
-import { ErrorBoundary } from 'next/dist/client/components/error-boundary';
 import { toast } from 'react-toastify';
 
 import apis from '@/api';
 import { Iconify } from '@/components/Iconify';
 import { LogsViewer } from '@/components/LogViewer';
 
-import LogsError from './error';
-
 type File = 'error' | 'combined';
 
-export default function LogsPage() {
+export default function Settings() {
   const [isLoading, setIsLoading] = React.useState(true);
   const [file, setFile] = React.useState<File>('combined');
   const [logData, setLogData] = React.useState('');
@@ -56,7 +51,7 @@ export default function LogsPage() {
   }, [file]);
 
   return (
-    <ErrorBoundary errorComponent={LogsError}>
+    <>
       <Box sx={{ display: 'flex', direction: 'row', justifyContent: 'space-between', mb: 2 }}>
         <Select value={file} onChange={(e) => setFile(e.target.value as File)} size="small" disabled={isLoading}>
           <MenuItem value="error">error.log</MenuItem>
@@ -86,6 +81,6 @@ export default function LogsPage() {
       </Box>
 
       <LogsViewer data={logData} />
-    </ErrorBoundary>
+    </>
   );
 }

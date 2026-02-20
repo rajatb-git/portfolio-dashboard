@@ -1,10 +1,7 @@
-'use client';
-
 import * as React from 'react';
 
 import { Box, Button, MenuItem, Select, Typography } from '@mui/material';
 import { GridColDef } from '@mui/x-data-grid';
-import { ErrorBoundary } from 'next/dist/client/components/error-boundary';
 import { toast } from 'react-toastify';
 
 import apis from '@/api';
@@ -14,8 +11,6 @@ import { Iconify } from '@/components/Iconify';
 import { IHoldings } from '@/models/HoldingsModel';
 import { ITransaction } from '@/models/TransactionsModel';
 import { IAccount } from '@/models/AccountsModel';
-
-import DatabaseError from './error';
 
 const columns: { [collection: string]: Array<GridColDef> } = {
   holdings: [
@@ -115,7 +110,7 @@ const columns: { [collection: string]: Array<GridColDef> } = {
   ],
 };
 
-export default function DataPage() {
+export default function Database() {
   const [isLoading, setIsLoading] = React.useState(true);
   const [activeCollection, setActiveCollection] = React.useState<'accounts' | 'transactions' | 'holdings'>('holdings');
   const [records, setRecords] = React.useState<Array<IAccount | IHoldings | ITransaction>>([]);
@@ -176,7 +171,7 @@ export default function DataPage() {
   }, [activeCollection]);
 
   return (
-    <ErrorBoundary errorComponent={DatabaseError}>
+    <>
       <Box sx={{ display: 'flex', direction: 'row', justifyContent: 'flex-start', mb: 2, gap: '8px' }}>
         <Typography variant="h6" flexGrow={1}>
           Database
@@ -220,6 +215,6 @@ export default function DataPage() {
         accountsData={accountsData}
         refreshPage={loadData}
       />
-    </ErrorBoundary>
+    </>
   );
 }

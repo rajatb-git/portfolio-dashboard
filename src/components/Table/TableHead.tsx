@@ -21,7 +21,7 @@ export default function TableHead({ order, orderBy, headLabel, onRequestSort }: 
   };
 
   return (
-    <MuiTableHead sx={{ backgroundColor: theme.palette.background.neutral }}>
+    <MuiTableHead sx={{ backgroundColor: theme.palette.background.default }}>
       <TableRow>
         {headLabel.map((headCell) => (
           <TableCell

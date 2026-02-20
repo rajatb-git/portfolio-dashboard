@@ -157,15 +157,7 @@ export default function GenericGrid(props: {
 
         if (isInEditMode) {
           return [
-            <GridActionsCellItem
-              icon={<SaveIcon />}
-              label="Save"
-              key={row.id}
-              sx={{
-                color: 'primary.main',
-              }}
-              onClick={handleSaveClick(row.id)}
-            />,
+            <GridActionsCellItem icon={<SaveIcon />} label="Save" key={row.id} onClick={handleSaveClick(row.id)} />,
             <GridActionsCellItem
               icon={<Iconify icon="fa:close" />}
               key={row.id}

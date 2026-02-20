@@ -1,5 +1,3 @@
-'use client';
-
 import * as React from 'react';
 
 import { toast } from 'react-toastify';
@@ -10,7 +8,7 @@ import DashboardTable from '@/components/DashboardTable/DashTable';
 import { IAccount } from '@/models/AccountsModel';
 import { Column } from '@/types';
 
-export default function DashboardPage() {
+export default function Dashboard() {
   const [isLoading, setIsLoading] = React.useState(true);
   const [accounts, setAccounts] = React.useState<Array<IAccount>>([]);
   const [dashboardData, setDashboardData] = React.useState<Array<HoldingAggregate>>([]);

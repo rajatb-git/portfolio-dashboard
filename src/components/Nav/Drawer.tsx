@@ -1,12 +1,10 @@
-'use client';
-
 import * as React from 'react';
 
-import { Box, Toolbar, Button, IconButton, Link } from '@mui/material';
+import { Box, Toolbar, Button, IconButton } from '@mui/material';
 import MuiAppBar from '@mui/material/AppBar';
 import { default as MuiDrawer } from '@mui/material/Drawer';
 import List from '@mui/material/List';
-import { usePathname } from 'next/navigation';
+import { Link } from 'react-router-dom';
 
 import { DRAWER_WIDTH, NAV_CONFIG, NAV_SETTINGS_CONFIG } from '@/config';
 
@@ -17,7 +15,6 @@ import theme from '../ThemeRegistry/theme';
 import LocalStorageArray from '@/utils/localStorageArray';
 
 export default function Drawer() {
-  const pathname = usePathname();
   const [showSearch, setShowSearch] = React.useState(false);
   const [searchHistory, setSearchHistory] = React.useState<Array<string> | null>(
     LocalStorageArray.getAll('searchText')
@@ -67,7 +64,7 @@ export default function Drawer() {
             <Box
               sx={{
                 ml: 2,
-                border: `2px solid ${theme.palette.grey[850]}`,
+                border: `2px solid ${theme.palette.grey[900]}`,
                 borderRadius: '4px',
                 p: '2px 4px',
                 lineHeight: 1,
@@ -77,7 +74,7 @@ export default function Drawer() {
             </Box>
           </Button>
 
-          <IconButton component={Link} href={NAV_SETTINGS_CONFIG.href}>
+          <IconButton component={Link} to={NAV_SETTINGS_CONFIG.href}>
             <Iconify icon={NAV_SETTINGS_CONFIG.icon} />
           </IconButton>
         </Toolbar>
@@ -103,7 +100,7 @@ export default function Drawer() {
       >
         <List sx={{ display: 'flex', flexDirection: 'column', width: DRAWER_WIDTH }}>
           {NAV_CONFIG.map(({ href, icon, text }) => (
-            <SideNavItem currentPath={pathname} key={text} href={href} icon={icon} text={text} />
+            <SideNavItem key={text} href={href} icon={icon} text={text} />
           ))}
 
           <Box sx={{ flexGrow: 1 }}> </Box>

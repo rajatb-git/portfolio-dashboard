@@ -1,6 +1,6 @@
 // API Config
 // ---------------------------------------------
-export const DB_HOST = process.env.DB_HOST || 'http://localhost:3001';
+export const DB_HOST = import.meta.env.VITE_DB_HOST || 'http://localhost:3001';
 
 // NAV
 // ---------------------------------------------

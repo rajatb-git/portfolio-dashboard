@@ -1,27 +1,25 @@
-'use client';
-
 import * as React from 'react';
 
 import apis from '@/api';
 import { IMarketNews } from '@/models/MarketNews';
 import { IPriceStore } from '@/models/PriceStoreModel';
 import { IRecommendation } from '@/models/RecommendationModel';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'react-router-dom';
 import { CompanyProfile } from '@/models/CompanyProfileModel';
 import theme from '@/components/ThemeRegistry/theme';
 import { fnCurrency } from '@/utils/formatNumber';
-import { Avatar, Box, Grid2, IconButton, Tooltip, Typography } from '@mui/material';
+import { Avatar, Box, Grid, IconButton, Tooltip, Typography } from '@mui/material';
 import moment from 'moment';
 import { toast } from 'react-toastify';
-import ResearchDetailsCard from './ResearchDetailsCard';
-import ResearchNewsCard from './ResearchNewsCard';
+import ResearchDetailsCard from '@/components/Research/ResearchDetailsCard';
+import ResearchNewsCard from '@/components/Research/ResearchNewsCard';
 import { Iconify } from '@/components/Iconify';
 import RecommendationDonutGraphMui from '@/components/RecommendationDonutGraphMui';
 import { PriceHistoryGraph } from '@/components/PriceHistoryGraph';
 import LocalStorageArray from '@/utils/localStorageArray';
 
 function Research() {
-  const params = useSearchParams();
+  const [searchParams] = useSearchParams();
 
   const [_isPriceLoading, setIsPriceLoading] = React.useState(true);
   const [isRecommendationLoading, setIsRecommendationLoading] = React.useState(true);
@@ -32,7 +30,7 @@ function Research() {
   const [price, setPrice] = React.useState<IPriceStore>();
   const [recommendation, setRecommendation] = React.useState<IRecommendation>();
   const [news, setNews] = React.useState<Array<IMarketNews>>([]);
-  const [searchText, setSearchText] = React.useState(params.get('searchText')?.toUpperCase() || '');
+  const [searchText, setSearchText] = React.useState(searchParams.get('searchText')?.toUpperCase() || '');
 
   const getResearchData = (searchTicker: string) => {
     if (searchTicker && searchTicker.length >= 2) {
@@ -93,10 +91,10 @@ function Research() {
   };
 
   React.useEffect(() => {
-    const searchTicker = params.get('searchText')?.toUpperCase() || '';
+    const searchTicker = searchParams.get('searchText')?.toUpperCase() || '';
     setSearchText(searchTicker);
     getResearchData(searchTicker);
-  }, [params]);
+  }, [searchParams]);
 
   return (
     <>
@@ -147,28 +145,28 @@ function Research() {
       </Box>
 
       {/* root */}
-      <Grid2 container direction="column" spacing={2}>
+      <Grid container direction="column" spacing={2}>
         {/* row 1 */}
-        <Grid2 size={{ xs: 12 }} direction="row" container spacing={2}>
+        <Grid size={{ xs: 12 }} direction="row" container spacing={2}>
           {/* row 1 col 1 */}
-          <Grid2 size={{ sm: 12, md: 6 }} container direction="column" spacing={2}>
-            <Grid2>
+          <Grid size={{ sm: 12, md: 6 }} container direction="column" spacing={2}>
+            <Grid>
               <ResearchDetailsCard companyProfile={companyProfile} isCompanyProfileLoading={isCompanyProfileLoading} />
-            </Grid2>
-            <Grid2>
+            </Grid>
+            <Grid>
               <RecommendationDonutGraphMui recommendation={recommendation} isLoading={isRecommendationLoading} />
-            </Grid2>
-          </Grid2>
+            </Grid>
+          </Grid>
           {/* row 1 col 2 */}
-          <Grid2 direction="row" size={{ sm: 12, md: 6 }}>
+          <Grid direction="row" size={{ sm: 12, md: 6 }}>
             <ResearchNewsCard news={news} isNewsLoading={isNewsLoading} />
-          </Grid2>
-        </Grid2>
+          </Grid>
+        </Grid>
         {/* row 2 */}
-        <Grid2 size={{ xs: 12 }}>
+        <Grid size={{ xs: 12 }}>
           <PriceHistoryGraph symbol={searchText} />
-        </Grid2>
-      </Grid2>
+        </Grid>
+      </Grid>
     </>
   );
 }

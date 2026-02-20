@@ -2,15 +2,16 @@ import React from 'react';
 
 import { ListItem, ListItemButton, ListItemIcon, Tooltip, Typography } from '@mui/material';
 import { motion } from 'framer-motion';
-import Link from 'next/link';
+import { Link, useLocation } from 'react-router-dom';
 
 import { Iconify } from '../Iconify';
 import theme from '../ThemeRegistry/theme';
 
-type SideNavItemProps = { href: string; currentPath: string; icon: string; text: string };
+type SideNavItemProps = { href: string; icon: string; text: string };
 
-export default function SideNavItem({ href, currentPath, icon, text }: SideNavItemProps) {
-  const active = currentPath === href;
+export default function SideNavItem({ href, icon, text }: SideNavItemProps) {
+  const location = useLocation();
+  const active = location.pathname === href;
 
   return (
     <ListItem
@@ -24,7 +25,7 @@ export default function SideNavItem({ href, currentPath, icon, text }: SideNavIt
       <Tooltip title={text} placement="right">
         <ListItemButton
           component={Link}
-          href={href}
+          to={href}
           sx={{
             justifyContent: 'center',
             margin: active ? '0px' : '6px',
