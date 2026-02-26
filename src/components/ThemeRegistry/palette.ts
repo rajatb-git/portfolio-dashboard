@@ -23,11 +23,11 @@ const GREY = {
 };
 
 const PRIMARY = {
-  lighter: '#D0ECFE',
-  light: '#73BAFB',
-  main: '#1877F2',
-  dark: '#0C44AE',
-  darker: '#042174',
+  lighter: '#dbeafe',
+  light: '#93c5fd',
+  main: '#3b82f6',
+  dark: '#1d4ed8',
+  darker: '#1e3a8a',
   contrastText: '#FFFFFF',
 };
 
@@ -85,7 +85,7 @@ const COMMON = {
   warning: WARNING,
   error: ERROR,
   grey: GREY,
-  divider: alpha(GREY[500], 0.24),
+  divider: 'rgba(255,255,255,0.07)',
   action: {
     hover: alpha(GREY[500], 0.08),
     selected: alpha(GREY[500], 0.16),
@@ -117,18 +117,20 @@ export default function palette(themeMode: 'light' | 'dark') {
     ...COMMON,
     mode: 'dark',
     text: {
-      primary: '#FFFFFF',
-      secondary: GREY[500],
-      disabled: GREY[600],
+      primary: '#e2e8f0',
+      secondary: '#94a3b8',
+      disabled: '#475569',
     },
     background: {
-      paper: GREY[800],
-      default: '#000000',
-      neutral: alpha(GREY[500], 0.16),
+      paper: '#0d1929',
+      default: '#060c18',
+      neutral: alpha(GREY[500], 0.10),
     },
     action: {
       ...COMMON.action,
-      active: GREY[500],
+      active: GREY[400],
+      hover: alpha(GREY[500], 0.06),
+      selected: alpha(GREY[500], 0.12),
     },
   } as const;
 

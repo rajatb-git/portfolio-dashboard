@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 
-import { Box, Divider, Grid, ToggleButton, ToggleButtonGroup } from '@mui/material';
+import { Alert, Box, Divider, Grid, ToggleButton, ToggleButtonGroup } from '@mui/material';
 import Card from '@mui/material/Card';
 import { default as MuiTable } from '@mui/material/Table';
 import TableBody from '@mui/material/TableBody';
@@ -9,6 +9,8 @@ import TablePagination from '@mui/material/TablePagination';
 import Case from 'case';
 import { useNavigate } from 'react-router-dom';
 
+import { HoldingAggregate } from '@/api/dashboard';
+import BuySellDialog from '@/components/BuySellDialog';
 import { HoldingTypesEnum } from '@/lib/enums';
 import { IAccount } from '@/models/AccountsModel';
 import { Column } from '@/types';
@@ -20,7 +22,6 @@ import { applyFilter, getComparator } from './dashTableUtils';
 import TableNoData from '../Table/TableNoData';
 import { TableSkeleton } from '../Table/TableSkeleton';
 import TotalCard from '../TotalCard';
-import theme from '../ThemeRegistry/theme';
 
 export type Total = {
   accountId: string;
@@ -46,6 +47,8 @@ export default function Table<T>({ rows, columns, accounts, refreshData, isLoadi
   const [rowsPerPage, setRowsPerPage] = useState(50);
   const [filterType, setFilterType] = useState<string>('all');
   const [filterAccount, setFilterAccount] = useState('all');
+  const [tradeHolding, setTradeHolding] = useState<HoldingAggregate | null>(null);
+  const [tradeOpen, setTradeOpen] = useState(false);
 
   // biome-ignore lint/correctness/noUnusedVariables: <explanation>
   const handleSort = (event: any, id: string) => {
@@ -58,6 +61,11 @@ export default function Table<T>({ rows, columns, accounts, refreshData, isLoadi
 
   const goToResearchPage = (symbol: string) => {
     navigate(`/research?searchText=${symbol}`);
+  };
+
+  const handleTrade = (holding: HoldingAggregate) => {
+    setTradeHolding(holding);
+    setTradeOpen(true);
   };
 
   // biome-ignore lint/correctness/noUnusedVariables: <explanation>
@@ -93,6 +101,10 @@ export default function Table<T>({ rows, columns, accounts, refreshData, isLoadi
     filterType,
   });
 
+  const nearTargetCount = (rows as HoldingAggregate[]).filter(
+    (r) => r.targetPrice && r.currentPrice && Math.abs(r.currentPrice - r.targetPrice) / r.targetPrice <= 0.05
+  ).length;
+
   const notFound = !dataFiltered.length;
 
   return (
@@ -105,62 +117,48 @@ export default function Table<T>({ rows, columns, accounts, refreshData, isLoadi
         ))}
       </Grid>
 
-      <Box sx={{ mt: 2, mb: 1, display: 'flex', justifyContent: 'space-between' }}>
+      {nearTargetCount > 0 && (
+        <Alert
+          severity="warning"
+          sx={{ mt: 2, fontSize: '0.8rem', py: 0.5, '& .MuiAlert-icon': { fontSize: '1.1rem' } }}
+        >
+          {nearTargetCount} holding{nearTargetCount > 1 ? 's are' : ' is'} within 5% of target price
+        </Alert>
+      )}
+
+      <Box sx={{ mt: 2, mb: 1.5, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
         <ToggleButtonGroup
-          color="warning"
           size="small"
           value={filterType}
           exclusive
           onChange={handleTypeFilterChange}
           aria-label="type-filter"
         >
-          <ToggleButton value="all" sx={{ mx: 1, border: '0 !important', borderRadius: '4px !important', p: 0.5 }}>
-            All
-          </ToggleButton>
-
+          <ToggleButton value="all">All</ToggleButton>
           {Object.values(HoldingTypesEnum).map((x) => (
-            <ToggleButton
-              key={x}
-              value={x}
-              sx={{ mx: 1, border: '0 !important', borderRadius: '4px !important', p: 0.5 }}
-            >
+            <ToggleButton key={x} value={x}>
               {Case.capital(x)}
             </ToggleButton>
           ))}
         </ToggleButtonGroup>
 
         <ToggleButtonGroup
-          color="warning"
           size="small"
           value={filterAccount}
           exclusive
           onChange={handleAccountFilterChange}
-          aria-label="type-filter"
+          aria-label="account-filter"
         >
-          <ToggleButton
-            value="all"
-            sx={{ mx: 1, border: '0 !important', borderRadius: '4px !important', py: 0, px: 0.5 }}
-          >
-            All
-          </ToggleButton>
-
+          <ToggleButton value="all">All Accounts</ToggleButton>
           {accounts.map((x) => (
-            <ToggleButton
-              key={x.id}
-              value={x.id}
-              sx={{ mx: 1, border: '0 !important', borderRadius: '4px !important', py: 0, px: 0.5 }}
-            >
+            <ToggleButton key={x.id} value={x.id}>
               {x.name}
             </ToggleButton>
           ))}
         </ToggleButtonGroup>
       </Box>
 
-      <Card
-        elevation={3}
-        sx={{ backgroundImage: 'none', backgroundColor: 'initial', border: '2px solid rgba(255,255,255,0.2)' }}
-        variant="outlined"
-      >
+      <Card elevation={0}>
         <TableToolbar
           accounts={accounts}
           filterName={filterName}
@@ -186,7 +184,14 @@ export default function Table<T>({ rows, columns, accounts, refreshData, isLoadi
               ) : (
                 dataFiltered
                   .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-                  .map((row: any) => <DashTableRow key={row.id} row={row} onRowClick={goToResearchPage} />)
+                  .map((row: any) => (
+                    <DashTableRow
+                      key={row.id}
+                      row={row}
+                      onRowClick={goToResearchPage}
+                      onTrade={handleTrade}
+                    />
+                  ))
               )}
 
               {notFound && !isLoading && <TableNoData query={filterName} />}
@@ -197,7 +202,6 @@ export default function Table<T>({ rows, columns, accounts, refreshData, isLoadi
         <Divider />
 
         <TablePagination
-          sx={{ backgroundColor: theme.palette.grey[900] }}
           page={page}
           component="div"
           count={dataFiltered.length}
@@ -207,6 +211,16 @@ export default function Table<T>({ rows, columns, accounts, refreshData, isLoadi
           onRowsPerPageChange={handleChangeRowsPerPage}
         />
       </Card>
+
+      {/* Per-row trade dialog — key forces remount so initialValues are fresh */}
+      <BuySellDialog
+        key={tradeHolding?.id ?? 'trade'}
+        open={tradeOpen}
+        initialValues={tradeHolding ?? undefined}
+        handleDialogClose={() => setTradeOpen(false)}
+        refreshData={refreshData}
+        accounts={accounts}
+      />
     </>
   );
 }

@@ -1,10 +1,11 @@
-import { Avatar, Tooltip } from '@mui/material';
-import { blue, green, grey, red } from '@mui/material/colors';
+import { Avatar, Chip, IconButton, Tooltip } from '@mui/material';
+import { blue, green, red } from '@mui/material/colors';
 import Stack from '@mui/material/Stack';
 import { default as MuiTableRow } from '@mui/material/TableRow';
 import Typography from '@mui/material/Typography';
 
 import { HoldingAggregate } from '@/api/dashboard';
+import { Iconify } from '@/components/Iconify';
 import Label from '@/components/Label';
 import { TableCell } from '@/components/Table/TableCell';
 import { fnCurrency } from '@/utils/formatNumber';
@@ -12,9 +13,17 @@ import { fnCurrency } from '@/utils/formatNumber';
 type TableRowProps = {
   row: HoldingAggregate;
   onRowClick: (symbol: string) => void;
+  onTrade: (row: HoldingAggregate) => void;
 };
 
-export default function DashTableRow({ row, onRowClick }: TableRowProps) {
+function isNearTarget(row: HoldingAggregate): boolean {
+  if (!row.targetPrice || !row.currentPrice) return false;
+  return Math.abs(row.currentPrice - row.targetPrice) / row.targetPrice <= 0.05;
+}
+
+export default function DashTableRow({ row, onRowClick, onTrade }: TableRowProps) {
+  const nearTarget = isNearTarget(row);
+
   return (
     <MuiTableRow
       hover
@@ -22,17 +31,37 @@ export default function DashTableRow({ row, onRowClick }: TableRowProps) {
       onClick={() => onRowClick(row.symbol)}
       sx={{
         cursor: 'pointer',
+        transition: 'background-color 0.1s ease',
         '&:hover': {
-          backgroundColor: `${grey[900]} !important`,
+          backgroundColor: 'rgba(59,130,246,0.05) !important',
         },
+        '&:last-child td': { borderBottom: 'none' },
       }}
     >
       <TableCell component="th" scope="row">
         <Stack direction="column" spacing={0}>
-          <Typography variant="subtitle2" noWrap>
-            {row.symbol}
-          </Typography>
-
+          <Stack direction="row" alignItems="center" spacing={0.75}>
+            <Typography variant="subtitle2" noWrap>
+              {row.symbol}
+            </Typography>
+            {nearTarget && (
+              <Tooltip title={`Target: ${fnCurrency(row.targetPrice)}`}>
+                <Chip
+                  label="Near Target"
+                  size="small"
+                  sx={{
+                    height: 18,
+                    fontSize: '0.6rem',
+                    fontWeight: 700,
+                    bgcolor: 'rgba(251,191,36,0.15)',
+                    color: '#fbbf24',
+                    border: '1px solid rgba(251,191,36,0.3)',
+                    '& .MuiChip-label': { px: 0.75 },
+                  }}
+                />
+              </Tooltip>
+            )}
+          </Stack>
           <Typography variant="caption" noWrap>
             {row.qty} {row.type === 'crypto' ? 'coins' : 'shares'}
           </Typography>
@@ -123,6 +152,21 @@ export default function DashTableRow({ row, onRowClick }: TableRowProps) {
             </Tooltip>
           </>
         )}
+      </TableCell>
+
+      <TableCell align="center" sx={{ width: 48, px: 0 }}>
+        <Tooltip title="Trade">
+          <IconButton
+            size="small"
+            onClick={(e) => {
+              e.stopPropagation();
+              onTrade(row);
+            }}
+            sx={{ color: 'text.disabled', '&:hover': { color: 'primary.main' } }}
+          >
+            <Iconify icon="fa6-solid:right-left" width={14} />
+          </IconButton>
+        </Tooltip>
       </TableCell>
     </MuiTableRow>
   );

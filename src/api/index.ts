@@ -4,6 +4,7 @@ import LiveAPI from './live';
 import LogsAPI from './logs';
 import TransactionsAPI from './transactions';
 import AccountsAPI from './account';
+import WatchlistAPI from './watchlist';
 
 const apis = {
   dashboard: new DashboardAPI(),
@@ -12,6 +13,7 @@ const apis = {
   accounts: new AccountsAPI(),
   transactions: new TransactionsAPI(),
   logs: new LogsAPI(),
+  watchlist: new WatchlistAPI(),
 };
 
 export default apis;

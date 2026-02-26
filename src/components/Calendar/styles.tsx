@@ -52,15 +52,21 @@ export const StyledCalendar = styled('div')(({ theme }) => ({
   },
 
   '.fc-popover': {
-    border: '1px solid black',
+    border: '1px solid rgba(255,255,255,0.10)',
+    borderRadius: '10px',
+    overflow: 'hidden',
+    boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
     '.fc-popover-header': {
-      backgroundColor: 'black',
+      backgroundColor: '#0d1929',
+      padding: '8px 12px',
     },
     '.fc-popover-body': {
-      backgroundColor: theme.palette.grey[700],
+      backgroundColor: '#0f1d33',
+      padding: '6px 8px',
     },
     '.fc-popover-title': {
       ...theme.typography.caption,
+      fontWeight: 600,
     },
   },
 

@@ -6,16 +6,18 @@ export const DB_HOST = import.meta.env.VITE_DB_HOST || 'http://localhost:3001';
 // ---------------------------------------------
 export const NAV_CONFIG = [
   { text: 'Dashboard', href: '/dashboard', icon: 'streamline:dashboard-3-solid' },
+  { text: 'Analytics', href: '/analytics', icon: 'tabler:chart-line' },
   { text: 'Database', href: '/database', icon: 'iconoir:database-search' },
   { text: 'IPO Calendar', href: '/ipo-calendar', icon: 'tabler:calendar-dollar' },
   { text: 'Logs', href: '/logs', icon: 'radix-icons:file-text' },
 ];
 
-export const NAV_SETTINGS_CONFIG = { text: 'Setting', href: '/setting', icon: 'lets-icons:setting-line' };
+export const NAV_SETTINGS_CONFIG = { text: 'Settings', href: '/settings', icon: 'lets-icons:setting-line' };
 
 // APP Config
 // ---------------------------------------------
-export const DRAWER_WIDTH = 64;
+export const DRAWER_WIDTH = 220;
+export const DRAWER_COLLAPSED_WIDTH = 56;
 
 // Theme
 export const THEME_MODE = 'dark';

@@ -49,4 +49,29 @@ export default class LiveAPI {
         return response.data;
       })
       .catch(catchCustomError);
+
+  getStockMetrics = async (symbol: string): Promise<any> =>
+    axios(DB_HOST + `/live/metrics/${symbol}`)
+      .then((response) => response.data)
+      .catch(catchCustomError);
+
+  getStockPeers = async (symbol: string): Promise<string[]> =>
+    axios(DB_HOST + `/live/peers/${symbol}`)
+      .then((response) => response.data)
+      .catch(catchCustomError);
+
+  getEarnings = async (symbol: string): Promise<any> =>
+    axios(DB_HOST + `/live/earnings/${symbol}`)
+      .then((response) => response.data)
+      .catch(catchCustomError);
+
+  getEarningsHistory = async (symbol: string): Promise<any[]> =>
+    axios(DB_HOST + `/live/earnings-history/${symbol}`)
+      .then((response) => response.data)
+      .catch(catchCustomError);
+
+  getInsiderTransactions = async (symbol: string): Promise<any[]> =>
+    axios(DB_HOST + `/live/insider/${symbol}`)
+      .then((response) => response.data)
+      .catch(catchCustomError);
 }

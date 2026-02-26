@@ -1,4 +1,3 @@
-import theme from '@/components/ThemeRegistry/theme';
 import { IMarketNews } from '@/models/MarketNews';
 import { Box, Card, Divider, Link, List, ListItemButton, ListItemText, Skeleton, Typography } from '@mui/material';
 import moment from 'moment';
@@ -10,14 +9,16 @@ type Props = {
 
 export default function ResearchNewsCard({ news, isNewsLoading }: Props) {
   return (
-    <Card variant="outlined" sx={{ height: { sm: 400, md: 630 } }}>
-      <Typography variant="body1" sx={{ p: '8px 16px', color: 'text.secondary', fontWeight: 800 }}>
+    <Card variant="outlined" sx={{ width: '100%', maxHeight: 640, display: 'flex', flexDirection: 'column' }}>
+      <Typography variant="body1" sx={{ p: '8px 16px', color: 'text.secondary', fontWeight: 700, fontSize: '0.75rem', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
         News
       </Typography>
 
+      <Divider />
+
       {!isNewsLoading ? (
         news && (
-          <List sx={{ pt: 0 }}>
+          <List sx={{ pt: 0, overflow: 'auto', flexGrow: 1, minHeight: 0 }}>
             {news.map((x) => (
               <Box key={x.id}>
                 <ListItemButton
@@ -25,35 +26,41 @@ export default function ResearchNewsCard({ news, isNewsLoading }: Props) {
                   component={Link}
                   target="_blank"
                   rel="noreferrer"
-                  sx={{ flexDirection: 'column' }}
+                  sx={{
+                    flexDirection: 'column',
+                    alignItems: 'flex-start',
+                    py: 1.5,
+                    px: 2,
+                    '&:hover': { bgcolor: 'rgba(255,255,255,0.04)' },
+                  }}
                 >
-                  {/* {x.image && (
-                        <ListItemAvatar>
-                          <Avatar src={x.image} />
-                        </ListItemAvatar>
-                      )} */}
+                  <ListItemText
+                    primary={x.headline}
+                    secondary={x.summary}
+                    sx={{ alignSelf: 'flex-start', m: 0, mb: 0.75 }}
+                    slotProps={{
+                      primary: { sx: { fontSize: '0.875rem', fontWeight: 600, lineHeight: 1.4, color: 'text.primary' } },
+                      secondary: { sx: { fontSize: '0.78rem', lineHeight: 1.4, color: 'text.secondary', mt: 0.5, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' } },
+                    }}
+                  />
 
-                  <ListItemText primary={x.headline} secondary={x.summary} sx={{ alignSelf: 'flex-start' }} />
-
-                  <Box sx={{ display: 'flex', width: '100%' }}>
-                    <Typography variant="caption" sx={{ alignSelf: 'flex-start', color: theme.palette.grey[600] }}>
+                  <Box sx={{ display: 'flex', width: '100%', mt: 0.25 }}>
+                    <Typography variant="caption" sx={{ color: 'text.disabled', fontWeight: 500 }}>
                       {x.source}
                     </Typography>
-
-                    <Box sx={{ flexGrow: 1 }}></Box>
-
-                    <Typography variant="caption" sx={{ alignSelf: 'flex-end', color: theme.palette.grey[600] }}>
-                      {moment(x.datetime).format('lll')}
+                    <Box sx={{ flexGrow: 1 }} />
+                    <Typography variant="caption" sx={{ color: 'text.disabled' }}>
+                      {moment(x.datetime).format('MMM D, h:mm a')}
                     </Typography>
                   </Box>
                 </ListItemButton>
-                <Divider component="li" variant="middle" />
+                <Divider sx={{ opacity: 0.5 }} />
               </Box>
             ))}
           </List>
         )
       ) : (
-        <Skeleton variant="rectangular" height={200} />
+        <Skeleton variant="rectangular" height={200} sx={{ m: 2, borderRadius: 1 }} />
       )}
     </Card>
   );

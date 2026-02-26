@@ -10,10 +10,11 @@ type Props = {
 
 export default function ResearchDetailsCard({ companyProfile, isCompanyProfileLoading }: Props) {
   return (
-    <Card variant="outlined" sx={{ flexGrow: 1, height: 384 }}>
-      <Typography variant="body1" sx={{ p: '8px 16px', color: 'text.secondary', fontWeight: 800 }}>
+    <Card variant="outlined">
+      <Typography sx={{ p: '10px 16px', color: 'text.secondary', fontWeight: 700, fontSize: '0.72rem', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
         Details
       </Typography>
+      <Divider />
 
       <Box>
         {!isCompanyProfileLoading ? (
@@ -53,7 +54,7 @@ export default function ResearchDetailsCard({ companyProfile, isCompanyProfileLo
             </List>
           )
         ) : (
-          <Skeleton variant="rectangular" height={200} />
+          <Skeleton variant="rectangular" height={200} sx={{ m: 2, borderRadius: 1 }} />
         )}
       </Box>
     </Card>

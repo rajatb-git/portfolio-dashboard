@@ -28,6 +28,11 @@ export type HoldingAggregate = {
   strongSell: number;
 };
 
+export type PortfolioSnapshot = {
+  date: string; // YYYY-MM-DD
+  totalValue: number;
+};
+
 export class DashboardAPI {
   getDashboard = async (): Promise<Array<HoldingAggregate>> =>
     axios
@@ -35,5 +40,11 @@ export class DashboardAPI {
       .then((response) => {
         return response.data;
       })
+      .catch(catchCustomError);
+
+  getSnapshots = async (): Promise<Array<PortfolioSnapshot>> =>
+    axios
+      .get(DB_HOST + '/portfolio/snapshots')
+      .then((response) => response.data)
       .catch(catchCustomError);
 }

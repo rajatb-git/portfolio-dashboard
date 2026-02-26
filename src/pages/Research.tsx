@@ -6,17 +6,33 @@ import { IPriceStore } from '@/models/PriceStoreModel';
 import { IRecommendation } from '@/models/RecommendationModel';
 import { useSearchParams } from 'react-router-dom';
 import { CompanyProfile } from '@/models/CompanyProfileModel';
-import theme from '@/components/ThemeRegistry/theme';
 import { fnCurrency } from '@/utils/formatNumber';
-import { Avatar, Box, Grid, IconButton, Tooltip, Typography } from '@mui/material';
+import { Avatar, Box, Card, Chip, Divider, Grid, IconButton, Skeleton, Stack, Tooltip, Typography } from '@mui/material';
 import moment from 'moment';
 import { toast } from 'react-toastify';
 import ResearchDetailsCard from '@/components/Research/ResearchDetailsCard';
 import ResearchNewsCard from '@/components/Research/ResearchNewsCard';
+import ResearchMetricsCard from '@/components/Research/ResearchMetricsCard';
+import ResearchPeersCard from '@/components/Research/ResearchPeersCard';
+import ResearchEarningsHistoryCard from '@/components/Research/ResearchEarningsHistoryCard';
+import ResearchInsiderCard from '@/components/Research/ResearchInsiderCard';
 import { Iconify } from '@/components/Iconify';
 import RecommendationDonutGraphMui from '@/components/RecommendationDonutGraphMui';
 import { PriceHistoryGraph } from '@/components/PriceHistoryGraph';
 import LocalStorageArray from '@/utils/localStorageArray';
+
+function StatItem({ label, value }: { label: string; value?: string }) {
+  return (
+    <Box sx={{ textAlign: 'center', px: 1.5 }}>
+      <Typography sx={{ fontSize: '0.65rem', color: 'text.disabled', textTransform: 'uppercase', letterSpacing: '0.05em', mb: 0.25 }}>
+        {label}
+      </Typography>
+      <Typography sx={{ fontSize: '0.82rem', fontWeight: 600, color: 'text.secondary' }}>
+        {value ?? '—'}
+      </Typography>
+    </Box>
+  );
+}
 
 function Research() {
   const [searchParams] = useSearchParams();
@@ -25,11 +41,22 @@ function Research() {
   const [isRecommendationLoading, setIsRecommendationLoading] = React.useState(true);
   const [isNewsLoading, setIsNewsLoading] = React.useState(true);
   const [isCompanyProfileLoading, setIsCompanyProfileLoading] = React.useState(true);
+  const [isMetricsLoading, setIsMetricsLoading] = React.useState(true);
+  const [isPeersLoading, setIsPeersLoading] = React.useState(true);
+  const [isEarningsLoading, setIsEarningsLoading] = React.useState(true);
+  const [isEarningsHistoryLoading, setIsEarningsHistoryLoading] = React.useState(true);
+  const [isInsiderLoading, setIsInsiderLoading] = React.useState(true);
 
   const [companyProfile, setCompanyProfile] = React.useState<CompanyProfile | undefined>();
   const [price, setPrice] = React.useState<IPriceStore>();
   const [recommendation, setRecommendation] = React.useState<IRecommendation>();
   const [news, setNews] = React.useState<Array<IMarketNews>>([]);
+  const [metrics, setMetrics] = React.useState<any>();
+  const [peers, setPeers] = React.useState<string[]>([]);
+  const [earnings, setEarnings] = React.useState<any>(null);
+  const [earningsHistory, setEarningsHistory] = React.useState<any[]>([]);
+  const [insiderTransactions, setInsiderTransactions] = React.useState<any[]>([]);
+  const [watchlist, setWatchlist] = React.useState<string[]>([]);
   const [searchText, setSearchText] = React.useState(searchParams.get('searchText')?.toUpperCase() || '');
 
   const getResearchData = (searchTicker: string) => {
@@ -39,54 +66,65 @@ function Research() {
       setIsCompanyProfileLoading(true);
       apis.live
         .getCompanyProfile(searchTicker)
-        .then((res) => {
-          setCompanyProfile(res);
-        })
-        .catch((err) => {
-          toast.error(err.message);
-        })
-        .finally(() => {
-          setIsCompanyProfileLoading(false);
-        });
+        .then((res) => setCompanyProfile(res))
+        .catch((err) => toast.error(err.message))
+        .finally(() => setIsCompanyProfileLoading(false));
 
       setIsNewsLoading(true);
       apis.live
         .getLiveNews(searchTicker)
-        .then((res) => {
-          setNews(res);
-        })
-        .catch((err) => {
-          toast.error(err.message);
-        })
-        .finally(() => {
-          setIsNewsLoading(false);
-        });
+        .then((res) => setNews(res))
+        .catch((err) => toast.error(err.message))
+        .finally(() => setIsNewsLoading(false));
 
       setIsPriceLoading(true);
       apis.live
         .getLivePrice(searchTicker)
-        .then((res) => {
-          setPrice(res);
-        })
-        .catch((err) => {
-          toast.error(err.message);
-        })
-        .finally(() => {
-          setIsPriceLoading(false);
-        });
+        .then((res) => setPrice(res))
+        .catch((err) => toast.error(err.message))
+        .finally(() => setIsPriceLoading(false));
 
       setIsRecommendationLoading(true);
       apis.live
         .getLiveRecommendation(searchTicker)
-        .then((res) => {
-          setRecommendation(res);
-        })
-        .catch((err) => {
-          toast.error(err.message);
-        })
-        .finally(() => {
-          setIsRecommendationLoading(false);
-        });
+        .then((res) => setRecommendation(res))
+        .catch((err) => toast.error(err.message))
+        .finally(() => setIsRecommendationLoading(false));
+
+      setIsMetricsLoading(true);
+      apis.live
+        .getStockMetrics(searchTicker)
+        .then((res) => setMetrics(res))
+        .catch((err) => toast.error(err.message))
+        .finally(() => setIsMetricsLoading(false));
+
+      setIsPeersLoading(true);
+      apis.live
+        .getStockPeers(searchTicker)
+        .then((res) => setPeers(res))
+        .catch((err) => toast.error(err.message))
+        .finally(() => setIsPeersLoading(false));
+
+      setIsEarningsLoading(true);
+      apis.live
+        .getEarnings(searchTicker)
+        .then((res) => setEarnings(res))
+        .catch((err) => toast.error(err.message))
+        .finally(() => setIsEarningsLoading(false));
+
+      setIsEarningsHistoryLoading(true);
+      apis.live
+        .getEarningsHistory(searchTicker)
+        .then((res) => setEarningsHistory(res ?? []))
+        .catch(() => setEarningsHistory([]))
+        .finally(() => setIsEarningsHistoryLoading(false));
+
+      setIsInsiderLoading(true);
+      apis.live
+        .getInsiderTransactions(searchTicker)
+        .then((res) => setInsiderTransactions(res ?? []))
+        .catch(() => setInsiderTransactions([]))
+        .finally(() => setIsInsiderLoading(false));
     }
   };
 
@@ -96,78 +134,242 @@ function Research() {
     getResearchData(searchTicker);
   }, [searchParams]);
 
+  React.useEffect(() => {
+    apis.watchlist.getAll().then((items) => setWatchlist((items ?? []).map((i: any) => i.symbol))).catch(() => {});
+  }, []);
+
+  const isInWatchlist = watchlist.includes(searchText);
+
+  const handleWatchlistToggle = async () => {
+    if (isInWatchlist) {
+      await apis.watchlist.remove(searchText).catch(() => {});
+      setWatchlist((prev) => prev.filter((s) => s !== searchText));
+    } else {
+      await apis.watchlist.add(searchText).catch(() => {});
+      setWatchlist((prev) => [...prev, searchText]);
+    }
+  };
+
+  const isPositive = (price?.percentChange ?? 0) >= 0;
+
   return (
-    <>
-      <Box sx={{ display: 'flex', flexDirection: 'row', mb: 4 }}>
-        <Box sx={{ mr: 2 }}>
-          <Avatar
-            src={companyProfile?.logo}
-            alt={companyProfile?.name}
-            sx={{ border: `2px solid ${theme.palette.grey[500]}`, width: 56, height: 56 }}
-          />
-        </Box>
-
-        <Box>
-          <Typography variant="h6">
-            {companyProfile?.name} ({companyProfile?.ticker})
-          </Typography>
-
-          <Typography variant="h6">
-            {fnCurrency(price?.price)}
-
-            <Box
+    <Stack spacing={2}>
+      {/* ── Hero header card ── */}
+      <Card sx={{ p: 2.5 }}>
+        <Stack direction="row" spacing={2.5} alignItems="flex-start">
+          {/* Logo */}
+          {isCompanyProfileLoading ? (
+            <Skeleton variant="rounded" width={60} height={60} sx={{ borderRadius: '12px', flexShrink: 0 }} />
+          ) : (
+            <Avatar
+              src={companyProfile?.logo}
+              alt={companyProfile?.name}
+              variant="rounded"
               sx={{
-                color: price?.percentChange! > 0 ? theme.palette.success.main : theme.palette.error.main,
-                display: 'inline',
-                alignItems: 'center',
-                ml: 1,
+                width: 60,
+                height: 60,
+                borderRadius: '12px',
+                border: '1px solid rgba(255,255,255,0.10)',
+                bgcolor: 'rgba(255,255,255,0.06)',
+                flexShrink: 0,
               }}
-            >
-              ({price?.percentChange && price?.percentChange > 0 && '+'}
-              {price?.percentChange.toFixed(2)}%)
-            </Box>
-          </Typography>
-        </Box>
+            />
+          )}
 
-        <Box sx={{ flexGrow: 1 }}></Box>
+          {/* Name + price */}
+          <Box sx={{ flexGrow: 1, minWidth: 0 }}>
+            {isCompanyProfileLoading ? (
+              <Stack spacing={1}>
+                <Skeleton width={240} height={28} />
+                <Skeleton width={160} height={22} />
+              </Stack>
+            ) : (
+              <>
+                <Stack direction="row" alignItems="center" spacing={1} flexWrap="wrap" sx={{ mb: 0.75 }}>
+                  <Typography variant="h6" fontWeight={700} noWrap>
+                    {companyProfile?.name}
+                  </Typography>
+                  {companyProfile?.ticker && (
+                    <Chip
+                      label={companyProfile.ticker}
+                      size="small"
+                      sx={{
+                        height: 22,
+                        fontSize: '0.72rem',
+                        fontWeight: 700,
+                        bgcolor: 'rgba(59,130,246,0.14)',
+                        color: '#93c5fd',
+                        border: '1px solid rgba(59,130,246,0.30)',
+                        letterSpacing: '0.04em',
+                      }}
+                    />
+                  )}
+                  {companyProfile?.exchange && (
+                    <Chip
+                      label={companyProfile.exchange}
+                      size="small"
+                      sx={{
+                        height: 20,
+                        fontSize: '0.68rem',
+                        fontWeight: 500,
+                        bgcolor: 'rgba(255,255,255,0.06)',
+                        color: 'text.secondary',
+                        border: '1px solid rgba(255,255,255,0.08)',
+                      }}
+                    />
+                  )}
+                  {companyProfile?.industry && (
+                    <Chip
+                      label={companyProfile.industry}
+                      size="small"
+                      sx={{
+                        height: 20,
+                        fontSize: '0.68rem',
+                        fontWeight: 500,
+                        bgcolor: 'rgba(255,255,255,0.06)',
+                        color: 'text.secondary',
+                        border: '1px solid rgba(255,255,255,0.08)',
+                      }}
+                    />
+                  )}
+                </Stack>
 
-        <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'end' }}>
-          <Tooltip title="Refresh">
-            <IconButton color="primary" onClick={() => getResearchData(searchText)}>
-              <Iconify icon="mingcute:refresh-3-fill" width={32} />
-            </IconButton>
-          </Tooltip>
+                <Stack direction="row" alignItems="baseline" spacing={1.5}>
+                  <Typography sx={{ fontSize: '1.75rem', fontWeight: 700, lineHeight: 1 }}>
+                    {fnCurrency(price?.price)}
+                  </Typography>
+                  <Box
+                    sx={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 0.4,
+                      px: 0.9,
+                      py: 0.3,
+                      borderRadius: '6px',
+                      bgcolor: isPositive ? 'rgba(74,222,128,0.12)' : 'rgba(248,113,113,0.12)',
+                      border: `1px solid ${isPositive ? 'rgba(34,197,94,0.25)' : 'rgba(239,68,68,0.25)'}`,
+                    }}
+                  >
+                    <Iconify
+                      icon={isPositive ? 'eva:trending-up-fill' : 'eva:trending-down-fill'}
+                      width={14}
+                      sx={{ color: isPositive ? '#4ade80' : '#f87171' }}
+                    />
+                    <Typography
+                      sx={{
+                        fontSize: '0.875rem',
+                        fontWeight: 600,
+                        color: isPositive ? '#4ade80' : '#f87171',
+                      }}
+                    >
+                      {isPositive ? '+' : ''}
+                      {price?.percentChange?.toFixed(2)}%
+                    </Typography>
+                  </Box>
+                  {!!price?.change && (
+                    <Typography sx={{ fontSize: '0.82rem', color: isPositive ? '#4ade80' : '#f87171', fontWeight: 500 }}>
+                      ({isPositive ? '+' : ''}{fnCurrency(price.change)})
+                    </Typography>
+                  )}
+                </Stack>
+              </>
+            )}
+          </Box>
 
-          <Typography variant="caption" component="div" color="text.secondary" sx={{ textAlign: 'end' }}>
-            as of {moment(price?.priceDate).format('lll')}
-          </Typography>
-        </Box>
-      </Box>
+          {/* Refresh + watchlist + timestamp */}
+          <Stack alignItems="flex-end" spacing={0.5} sx={{ flexShrink: 0 }}>
+            <Stack direction="row" spacing={0.5}>
+              <Tooltip title={isInWatchlist ? 'Remove from Watchlist' : 'Add to Watchlist'}>
+                <IconButton
+                  size="small"
+                  onClick={handleWatchlistToggle}
+                  sx={{ color: isInWatchlist ? '#fbbf24' : 'text.disabled', '&:hover': { color: '#fbbf24' } }}
+                >
+                  <Iconify icon={isInWatchlist ? 'mdi:eye' : 'mdi:eye-outline'} width={18} />
+                </IconButton>
+              </Tooltip>
+              <Tooltip title="Refresh">
+                <IconButton
+                  size="small"
+                  onClick={() => getResearchData(searchText)}
+                  sx={{ color: 'primary.main' }}
+                >
+                  <Iconify icon="mingcute:refresh-3-fill" width={20} />
+                </IconButton>
+              </Tooltip>
+            </Stack>
+            <Typography variant="caption" color="text.disabled" sx={{ textAlign: 'right' }}>
+              as of {moment(price?.priceDate).format('MMM D, h:mm a')}
+            </Typography>
+          </Stack>
+        </Stack>
 
-      {/* root */}
-      <Grid container direction="column" spacing={2}>
-        {/* row 1 */}
-        <Grid size={{ xs: 12 }} direction="row" container spacing={2}>
-          {/* row 1 col 1 */}
-          <Grid size={{ sm: 12, md: 6 }} container direction="column" spacing={2}>
-            <Grid>
-              <ResearchDetailsCard companyProfile={companyProfile} isCompanyProfileLoading={isCompanyProfileLoading} />
-            </Grid>
-            <Grid>
-              <RecommendationDonutGraphMui recommendation={recommendation} isLoading={isRecommendationLoading} />
-            </Grid>
-          </Grid>
-          {/* row 1 col 2 */}
-          <Grid direction="row" size={{ sm: 12, md: 6 }}>
-            <ResearchNewsCard news={news} isNewsLoading={isNewsLoading} />
-          </Grid>
+        {/* Day stats row */}
+        {(price?.open || price?.dayHigh) && (
+          <>
+            <Divider sx={{ mt: 2, mb: 1.5 }} />
+            <Stack direction="row" divider={<Divider orientation="vertical" flexItem sx={{ opacity: 0.4 }} />}>
+              <StatItem label="Open" value={price?.open ? fnCurrency(price.open) : '—'} />
+              <StatItem label="High" value={price?.dayHigh ? fnCurrency(price.dayHigh) : '—'} />
+              <StatItem label="Low" value={price?.dayLow ? fnCurrency(price.dayLow) : '—'} />
+              <StatItem label="Prev Close" value={price?.prevClose ? fnCurrency(price.prevClose) : '—'} />
+            </Stack>
+          </>
+        )}
+      </Card>
+
+      {/* ── Row 1: Details + Recommendations | News ── */}
+      <Grid container spacing={2} alignItems="stretch">
+        <Grid size={{ xs: 12, md: 4 }} sx={{ display: 'flex' }}>
+          <Stack spacing={2} sx={{ width: '100%', height: '100%' }}>
+            <ResearchDetailsCard
+              companyProfile={companyProfile}
+              isCompanyProfileLoading={isCompanyProfileLoading}
+            />
+            <RecommendationDonutGraphMui
+              recommendation={recommendation}
+              isLoading={isRecommendationLoading}
+            />
+          </Stack>
         </Grid>
-        {/* row 2 */}
-        <Grid size={{ xs: 12 }}>
-          <PriceHistoryGraph symbol={searchText} />
+        <Grid size={{ xs: 12, md: 8 }} sx={{ display: 'flex' }}>
+          <ResearchNewsCard news={news} isNewsLoading={isNewsLoading} />
         </Grid>
       </Grid>
-    </>
+
+      {/* ── Row 2: Key Metrics | Peers + Earnings ── */}
+      <Grid container spacing={2} alignItems="stretch">
+        <Grid size={{ xs: 12, md: 8 }} sx={{ display: 'flex' }}>
+          <ResearchMetricsCard
+            metrics={metrics}
+            currentPrice={price?.price}
+            isLoading={isMetricsLoading}
+          />
+        </Grid>
+        <Grid size={{ xs: 12, md: 4 }} sx={{ display: 'flex' }}>
+          <ResearchPeersCard
+            peers={peers}
+            earnings={earnings}
+            currentSymbol={searchText}
+            isPeersLoading={isPeersLoading}
+            isEarningsLoading={isEarningsLoading}
+          />
+        </Grid>
+      </Grid>
+
+      {/* ── Row 3: Earnings History | Insider Transactions ── */}
+      <Grid container spacing={2} alignItems="stretch">
+        <Grid size={{ xs: 12, md: 6 }} sx={{ display: 'flex', flexDirection: 'column' }}>
+          <ResearchEarningsHistoryCard history={earningsHistory} isLoading={isEarningsHistoryLoading} />
+        </Grid>
+        <Grid size={{ xs: 12, md: 6 }} sx={{ display: 'flex', flexDirection: 'column' }}>
+          <ResearchInsiderCard transactions={insiderTransactions} isLoading={isInsiderLoading} />
+        </Grid>
+      </Grid>
+
+      {/* ── Price chart (full width) ── */}
+      <PriceHistoryGraph symbol={searchText} />
+    </Stack>
   );
 }
 

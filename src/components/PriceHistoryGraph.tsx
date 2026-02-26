@@ -92,23 +92,14 @@ export const PriceHistoryGraph = ({ symbol }: Props) => {
     <Card variant="outlined" sx={{ minWidth: 400 }}>
       <CardContent>
         <ToggleButtonGroup
-          color="primary"
           size="small"
           value={range}
           exclusive
           onChange={handleRangeChange}
           aria-label="Range"
-          sx={{ ml: 2, backgroundColor: theme.palette.background.paper }}
         >
           {RangeOptions.map((option) => (
-            <ToggleButton
-              key={option}
-              value={option}
-              sx={{
-                px: 1.5,
-                border: 'none !important',
-              }}
-            >
+            <ToggleButton key={option} value={option}>
               {option}
             </ToggleButton>
           ))}

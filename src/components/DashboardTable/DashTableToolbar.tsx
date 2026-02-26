@@ -38,26 +38,31 @@ export default function DashTableToolbar({ filterName, onFilterName, refreshData
         size="small"
         value={filterName}
         onChange={onFilterName}
-        placeholder="Search name..."
+        placeholder="Filter holdings..."
         startAdornment={
           <InputAdornment position="start">
-            <Iconify icon="eva:search-fill" sx={{ color: 'text.disabled' }} />
+            <Iconify icon="eva:search-fill" sx={{ color: 'text.disabled', width: 16, height: 16 }} />
           </InputAdornment>
         }
-        sx={{ fieldset: { border: '0 !important' }, pl: 0 }}
+        sx={{
+          fieldset: { border: '0 !important' },
+          pl: 0,
+          '& input': { fontSize: '0.875rem' },
+        }}
       />
 
       <Button
         size="small"
+        variant="outlined"
         onClick={openToggle}
-        sx={{ whiteSpace: 'nowrap' }}
-        startIcon={<Iconify icon="fa6-solid:right-left" />}
+        sx={{ whiteSpace: 'nowrap', borderColor: 'rgba(255,255,255,0.12)', color: 'text.secondary' }}
+        startIcon={<Iconify icon="fa6-solid:right-left" width={13} />}
       >
-        Buy / Sell
+        Trade
       </Button>
 
-      <IconButton onClick={refreshData}>
-        <Iconify icon="fa:refresh" />
+      <IconButton onClick={refreshData} size="small" sx={{ color: 'text.secondary' }}>
+        <Iconify icon="mingcute:refresh-3-fill" width={18} />
       </IconButton>
 
       <BuySellDialog handleDialogClose={closeToggle} open={toggleState} refreshData={refreshData} accounts={accounts} />

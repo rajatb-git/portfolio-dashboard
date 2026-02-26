@@ -1,65 +1,76 @@
 import React from 'react';
 
-import { ListItem, ListItemButton, ListItemIcon, Tooltip, Typography } from '@mui/material';
-import { motion } from 'framer-motion';
+import { Box, ListItem, ListItemButton, Tooltip, Typography } from '@mui/material';
 import { Link, useLocation } from 'react-router-dom';
 
 import { Iconify } from '../Iconify';
-import theme from '../ThemeRegistry/theme';
 
-type SideNavItemProps = { href: string; icon: string; text: string };
+type SideNavItemProps = { href: string; icon: string; text: string; collapsed?: boolean };
 
-export default function SideNavItem({ href, icon, text }: SideNavItemProps) {
+export default function SideNavItem({ href, icon, text, collapsed }: SideNavItemProps) {
   const location = useLocation();
   const active = location.pathname === href;
 
   return (
-    <ListItem
-      key={href}
-      disablePadding
-      sx={{ justifyContent: 'center' }}
-      component={motion.div}
-      whileHover={{ scale: 1.3 }}
-      whileTap={{ scale: 0.9 }}
-    >
-      <Tooltip title={text} placement="right">
+    <ListItem disablePadding sx={{ px: collapsed ? 0.75 : 1.5, mb: 0.25 }}>
+      <Tooltip title={collapsed ? text : ''} placement="right" arrow>
         <ListItemButton
           component={Link}
           to={href}
           sx={{
-            justifyContent: 'center',
-            margin: active ? '0px' : '6px',
-            ...(active && {
-              backgroundColor: theme.palette.grey[900],
-              color: theme.palette.primary.main,
-            }),
+            borderRadius: '8px',
+            px: collapsed ? 0 : 1.5,
+            py: 0.875,
+            gap: collapsed ? 0 : 1.25,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: collapsed ? 'center' : 'flex-start',
+            transition: 'background-color 0.15s ease, padding 0.2s ease',
+            position: 'relative',
+            ...(active
+              ? {
+                  backgroundColor: 'rgba(59,130,246,0.12)',
+                  '&:hover': { backgroundColor: 'rgba(59,130,246,0.18)' },
+                }
+              : {
+                  '&:hover': { backgroundColor: 'rgba(255,255,255,0.05)' },
+                }),
           }}
         >
-          <ListItemIcon
-            sx={{
-              minWidth: 'auto',
-              flexDirection: 'column',
-              alignItems: 'center',
-              ...(active && {
-                color: theme.palette.primary.main,
-              }),
-            }}
-          >
-            <Iconify icon={icon} width={active ? 30 : 26} />
-            <Typography
-              variant="caption"
+          {active && !collapsed && (
+            <Box
               sx={{
-                fontSize: '0.6rem',
-                fontWeight: '700',
-                maxWidth: '62px',
-                padding: '3px 1px 0px 1px',
-                textAlign: 'center',
-                lineHeight: '1.2',
+                position: 'absolute',
+                left: 0,
+                top: '22%',
+                height: '56%',
+                width: '3px',
+                borderRadius: '0 3px 3px 0',
+                backgroundColor: '#3b82f6',
+                boxShadow: '0 0 6px rgba(59,130,246,0.55)',
+              }}
+            />
+          )}
+
+          <Iconify
+            icon={icon}
+            width={18}
+            sx={{ color: active ? '#60a5fa' : '#64748b', flexShrink: 0 }}
+          />
+
+          {!collapsed && (
+            <Typography
+              sx={{
+                fontSize: '0.8125rem',
+                fontWeight: active ? 600 : 500,
+                color: active ? '#cbd5e1' : '#94a3b8',
+                letterSpacing: '-0.01em',
+                lineHeight: 1,
               }}
             >
               {text}
             </Typography>
-          </ListItemIcon>
+          )}
         </ListItemButton>
       </Tooltip>
     </ListItem>

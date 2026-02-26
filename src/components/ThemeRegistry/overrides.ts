@@ -51,7 +51,19 @@ export function overrides(theme: Theme) {
       styleOverrides: {
         root: {
           [`& .${outlinedInputClasses.notchedOutline}`]: {
-            borderWidth: '2px',
+            borderWidth: '1px',
+            borderColor: 'rgba(255,255,255,0.10)',
+          },
+          '&:hover': {
+            [`& .${outlinedInputClasses.notchedOutline}`]: {
+              borderColor: 'rgba(255,255,255,0.20)',
+            },
+          },
+          '&.Mui-focused': {
+            [`& .${outlinedInputClasses.notchedOutline}`]: {
+              borderColor: theme.palette.primary.main,
+              borderWidth: '1.5px',
+            },
           },
         },
       },
@@ -60,17 +72,29 @@ export function overrides(theme: Theme) {
       styleOverrides: {
         head: {
           color: theme.palette.text.secondary,
-          // backgroundColor: theme.palette.background.neutral,
+          backgroundColor: '#060c18',
+          fontSize: '0.72rem',
+          fontWeight: 600,
+          letterSpacing: '0.06em',
+          textTransform: 'uppercase',
+          borderBottom: '1px solid rgba(255,255,255,0.07)',
+        },
+        root: {
+          borderBottom: '1px solid rgba(255,255,255,0.05)',
+          padding: '10px 16px',
         },
       },
     },
     MuiTooltip: {
       styleOverrides: {
         tooltip: {
-          backgroundColor: theme.palette.grey[800],
+          backgroundColor: '#1e293b',
+          fontSize: '0.75rem',
+          border: '1px solid rgba(255,255,255,0.10)',
+          borderRadius: 8,
         },
         arrow: {
-          color: theme.palette.grey[800],
+          color: '#1e293b',
         },
       },
     },
@@ -88,13 +112,22 @@ export function overrides(theme: Theme) {
       styleOverrides: {
         root: {
           ...theme.typography.body2,
+          borderRadius: 6,
+          margin: '2px 6px',
+          '&:hover': {
+            backgroundColor: 'rgba(255,255,255,0.06)',
+          },
         },
       },
     },
     MuiCard: {
       styleOverrides: {
         root: {
-          borderRadius: theme.spacing(1),
+          borderRadius: 12,
+          border: '1px solid rgba(255,255,255,0.07)',
+          backgroundImage: 'none',
+          backgroundColor: '#0d1929',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.4)',
         },
       },
     },
@@ -102,15 +135,17 @@ export function overrides(theme: Theme) {
       styleOverrides: {
         root: {
           backgroundImage: 'none',
-          backgroundColor: theme.palette.grey[900],
+          backgroundColor: '#0d1929',
         },
       },
     },
     MuiDialog: {
       styleOverrides: {
         paper: {
-          backgroundColor: theme.palette.grey[800],
-          borderRadius: theme.spacing(1),
+          backgroundColor: '#0d1929',
+          border: '1px solid rgba(255,255,255,0.10)',
+          borderRadius: 16,
+          boxShadow: '0 25px 50px rgba(0,0,0,0.6)',
         },
       },
     },
@@ -118,30 +153,110 @@ export function overrides(theme: Theme) {
       styleOverrides: {
         root: {
           textTransform: 'none',
+          borderRadius: 8,
+          fontWeight: 500,
+        },
+        contained: {
+          boxShadow: 'none',
+          '&:hover': {
+            boxShadow: 'none',
+          },
+        },
+        outlined: {
+          borderColor: 'rgba(255,255,255,0.12)',
+          '&:hover': {
+            borderColor: 'rgba(255,255,255,0.24)',
+            backgroundColor: 'rgba(255,255,255,0.04)',
+          },
         },
       },
     },
     MuiIconButton: {
       styleOverrides: {
         root: {
-          // ':hover': {
-          //   backgroundColor: theme.palette.grey[800],
-          //   transform: 'scale(1.2)',
-          // },
+          borderRadius: 8,
           ':active': {
-            backgroundColor: theme.palette.grey[800],
-            transform: 'scale(0.8)',
+            transform: 'scale(0.9)',
           },
+          '&:hover': {
+            backgroundColor: 'rgba(255,255,255,0.06)',
+          },
+        },
+      },
+    },
+    MuiToggleButton: {
+      styleOverrides: {
+        root: {
+          textTransform: 'none',
+          borderRadius: '6px !important',
+          fontWeight: 500,
+          fontSize: '0.8125rem',
+          color: theme.palette.text.secondary,
+          border: '1px solid rgba(255,255,255,0.08) !important',
+          padding: '3px 10px',
+          '&.Mui-selected': {
+            backgroundColor: 'rgba(59,130,246,0.14)',
+            color: '#93c5fd',
+            border: '1px solid rgba(59,130,246,0.30) !important',
+            '&:hover': {
+              backgroundColor: 'rgba(59,130,246,0.20)',
+            },
+          },
+          '&:hover': {
+            backgroundColor: 'rgba(255,255,255,0.05)',
+          },
+        },
+      },
+    },
+    MuiToggleButtonGroup: {
+      styleOverrides: {
+        root: {
+          gap: 4,
+          '& .MuiToggleButtonGroup-grouped': {
+            margin: '0 !important',
+          },
+        },
+      },
+    },
+    MuiTablePagination: {
+      styleOverrides: {
+        root: {
+          backgroundColor: '#060c18',
+          borderTop: '1px solid rgba(255,255,255,0.07)',
+          color: theme.palette.text.secondary,
         },
       },
     },
     MuiDataGrid: {
       styleOverrides: {
+        root: {
+          border: 'none',
+        },
         footerContainer: {
-          backgroundColor: theme.palette.grey[900],
+          backgroundColor: '#060c18',
+          borderTop: '1px solid rgba(255,255,255,0.07)',
         },
         columnHeader: {
-          backgroundColor: theme.palette.grey[900],
+          backgroundColor: '#060c18',
+          fontSize: '0.72rem',
+          fontWeight: 600,
+          letterSpacing: '0.06em',
+          textTransform: 'uppercase',
+        },
+        row: {
+          '&:hover': {
+            backgroundColor: 'rgba(255,255,255,0.035)',
+          },
+        },
+        cell: {
+          borderBottom: '1px solid rgba(255,255,255,0.05)',
+        },
+      },
+    },
+    MuiDivider: {
+      styleOverrides: {
+        root: {
+          borderColor: 'rgba(255,255,255,0.07)',
         },
       },
     },
