@@ -169,8 +169,9 @@ function Research() {
                 width: 60,
                 height: 60,
                 borderRadius: '12px',
-                border: '1px solid rgba(255,255,255,0.10)',
-                bgcolor: 'rgba(255,255,255,0.06)',
+                border: '1px solid',
+                borderColor: 'divider',
+                bgcolor: 'action.hover',
                 flexShrink: 0,
               }}
             />
@@ -198,7 +199,7 @@ function Research() {
                         fontSize: '0.72rem',
                         fontWeight: 700,
                         bgcolor: 'rgba(59,130,246,0.14)',
-                        color: '#93c5fd',
+                        color: 'primary.main',
                         border: '1px solid rgba(59,130,246,0.30)',
                         letterSpacing: '0.04em',
                       }}
@@ -212,9 +213,9 @@ function Research() {
                         height: 20,
                         fontSize: '0.68rem',
                         fontWeight: 500,
-                        bgcolor: 'rgba(255,255,255,0.06)',
+                        bgcolor: 'action.hover',
                         color: 'text.secondary',
-                        border: '1px solid rgba(255,255,255,0.08)',
+                        border: '1px solid', borderColor: 'divider',
                       }}
                     />
                   )}
@@ -226,9 +227,9 @@ function Research() {
                         height: 20,
                         fontSize: '0.68rem',
                         fontWeight: 500,
-                        bgcolor: 'rgba(255,255,255,0.06)',
+                        bgcolor: 'action.hover',
                         color: 'text.secondary',
-                        border: '1px solid rgba(255,255,255,0.08)',
+                        border: '1px solid', borderColor: 'divider',
                       }}
                     />
                   )}

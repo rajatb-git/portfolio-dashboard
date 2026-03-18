@@ -22,7 +22,7 @@ const Select = styled(MuiSelect)(({ theme }: { theme: Theme }) => ({
   '& .MuiInputBase-input': {
     borderRadius: 4,
     position: 'relative',
-    backgroundColor: theme.palette.mode === 'light' ? '#F3F6F9' : '#1A2027',
+    backgroundColor: theme.palette.mode === 'light' ? '#F3F6F9' : theme.palette.background.default,
   },
 }));
 
@@ -30,7 +30,7 @@ const TextField = styled(MuiTextField)(({ theme }: { theme: Theme }) => ({
   '& .MuiInputBase-input': {
     borderRadius: 4,
     position: 'relative',
-    backgroundColor: theme.palette.mode === 'light' ? '#F3F6F9' : '#1A2027',
+    backgroundColor: theme.palette.mode === 'light' ? '#F3F6F9' : theme.palette.background.default,
   },
 }));
 

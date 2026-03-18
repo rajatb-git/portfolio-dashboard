@@ -50,7 +50,7 @@ function SettingRow({
       direction="row"
       alignItems="center"
       justifyContent="space-between"
-      sx={{ px: 2, py: 1.5, borderBottom: '1px solid rgba(255,255,255,0.05)' }}
+      sx={{ px: 2, py: 1.5, borderBottom: '1px solid', borderColor: 'divider' }}
     >
       <Box>
         <Typography sx={{ fontSize: '0.85rem', fontWeight: 500, color: 'text.primary' }}>{label}</Typography>

@@ -2,7 +2,7 @@ import * as React from 'react';
 import { PieChart } from '@mui/x-charts/PieChart';
 import { IRecommendation } from '@/models/RecommendationModel';
 import { Box, Card, Divider, Skeleton, Stack, Typography } from '@mui/material';
-import theme from './ThemeRegistry/theme';
+import { useTheme } from '@mui/material/styles';
 
 type Props = {
   recommendation?: IRecommendation;
@@ -11,17 +11,19 @@ type Props = {
 
 const valueFormatter = (item: { value: number }) => `${item.value}`;
 
-const COLORS = [
-  theme.palette.success.dark,
-  theme.palette.success.main,
-  theme.palette.primary.main,
-  theme.palette.error.main,
-  theme.palette.error.dark,
-];
-
 const LABELS = ['Strong Buy', 'Buy', 'Hold', 'Sell', 'Strong Sell'];
 
 export default function RecommendationDonutGraphMui({ recommendation, isLoading }: Props) {
+  const theme = useTheme();
+
+  const COLORS = [
+    theme.palette.success.dark,
+    theme.palette.success.main,
+    theme.palette.primary.main,
+    theme.palette.error.main,
+    theme.palette.error.dark,
+  ];
+
   const data = [
     { value: recommendation?.strongBuy || 0, label: 'Strong Buy' },
     { value: recommendation?.buy || 0, label: 'Buy' },

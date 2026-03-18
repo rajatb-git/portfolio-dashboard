@@ -4,8 +4,9 @@ import { default as MuiTableHead } from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
 import TableSortLabel from '@mui/material/TableSortLabel';
 
+import { useTheme } from '@mui/material/styles';
+
 import { visuallyHidden } from '../DashboardTable/dashTableUtils';
-import theme from '../ThemeRegistry/theme';
 
 type TableHeadProps = {
   order: 'asc' | 'desc';
@@ -16,6 +17,7 @@ type TableHeadProps = {
 };
 
 export default function TableHead({ order, orderBy, headLabel, onRequestSort }: TableHeadProps) {
+  const theme = useTheme();
   const onSort = (property: any) => (event: any) => {
     onRequestSort(event, property);
   };

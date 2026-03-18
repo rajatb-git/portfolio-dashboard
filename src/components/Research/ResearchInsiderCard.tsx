@@ -45,7 +45,7 @@ export default function ResearchInsiderCard({ transactions, isLoading }: Props) 
                 {['Name', 'Type', 'Shares', 'Value', 'Date'].map((h) => (
                   <TableCell
                     key={h}
-                    sx={{ fontSize: '0.68rem', color: 'text.disabled', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid rgba(255,255,255,0.07)' }}
+                    sx={{ fontSize: '0.68rem', color: 'text.disabled', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid', borderColor: 'divider' }}
                   >
                     {h}
                   </TableCell>
@@ -58,10 +58,10 @@ export default function ResearchInsiderCard({ transactions, isLoading }: Props) 
                 const txLabel = isBuy ? 'Buy' : 'Sell';
                 return (
                   <TableRow key={i} sx={{ '&:last-child td': { border: 0 } }}>
-                    <TableCell sx={{ fontSize: '0.78rem', color: 'text.primary', borderBottom: '1px solid rgba(255,255,255,0.05)', maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    <TableCell sx={{ fontSize: '0.78rem', color: 'text.primary', borderBottom: '1px solid', borderColor: 'divider', maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {tx.name ?? '—'}
                     </TableCell>
-                    <TableCell sx={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                    <TableCell sx={{ borderBottom: '1px solid', borderColor: 'divider' }}>
                       <Chip
                         label={txLabel}
                         size="small"
@@ -76,13 +76,13 @@ export default function ResearchInsiderCard({ transactions, isLoading }: Props) 
                         }}
                       />
                     </TableCell>
-                    <TableCell sx={{ fontSize: '0.78rem', color: 'text.secondary', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                    <TableCell sx={{ fontSize: '0.78rem', color: 'text.secondary', borderBottom: '1px solid', borderColor: 'divider' }}>
                       {tx.share != null ? Math.abs(tx.share).toLocaleString() : '—'}
                     </TableCell>
-                    <TableCell sx={{ fontSize: '0.78rem', color: 'text.secondary', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                    <TableCell sx={{ fontSize: '0.78rem', color: 'text.secondary', borderBottom: '1px solid', borderColor: 'divider' }}>
                       {formatValue(tx.value ?? null)}
                     </TableCell>
-                    <TableCell sx={{ fontSize: '0.78rem', color: 'text.disabled', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                    <TableCell sx={{ fontSize: '0.78rem', color: 'text.disabled', borderBottom: '1px solid', borderColor: 'divider' }}>
                       {tx.filingDate ? moment(tx.filingDate).format('MMM D, YYYY') : '—'}
                     </TableCell>
                   </TableRow>

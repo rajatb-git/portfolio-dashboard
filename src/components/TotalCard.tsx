@@ -1,6 +1,7 @@
 import Card from '@mui/material/Card';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
+import { useTheme } from '@mui/material/styles';
 
 import { Iconify } from '@/components/Iconify';
 import { fnCurrency, fnPercent } from '@/utils/formatNumber';
@@ -12,22 +13,42 @@ type TotalCardProps = {
 };
 
 export default function TotalCard({ total }: TotalCardProps) {
+  const theme = useTheme();
+  const isLight = theme.palette.mode === 'light';
   const isPositive = total.totalGL > 0;
 
-  const borderColor = isPositive ? 'rgba(34,197,94,0.25)' : 'rgba(239,68,68,0.25)';
-  const glowColor = isPositive ? 'rgba(34,197,94,0.08)' : 'rgba(239,68,68,0.08)';
-  const accentColor = isPositive ? '#4ade80' : '#f87171';
-  const dimAccent = isPositive ? '#86efac' : '#fca5a5';
+  const borderColor = isPositive
+    ? isLight ? 'rgba(22,163,74,0.3)' : 'rgba(34,197,94,0.25)'
+    : isLight ? 'rgba(220,38,38,0.3)' : 'rgba(239,68,68,0.25)';
+  const glowColor = isPositive
+    ? isLight ? 'rgba(22,163,74,0.1)' : 'rgba(34,197,94,0.08)'
+    : isLight ? 'rgba(220,38,38,0.1)' : 'rgba(239,68,68,0.08)';
+  const accentColor = isPositive
+    ? isLight ? '#15803d' : '#4ade80'
+    : isLight ? '#dc2626' : '#f87171';
+  const dimAccent = isPositive
+    ? isLight ? '#166534' : '#86efac'
+    : isLight ? '#991b1b' : '#fca5a5';
+
+  const background = isPositive
+    ? isLight
+      ? 'linear-gradient(135deg, rgba(187,247,208,0.6) 0%, rgba(220,252,231,0.4) 100%)'
+      : 'linear-gradient(135deg, rgba(22,101,52,0.55) 0%, rgba(15,60,35,0.4) 100%)'
+    : isLight
+      ? 'linear-gradient(135deg, rgba(254,202,202,0.6) 0%, rgba(254,226,226,0.4) 100%)'
+      : 'linear-gradient(135deg, rgba(127,29,29,0.55) 0%, rgba(80,10,10,0.4) 100%)';
+
+  const pillBg = isPositive
+    ? isLight ? 'rgba(22,163,74,0.08)' : 'rgba(74,222,128,0.10)'
+    : isLight ? 'rgba(220,38,38,0.08)' : 'rgba(248,113,113,0.10)';
 
   return (
     <Card
       sx={{
         p: 1.5,
-        background: isPositive
-          ? 'linear-gradient(135deg, rgba(22,101,52,0.55) 0%, rgba(15,60,35,0.4) 100%)'
-          : 'linear-gradient(135deg, rgba(127,29,29,0.55) 0%, rgba(80,10,10,0.4) 100%)',
+        background,
         border: `1px solid ${borderColor}`,
-        boxShadow: `0 4px 20px ${glowColor}, 0 1px 3px rgba(0,0,0,0.4)`,
+        boxShadow: `0 4px 20px ${glowColor}, 0 1px 3px ${isLight ? 'rgba(0,0,0,0.08)' : 'rgba(0,0,0,0.4)'}`,
       }}
     >
       <Stack direction="column" spacing={1}>
@@ -64,7 +85,7 @@ export default function TotalCard({ total }: TotalCardProps) {
             alignItems="center"
             spacing={0.5}
             sx={{
-              bgcolor: isPositive ? 'rgba(74,222,128,0.10)' : 'rgba(248,113,113,0.10)',
+              bgcolor: pillBg,
               border: `1px solid ${borderColor}`,
               borderRadius: '6px',
               px: 0.75,
@@ -92,7 +113,7 @@ export default function TotalCard({ total }: TotalCardProps) {
             <Typography sx={{ fontSize: '0.62rem', color: dimAccent, opacity: 0.7, fontWeight: 500 }}>
               Invested
             </Typography>
-            <Typography sx={{ fontSize: '0.8rem', fontWeight: 600, color: 'rgba(255,255,255,0.85)' }}>
+            <Typography sx={{ fontSize: '0.8rem', fontWeight: 600, color: 'text.primary' }}>
               {fnCurrency(total.totalInvestment)}
             </Typography>
           </Stack>
@@ -101,7 +122,7 @@ export default function TotalCard({ total }: TotalCardProps) {
             <Typography sx={{ fontSize: '0.62rem', color: dimAccent, opacity: 0.7, fontWeight: 500 }}>
               Value
             </Typography>
-            <Typography sx={{ fontSize: '0.8rem', fontWeight: 600, color: 'rgba(255,255,255,0.85)' }}>
+            <Typography sx={{ fontSize: '0.8rem', fontWeight: 600, color: 'text.primary' }}>
               {fnCurrency(total.totalValue)}
             </Typography>
           </Stack>

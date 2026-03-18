@@ -2,8 +2,6 @@ import Paper from '@mui/material/Paper';
 import TableCell from '@mui/material/TableCell';
 import TableRow from '@mui/material/TableRow';
 import Typography from '@mui/material/Typography';
-import theme from '../ThemeRegistry/theme';
-
 type TableNoDataProps = {
   query: string;
 };

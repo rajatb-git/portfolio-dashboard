@@ -85,7 +85,7 @@ const COMMON = {
   warning: WARNING,
   error: ERROR,
   grey: GREY,
-  divider: 'rgba(255,255,255,0.07)',
+  divider: 'rgba(255,255,255,0.07)', // overridden per-mode below
   action: {
     hover: alpha(GREY[500], 0.08),
     selected: alpha(GREY[500], 0.16),
@@ -100,13 +100,14 @@ const COMMON = {
 export default function palette(themeMode: 'light' | 'dark') {
   const light = {
     ...COMMON,
-    mode: 'dark',
+    mode: 'light',
+    divider: 'rgba(0,0,0,0.12)',
     text: {
       primary: GREY[800],
       secondary: GREY[600],
       disabled: GREY[500],
     },
-    background: { paper: '#FFFFFF', default: '#FFFFFF', neutral: GREY[200] },
+    background: { paper: '#FFFFFF', default: '#f8fafc', neutral: GREY[200] },
     action: {
       ...COMMON.action,
       active: GREY[600],
@@ -116,6 +117,7 @@ export default function palette(themeMode: 'light' | 'dark') {
   const dark = {
     ...COMMON,
     mode: 'dark',
+    divider: 'rgba(255,255,255,0.07)',
     text: {
       primary: '#e2e8f0',
       secondary: '#94a3b8',

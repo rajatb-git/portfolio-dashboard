@@ -57,7 +57,7 @@ export default function ResearchEarningsHistoryCard({ history, isLoading }: Prop
                 {['Period', 'EPS Est.', 'EPS Actual', 'Surprise'].map((h) => (
                   <TableCell
                     key={h}
-                    sx={{ fontSize: '0.68rem', color: 'text.disabled', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid rgba(255,255,255,0.07)' }}
+                    sx={{ fontSize: '0.68rem', color: 'text.disabled', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid', borderColor: 'divider' }}
                   >
                     {h}
                   </TableCell>
@@ -69,16 +69,16 @@ export default function ResearchEarningsHistoryCard({ history, isLoading }: Prop
                 const beat = row.surprisePercent != null && row.surprisePercent >= 0;
                 return (
                   <TableRow key={row.period} sx={{ '&:last-child td': { border: 0 } }}>
-                    <TableCell sx={{ fontSize: '0.78rem', color: 'text.primary', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                    <TableCell sx={{ fontSize: '0.78rem', color: 'text.primary', borderBottom: '1px solid', borderColor: 'divider' }}>
                       {row.period}
                     </TableCell>
-                    <TableCell sx={{ fontSize: '0.78rem', color: 'text.secondary', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                    <TableCell sx={{ fontSize: '0.78rem', color: 'text.secondary', borderBottom: '1px solid', borderColor: 'divider' }}>
                       {formatEps(row.epsEstimate)}
                     </TableCell>
-                    <TableCell sx={{ fontSize: '0.78rem', fontWeight: 600, color: 'text.primary', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                    <TableCell sx={{ fontSize: '0.78rem', fontWeight: 600, color: 'text.primary', borderBottom: '1px solid', borderColor: 'divider' }}>
                       {formatEps(row.epsActual)}
                     </TableCell>
-                    <TableCell sx={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                    <TableCell sx={{ borderBottom: '1px solid', borderColor: 'divider' }}>
                       {row.surprisePercent != null ? (
                         <Chip
                           label={`${beat ? '+' : ''}${row.surprisePercent.toFixed(1)}%`}

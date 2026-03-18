@@ -30,8 +30,8 @@ export default function ResearchDetailsCard({ companyProfile, isCompanyProfileLo
               {[
                 { key: 'country', label: 'Country', value: companyProfile['country'] },
                 { key: 'currency', label: 'Currency', value: companyProfile['currency'] },
-                { key: 'exchange', label: 'Exchange', value: companyProfile['exchange'] },
-                { key: 'industry', label: 'Industry', value: companyProfile['industry'] },
+                // { key: 'exchange', label: 'Exchange', value: companyProfile['exchange'] },
+                // { key: 'industry', label: 'Industry', value: companyProfile['industry'] },
                 {
                   key: 'shareOutstanding',
                   label: 'Shares Outstanding',

@@ -2,10 +2,10 @@ import Box from '@mui/material/Box';
 import { default as MuiTableHead } from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
 import TableSortLabel from '@mui/material/TableSortLabel';
+import { useTheme } from '@mui/material/styles';
 
 import { visuallyHidden } from './dashTableUtils';
 import { TableCell } from '../Table/TableCell';
-import theme from '../ThemeRegistry/theme';
 
 type TableHeadProps = {
   order: 'asc' | 'desc';
@@ -16,6 +16,8 @@ type TableHeadProps = {
 };
 
 export default function TableHead({ order, orderBy, headLabel, onRequestSort }: TableHeadProps) {
+  const theme = useTheme();
+
   const onSort = (property: any) => (event: any) => {
     onRequestSort(event, property);
   };
@@ -31,7 +33,7 @@ export default function TableHead({ order, orderBy, headLabel, onRequestSort }: 
             sx={{
               width: headCell.width,
               minWidth: headCell.minWidth,
-              backgroundColor: theme.palette.grey[900],
+              backgroundColor: theme.palette.background.default,
             }}
           >
             <TableSortLabel

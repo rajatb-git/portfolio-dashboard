@@ -4,6 +4,8 @@ import { Theme } from '@mui/material/styles';
 // ----------------------------------------------------------------------
 
 export function overrides(theme: Theme) {
+  const isLight = theme.palette.mode === 'light';
+
   return {
     MuiCssBaseline: {
       styleOverrides: {
@@ -45,6 +47,24 @@ export function overrides(theme: Theme) {
           display: 'inline-block',
           verticalAlign: 'bottom',
         },
+        '::-webkit-scrollbar': {
+          width: 5,
+          height: 5,
+        },
+        '::-webkit-scrollbar-track': {
+          background: 'transparent',
+        },
+        '::-webkit-scrollbar-thumb': {
+          background: isLight ? 'rgba(0,0,0,0.12)' : 'rgba(255,255,255,0.08)',
+          borderRadius: 10,
+        },
+        '::-webkit-scrollbar-thumb:hover': {
+          background: isLight ? 'rgba(0,0,0,0.24)' : 'rgba(255,255,255,0.16)',
+        },
+        '::selection': {
+          background: 'rgba(59,130,246,0.28)',
+          color: isLight ? '#1e293b' : '#e2e8f0',
+        },
       },
     },
     MuiOutlinedInput: {
@@ -52,11 +72,11 @@ export function overrides(theme: Theme) {
         root: {
           [`& .${outlinedInputClasses.notchedOutline}`]: {
             borderWidth: '1px',
-            borderColor: 'rgba(255,255,255,0.10)',
+            borderColor: isLight ? 'rgba(0,0,0,0.12)' : 'rgba(255,255,255,0.10)',
           },
           '&:hover': {
             [`& .${outlinedInputClasses.notchedOutline}`]: {
-              borderColor: 'rgba(255,255,255,0.20)',
+              borderColor: isLight ? 'rgba(0,0,0,0.24)' : 'rgba(255,255,255,0.20)',
             },
           },
           '&.Mui-focused': {
@@ -72,15 +92,15 @@ export function overrides(theme: Theme) {
       styleOverrides: {
         head: {
           color: theme.palette.text.secondary,
-          backgroundColor: '#060c18',
+          backgroundColor: theme.palette.background.default,
           fontSize: '0.72rem',
           fontWeight: 600,
           letterSpacing: '0.06em',
           textTransform: 'uppercase',
-          borderBottom: '1px solid rgba(255,255,255,0.07)',
+          borderBottom: `1px solid ${theme.palette.divider}`,
         },
         root: {
-          borderBottom: '1px solid rgba(255,255,255,0.05)',
+          borderBottom: `1px solid ${isLight ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.05)'}`,
           padding: '10px 16px',
         },
       },
@@ -88,13 +108,15 @@ export function overrides(theme: Theme) {
     MuiTooltip: {
       styleOverrides: {
         tooltip: {
-          backgroundColor: '#1e293b',
+          backgroundColor: isLight ? '#ffffff' : '#1e293b',
+          color: isLight ? '#334155' : '#e2e8f0',
           fontSize: '0.75rem',
-          border: '1px solid rgba(255,255,255,0.10)',
+          border: `1px solid ${isLight ? 'rgba(0,0,0,0.12)' : 'rgba(255,255,255,0.10)'}`,
           borderRadius: 8,
+          boxShadow: isLight ? '0 4px 12px rgba(0,0,0,0.1)' : undefined,
         },
         arrow: {
-          color: '#1e293b',
+          color: isLight ? '#ffffff' : '#1e293b',
         },
       },
     },
@@ -115,7 +137,7 @@ export function overrides(theme: Theme) {
           borderRadius: 6,
           margin: '2px 6px',
           '&:hover': {
-            backgroundColor: 'rgba(255,255,255,0.06)',
+            backgroundColor: isLight ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.06)',
           },
         },
       },
@@ -124,10 +146,10 @@ export function overrides(theme: Theme) {
       styleOverrides: {
         root: {
           borderRadius: 12,
-          border: '1px solid rgba(255,255,255,0.07)',
+          border: `1px solid ${theme.palette.divider}`,
           backgroundImage: 'none',
-          backgroundColor: '#0d1929',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.4)',
+          backgroundColor: theme.palette.background.paper,
+          boxShadow: isLight ? '0 1px 3px rgba(0,0,0,0.08)' : '0 1px 3px rgba(0,0,0,0.4)',
         },
       },
     },
@@ -135,17 +157,17 @@ export function overrides(theme: Theme) {
       styleOverrides: {
         root: {
           backgroundImage: 'none',
-          backgroundColor: '#0d1929',
+          backgroundColor: theme.palette.background.paper,
         },
       },
     },
     MuiDialog: {
       styleOverrides: {
         paper: {
-          backgroundColor: '#0d1929',
-          border: '1px solid rgba(255,255,255,0.10)',
+          backgroundColor: theme.palette.background.paper,
+          border: `1px solid ${isLight ? 'rgba(0,0,0,0.12)' : 'rgba(255,255,255,0.10)'}`,
           borderRadius: 16,
-          boxShadow: '0 25px 50px rgba(0,0,0,0.6)',
+          boxShadow: isLight ? '0 25px 50px rgba(0,0,0,0.15)' : '0 25px 50px rgba(0,0,0,0.6)',
         },
       },
     },
@@ -163,10 +185,10 @@ export function overrides(theme: Theme) {
           },
         },
         outlined: {
-          borderColor: 'rgba(255,255,255,0.12)',
+          borderColor: isLight ? 'rgba(0,0,0,0.12)' : 'rgba(255,255,255,0.12)',
           '&:hover': {
-            borderColor: 'rgba(255,255,255,0.24)',
-            backgroundColor: 'rgba(255,255,255,0.04)',
+            borderColor: isLight ? 'rgba(0,0,0,0.24)' : 'rgba(255,255,255,0.24)',
+            backgroundColor: isLight ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.04)',
           },
         },
       },
@@ -179,7 +201,7 @@ export function overrides(theme: Theme) {
             transform: 'scale(0.9)',
           },
           '&:hover': {
-            backgroundColor: 'rgba(255,255,255,0.06)',
+            backgroundColor: isLight ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.06)',
           },
         },
       },
@@ -192,18 +214,18 @@ export function overrides(theme: Theme) {
           fontWeight: 500,
           fontSize: '0.8125rem',
           color: theme.palette.text.secondary,
-          border: '1px solid rgba(255,255,255,0.08) !important',
+          border: `1px solid ${isLight ? 'rgba(0,0,0,0.12)' : 'rgba(255,255,255,0.08)'} !important`,
           padding: '3px 10px',
           '&.Mui-selected': {
             backgroundColor: 'rgba(59,130,246,0.14)',
-            color: '#93c5fd',
+            color: isLight ? '#2563eb' : '#93c5fd',
             border: '1px solid rgba(59,130,246,0.30) !important',
             '&:hover': {
               backgroundColor: 'rgba(59,130,246,0.20)',
             },
           },
           '&:hover': {
-            backgroundColor: 'rgba(255,255,255,0.05)',
+            backgroundColor: isLight ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.05)',
           },
         },
       },
@@ -221,8 +243,8 @@ export function overrides(theme: Theme) {
     MuiTablePagination: {
       styleOverrides: {
         root: {
-          backgroundColor: '#060c18',
-          borderTop: '1px solid rgba(255,255,255,0.07)',
+          backgroundColor: theme.palette.background.default,
+          borderTop: `1px solid ${theme.palette.divider}`,
           color: theme.palette.text.secondary,
         },
       },
@@ -233,11 +255,11 @@ export function overrides(theme: Theme) {
           border: 'none',
         },
         footerContainer: {
-          backgroundColor: '#060c18',
-          borderTop: '1px solid rgba(255,255,255,0.07)',
+          backgroundColor: theme.palette.background.default,
+          borderTop: `1px solid ${theme.palette.divider}`,
         },
         columnHeader: {
-          backgroundColor: '#060c18',
+          backgroundColor: theme.palette.background.default,
           fontSize: '0.72rem',
           fontWeight: 600,
           letterSpacing: '0.06em',
@@ -245,18 +267,18 @@ export function overrides(theme: Theme) {
         },
         row: {
           '&:hover': {
-            backgroundColor: 'rgba(255,255,255,0.035)',
+            backgroundColor: isLight ? 'rgba(0,0,0,0.02)' : 'rgba(255,255,255,0.035)',
           },
         },
         cell: {
-          borderBottom: '1px solid rgba(255,255,255,0.05)',
+          borderBottom: `1px solid ${isLight ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.05)'}`,
         },
       },
     },
     MuiDivider: {
       styleOverrides: {
         root: {
-          borderColor: 'rgba(255,255,255,0.07)',
+          borderColor: theme.palette.divider,
         },
       },
     },

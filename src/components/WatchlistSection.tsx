@@ -127,7 +127,7 @@ export default function WatchlistSection() {
                 fontSize: '0.65rem',
                 fontWeight: 700,
                 bgcolor: 'rgba(59,130,246,0.12)',
-                color: '#93c5fd',
+                color: 'primary.main',
                 '& .MuiChip-label': { px: 0.75 },
               }}
             />
@@ -152,7 +152,7 @@ export default function WatchlistSection() {
                   {['Symbol', 'Price', 'Change', ''].map((h) => (
                     <TableCell
                       key={h}
-                      sx={{ fontSize: '0.68rem', color: 'text.disabled', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid rgba(255,255,255,0.07)' }}
+                      sx={{ fontSize: '0.68rem', color: 'text.disabled', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid', borderColor: 'divider' }}
                     >
                       {h}
                     </TableCell>
@@ -169,13 +169,13 @@ export default function WatchlistSection() {
                       sx={{ cursor: 'pointer', '&:last-child td': { border: 0 } }}
                       onClick={() => navigate(`/research?searchText=${row.symbol}`)}
                     >
-                      <TableCell sx={{ fontWeight: 700, fontSize: '0.82rem', color: 'text.primary', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                      <TableCell sx={{ fontWeight: 700, fontSize: '0.82rem', color: 'text.primary', borderBottom: '1px solid', borderColor: 'divider' }}>
                         {row.symbol}
                       </TableCell>
-                      <TableCell sx={{ fontSize: '0.82rem', color: 'text.primary', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                      <TableCell sx={{ fontSize: '0.82rem', color: 'text.primary', borderBottom: '1px solid', borderColor: 'divider' }}>
                         {row.isLoading ? <Skeleton width={60} /> : row.price ? fnCurrency(row.price) : '—'}
                       </TableCell>
-                      <TableCell sx={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                      <TableCell sx={{ borderBottom: '1px solid', borderColor: 'divider' }}>
                         {row.isLoading ? (
                           <Skeleton width={50} />
                         ) : row.percentChange != null ? (
@@ -188,7 +188,7 @@ export default function WatchlistSection() {
                           '—'
                         )}
                       </TableCell>
-                      <TableCell align="right" sx={{ borderBottom: '1px solid rgba(255,255,255,0.05)', pr: 1 }}>
+                      <TableCell align="right" sx={{ borderBottom: '1px solid', borderColor: 'divider', pr: 1 }}>
                         <Tooltip title="Remove from watchlist">
                           <IconButton
                             size="small"

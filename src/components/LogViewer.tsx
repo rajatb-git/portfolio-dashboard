@@ -3,12 +3,12 @@
 import * as React from 'react';
 
 import { Box } from '@mui/material';
-
-import theme from '@/components/ThemeRegistry/theme';
+import { useTheme } from '@mui/material/styles';
 
 type Props = { data: string };
 
 const LogLine = ({ splitLine }: any) => {
+  const theme = useTheme();
   const [timestamp, level, label, message, rest] = splitLine;
 
   const timestampStyling = { color: theme.palette.success.main };
@@ -47,6 +47,9 @@ const LogLine = ({ splitLine }: any) => {
 };
 
 export const LogsViewer = ({ data }: Props) => {
+  const theme = useTheme();
+  const isLight = theme.palette.mode === 'light';
+
   // eslint-disable-next-line no-useless-escape
   const regex = /(\d{4}-[01]\d-[0-3]\dT[0-2]\d:[0-5]\d:[0-5]\d[+-][0-2]\d:[0-5]\d)|(info)|\[(.*?)\]|\((.*?)\)|:(.*)/gi;
 
@@ -63,7 +66,7 @@ export const LogsViewer = ({ data }: Props) => {
         pl: 0,
         lineHeight: 1.75,
         maxHeight: '85vh',
-        backgroundColor: theme.palette.grey[900],
+        backgroundColor: isLight ? theme.palette.grey[100] : theme.palette.grey[900],
       }}
     >
       {data

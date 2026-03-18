@@ -6,8 +6,9 @@ import TableSortLabel from '@mui/material/TableSortLabel';
 
 import { Column } from '@/types';
 
+import { useTheme } from '@mui/material/styles';
+
 import { visuallyHidden } from './dbTableUtils';
-import theme from '../ThemeRegistry/theme';
 
 type TableHeadProps = {
   order: 'asc' | 'desc';
@@ -18,6 +19,7 @@ type TableHeadProps = {
 };
 
 export default function TableHead({ order, orderBy, columnsConfig, onRequestSort }: TableHeadProps) {
+  const theme = useTheme();
   const onSort = (property: any) => (event: any) => {
     onRequestSort(event, property);
   };

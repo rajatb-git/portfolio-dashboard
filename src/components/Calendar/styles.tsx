@@ -52,16 +52,16 @@ export const StyledCalendar = styled('div')(({ theme }) => ({
   },
 
   '.fc-popover': {
-    border: '1px solid rgba(255,255,255,0.10)',
+    border: `1px solid ${theme.palette.divider}`,
     borderRadius: '10px',
     overflow: 'hidden',
-    boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
+    boxShadow: theme.palette.mode === 'light' ? '0 8px 32px rgba(0,0,0,0.12)' : '0 8px 32px rgba(0,0,0,0.5)',
     '.fc-popover-header': {
-      backgroundColor: '#0d1929',
+      backgroundColor: theme.palette.background.paper,
       padding: '8px 12px',
     },
     '.fc-popover-body': {
-      backgroundColor: '#0f1d33',
+      backgroundColor: theme.palette.background.default,
       padding: '6px 8px',
     },
     '.fc-popover-title': {

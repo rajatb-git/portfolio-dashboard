@@ -31,7 +31,7 @@ export default function ResearchNewsCard({ news, isNewsLoading }: Props) {
                     alignItems: 'flex-start',
                     py: 1.5,
                     px: 2,
-                    '&:hover': { bgcolor: 'rgba(255,255,255,0.04)' },
+                    '&:hover': { bgcolor: 'action.hover' },
                   }}
                 >
                   <ListItemText

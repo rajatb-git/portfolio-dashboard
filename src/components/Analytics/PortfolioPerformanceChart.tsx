@@ -146,7 +146,7 @@ export default function PortfolioPerformanceChart({ snapshots }: Props) {
       y: { formatter: (val) => fnCurrency(val) },
     },
     legend: { show: true, position: 'top', horizontalAlign: 'left' },
-    grid: { show: true, borderColor: 'rgba(255,255,255,0.07)' },
+    grid: { show: true, borderColor: mode === 'light' ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.07)' },
   };
 
   const isEmpty = filteredSnapshots.length < 2;

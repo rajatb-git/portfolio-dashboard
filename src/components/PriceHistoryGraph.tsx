@@ -1,13 +1,12 @@
 import React from 'react';
 
 import { ToggleButtonGroup, ToggleButton, Card, CardContent } from '@mui/material';
+import { useTheme } from '@mui/material/styles';
 import { ApexOptions } from 'apexcharts';
 
 import apis from '@/api';
 import { Range } from '@/api/live';
-import { THEME_MODE } from '@/config';
-
-import theme from './ThemeRegistry/theme';
+import { useThemeMode } from './ThemeRegistry/ThemeModeContext';
 
 const ReactApexChart = React.lazy(() => import('react-apexcharts'));
 
@@ -18,6 +17,8 @@ type Props = {
 const RangeOptions = ['1d', '5d', '1M', '3M', '6M', '1y', '2y', '3y'];
 
 export const PriceHistoryGraph = ({ symbol }: Props) => {
+  const { mode } = useThemeMode();
+  const theme = useTheme();
   const [series, setSeries] = React.useState<any>();
   const [range, setRange] = React.useState<Range>('6M');
 
@@ -34,7 +35,7 @@ export const PriceHistoryGraph = ({ symbol }: Props) => {
 
   const options: ApexOptions = {
     theme: {
-      mode: THEME_MODE,
+      mode: mode as 'dark' | 'light',
     },
     chart: {
       type: 'candlestick',
@@ -42,7 +43,7 @@ export const PriceHistoryGraph = ({ symbol }: Props) => {
       toolbar: {
         offsetY: -36,
         tools: {
-          reset: `<img src="/images/icons/tabler--zoom-reset-${THEME_MODE === 'dark' ? 'white' : 'black'}.png" width="20">`,
+          reset: `<img src="/images/icons/tabler--zoom-reset-${mode === 'dark' ? 'white' : 'black'}.png" width="20">`,
         },
       },
     },

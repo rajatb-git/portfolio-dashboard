@@ -12,8 +12,8 @@ import {
   ListItemIcon,
   ListItemText,
 } from '@mui/material';
+import { useTheme } from '@mui/material/styles';
 import { Iconify } from './Iconify';
-import theme from './ThemeRegistry/theme';
 import { useNavigate } from 'react-router-dom';
 import LocalStorageArray from '@/utils/localStorageArray';
 
@@ -26,6 +26,8 @@ type SearchTickerModalProps = {
 
 export function SearchTickerModal({ refreshSearchHistory, searchHistory, isOpen, onClose }: SearchTickerModalProps) {
   const navigate = useNavigate();
+  const theme = useTheme();
+  const isLight = theme.palette.mode === 'light';
 
   const onSearchEnter = (searchText: string) => {
     onClose();
@@ -45,7 +47,11 @@ export function SearchTickerModal({ refreshSearchHistory, searchHistory, isOpen,
       open={isOpen}
       slotProps={{
         paper: {
-          sx: { backgroundColor: theme.palette.grey[900], border: `1px solid ${theme.palette.grey[800]}`, mt: 10 },
+          sx: {
+            backgroundColor: theme.palette.background.paper,
+            border: `1px solid ${theme.palette.divider}`,
+            mt: 10,
+          },
         },
         container: { sx: { backdropFilter: 'blur(3px)', alignItems: 'flex-start' } },
       }}
@@ -61,7 +67,7 @@ export function SearchTickerModal({ refreshSearchHistory, searchHistory, isOpen,
             flex: 1,
             input: {
               '&::placeholder': {
-                color: theme.palette.grey[100],
+                color: theme.palette.text.secondary,
                 fontWeight: 500,
               },
             },
@@ -84,7 +90,7 @@ export function SearchTickerModal({ refreshSearchHistory, searchHistory, isOpen,
         <Button
           variant="outlined"
           onClick={onClose}
-          sx={{ p: '0px 8px', minWidth: 'auto', borderColor: theme.palette.grey[600], color: theme.palette.grey[400] }}
+          sx={{ p: '0px 8px', minWidth: 'auto', borderColor: theme.palette.divider, color: theme.palette.text.disabled }}
         >
           <kbd>esc</kbd>
         </Button>
@@ -97,7 +103,7 @@ export function SearchTickerModal({ refreshSearchHistory, searchHistory, isOpen,
               <ListItem
                 key={search}
                 sx={{
-                  backgroundColor: theme.palette.grey[800],
+                  backgroundColor: isLight ? theme.palette.grey[100] : theme.palette.grey[800],
                   p: 0,
                   mb: 1,
                   borderRadius: '4px',

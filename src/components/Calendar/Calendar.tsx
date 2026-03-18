@@ -18,7 +18,6 @@ import { fnCurrency, fnShortenCurrency, fnShortenNumber } from '@/utils/formatNu
 import { StyledCalendar } from './styles';
 import { ICalendarEvent } from './types';
 import { Iconify } from '../Iconify';
-import theme from '../ThemeRegistry/theme';
 
 type Props = { events: Array<ICalendarEvent>; refreshData: () => void; isLoading: boolean };
 

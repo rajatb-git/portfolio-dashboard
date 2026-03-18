@@ -1,6 +1,7 @@
 import React from 'react';
 
 import { Box, ListItem, ListItemButton, Tooltip, Typography } from '@mui/material';
+import { useTheme } from '@mui/material/styles';
 import { Link, useLocation } from 'react-router-dom';
 
 import { Iconify } from '../Iconify';
@@ -9,6 +10,8 @@ type SideNavItemProps = { href: string; icon: string; text: string; collapsed?: 
 
 export default function SideNavItem({ href, icon, text, collapsed }: SideNavItemProps) {
   const location = useLocation();
+  const theme = useTheme();
+  const isLight = theme.palette.mode === 'light';
   const active = location.pathname === href;
 
   return (
@@ -29,11 +32,11 @@ export default function SideNavItem({ href, icon, text, collapsed }: SideNavItem
             position: 'relative',
             ...(active
               ? {
-                  backgroundColor: 'rgba(59,130,246,0.12)',
-                  '&:hover': { backgroundColor: 'rgba(59,130,246,0.18)' },
+                  backgroundColor: isLight ? 'rgba(59,130,246,0.08)' : 'rgba(59,130,246,0.12)',
+                  '&:hover': { backgroundColor: isLight ? 'rgba(59,130,246,0.14)' : 'rgba(59,130,246,0.18)' },
                 }
               : {
-                  '&:hover': { backgroundColor: 'rgba(255,255,255,0.05)' },
+                  '&:hover': { backgroundColor: isLight ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.05)' },
                 }),
           }}
         >
@@ -54,8 +57,8 @@ export default function SideNavItem({ href, icon, text, collapsed }: SideNavItem
 
           <Iconify
             icon={icon}
-            width={18}
-            sx={{ color: active ? '#60a5fa' : '#64748b', flexShrink: 0 }}
+            width={26}
+            sx={{ color: active ? (isLight ? '#3b82f6' : '#60a5fa') : theme.palette.text.disabled, flexShrink: 0 }}
           />
 
           {!collapsed && (
@@ -63,7 +66,7 @@ export default function SideNavItem({ href, icon, text, collapsed }: SideNavItem
               sx={{
                 fontSize: '0.8125rem',
                 fontWeight: active ? 600 : 500,
-                color: active ? '#cbd5e1' : '#94a3b8',
+                color: active ? theme.palette.text.primary : theme.palette.text.secondary,
                 letterSpacing: '-0.01em',
                 lineHeight: 1,
               }}

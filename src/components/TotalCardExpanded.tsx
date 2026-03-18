@@ -7,7 +7,6 @@ import { Iconify } from '@/components/Iconify';
 import { fnCurrency, fnPercent } from '@/utils/formatNumber';
 
 import { Total } from './DashboardTable/dashTableUtils';
-import theme from './ThemeRegistry/theme';
 
 type TotalCardProps = {
   total: Total;
@@ -20,7 +19,7 @@ export default function TotalCard({ total }: TotalCardProps) {
     <Card
       sx={{
         p: 1.5,
-        color: theme.palette.success.contrastText,
+        color: 'success.contrastText',
         bgcolor: `${color}.dark`,
       }}
     >

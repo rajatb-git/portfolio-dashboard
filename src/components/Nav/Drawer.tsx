@@ -4,6 +4,7 @@ import { Box, Toolbar, Button, Divider, Typography } from '@mui/material';
 import MuiAppBar from '@mui/material/AppBar';
 import { default as MuiDrawer } from '@mui/material/Drawer';
 import List from '@mui/material/List';
+import { useTheme } from '@mui/material/styles';
 
 import { DRAWER_WIDTH, DRAWER_COLLAPSED_WIDTH, NAV_CONFIG, NAV_SETTINGS_CONFIG } from '@/config';
 
@@ -12,12 +13,12 @@ import { Iconify } from '../Iconify';
 import { SearchTickerModal } from '../SearchTickerModal';
 import LocalStorageArray from '@/utils/localStorageArray';
 
-const LogoIcon = () => (
+const LogoIcon = ({ isLight }: { isLight: boolean }) => (
   <svg width="18" height="18" viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg">
     {/* area fill under the trend line */}
     <path
       d="M2 17 C4.5 13.5 7 12 9.5 13 C12 14 14.5 9 20 5 L20 20 L2 20 Z"
-      fill="rgba(255,255,255,0.18)"
+      fill={isLight ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.18)'}
     />
     {/* upward trend line */}
     <path
@@ -35,6 +36,8 @@ const LogoIcon = () => (
 type DrawerProps = { collapsed: boolean; onToggle: () => void };
 
 export default function Drawer({ collapsed, onToggle }: DrawerProps) {
+  const theme = useTheme();
+  const isLight = theme.palette.mode === 'light';
   const [showSearch, setShowSearch] = React.useState(false);
   const [searchHistory, setSearchHistory] = React.useState<Array<string> | null>(
     LocalStorageArray.getAll('searchText')
@@ -74,10 +77,10 @@ export default function Drawer({ collapsed, onToggle }: DrawerProps) {
         position="fixed"
         elevation={0}
         sx={{
-          backgroundColor: 'rgba(6,12,24,0.75)',
+          backgroundColor: isLight ? 'rgba(248,250,252,0.85)' : 'rgba(6,12,24,0.75)',
           backdropFilter: 'blur(16px)',
           WebkitBackdropFilter: 'blur(16px)',
-          borderBottom: '1px solid rgba(255,255,255,0.07)',
+          borderBottom: `1px solid ${theme.palette.divider}`,
           ml: `${drawerWidth}px`,
           width: `calc(100% - ${drawerWidth}px)`,
           transition: 'margin-left 0.2s ease, width 0.2s ease',
@@ -95,10 +98,10 @@ export default function Drawer({ collapsed, onToggle }: DrawerProps) {
             size="small"
             onClick={openSearchTickerModal}
             sx={{
-              border: '1px solid rgba(255,255,255,0.10)',
+              border: `1px solid ${isLight ? 'rgba(0,0,0,0.12)' : 'rgba(255,255,255,0.10)'}`,
               color: 'text.disabled',
               borderRadius: '8px',
-              bgcolor: 'rgba(255,255,255,0.04)',
+              bgcolor: isLight ? 'rgba(0,0,0,0.03)' : 'rgba(255,255,255,0.04)',
               px: 1.5,
               py: 0.5,
               minWidth: 160,
@@ -106,8 +109,8 @@ export default function Drawer({ collapsed, onToggle }: DrawerProps) {
               gap: 0.5,
               fontSize: '0.8125rem',
               '&:hover': {
-                bgcolor: 'rgba(255,255,255,0.07)',
-                border: '1px solid rgba(255,255,255,0.18)',
+                bgcolor: isLight ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.07)',
+                border: `1px solid ${isLight ? 'rgba(0,0,0,0.20)' : 'rgba(255,255,255,0.18)'}`,
               },
             }}
           >
@@ -115,7 +118,7 @@ export default function Drawer({ collapsed, onToggle }: DrawerProps) {
             <Box sx={{ flexGrow: 1 }} />
             <Box
               sx={{
-                border: '1px solid rgba(255,255,255,0.14)',
+                border: `1px solid ${isLight ? 'rgba(0,0,0,0.14)' : 'rgba(255,255,255,0.14)'}`,
                 borderRadius: '5px',
                 px: 0.6,
                 py: 0.2,
@@ -141,8 +144,8 @@ export default function Drawer({ collapsed, onToggle }: DrawerProps) {
             boxSizing: 'border-box',
             height: '100%',
             border: 0,
-            borderRight: '1px solid rgba(255,255,255,0.06)',
-            backgroundColor: '#060c18',
+            borderRight: `1px solid ${theme.palette.divider}`,
+            backgroundColor: isLight ? '#ffffff' : '#060c18',
             display: 'flex',
             flexDirection: 'column',
             overflowX: 'hidden',
@@ -175,7 +178,7 @@ export default function Drawer({ collapsed, onToggle }: DrawerProps) {
                 boxShadow: '0 0 14px rgba(59,130,246,0.3)',
               }}
             >
-              <LogoIcon />
+              <LogoIcon isLight={isLight} />
             </Box>
           </Box>
         ) : (
@@ -202,14 +205,14 @@ export default function Drawer({ collapsed, onToggle }: DrawerProps) {
                 boxShadow: '0 0 14px rgba(59,130,246,0.3)',
               }}
             >
-              <LogoIcon />
+              <LogoIcon isLight={isLight} />
             </Box>
             <Box sx={{ flexGrow: 1, overflow: 'hidden' }}>
               <Typography
                 sx={{
                   fontSize: '0.875rem',
                   fontWeight: 700,
-                  color: '#e2e8f0',
+                  color: 'text.primary',
                   letterSpacing: '-0.02em',
                   lineHeight: 1.2,
                   whiteSpace: 'nowrap',
@@ -220,7 +223,7 @@ export default function Drawer({ collapsed, onToggle }: DrawerProps) {
               <Typography
                 sx={{
                   fontSize: '0.65rem',
-                  color: '#475569',
+                  color: 'text.disabled',
                   letterSpacing: '0.04em',
                   textTransform: 'uppercase',
                   lineHeight: 1,
@@ -233,7 +236,7 @@ export default function Drawer({ collapsed, onToggle }: DrawerProps) {
           </Box>
         )}
 
-        <Divider sx={{ borderColor: 'rgba(255,255,255,0.05)', mx: collapsed ? 0.75 : 1.5, mb: 1 }} />
+        <Divider sx={{ mx: collapsed ? 0.75 : 1.5, mb: 1 }} />
 
         {/* Main nav */}
         <List sx={{ p: 0, flexGrow: 1 }}>
@@ -243,7 +246,7 @@ export default function Drawer({ collapsed, onToggle }: DrawerProps) {
         </List>
 
         {/* Bottom: Settings */}
-        <Divider sx={{ borderColor: 'rgba(255,255,255,0.05)', mx: collapsed ? 0.75 : 1.5, mb: 0.5 }} />
+        <Divider sx={{ mx: collapsed ? 0.75 : 1.5, mb: 0.5 }} />
         <List sx={{ p: 0, pb: 1.5 }}>
           <SideNavItem
             href={NAV_SETTINGS_CONFIG.href}
@@ -265,24 +268,24 @@ export default function Drawer({ collapsed, onToggle }: DrawerProps) {
           width: 20,
           height: 20,
           borderRadius: '50%',
-          bgcolor: '#0f172a',
-          border: '1px solid rgba(255,255,255,0.15)',
+          bgcolor: isLight ? '#f1f5f9' : '#0f172a',
+          border: `1px solid ${isLight ? 'rgba(0,0,0,0.15)' : 'rgba(255,255,255,0.15)'}`,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           cursor: 'pointer',
           transition: 'left 0.2s ease, border-color 0.15s ease, background-color 0.15s ease',
           '&:hover': {
-            bgcolor: '#1e293b',
-            borderColor: 'rgba(255,255,255,0.3)',
-            '& svg': { color: '#94a3b8' },
+            bgcolor: isLight ? '#e2e8f0' : '#1e293b',
+            borderColor: isLight ? 'rgba(0,0,0,0.3)' : 'rgba(255,255,255,0.3)',
+            '& svg': { color: isLight ? '#475569' : '#94a3b8' },
           },
         }}
       >
         <Iconify
           icon={collapsed ? 'tabler:chevron-right' : 'tabler:chevron-left'}
           width={11}
-          sx={{ color: '#64748b', flexShrink: 0, transition: 'color 0.15s ease' }}
+          sx={{ color: isLight ? '#94a3b8' : '#64748b', flexShrink: 0, transition: 'color 0.15s ease' }}
         />
       </Box>
 

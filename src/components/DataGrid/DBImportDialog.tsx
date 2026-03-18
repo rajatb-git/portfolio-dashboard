@@ -15,13 +15,13 @@ import {
 } from '@mui/material';
 import Button from '@mui/material/Button';
 import Dialog from '@mui/material/Dialog';
+import { useTheme } from '@mui/material/styles';
 import csvtojson from 'csvtojson';
 
 import { OverlayButton } from '@/components/OverlayButton';
 import { IHoldings } from '@/models/HoldingsModel';
 import { IAccount } from '@/models/AccountsModel';
 import { Iconify } from '../Iconify';
-import theme from '../ThemeRegistry/theme';
 import { fnBytes } from '@/utils/formatNumber';
 
 type AddEditDialogProps = {
@@ -40,6 +40,8 @@ export default function ImportDialog({
   insertHoldingsData,
   refreshPage,
 }: AddEditDialogProps) {
+  const theme = useTheme();
+  const isLight = theme.palette.mode === 'light';
   const [file, setFile] = React.useState<File | undefined>();
   const [owner, setOwner] = React.useState('');
   const [type, setType] = React.useState('');
@@ -94,6 +96,10 @@ export default function ImportDialog({
     handleDialogClose();
   };
 
+  const dropzoneBg = isLight ? theme.palette.grey[100] : theme.palette.grey[900];
+  const dropzoneBorder = isLight ? theme.palette.grey[400] : theme.palette.grey[700];
+  const dropzoneText = isLight ? theme.palette.grey[700] : theme.palette.grey[300];
+
   return (
     <Dialog open={open} onClose={handleDialogClose} fullWidth maxWidth="sm">
       <Typography sx={{ m: 2 }} variant="h6">
@@ -110,13 +116,13 @@ export default function ImportDialog({
         {file?.name ? (
           <Box
             sx={{
-              border: `1px solid ${theme.palette.grey[700]}`,
+              border: `1px solid ${dropzoneBorder}`,
               p: 0.5,
-              backgroundColor: theme.palette.grey[900],
+              backgroundColor: dropzoneBg,
               borderRadius: '8px',
-              color: theme.palette.grey[300],
+              color: dropzoneText,
               ':hover': {
-                backgroundColor: theme.palette.grey[900],
+                backgroundColor: dropzoneBg,
               },
               textAlign: 'center',
             }}
@@ -144,14 +150,14 @@ export default function ImportDialog({
         ) : (
           <Box
             sx={{
-              border: `1px dashed ${theme.palette.grey[700]}`,
+              border: `1px dashed ${dropzoneBorder}`,
               p: 2,
-              backgroundColor: theme.palette.grey[900],
+              backgroundColor: dropzoneBg,
               borderRadius: '8px',
-              color: theme.palette.grey[300],
+              color: dropzoneText,
               cursor: 'pointer',
               ':hover': {
-                backgroundColor: theme.palette.grey[900],
+                backgroundColor: dropzoneBg,
               },
               textAlign: 'center',
             }}

@@ -24,7 +24,7 @@ type Props = {
 
 function MetricRow({ label, value, tooltip }: { label: string; value: string; tooltip?: string }) {
   const content = (
-    <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ py: 1, px: 2, borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+    <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ py: 1, px: 2, borderBottom: '1px solid', borderColor: 'divider' }}>
       <Typography sx={{ fontSize: '0.78rem', color: 'text.secondary' }}>{label}</Typography>
       <Typography sx={{ fontSize: '0.78rem', fontWeight: 600, color: 'text.primary' }}>{value}</Typography>
     </Stack>
@@ -62,7 +62,7 @@ export default function ResearchMetricsCard({ metrics, currentPrice, isLoading }
               sx={{
                 height: 5,
                 borderRadius: 3,
-                bgcolor: 'rgba(255,255,255,0.08)',
+                bgcolor: 'action.hover',
                 '& .MuiLinearProgress-bar': { bgcolor: '#3b82f6', borderRadius: 3 },
               }}
             />

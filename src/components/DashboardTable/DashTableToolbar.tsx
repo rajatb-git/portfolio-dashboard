@@ -55,7 +55,7 @@ export default function DashTableToolbar({ filterName, onFilterName, refreshData
         size="small"
         variant="outlined"
         onClick={openToggle}
-        sx={{ whiteSpace: 'nowrap', borderColor: 'rgba(255,255,255,0.12)', color: 'text.secondary' }}
+        sx={{ whiteSpace: 'nowrap', borderColor: 'divider', color: 'text.secondary' }}
         startIcon={<Iconify icon="fa6-solid:right-left" width={13} />}
       >
         Trade
