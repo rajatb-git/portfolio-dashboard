@@ -1,0 +1,175 @@
+import KoaRouter from 'koa-router';
+import { logger } from '../utils/winston';
+import { LiveQuoteController } from '../controller/LiveQuoteController';
+import { LiveRecommendationController } from '../controller/LiveRecommendationController';
+import { getCompanyNews } from '../externalApis/finnHub';
+import moment from 'moment';
+import { getPriceHistoryCandleStick } from '../externalApis/nasdaq';
+import { getStockMetrics, getStockPeers, getEarningsCalendar, getEarningsHistory, getInsiderTransactions } from '../externalApis/finnHub';
+import { IPOController } from '../controller/IPOController';
+import { CompanyProfileController } from '../controller/CompanyProfileController';
+import { errorBody } from '../utils/error';
+
+export const LiveRouter = () => {
+  const router = new KoaRouter();
+
+  router.get('/live/quote/:sym', async (ctx) => {
+    try {
+      const result = await new LiveQuoteController().getLiveQuote(ctx.params.sym.toUpperCase());
+
+      ctx.body = result;
+      ctx.status = 200;
+    } catch (err) {
+      logger.log({ level: 'error', message: err.message, label: `Get live quote \"${ctx.params.sym}\"` });
+
+      ctx.body = err.message;
+      ctx.status = 400;
+    }
+  });
+
+  router.get('/live/recommendation/:sym', async (ctx) => {
+    try {
+      const result = await new LiveRecommendationController().getLiveRecommendation(ctx.params.sym.toUpperCase());
+
+      ctx.body = result;
+      ctx.status = 200;
+    } catch (err) {
+      logger.log({ level: 'error', message: err.message, label: `Get live recommendation \"${ctx.params.sym}\"` });
+
+      ctx.body = err.message;
+      ctx.status = 400;
+    }
+  });
+
+  router.get('/live/news/:sym', async (ctx) => {
+    try {
+      const result = await getCompanyNews(
+        ctx.params.sym.toUpperCase(),
+        moment().subtract(3, 'days').format('YYYY-MM-DD'),
+        moment().format('YYYY-MM-DD')
+      );
+
+      ctx.body = result;
+      ctx.status = 200;
+    } catch (err) {
+      logger.log({ level: 'error', message: err.message, label: `Get live company news \"${ctx.params.sym}\"` });
+
+      ctx.body = err.message;
+      ctx.status = 400;
+    }
+  });
+
+  router.get('/live/history/:sym', async (ctx) => {
+    try {
+      if (!ctx.query.range) {
+        ctx.body = 'range is required';
+        ctx.status = 400;
+        return;
+      }
+      const result = await getPriceHistoryCandleStick(ctx.params.sym.toUpperCase(), ctx.query.range as any);
+
+      ctx.body = result;
+      ctx.status = 200;
+    } catch (err) {
+      logger.log({ level: 'error', message: err.message, label: `Get live company news \"${ctx.params.sym}\"` });
+
+      ctx.body = err.message;
+      ctx.status = 400;
+    }
+  });
+
+  router.get('/live/ipos', async (ctx) => {
+    try {
+      const result = await new IPOController().getIPOs();
+
+      ctx.body = result;
+      ctx.status = 200;
+    } catch (err) {
+      logger.log({ level: 'error', message: err.message, label: `Get IPOs` });
+
+      ctx.body = err.message;
+      ctx.status = 400;
+    }
+  });
+
+  router.get('/live/company-profile/:sym', async (ctx) => {
+    try {
+      if (ctx.params.sym) {
+        const result = await new CompanyProfileController().getCompanyProfile2(ctx.params.sym.toUpperCase());
+
+        ctx.body = result;
+        ctx.status = 200;
+        return;
+      }
+      ctx.status = 400;
+      ctx.body = errorBody('Symbol is required', 'Symbol is required');
+    } catch (err) {
+      logger.log({ level: 'error', message: err.message, label: `Get IPOs` });
+
+      ctx.status = 500;
+      ctx.body = errorBody('Failed to get account', err.message);
+    }
+  });
+
+  router.get('/live/metrics/:sym', async (ctx) => {
+    try {
+      const result = await getStockMetrics(ctx.params.sym.toUpperCase());
+      ctx.body = result;
+      ctx.status = 200;
+    } catch (err) {
+      logger.log({ level: 'error', message: err.message, label: `Get stock metrics "${ctx.params.sym}"` });
+      ctx.body = err.message;
+      ctx.status = 400;
+    }
+  });
+
+  router.get('/live/peers/:sym', async (ctx) => {
+    try {
+      const result = await getStockPeers(ctx.params.sym.toUpperCase());
+      ctx.body = result;
+      ctx.status = 200;
+    } catch (err) {
+      logger.log({ level: 'error', message: err.message, label: `Get stock peers "${ctx.params.sym}"` });
+      ctx.body = err.message;
+      ctx.status = 400;
+    }
+  });
+
+  router.get('/live/earnings/:sym', async (ctx) => {
+    try {
+      const result = await getEarningsCalendar(ctx.params.sym.toUpperCase());
+      ctx.body = result;
+      ctx.status = 200;
+    } catch (err) {
+      logger.log({ level: 'error', message: err.message, label: `Get earnings calendar "${ctx.params.sym}"` });
+      ctx.body = err.message;
+      ctx.status = 400;
+    }
+  });
+
+  router.get('/live/earnings-history/:sym', async (ctx) => {
+    try {
+      const result = await getEarningsHistory(ctx.params.sym.toUpperCase());
+      ctx.body = result;
+      ctx.status = 200;
+    } catch (err) {
+      logger.log({ level: 'error', message: err.message, label: `Get earnings history "${ctx.params.sym}"` });
+      ctx.body = err.message;
+      ctx.status = 400;
+    }
+  });
+
+  router.get('/live/insider/:sym', async (ctx) => {
+    try {
+      const result = await getInsiderTransactions(ctx.params.sym.toUpperCase());
+      ctx.body = result;
+      ctx.status = 200;
+    } catch (err) {
+      logger.log({ level: 'error', message: err.message, label: `Get insider transactions "${ctx.params.sym}"` });
+      ctx.body = err.message;
+      ctx.status = 400;
+    }
+  });
+
+  return router;
+};
