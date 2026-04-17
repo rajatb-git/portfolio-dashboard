@@ -1,19 +1,8 @@
 {
+  "extends": ["../../biome.json"],
   "files": {
     "ignore": [".next", ".github", "HAapp"]
   },
-  "formatter": {
-    "enabled": true,
-    "useEditorconfig": true,
-    "formatWithErrors": false,
-    "indentStyle": "space",
-    "indentWidth": 2,
-    "lineEnding": "lf",
-    "lineWidth": 120,
-    "attributePosition": "auto",
-    "bracketSpacing": true
-  },
-  "organizeImports": { "enabled": true },
   "linter": {
     "enabled": true,
     "rules": {
@@ -76,19 +65,6 @@
         "useGetterReturn": "error",
         "useValidTypeof": "error"
       }
-    }
-  },
-  "javascript": {
-    "formatter": {
-      "jsxQuoteStyle": "double",
-      "quoteProperties": "asNeeded",
-      "trailingCommas": "es5",
-      "semicolons": "always",
-      "arrowParentheses": "always",
-      "bracketSameLine": false,
-      "quoteStyle": "single",
-      "attributePosition": "auto",
-      "bracketSpacing": true
     }
   }
 }
