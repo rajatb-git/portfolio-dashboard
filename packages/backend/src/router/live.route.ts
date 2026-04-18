@@ -8,6 +8,7 @@ import { getPriceHistoryCandleStick } from '../externalApis/nasdaq';
 import { getStockMetrics, getStockPeers, getEarningsCalendar, getEarningsHistory, getInsiderTransactions } from '../externalApis/finnHub';
 import { IPOController } from '../controller/IPOController';
 import { CompanyProfileController } from '../controller/CompanyProfileController';
+import { AgentInsightsController } from '../controller/AgentInsightsController';
 import { errorBody } from '../utils/error';
 
 export const LiveRouter = () => {
@@ -167,6 +168,18 @@ export const LiveRouter = () => {
     } catch (err) {
       logger.log({ level: 'error', message: err.message, label: `Get insider transactions "${ctx.params.sym}"` });
       ctx.body = err.message;
+      ctx.status = 400;
+    }
+  });
+
+  router.get('/live/agent-insights/:sym', async (ctx) => {
+    try {
+      const result = await new AgentInsightsController().getInsights(ctx.params.sym.toUpperCase());
+      ctx.body = result;
+      ctx.status = 200;
+    } catch (err) {
+      logger.log({ level: 'error', message: err.message, label: `Get agent insights "${ctx.params.sym}"` });
+      ctx.body = errorBody('Failed to get agent insights', err.message);
       ctx.status = 400;
     }
   });

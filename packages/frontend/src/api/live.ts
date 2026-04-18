@@ -9,6 +9,15 @@ import { catchCustomError } from './apiUtil';
 
 export type Range = '1d' | '5d' | '1M' | '3M' | '6M' | '1y' | '2y' | '3y';
 
+export type AgentInsight = {
+  summary: string;
+  sentiment: 'bullish' | 'bearish' | 'neutral';
+  keyPoints: string[];
+  risks: string[];
+  catalysts: string[];
+  generatedAt: string;
+};
+
 export default class LiveAPI {
   getLivePrice = async (symbol: string): Promise<IPriceStore> =>
     axios(DB_HOST + `/live/quote/${symbol}`)
@@ -72,6 +81,11 @@ export default class LiveAPI {
 
   getInsiderTransactions = async (symbol: string): Promise<any[]> =>
     axios(DB_HOST + `/live/insider/${symbol}`)
+      .then((response) => response.data)
+      .catch(catchCustomError);
+
+  getAgentInsights = async (symbol: string): Promise<AgentInsight> =>
+    axios(DB_HOST + `/live/agent-insights/${symbol}`)
       .then((response) => response.data)
       .catch(catchCustomError);
 }
