@@ -20,6 +20,18 @@ import { SettingsRouter } from './router/settings.route';
 
 const app = new Koa();
 app.use(cors());
+// Raw body parser for zip uploads — must run before koa-bodyparser
+app.use(async (ctx, next) => {
+  if (ctx.path === '/settings/db/import' && ctx.method === 'POST') {
+    const chunks: Buffer[] = [];
+    for await (const chunk of ctx.req) {
+      chunks.push(chunk);
+    }
+    (ctx.request as any).body = Buffer.concat(chunks);
+    return next();
+  }
+  return next();
+});
 app.use(KoaBodyParser());
 app.use(KoaHelmet());
 

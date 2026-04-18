@@ -2,7 +2,13 @@ import * as React from 'react';
 
 import {
   Box,
+  Button,
   Card,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogContentText,
+  DialogTitle,
   Divider,
   MenuItem,
   Select,
@@ -13,6 +19,7 @@ import {
   ToggleButtonGroup,
   Typography,
 } from '@mui/material';
+import { toast } from 'react-toastify';
 
 import { useThemeMode } from '@/components/ThemeRegistry/ThemeModeContext';
 import { DB_HOST } from '@/config';
@@ -74,6 +81,11 @@ export default function Settings() {
   const [apiHostSaved, setApiHostSaved] = React.useState(false);
   const [aiConfig, setAiConfig] = React.useState<AiConfig | null>(null);
   const [saving, setSaving] = React.useState(false);
+  const [exporting, setExporting] = React.useState(false);
+  const [importing, setImporting] = React.useState(false);
+  const [importConfirmOpen, setImportConfirmOpen] = React.useState(false);
+  const [pendingImportFile, setPendingImportFile] = React.useState<File | null>(null);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   React.useEffect(() => {
     apis.live.getAiConfig().then(setAiConfig).catch(() => {});
@@ -84,6 +96,53 @@ export default function Settings() {
       LocalStorageUtil.setItem('api_host', apiHost.trim());
       setApiHostSaved(true);
       setTimeout(() => setApiHostSaved(false), 2000);
+    }
+  };
+
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      const blob = await apis.live.exportDb();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `portfolio-backup-${new Date().toISOString().slice(0, 10)}.zip`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      toast.success('Database exported successfully');
+    } catch (err: any) {
+      toast.error(err.message || 'Export failed');
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const handleImportFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.name.endsWith('.zip')) {
+      toast.error('Please select a .zip backup file');
+      return;
+    }
+    setPendingImportFile(file);
+    setImportConfirmOpen(true);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const handleImportConfirm = async () => {
+    if (!pendingImportFile) return;
+    setImportConfirmOpen(false);
+    setImporting(true);
+    try {
+      const result = await apis.live.importDb(pendingImportFile);
+      toast.success(result.message || 'Import completed');
+    } catch (err: any) {
+      toast.error(err.message || 'Import failed');
+    } finally {
+      setImporting(false);
+      setPendingImportFile(null);
     }
   };
 
@@ -156,6 +215,63 @@ export default function Settings() {
           </Stack>
         </SettingRow>
       </SettingsSection>
+
+      <SettingsSection title="Data">
+        <SettingRow
+          label="Export Database"
+          description="Download a zip backup of all your portfolio data"
+        >
+          <Button
+            variant="outlined"
+            size="small"
+            onClick={handleExport}
+            disabled={exporting}
+            sx={{ fontSize: '0.78rem', textTransform: 'none' }}
+          >
+            {exporting ? 'Exporting...' : 'Export'}
+          </Button>
+        </SettingRow>
+        <SettingRow
+          label="Import Database"
+          description="Restore from a previously exported zip backup"
+        >
+          <input
+            type="file"
+            accept=".zip"
+            ref={fileInputRef}
+            onChange={handleImportFileSelect}
+            style={{ display: 'none' }}
+          />
+          <Button
+            variant="outlined"
+            size="small"
+            color="warning"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={importing}
+            sx={{ fontSize: '0.78rem', textTransform: 'none' }}
+          >
+            {importing ? 'Importing...' : 'Import'}
+          </Button>
+        </SettingRow>
+      </SettingsSection>
+
+      <Dialog open={importConfirmOpen} onClose={() => setImportConfirmOpen(false)}>
+        <DialogTitle>Confirm Import</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            This will <strong>overwrite all existing data</strong> with the contents of the backup file.
+            This action cannot be undone. Are you sure you want to continue?
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => { setImportConfirmOpen(false); setPendingImportFile(null); }}>
+            Cancel
+          </Button>
+          <Button onClick={handleImportConfirm} color="warning" variant="contained">
+            Overwrite &amp; Import
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       <SettingsSection title="AI Agent">
         <SettingRow label="Enable AI Insights" description="Show AI-powered analysis on the Research page">

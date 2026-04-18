@@ -112,4 +112,18 @@ export default class LiveAPI {
       .post(DB_HOST + '/settings/ai-config', config)
       .then((response) => response.data)
       .catch(catchCustomError);
+
+  exportDb = async (): Promise<Blob> =>
+    axios
+      .get(DB_HOST + '/settings/db/export', { responseType: 'blob' })
+      .then((response) => response.data)
+      .catch(catchCustomError);
+
+  importDb = async (file: File): Promise<{ message: string }> =>
+    axios
+      .post(DB_HOST + '/settings/db/import', file, {
+        headers: { 'Content-Type': 'application/octet-stream' },
+      })
+      .then((response) => response.data)
+      .catch(catchCustomError);
 }
