@@ -15,7 +15,14 @@ export type AgentInsight = {
   keyPoints: string[];
   risks: string[];
   catalysts: string[];
+  provider: string;
+  model: string;
   generatedAt: string;
+};
+
+export type AiProviderInfo = {
+  active: { name: string; model: string; configured: boolean };
+  providers: Array<{ name: string; model: string; configured: boolean }>;
 };
 
 export default class LiveAPI {
@@ -86,6 +93,11 @@ export default class LiveAPI {
 
   getAgentInsights = async (symbol: string): Promise<AgentInsight> =>
     axios(DB_HOST + `/live/agent-insights/${symbol}`)
+      .then((response) => response.data)
+      .catch(catchCustomError);
+
+  getAiProviderInfo = async (): Promise<AiProviderInfo> =>
+    axios(DB_HOST + '/live/ai-provider')
       .then((response) => response.data)
       .catch(catchCustomError);
 }

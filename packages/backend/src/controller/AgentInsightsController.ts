@@ -1,4 +1,3 @@
-import Anthropic from '@anthropic-ai/sdk';
 import moment from 'moment';
 
 import { LiveQuoteController } from './LiveQuoteController';
@@ -6,6 +5,7 @@ import { LiveRecommendationController } from './LiveRecommendationController';
 import { CompanyProfileController } from './CompanyProfileController';
 import { getCompanyNews, getStockMetrics, getEarningsHistory, getInsiderTransactions } from '../externalApis/finnHub';
 import { CacheDBModel } from '../models/CacheModel';
+import { getActiveProvider, SYSTEM_PROMPT } from '../aiProviders';
 import { logger } from '../utils/winston';
 
 export type AgentInsight = {
@@ -14,6 +14,8 @@ export type AgentInsight = {
   keyPoints: string[];
   risks: string[];
   catalysts: string[];
+  provider: string;
+  model: string;
   generatedAt: string;
 };
 
@@ -120,55 +122,31 @@ export class AgentInsightsController {
       }
     }
 
+    const provider = getActiveProvider();
     const marketData = await this.getMarketContext(symbol);
     const prompt = this.buildPrompt(symbol, marketData);
 
-    const apiKey = process.env.ANTHROPIC_API_KEY;
-    if (!apiKey) {
-      throw new Error('ANTHROPIC_API_KEY environment variable is not set');
-    }
+    const rawText = await provider.generateInsight(SYSTEM_PROMPT, prompt);
 
-    const client = new Anthropic({ apiKey });
-
-    const response = await client.messages.create({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 1024,
-      messages: [
-        {
-          role: 'user',
-          content: prompt,
-        },
-      ],
-      system: `You are a senior equity research analyst. Given market data for a stock, provide a concise investment analysis. Respond ONLY with valid JSON matching this exact schema (no markdown, no code fences):
-{
-  "summary": "2-3 sentence overall assessment",
-  "sentiment": "bullish" | "bearish" | "neutral",
-  "keyPoints": ["point 1", "point 2", "point 3"],
-  "risks": ["risk 1", "risk 2"],
-  "catalysts": ["catalyst 1", "catalyst 2"]
-}
-Keep each point to one sentence. Be specific with numbers from the data provided. Do not give financial advice - frame as analysis observations.`,
-    });
-
-    const textContent = response.content.find((c) => c.type === 'text');
-    if (!textContent || textContent.type !== 'text') {
-      throw new Error('No text response from agent');
-    }
+    // Strip markdown code fences if present
+    const cleaned = rawText.replace(/```(?:json)?\s*/g, '').replace(/```\s*/g, '').trim();
 
     let insight: AgentInsight;
     try {
-      const parsed = JSON.parse(textContent.text);
+      const parsed = JSON.parse(cleaned);
       insight = {
         summary: parsed.summary,
         sentiment: parsed.sentiment,
         keyPoints: parsed.keyPoints ?? [],
         risks: parsed.risks ?? [],
         catalysts: parsed.catalysts ?? [],
+        provider: provider.name,
+        model: provider.model,
         generatedAt: moment().toISOString(),
       };
     } catch (err) {
-      logger.log({ level: 'error', label: 'AgentInsights', message: `Failed to parse agent response: ${textContent.text}` });
-      throw new Error('Failed to parse agent insights');
+      logger.log({ level: 'error', label: 'AgentInsights', message: `Failed to parse response from ${provider.name}: ${cleaned}` });
+      throw new Error(`Failed to parse ${provider.name} response as JSON`);
     }
 
     await cacheModel.insertOrUpdate({ key: cacheKey, value: JSON.stringify(insight) }, cacheKey);

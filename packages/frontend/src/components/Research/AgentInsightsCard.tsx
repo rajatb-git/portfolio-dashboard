@@ -85,7 +85,7 @@ export default function AgentInsightsCard({ insight, isLoading, onRefresh }: Pro
           <Typography sx={{ color: 'text.disabled', fontSize: '0.82rem', textAlign: 'center' }}>
             Agent insights unavailable.
             <br />
-            Set ANTHROPIC_API_KEY in your backend .env to enable.
+            Configure an AI provider: set GEMINI_API_KEY, ANTHROPIC_API_KEY, or run Ollama locally.
           </Typography>
         </Stack>
       ) : (
@@ -93,20 +93,37 @@ export default function AgentInsightsCard({ insight, isLoading, onRefresh }: Pro
           {/* Sentiment badge */}
           {sentimentStyle && (
             <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ px: 2, pt: 1.5 }}>
-              <Chip
-                icon={<Iconify icon={sentimentStyle.icon} width={16} />}
-                label={sentimentStyle.label}
-                size="small"
-                sx={{
-                  height: 24,
-                  fontSize: '0.75rem',
-                  fontWeight: 700,
-                  bgcolor: sentimentStyle.bg,
-                  color: sentimentStyle.color,
-                  border: `1px solid ${sentimentStyle.border}`,
-                  '& .MuiChip-icon': { color: sentimentStyle.color },
-                }}
-              />
+              <Stack direction="row" alignItems="center" spacing={1}>
+                <Chip
+                  icon={<Iconify icon={sentimentStyle.icon} width={16} />}
+                  label={sentimentStyle.label}
+                  size="small"
+                  sx={{
+                    height: 24,
+                    fontSize: '0.75rem',
+                    fontWeight: 700,
+                    bgcolor: sentimentStyle.bg,
+                    color: sentimentStyle.color,
+                    border: `1px solid ${sentimentStyle.border}`,
+                    '& .MuiChip-icon': { color: sentimentStyle.color },
+                  }}
+                />
+                {insight.provider && (
+                  <Chip
+                    label={`${insight.provider} · ${insight.model}`}
+                    size="small"
+                    sx={{
+                      height: 20,
+                      fontSize: '0.62rem',
+                      fontWeight: 500,
+                      bgcolor: 'action.hover',
+                      color: 'text.disabled',
+                      border: '1px solid',
+                      borderColor: 'divider',
+                    }}
+                  />
+                )}
+              </Stack>
               <Typography sx={{ fontSize: '0.65rem', color: 'text.disabled' }}>
                 {moment(insight.generatedAt).fromNow()}
               </Typography>

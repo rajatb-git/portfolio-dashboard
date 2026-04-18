@@ -3,6 +3,7 @@ import * as React from 'react';
 import {
   Box,
   Card,
+  Chip,
   Divider,
   Stack,
   TextField,
@@ -14,6 +15,8 @@ import {
 import { useThemeMode } from '@/components/ThemeRegistry/ThemeModeContext';
 import { DB_HOST } from '@/config';
 import LocalStorageUtil from '@/utils/localStorage';
+import apis from '@/api';
+import { AiProviderInfo } from '@/api/live';
 
 function SettingsSection({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -67,6 +70,11 @@ export default function Settings() {
   const { mode, setMode } = useThemeMode();
   const [apiHost, setApiHost] = React.useState(LocalStorageUtil.getItem<string>('api_host') ?? DB_HOST);
   const [apiHostSaved, setApiHostSaved] = React.useState(false);
+  const [aiProvider, setAiProvider] = React.useState<AiProviderInfo | null>(null);
+
+  React.useEffect(() => {
+    apis.live.getAiProviderInfo().then(setAiProvider).catch(() => {});
+  }, []);
 
   const handleApiHostBlur = () => {
     if (apiHost.trim()) {
@@ -132,6 +140,42 @@ export default function Settings() {
             />
           </Stack>
         </SettingRow>
+      </SettingsSection>
+
+      <SettingsSection title="AI Agent">
+        <SettingRow
+          label="Active Provider"
+          description="Set AI_PROVIDER env var to override auto-detection"
+        >
+          <Typography sx={{ fontSize: '0.82rem', color: 'text.secondary', fontWeight: 600 }}>
+            {aiProvider?.active ? `${aiProvider.active.name} (${aiProvider.active.model})` : '—'}
+          </Typography>
+        </SettingRow>
+        {aiProvider?.providers.map((p) => (
+          <SettingRow
+            key={p.name}
+            label={p.name.charAt(0).toUpperCase() + p.name.slice(1)}
+            description={
+              p.name === 'claude' ? 'ANTHROPIC_API_KEY' :
+              p.name === 'gemini' ? 'GEMINI_API_KEY' :
+              'OLLAMA_HOST (default localhost:11434)'
+            }
+          >
+            <Chip
+              label={p.configured ? 'Configured' : 'Not configured'}
+              size="small"
+              sx={{
+                height: 22,
+                fontSize: '0.72rem',
+                fontWeight: 600,
+                bgcolor: p.configured ? 'rgba(34,197,94,0.12)' : 'rgba(239,68,68,0.08)',
+                color: p.configured ? '#22c55e' : 'text.disabled',
+                border: '1px solid',
+                borderColor: p.configured ? 'rgba(34,197,94,0.25)' : 'divider',
+              }}
+            />
+          </SettingRow>
+        ))}
       </SettingsSection>
 
       <SettingsSection title="About">

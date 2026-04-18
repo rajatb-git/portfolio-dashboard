@@ -17,6 +17,7 @@
   "private": true,
   "dependencies": {
     "@anthropic-ai/sdk": "^0.90.0",
+    "@google/genai": "^1.50.1",
     "@koa/cors": "^5.0.0",
     "axios": "^1.12.2",
     "dotenv": "^17.2.2",
