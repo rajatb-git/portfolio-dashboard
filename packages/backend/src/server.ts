@@ -16,6 +16,7 @@ import { HealthRouter } from './router/health.route';
 import { WatchlistRouter } from './router/watchlist.route';
 import { DividendRouter } from './router/dividend.route';
 import { AnalyticsRouter } from './router/analytics.route';
+import { SettingsRouter } from './router/settings.route';
 
 const app = new Koa();
 app.use(cors());
@@ -50,6 +51,7 @@ app.use(LogsRouter().routes()).use(LogsRouter().allowedMethods());
 app.use(WatchlistRouter().routes()).use(WatchlistRouter().allowedMethods());
 app.use(DividendRouter().routes()).use(DividendRouter().allowedMethods());
 app.use(AnalyticsRouter().routes()).use(AnalyticsRouter().allowedMethods());
+app.use(SettingsRouter().routes()).use(SettingsRouter().allowedMethods());
 
 app.listen(port, () => {
   console.log('server started on port ' + port);

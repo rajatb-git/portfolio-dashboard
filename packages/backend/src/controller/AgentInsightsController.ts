@@ -122,7 +122,7 @@ export class AgentInsightsController {
       }
     }
 
-    const provider = getActiveProvider();
+    const provider = await getActiveProvider();
     const marketData = await this.getMarketContext(symbol);
     const prompt = this.buildPrompt(symbol, marketData);
 

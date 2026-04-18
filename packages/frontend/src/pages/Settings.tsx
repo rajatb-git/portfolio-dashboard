@@ -3,9 +3,11 @@ import * as React from 'react';
 import {
   Box,
   Card,
-  Chip,
   Divider,
+  MenuItem,
+  Select,
   Stack,
+  Switch,
   TextField,
   ToggleButton,
   ToggleButtonGroup,
@@ -16,7 +18,7 @@ import { useThemeMode } from '@/components/ThemeRegistry/ThemeModeContext';
 import { DB_HOST } from '@/config';
 import LocalStorageUtil from '@/utils/localStorage';
 import apis from '@/api';
-import { AiProviderInfo } from '@/api/live';
+import { AiConfig } from '@/api/live';
 
 function SettingsSection({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -70,10 +72,11 @@ export default function Settings() {
   const { mode, setMode } = useThemeMode();
   const [apiHost, setApiHost] = React.useState(LocalStorageUtil.getItem<string>('api_host') ?? DB_HOST);
   const [apiHostSaved, setApiHostSaved] = React.useState(false);
-  const [aiProvider, setAiProvider] = React.useState<AiProviderInfo | null>(null);
+  const [aiConfig, setAiConfig] = React.useState<AiConfig | null>(null);
+  const [saving, setSaving] = React.useState(false);
 
   React.useEffect(() => {
-    apis.live.getAiProviderInfo().then(setAiProvider).catch(() => {});
+    apis.live.getAiConfig().then(setAiConfig).catch(() => {});
   }, []);
 
   const handleApiHostBlur = () => {
@@ -82,6 +85,18 @@ export default function Settings() {
       setApiHostSaved(true);
       setTimeout(() => setApiHostSaved(false), 2000);
     }
+  };
+
+  const updateAiConfig = (partial: Partial<AiConfig>) => {
+    if (!aiConfig) return;
+    const updated = { ...aiConfig, ...partial };
+    setAiConfig(updated);
+    setSaving(true);
+    apis.live
+      .saveAiConfig(partial)
+      .then((saved) => setAiConfig(saved))
+      .catch(() => {})
+      .finally(() => setSaving(false));
   };
 
   return (
@@ -143,39 +158,108 @@ export default function Settings() {
       </SettingsSection>
 
       <SettingsSection title="AI Agent">
-        <SettingRow
-          label="Active Provider"
-          description="Set AI_PROVIDER env var to override auto-detection"
-        >
-          <Typography sx={{ fontSize: '0.82rem', color: 'text.secondary', fontWeight: 600 }}>
-            {aiProvider?.active ? `${aiProvider.active.name} (${aiProvider.active.model})` : '—'}
-          </Typography>
+        <SettingRow label="Enable AI Insights" description="Show AI-powered analysis on the Research page">
+          <Switch
+            checked={aiConfig?.enabled ?? false}
+            onChange={(_, checked) => updateAiConfig({ enabled: checked })}
+          />
         </SettingRow>
-        {aiProvider?.providers.map((p) => (
-          <SettingRow
-            key={p.name}
-            label={p.name.charAt(0).toUpperCase() + p.name.slice(1)}
-            description={
-              p.name === 'claude' ? 'ANTHROPIC_API_KEY' :
-              p.name === 'gemini' ? 'GEMINI_API_KEY' :
-              'OLLAMA_HOST (default localhost:11434)'
-            }
-          >
-            <Chip
-              label={p.configured ? 'Configured' : 'Not configured'}
-              size="small"
-              sx={{
-                height: 22,
-                fontSize: '0.72rem',
-                fontWeight: 600,
-                bgcolor: p.configured ? 'rgba(34,197,94,0.12)' : 'rgba(239,68,68,0.08)',
-                color: p.configured ? '#22c55e' : 'text.disabled',
-                border: '1px solid',
-                borderColor: p.configured ? 'rgba(34,197,94,0.25)' : 'divider',
-              }}
-            />
-          </SettingRow>
-        ))}
+
+        {aiConfig?.enabled && (
+          <>
+            <SettingRow label="Provider" description="Select which AI provider to use">
+              <Select
+                size="small"
+                value={aiConfig.provider}
+                onChange={(e) => updateAiConfig({ provider: e.target.value as AiConfig['provider'] })}
+                sx={{ minWidth: 200, fontSize: '0.82rem' }}
+              >
+                <MenuItem value="ollama">Ollama (Local)</MenuItem>
+                <MenuItem value="gemini">Gemini (Google)</MenuItem>
+                <MenuItem value="claude">Claude (Anthropic)</MenuItem>
+              </Select>
+            </SettingRow>
+
+            {aiConfig.provider === 'claude' && (
+              <>
+                <SettingRow label="API Key" description="Your Anthropic API key">
+                  <TextField
+                    size="small"
+                    type="password"
+                    value={aiConfig.claudeApiKey}
+                    onChange={(e) => setAiConfig({ ...aiConfig, claudeApiKey: e.target.value })}
+                    onBlur={() => updateAiConfig({ claudeApiKey: aiConfig.claudeApiKey })}
+                    placeholder="sk-ant-..."
+                    sx={{ width: 260, '& input': { fontSize: '0.78rem' } }}
+                  />
+                </SettingRow>
+                <SettingRow label="Model" description="Claude model to use">
+                  <TextField
+                    size="small"
+                    value={aiConfig.claudeModel}
+                    onChange={(e) => setAiConfig({ ...aiConfig, claudeModel: e.target.value })}
+                    onBlur={() => updateAiConfig({ claudeModel: aiConfig.claudeModel })}
+                    sx={{ width: 260, '& input': { fontSize: '0.78rem' } }}
+                  />
+                </SettingRow>
+              </>
+            )}
+
+            {aiConfig.provider === 'gemini' && (
+              <>
+                <SettingRow label="API Key" description="Your Google Gemini API key">
+                  <TextField
+                    size="small"
+                    type="password"
+                    value={aiConfig.geminiApiKey}
+                    onChange={(e) => setAiConfig({ ...aiConfig, geminiApiKey: e.target.value })}
+                    onBlur={() => updateAiConfig({ geminiApiKey: aiConfig.geminiApiKey })}
+                    placeholder="AIza..."
+                    sx={{ width: 260, '& input': { fontSize: '0.78rem' } }}
+                  />
+                </SettingRow>
+                <SettingRow label="Model" description="Gemini model to use">
+                  <TextField
+                    size="small"
+                    value={aiConfig.geminiModel}
+                    onChange={(e) => setAiConfig({ ...aiConfig, geminiModel: e.target.value })}
+                    onBlur={() => updateAiConfig({ geminiModel: aiConfig.geminiModel })}
+                    sx={{ width: 260, '& input': { fontSize: '0.78rem' } }}
+                  />
+                </SettingRow>
+              </>
+            )}
+
+            {aiConfig.provider === 'ollama' && (
+              <>
+                <SettingRow label="Host" description="Ollama server URL">
+                  <TextField
+                    size="small"
+                    value={aiConfig.ollamaHost}
+                    onChange={(e) => setAiConfig({ ...aiConfig, ollamaHost: e.target.value })}
+                    onBlur={() => updateAiConfig({ ollamaHost: aiConfig.ollamaHost })}
+                    sx={{ width: 260, '& input': { fontSize: '0.78rem' } }}
+                  />
+                </SettingRow>
+                <SettingRow label="Model" description="Ollama model name (e.g. llama3.1, mistral)">
+                  <TextField
+                    size="small"
+                    value={aiConfig.ollamaModel}
+                    onChange={(e) => setAiConfig({ ...aiConfig, ollamaModel: e.target.value })}
+                    onBlur={() => updateAiConfig({ ollamaModel: aiConfig.ollamaModel })}
+                    sx={{ width: 260, '& input': { fontSize: '0.78rem' } }}
+                  />
+                </SettingRow>
+              </>
+            )}
+
+            {saving && (
+              <Typography sx={{ px: 2, py: 1, fontSize: '0.72rem', color: 'text.disabled' }}>
+                Saving...
+              </Typography>
+            )}
+          </>
+        )}
       </SettingsSection>
 
       <SettingsSection title="About">

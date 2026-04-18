@@ -6,9 +6,9 @@ export class OllamaProvider implements AiProvider {
   readonly model: string;
   private host: string;
 
-  constructor() {
-    this.host = process.env.OLLAMA_HOST ?? 'http://localhost:11434';
-    this.model = process.env.OLLAMA_MODEL ?? 'llama3.1';
+  constructor(host?: string, model?: string) {
+    this.host = host || 'http://localhost:11434';
+    this.model = model || 'llama3.1';
   }
 
   isConfigured(): boolean {

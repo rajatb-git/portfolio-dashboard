@@ -6,9 +6,9 @@ export class GeminiProvider implements AiProvider {
   readonly model: string;
   private apiKey: string;
 
-  constructor() {
-    this.apiKey = process.env.GEMINI_API_KEY ?? '';
-    this.model = process.env.GEMINI_MODEL ?? 'gemini-2.0-flash';
+  constructor(apiKey: string, model?: string) {
+    this.apiKey = apiKey;
+    this.model = model || 'gemini-2.0-flash';
   }
 
   isConfigured(): boolean {

@@ -9,7 +9,6 @@ import { getStockMetrics, getStockPeers, getEarningsCalendar, getEarningsHistory
 import { IPOController } from '../controller/IPOController';
 import { CompanyProfileController } from '../controller/CompanyProfileController';
 import { AgentInsightsController } from '../controller/AgentInsightsController';
-import { getActiveProviderConfig, getAllProviderConfigs } from '../aiProviders';
 import { errorBody } from '../utils/error';
 
 export const LiveRouter = () => {
@@ -169,18 +168,6 @@ export const LiveRouter = () => {
     } catch (err) {
       logger.log({ level: 'error', message: err.message, label: `Get insider transactions "${ctx.params.sym}"` });
       ctx.body = err.message;
-      ctx.status = 400;
-    }
-  });
-
-  router.get('/live/ai-provider', (ctx) => {
-    try {
-      const active = getActiveProviderConfig();
-      const all = getAllProviderConfigs();
-      ctx.body = { active, providers: all };
-      ctx.status = 200;
-    } catch (err) {
-      ctx.body = errorBody('Failed to get AI provider info', err.message);
       ctx.status = 400;
     }
   });

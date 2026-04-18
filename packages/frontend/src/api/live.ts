@@ -20,9 +20,15 @@ export type AgentInsight = {
   generatedAt: string;
 };
 
-export type AiProviderInfo = {
-  active: { name: string; model: string; configured: boolean };
-  providers: Array<{ name: string; model: string; configured: boolean }>;
+export type AiConfig = {
+  enabled: boolean;
+  provider: 'claude' | 'gemini' | 'ollama';
+  claudeApiKey: string;
+  claudeModel: string;
+  geminiApiKey: string;
+  geminiModel: string;
+  ollamaHost: string;
+  ollamaModel: string;
 };
 
 export default class LiveAPI {
@@ -96,8 +102,14 @@ export default class LiveAPI {
       .then((response) => response.data)
       .catch(catchCustomError);
 
-  getAiProviderInfo = async (): Promise<AiProviderInfo> =>
-    axios(DB_HOST + '/live/ai-provider')
+  getAiConfig = async (): Promise<AiConfig> =>
+    axios(DB_HOST + '/settings/ai-config')
+      .then((response) => response.data)
+      .catch(catchCustomError);
+
+  saveAiConfig = async (config: Partial<AiConfig>): Promise<AiConfig> =>
+    axios
+      .post(DB_HOST + '/settings/ai-config', config)
       .then((response) => response.data)
       .catch(catchCustomError);
 }

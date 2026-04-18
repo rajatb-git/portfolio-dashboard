@@ -17,7 +17,7 @@ import ResearchPeersCard from '@/components/Research/ResearchPeersCard';
 import ResearchEarningsHistoryCard from '@/components/Research/ResearchEarningsHistoryCard';
 import ResearchInsiderCard from '@/components/Research/ResearchInsiderCard';
 import AgentInsightsCard from '@/components/Research/AgentInsightsCard';
-import { AgentInsight } from '@/api/live';
+import { AgentInsight, AiConfig } from '@/api/live';
 import { Iconify } from '@/components/Iconify';
 import RecommendationDonutGraphMui from '@/components/RecommendationDonutGraphMui';
 import { PriceHistoryGraph } from '@/components/PriceHistoryGraph';
@@ -50,6 +50,7 @@ function Research() {
   const [isInsiderLoading, setIsInsiderLoading] = React.useState(true);
   const [isAgentLoading, setIsAgentLoading] = React.useState(false);
   const [agentInsight, setAgentInsight] = React.useState<AgentInsight | null>(null);
+  const [agentEnabled, setAgentEnabled] = React.useState(false);
 
   const [companyProfile, setCompanyProfile] = React.useState<CompanyProfile | undefined>();
   const [price, setPrice] = React.useState<IPriceStore>();
@@ -130,7 +131,9 @@ function Research() {
         .catch(() => setInsiderTransactions([]))
         .finally(() => setIsInsiderLoading(false));
 
-      fetchAgentInsights(searchTicker);
+      if (agentEnabled) {
+        fetchAgentInsights(searchTicker);
+      }
     }
   };
 
@@ -151,6 +154,7 @@ function Research() {
 
   React.useEffect(() => {
     apis.watchlist.getAll().then((items) => setWatchlist((items ?? []).map((i: any) => i.symbol))).catch(() => {});
+    apis.live.getAiConfig().then((config) => setAgentEnabled(config.enabled)).catch(() => {});
   }, []);
 
   const isInWatchlist = watchlist.includes(searchText);
@@ -335,7 +339,7 @@ function Research() {
       </Card>
 
       {/* ── AI Agent Insights ── */}
-      {searchText && (
+      {agentEnabled && searchText && (
         <AgentInsightsCard
           insight={agentInsight}
           isLoading={isAgentLoading}
