@@ -36,7 +36,7 @@ const TextField = styled(MuiTextField)(({ theme }: { theme: Theme }) => ({
 
 type Props = {
   open: boolean;
-  initialValues?: IHoldings;
+  initialValues?: Pick<IHoldings, 'name' | 'symbol' | 'accountId' | 'type' | 'qty' | 'averagePrice' | 'targetPrice'>;
   handleDialogClose: () => void;
   refreshData: () => void;
   accounts: Array<IAccount>;

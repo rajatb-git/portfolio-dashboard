@@ -214,7 +214,7 @@ export default function Table<T>({ rows, columns, accounts, refreshData, isLoadi
 
       {/* Per-row trade dialog — key forces remount so initialValues are fresh */}
       <BuySellDialog
-        key={tradeHolding?.id ?? 'trade'}
+        key={tradeHolding?.symbol ?? 'trade'}
         open={tradeOpen}
         initialValues={tradeHolding ?? undefined}
         handleDialogClose={() => setTradeOpen(false)}
