@@ -50,6 +50,7 @@ function Research() {
   const [isInsiderLoading, setIsInsiderLoading] = React.useState(true);
   const [isAgentLoading, setIsAgentLoading] = React.useState(false);
   const [agentInsight, setAgentInsight] = React.useState<AgentInsight | null>(null);
+  const [agentError, setAgentError] = React.useState<string | null>(null);
   const [agentEnabled, setAgentEnabled] = React.useState(false);
 
   const [companyProfile, setCompanyProfile] = React.useState<CompanyProfile | undefined>();
@@ -121,14 +122,20 @@ function Research() {
       apis.live
         .getEarningsHistory(searchTicker)
         .then((res) => setEarningsHistory(res ?? []))
-        .catch(() => setEarningsHistory([]))
+        .catch((err) => {
+          setEarningsHistory([]);
+          toast.error(err.message || 'Failed to load earnings history');
+        })
         .finally(() => setIsEarningsHistoryLoading(false));
 
       setIsInsiderLoading(true);
       apis.live
         .getInsiderTransactions(searchTicker)
         .then((res) => setInsiderTransactions(res ?? []))
-        .catch(() => setInsiderTransactions([]))
+        .catch((err) => {
+          setInsiderTransactions([]);
+          toast.error(err.message || 'Failed to load insider transactions');
+        })
         .finally(() => setIsInsiderLoading(false));
 
       if (agentEnabled) {
@@ -139,10 +146,15 @@ function Research() {
 
   const fetchAgentInsights = (ticker: string) => {
     setIsAgentLoading(true);
+    setAgentError(null);
     apis.live
       .getAgentInsights(ticker)
       .then((res) => setAgentInsight(res))
-      .catch(() => setAgentInsight(null))
+      .catch((err) => {
+        setAgentInsight(null);
+        setAgentError(err.message || 'Failed to load AI insights');
+        toast.error(err.message || 'Failed to load AI insights');
+      })
       .finally(() => setIsAgentLoading(false));
   };
 
@@ -153,19 +165,27 @@ function Research() {
   }, [searchParams]);
 
   React.useEffect(() => {
-    apis.watchlist.getAll().then((items) => setWatchlist((items ?? []).map((i: any) => i.symbol))).catch(() => {});
-    apis.live.getAiConfig().then((config) => setAgentEnabled(config.enabled)).catch(() => {});
+    apis.watchlist.getAll()
+      .then((items) => setWatchlist((items ?? []).map((i: any) => i.symbol)))
+      .catch((err) => toast.error(err.message || 'Failed to load watchlist'));
+    apis.live.getAiConfig()
+      .then((config) => setAgentEnabled(config.enabled))
+      .catch(() => {});
   }, []);
 
   const isInWatchlist = watchlist.includes(searchText);
 
   const handleWatchlistToggle = async () => {
-    if (isInWatchlist) {
-      await apis.watchlist.remove(searchText).catch(() => {});
-      setWatchlist((prev) => prev.filter((s) => s !== searchText));
-    } else {
-      await apis.watchlist.add(searchText).catch(() => {});
-      setWatchlist((prev) => [...prev, searchText]);
+    try {
+      if (isInWatchlist) {
+        await apis.watchlist.remove(searchText);
+        setWatchlist((prev) => prev.filter((s) => s !== searchText));
+      } else {
+        await apis.watchlist.add(searchText);
+        setWatchlist((prev) => [...prev, searchText]);
+      }
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to update watchlist');
     }
   };
 
@@ -343,6 +363,7 @@ function Research() {
         <AgentInsightsCard
           insight={agentInsight}
           isLoading={isAgentLoading}
+          error={agentError}
           onRefresh={() => fetchAgentInsights(searchText)}
         />
       )}

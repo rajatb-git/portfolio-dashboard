@@ -1,6 +1,7 @@
 import * as React from 'react';
 
 import { Grid, Stack, Typography } from '@mui/material';
+import { toast } from 'react-toastify';
 
 import apis from '@/api';
 import { HoldingAggregate, PortfolioSnapshot } from '@/api/dashboard';
@@ -27,8 +28,14 @@ export default function Analytics() {
   React.useEffect(() => {
     setIsLoading(true);
     Promise.all([
-      apis.dashboard.getSnapshots().catch(() => [] as PortfolioSnapshot[]),
-      apis.dashboard.getDashboard().catch(() => [] as HoldingAggregate[]),
+      apis.dashboard.getSnapshots().catch((err) => {
+        toast.error(err.message || 'Failed to load portfolio snapshots');
+        return [] as PortfolioSnapshot[];
+      }),
+      apis.dashboard.getDashboard().catch((err) => {
+        toast.error(err.message || 'Failed to load dashboard data');
+        return [] as HoldingAggregate[];
+      }),
     ])
       .then(([snaps, data]) => {
         setSnapshots(snaps ?? []);
@@ -36,11 +43,16 @@ export default function Analytics() {
       })
       .finally(() => setIsLoading(false));
 
-    // Fetch risk metrics and sector allocation
     setIsRiskLoading(true);
     Promise.all([
-      apis.analytics.getRiskMetrics().catch(() => null),
-      apis.analytics.getSectorAllocation().catch(() => [] as SectorAllocation[]),
+      apis.analytics.getRiskMetrics().catch((err) => {
+        toast.error(err.message || 'Failed to load risk metrics');
+        return null;
+      }),
+      apis.analytics.getSectorAllocation().catch((err) => {
+        toast.error(err.message || 'Failed to load sector allocation');
+        return [] as SectorAllocation[];
+      }),
     ])
       .then(([risk, sectorData]) => {
         setRiskMetrics(risk);
@@ -48,12 +60,14 @@ export default function Analytics() {
       })
       .finally(() => setIsRiskLoading(false));
 
-    // Fetch dividend summary
     setIsDividendLoading(true);
     apis.dividends
       .getSummary()
       .then((summary) => setDividendSummary(summary))
-      .catch(() => setDividendSummary(null))
+      .catch((err) => {
+        setDividendSummary(null);
+        toast.error(err.message || 'Failed to load dividend summary');
+      })
       .finally(() => setIsDividendLoading(false));
   }, []);
 

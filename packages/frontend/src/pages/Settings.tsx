@@ -88,7 +88,9 @@ export default function Settings() {
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   React.useEffect(() => {
-    apis.live.getAiConfig().then(setAiConfig).catch(() => {});
+    apis.live.getAiConfig().then(setAiConfig).catch((err) => {
+      toast.error(err.message || 'Failed to load AI configuration');
+    });
   }, []);
 
   const handleApiHostBlur = () => {
@@ -154,7 +156,10 @@ export default function Settings() {
     apis.live
       .saveAiConfig(partial)
       .then((saved) => setAiConfig(saved))
-      .catch(() => {})
+      .catch((err) => {
+        setAiConfig(aiConfig);
+        toast.error(err.message || 'Failed to save AI configuration');
+      })
       .finally(() => setSaving(false));
   };
 

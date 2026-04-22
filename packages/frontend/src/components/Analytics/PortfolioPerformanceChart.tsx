@@ -3,6 +3,7 @@ import React from 'react';
 import { ApexOptions } from 'apexcharts';
 import { Card, CardContent, Skeleton, Stack, ToggleButton, ToggleButtonGroup, Typography } from '@mui/material';
 import moment from 'moment';
+import { toast } from 'react-toastify';
 
 import apis from '@/api';
 import { PortfolioSnapshot } from '@/api/dashboard';
@@ -47,7 +48,10 @@ export default function PortfolioPerformanceChart({ snapshots }: Props) {
     apis.live
       .getPriceHistory('SPY', SPY_RANGE[range] as any)
       .then((data) => setSpyRaw(data ?? []))
-      .catch(() => setSpyRaw([]))
+      .catch((err) => {
+        setSpyRaw([]);
+        toast.error(err.message || 'Failed to load SPY benchmark data');
+      })
       .finally(() => setIsSpyLoading(false));
   }, [range]);
 

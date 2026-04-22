@@ -47,10 +47,11 @@ function InsightSection({ title, icon, iconColor, items }: SectionProps) {
 type Props = {
   insight: AgentInsight | null;
   isLoading: boolean;
+  error?: string | null;
   onRefresh?: () => void;
 };
 
-export default function AgentInsightsCard({ insight, isLoading, onRefresh }: Props) {
+export default function AgentInsightsCard({ insight, isLoading, error, onRefresh }: Props) {
   const sentimentStyle = insight ? SENTIMENT_CONFIG[insight.sentiment] : null;
 
   return (
@@ -79,13 +80,21 @@ export default function AgentInsightsCard({ insight, isLoading, onRefresh }: Pro
           <Skeleton variant="rounded" height={80} />
           <Skeleton variant="rounded" height={60} />
         </Stack>
+      ) : error ? (
+        <Stack alignItems="center" justifyContent="center" sx={{ p: 3, flexGrow: 1 }}>
+          <Iconify icon="mdi:alert-circle-outline" width={32} sx={{ color: 'error.main', mb: 1 }} />
+          <Typography sx={{ color: 'error.main', fontSize: '0.82rem', textAlign: 'center', fontWeight: 500 }}>
+            Failed to load AI insights
+          </Typography>
+          <Typography sx={{ color: 'text.disabled', fontSize: '0.75rem', textAlign: 'center', mt: 0.5 }}>
+            {error}
+          </Typography>
+        </Stack>
       ) : !insight ? (
         <Stack alignItems="center" justifyContent="center" sx={{ p: 3, flexGrow: 1 }}>
           <Iconify icon="fluent:brain-sparkle-20-regular" width={32} sx={{ color: 'text.disabled', mb: 1 }} />
           <Typography sx={{ color: 'text.disabled', fontSize: '0.82rem', textAlign: 'center' }}>
-            Agent insights unavailable.
-            <br />
-            Configure an AI provider: set GEMINI_API_KEY, ANTHROPIC_API_KEY, or run Ollama locally.
+            No insights available yet. Click refresh to generate.
           </Typography>
         </Stack>
       ) : (

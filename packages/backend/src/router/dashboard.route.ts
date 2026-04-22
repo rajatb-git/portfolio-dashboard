@@ -1,6 +1,7 @@
 import KoaRouter from 'koa-router';
 
 import { logger } from '../utils/winston';
+import { errorBody } from '../utils/error';
 import { createDashboard } from '../controller/DashboardController';
 import { PortfolioSnapshotDBModel } from '../models/PortfolioSnapshotModel';
 
@@ -30,7 +31,7 @@ export const DashboardRouter = () => {
       ctx.status = 200;
     } catch (err) {
       logger.log({ level: 'error', message: err.message, label: 'Portfolio snapshots route' });
-      ctx.body = err.message;
+      ctx.body = errorBody('Failed to get portfolio snapshots', err.message);
       ctx.status = 400;
     }
   });
