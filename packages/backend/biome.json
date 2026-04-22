@@ -1,5 +1,35 @@
 {
-  "extends": ["../../biome.json"],
+  "formatter": {
+    "enabled": true,
+    "useEditorconfig": true,
+    "formatWithErrors": false,
+    "indentStyle": "space",
+    "indentWidth": 2,
+    "lineEnding": "lf",
+    "lineWidth": 120,
+    "attributePosition": "auto",
+    "bracketSpacing": true
+  },
+  "assist": {
+    "actions": {
+      "source": {
+        "organizeImports": "on"
+      }
+    }
+  },
+  "javascript": {
+    "formatter": {
+      "jsxQuoteStyle": "double",
+      "quoteProperties": "asNeeded",
+      "trailingCommas": "es5",
+      "semicolons": "always",
+      "arrowParentheses": "always",
+      "bracketSameLine": false,
+      "quoteStyle": "single",
+      "attributePosition": "auto",
+      "bracketSpacing": true
+    }
+  },
   "linter": {
     "enabled": true,
     "rules": {
@@ -10,12 +40,11 @@
         "useArrowFunction": "off"
       },
       "correctness": {
-        "noUnusedVariables": "warn",
-        "useArrayLiterals": "off"
+        "noUnusedVariables": "warn"
       },
       "style": {
         "noNamespace": "error",
-        "noVar": "error",
+        "useArrayLiterals": "off",
         "useAsConstAssertion": "error",
         "useBlockStatements": "off",
         "useConst": "error"
@@ -31,7 +60,7 @@
   },
   "overrides": [
     {
-      "include": ["*.ts"],
+      "includes": ["**/*.ts"],
       "linter": {
         "rules": {
           "correctness": {
@@ -39,15 +68,12 @@
             "noGlobalObjectCalls": "off",
             "noInvalidBuiltinInstantiation": "off",
             "noInvalidConstructorSuper": "off",
-            "noNewSymbol": "off",
             "noSetterReturn": "off",
             "noUndeclaredVariables": "off",
             "noUnreachable": "off",
             "noUnreachableSuper": "off"
           },
           "style": {
-            "noArguments": "error",
-            "noVar": "error",
             "useConst": "error"
           },
           "suspicious": {

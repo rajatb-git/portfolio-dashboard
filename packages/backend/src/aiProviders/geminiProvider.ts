@@ -1,5 +1,5 @@
 import { GoogleGenAI } from '@google/genai';
-import { AiProvider } from './types';
+import type { AiProvider } from './types';
 
 export class GeminiProvider implements AiProvider {
   readonly name = 'gemini' as const;
@@ -23,7 +23,7 @@ export class GeminiProvider implements AiProvider {
       contents: userPrompt,
       config: {
         systemInstruction: systemPrompt,
-        maxOutputTokens: 1024,
+        maxOutputTokens: 10240,
       },
     });
 

@@ -1,7 +1,37 @@
 {
-  "extends": ["../../biome.json"],
+  "formatter": {
+    "enabled": true,
+    "useEditorconfig": true,
+    "formatWithErrors": false,
+    "indentStyle": "space",
+    "indentWidth": 2,
+    "lineEnding": "lf",
+    "lineWidth": 120,
+    "attributePosition": "auto",
+    "bracketSpacing": true
+  },
+  "assist": {
+    "actions": {
+      "source": {
+        "organizeImports": "on"
+      }
+    }
+  },
+  "javascript": {
+    "formatter": {
+      "jsxQuoteStyle": "double",
+      "quoteProperties": "asNeeded",
+      "trailingCommas": "es5",
+      "semicolons": "always",
+      "arrowParentheses": "always",
+      "bracketSameLine": false,
+      "quoteStyle": "single",
+      "attributePosition": "auto",
+      "bracketSpacing": true
+    }
+  },
   "files": {
-    "ignore": [".next", ".github", "HAapp"]
+    "includes": ["**", "!.next", "!.github", "!HAapp"]
   },
   "linter": {
     "enabled": true,
@@ -9,9 +39,8 @@
       "recommended": false,
       "complexity": {
         "noExtraBooleanCast": "error",
-        "noMultipleSpacesInRegularExpressionLiterals": "error",
-        "noUselessCatch": "error",
-        "noWith": "error"
+        "noAdjacentSpacesInRegex": "error",
+        "noUselessCatch": "error"
       },
       "correctness": {
         "noConstAssign": "error",
@@ -38,6 +67,7 @@
         "useHookAtTopLevel": "error",
         "useIsNan": "error",
         "useValidForDirection": "error",
+        "useValidTypeof": "error",
         "useYield": "error"
       },
       "suspicious": {
@@ -62,8 +92,8 @@
         "noShadowRestrictedNames": "error",
         "noSparseArray": "error",
         "noUnsafeNegation": "error",
-        "useGetterReturn": "error",
-        "useValidTypeof": "error"
+        "noWith": "error",
+        "useGetterReturn": "error"
       }
     }
   }

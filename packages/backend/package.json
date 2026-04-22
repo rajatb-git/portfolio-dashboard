@@ -6,8 +6,9 @@
   "scripts": {
     "clean": "rimraf dist",
     "build": "tsc",
-    "lint": "pnpm biome lint .",
+    "lint": "pnpm biome lint --write .",
     "format": "pnpm biome format --write .",
+    "fix:all": "pnpm run lint && pnpm run format",
     "start": "node ./dist/server.js",
     "do": "npm run clean && npm run build && npm start",
     "dev": "nodemon --ignore '*.json' src/server.ts"
