@@ -32,7 +32,8 @@ export const getPriceHistoryAreaChart = (symbol: string, range: Range): Promise<
       }
     )
     .then((response) => {
-      const rows = response.data.data.tradesTable.rows;
+      const rows = response.data?.data?.tradesTable?.rows;
+      if (!rows) return [];
       return rows.map((x) => {
         return [parseInt(moment(x.date).format('x')), parseFloat(x.close.replace(/\$|\,/g, ''))];
       });
@@ -72,7 +73,8 @@ export const getPriceHistoryCandleStick = (symbol: string, range: Range): Promis
       }
     )
     .then((response) => {
-      const rows = response.data.data.tradesTable.rows;
+      const rows = response.data?.data?.tradesTable?.rows;
+      if (!rows) return [];
       return rows.map((x) => {
         return {
           x: new Date(x.date),
