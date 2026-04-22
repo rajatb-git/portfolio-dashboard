@@ -1,5 +1,5 @@
 /* eslint-disable no-unused-vars */
-import { alpha, Color } from '@mui/material/styles';
+import { alpha } from '@mui/material/styles';
 
 // ----------------------------------------------------------------------
 

@@ -1,12 +1,11 @@
 import moment from 'moment';
-
+import { getActiveProvider, SYSTEM_PROMPT } from '../aiProviders';
+import { getCompanyNews, getEarningsHistory, getInsiderTransactions, getStockMetrics } from '../externalApis/finnHub';
+import { CacheDBModel } from '../models/CacheModel';
+import { logger } from '../utils/winston';
+import { CompanyProfileController } from './CompanyProfileController';
 import { LiveQuoteController } from './LiveQuoteController';
 import { LiveRecommendationController } from './LiveRecommendationController';
-import { CompanyProfileController } from './CompanyProfileController';
-import { getCompanyNews, getStockMetrics, getEarningsHistory, getInsiderTransactions } from '../externalApis/finnHub';
-import { CacheDBModel } from '../models/CacheModel';
-import { getActiveProvider, SYSTEM_PROMPT } from '../aiProviders';
-import { logger } from '../utils/winston';
 
 export type AgentInsight = {
   summary: string;
@@ -27,9 +26,18 @@ export class AgentInsightsController {
     const results: Record<string, any> = {};
 
     const tasks = [
-      { key: 'quote', fn: () => new LiveQuoteController().getLiveQuote(symbol) },
-      { key: 'profile', fn: () => new CompanyProfileController().getCompanyProfile2(symbol) },
-      { key: 'recommendation', fn: () => new LiveRecommendationController().getLiveRecommendation(symbol) },
+      {
+        key: 'quote',
+        fn: () => new LiveQuoteController().getLiveQuote(symbol),
+      },
+      {
+        key: 'profile',
+        fn: () => new CompanyProfileController().getCompanyProfile2(symbol),
+      },
+      {
+        key: 'recommendation',
+        fn: () => new LiveRecommendationController().getLiveRecommendation(symbol),
+      },
       { key: 'metrics', fn: () => getStockMetrics(symbol) },
       {
         key: 'news',
@@ -155,7 +163,7 @@ export class AgentInsightsController {
         model: provider.model,
         generatedAt: moment().toISOString(),
       };
-    } catch (err) {
+    } catch (_err) {
       logger.log({
         level: 'error',
         label: 'AgentInsights',

@@ -5,7 +5,8 @@ import { default as MuiTable } from '@mui/material/Table';
 import TableBody from '@mui/material/TableBody';
 import TableContainer from '@mui/material/TableContainer';
 import TablePagination from '@mui/material/TablePagination';
-import React, { useState } from 'react';
+import type React from 'react';
+import { useState } from 'react';
 import type { IAccount } from '@/models/AccountsModel';
 import type { IHoldings } from '@/models/HoldingsModel';
 import type { ITransaction } from '@/models/TransactionsModel';
@@ -64,41 +65,39 @@ export default function DatabaseTable<T>({ rows, columns }: TableProps<T>) {
   const notFound = !dataFiltered.length;
 
   return (
-    <>
-      <Card elevation={3} sx={{ backgroundImage: 'none' }}>
-        <TableToolbar filterName={filterName} onFilterName={handleFilterByName} />
+    <Card elevation={3} sx={{ backgroundImage: 'none' }}>
+      <TableToolbar filterName={filterName} onFilterName={handleFilterByName} />
 
-        <TableContainer sx={{ maxHeight: '70vh' }}>
-          <MuiTable stickyHeader>
-            <TableHead
-              order={order}
-              orderBy={orderBy}
-              rowCount={rows.length}
-              onRequestSort={handleSort}
-              columnsConfig={columns}
-            />
-            <TableBody>
-              {dataFiltered.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((row: any) => (
-                <TableRow key={row.id} row={row} columnsConfig={columns} />
-              ))}
+      <TableContainer sx={{ maxHeight: '70vh' }}>
+        <MuiTable stickyHeader>
+          <TableHead
+            order={order}
+            orderBy={orderBy}
+            rowCount={rows.length}
+            onRequestSort={handleSort}
+            columnsConfig={columns}
+          />
+          <TableBody>
+            {dataFiltered.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((row: any) => (
+              <TableRow key={row.id} row={row} columnsConfig={columns} />
+            ))}
 
-              <TableEmptyRows height={77} emptyRows={emptyRows(page, rowsPerPage, rows.length)} />
+            <TableEmptyRows height={77} emptyRows={emptyRows(page, rowsPerPage, rows.length)} />
 
-              {notFound && <TableNoData query={filterName} />}
-            </TableBody>
-          </MuiTable>
-        </TableContainer>
+            {notFound && <TableNoData query={filterName} />}
+          </TableBody>
+        </MuiTable>
+      </TableContainer>
 
-        <TablePagination
-          page={page}
-          component="div"
-          count={rows.length}
-          rowsPerPage={rowsPerPage}
-          onPageChange={handleChangePage}
-          rowsPerPageOptions={[50, 100, 200]}
-          onRowsPerPageChange={handleChangeRowsPerPage}
-        />
-      </Card>
-    </>
+      <TablePagination
+        page={page}
+        component="div"
+        count={rows.length}
+        rowsPerPage={rowsPerPage}
+        onPageChange={handleChangePage}
+        rowsPerPageOptions={[50, 100, 200]}
+        onRowsPerPageChange={handleChangeRowsPerPage}
+      />
+    </Card>
   );
 }

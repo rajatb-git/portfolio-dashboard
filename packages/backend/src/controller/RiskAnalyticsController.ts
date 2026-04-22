@@ -1,7 +1,6 @@
 import moment from 'moment';
-
-import { PortfolioSnapshotDBModel, IPortfolioSnapshotModel } from '../models/PortfolioSnapshotModel';
 import { getPriceHistoryAreaChart } from '../externalApis/nasdaq';
+import { IPortfolioSnapshotModel, PortfolioSnapshotDBModel } from '../models/PortfolioSnapshotModel';
 import { logger } from '../utils/winston';
 
 export type RiskMetrics = {
@@ -68,11 +67,11 @@ export const calculateRiskMetrics = async (): Promise<RiskMetrics> => {
   // Annualized return
   const totalReturn = (sorted[sorted.length - 1].totalValue - sorted[0].totalValue) / sorted[0].totalValue;
   const daySpan = moment(sorted[sorted.length - 1].date).diff(moment(sorted[0].date), 'days');
-  const annualizedReturn = daySpan > 0 ? Math.pow(1 + totalReturn, 365 / daySpan) - 1 : 0;
+  const annualizedReturn = daySpan > 0 ? (1 + totalReturn) ** (365 / daySpan) - 1 : 0;
 
   // Volatility (annualized std dev of daily returns)
   const meanReturn = dailyReturns.reduce((s, r) => s + r.return, 0) / dailyReturns.length;
-  const variance = dailyReturns.reduce((s, r) => s + Math.pow(r.return - meanReturn, 2), 0) / (dailyReturns.length - 1);
+  const variance = dailyReturns.reduce((s, r) => s + (r.return - meanReturn) ** 2, 0) / (dailyReturns.length - 1);
   const dailyVol = Math.sqrt(variance);
   const volatility = dailyVol * Math.sqrt(TRADING_DAYS_PER_YEAR);
 
@@ -82,7 +81,7 @@ export const calculateRiskMetrics = async (): Promise<RiskMetrics> => {
   // Max Drawdown
   let peak = sorted[0].totalValue;
   let maxDrawdown = 0;
-  const drawdownFrom = sorted[0].date;
+  // const drawdownFrom = sorted[0].date;
   let maxDrawdownPeriod = { from: sorted[0].date, to: sorted[0].date };
   let currentDrawdownStart = sorted[0].date;
 
@@ -133,12 +132,16 @@ export const calculateRiskMetrics = async (): Promise<RiskMetrics> => {
         const meanS = paired.reduce((s, p) => s + p.spy, 0) / paired.length;
         const covariance =
           paired.reduce((s, p) => s + (p.portfolio - meanP) * (p.spy - meanS), 0) / (paired.length - 1);
-        const spyVariance = paired.reduce((s, p) => s + Math.pow(p.spy - meanS, 2), 0) / (paired.length - 1);
+        const spyVariance = paired.reduce((s, p) => s + (p.spy - meanS) ** 2, 0) / (paired.length - 1);
         beta = spyVariance > 0 ? covariance / spyVariance : 0;
       }
     }
   } catch (err) {
-    logger.log({ level: 'error', label: 'RiskAnalytics', message: `Failed to calculate beta: ${err}` });
+    logger.log({
+      level: 'error',
+      label: 'RiskAnalytics',
+      message: `Failed to calculate beta: ${err}`,
+    });
   }
 
   return {
@@ -149,7 +152,10 @@ export const calculateRiskMetrics = async (): Promise<RiskMetrics> => {
     maxDrawdownPeriod,
     beta: +beta.toFixed(2),
     bestDay: { date: bestDay.date, return: +(bestDay.return * 100).toFixed(2) },
-    worstDay: { date: worstDay.date, return: +(worstDay.return * 100).toFixed(2) },
+    worstDay: {
+      date: worstDay.date,
+      return: +(worstDay.return * 100).toFixed(2),
+    },
     totalDataDays: sorted.length,
   };
 };

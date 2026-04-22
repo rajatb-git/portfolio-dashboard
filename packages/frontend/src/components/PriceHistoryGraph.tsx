@@ -1,11 +1,10 @@
+import { Card, CardContent, ToggleButton, ToggleButtonGroup } from '@mui/material';
+import { useTheme } from '@mui/material/styles';
+import type { ApexOptions } from 'apexcharts';
 import React from 'react';
 
-import { ToggleButtonGroup, ToggleButton, Card, CardContent } from '@mui/material';
-import { useTheme } from '@mui/material/styles';
-import { ApexOptions } from 'apexcharts';
-
 import apis from '@/api';
-import { Range } from '@/api/live';
+import type { Range } from '@/api/live';
 import { useThemeMode } from './ThemeRegistry/ThemeModeContext';
 
 const ReactApexChart = React.lazy(() => import('react-apexcharts'));
@@ -80,8 +79,7 @@ export const PriceHistoryGraph = ({ symbol }: Props) => {
     },
   };
 
-  // biome-ignore lint/correctness/noUnusedVariables: <explanation>
-  const handleRangeChange = (event: React.MouseEvent<HTMLElement>, newRange: Range) => {
+  const handleRangeChange = (_event: React.MouseEvent<HTMLElement>, newRange: Range) => {
     setRange(newRange);
   };
 
@@ -92,13 +90,7 @@ export const PriceHistoryGraph = ({ symbol }: Props) => {
   return (
     <Card variant="outlined" sx={{ minWidth: 400 }}>
       <CardContent>
-        <ToggleButtonGroup
-          size="small"
-          value={range}
-          exclusive
-          onChange={handleRangeChange}
-          aria-label="Range"
-        >
+        <ToggleButtonGroup size="small" value={range} exclusive onChange={handleRangeChange} aria-label="Range">
           {RangeOptions.map((option) => (
             <ToggleButton key={option} value={option}>
               {option}

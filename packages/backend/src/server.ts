@@ -1,22 +1,22 @@
+import cors from '@koa/cors';
+import * as dotenv from 'dotenv';
+import Koa from 'koa';
 import KoaBodyParser from 'koa-bodyparser';
 import KoaHelmet from 'koa-helmet';
-import * as dotenv from 'dotenv';
-import cors from '@koa/cors';
-import Koa from 'koa';
 
 dotenv.config();
 
-import { LiveRouter } from './router/live.route';
-import { DashboardRouter } from './router/dashboard.route';
-import { TransactionsRouter } from './router/transactions.route';
-import { LogsRouter } from './router/logs.route';
-import { HoldingsRouter } from './router/holdings.route';
 import { AccountsRouter } from './router/accounts.route';
-import { HealthRouter } from './router/health.route';
-import { WatchlistRouter } from './router/watchlist.route';
-import { DividendRouter } from './router/dividend.route';
 import { AnalyticsRouter } from './router/analytics.route';
+import { DashboardRouter } from './router/dashboard.route';
+import { DividendRouter } from './router/dividend.route';
+import { HealthRouter } from './router/health.route';
+import { HoldingsRouter } from './router/holdings.route';
+import { LiveRouter } from './router/live.route';
+import { LogsRouter } from './router/logs.route';
 import { SettingsRouter } from './router/settings.route';
+import { TransactionsRouter } from './router/transactions.route';
+import { WatchlistRouter } from './router/watchlist.route';
 
 const app = new Koa();
 app.use(cors());
@@ -36,15 +36,6 @@ app.use(KoaBodyParser());
 app.use(KoaHelmet());
 
 const port = process.env.PORT || 3001;
-
-// logger
-
-app.use(async (ctx, next) => {
-  await next();
-  const rt = ctx.response.get('X-Response-Time');
-});
-
-// x-response-time
 
 app.use(async (ctx, next) => {
   const start = Date.now();

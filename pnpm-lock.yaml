@@ -68,6 +68,9 @@ importers:
       '@types/koa-bodyparser':
         specifier: ^4.3.12
         version: 4.3.13
+      '@types/koa-cors':
+        specifier: ^0.0.6
+        version: 0.0.6
       '@types/koa-router':
         specifier: ^7.4.8
         version: 7.4.9
@@ -1064,6 +1067,9 @@ packages:
 
   '@types/koa-compose@3.2.9':
     resolution: {integrity: sha512-BroAZ9FTvPiCy0Pi8tjD1OfJ7bgU1gQf0eR6e1Vm+JJATy9eKOG3hQMFtMciMawiSOVnLMdmUOC46s7HBhSTsA==}
+
+  '@types/koa-cors@0.0.6':
+    resolution: {integrity: sha512-JGT9/jtFahFfmZ9YmzM/TTpkc+Bw7ZLQUCvn2sFyZXi7DI4nd4noAmyha6i2nThHvVVBfh+V9OhVwPTpVAls6A==}
 
   '@types/koa-router@7.4.9':
     resolution: {integrity: sha512-YibkqJrFWwwF55YtZo6dORpMj/1zfweHHIZA/qpA+2JPcVbBopAvLjejTcO1ojWAJfzf1tPC+CrPnLDuVRkUEA==}
@@ -3307,6 +3313,10 @@ snapshots:
       '@types/koa': 3.0.2
 
   '@types/koa-compose@3.2.9':
+    dependencies:
+      '@types/koa': 3.0.2
+
+  '@types/koa-cors@0.0.6':
     dependencies:
       '@types/koa': 3.0.2
 
