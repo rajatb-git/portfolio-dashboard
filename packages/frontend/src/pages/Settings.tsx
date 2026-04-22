@@ -4,12 +4,14 @@ import {
   Box,
   Button,
   Card,
+  Chip,
   Dialog,
   DialogActions,
   DialogContent,
   DialogContentText,
   DialogTitle,
   Divider,
+  IconButton,
   MenuItem,
   Select,
   Stack,
@@ -17,15 +19,18 @@ import {
   TextField,
   ToggleButton,
   ToggleButtonGroup,
+  Tooltip,
   Typography,
 } from '@mui/material';
 import { toast } from 'react-toastify';
 
 import { useThemeMode } from '@/components/ThemeRegistry/ThemeModeContext';
+import { Iconify } from '@/components/Iconify';
 import { DB_HOST } from '@/config';
 import LocalStorageUtil from '@/utils/localStorage';
 import apis from '@/api';
 import { AiConfig } from '@/api/live';
+import { IAccount } from '@/models/AccountsModel';
 
 function SettingsSection({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -90,6 +95,11 @@ export default function Settings() {
   const [pendingImportFile, setPendingImportFile] = React.useState<File | null>(null);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
+  const [accounts, setAccounts] = React.useState<IAccount[]>([]);
+  const [newAccountName, setNewAccountName] = React.useState('');
+  const [addingAccount, setAddingAccount] = React.useState(false);
+  const [deleteConfirm, setDeleteConfirm] = React.useState<IAccount | null>(null);
+
   const isAiConfigDirty =
     !!aiConfig && !!draftAiConfig && JSON.stringify(aiConfig) !== JSON.stringify(draftAiConfig);
 
@@ -102,6 +112,10 @@ export default function Settings() {
       .catch((err) => {
         toast.error(err.message || 'Failed to load AI configuration');
       });
+
+    apis.accounts.getAll()
+      .then(setAccounts)
+      .catch((err) => toast.error(err.message || 'Failed to load accounts'));
   }, []);
 
   const handleApiHostSave = () => {
@@ -184,6 +198,35 @@ export default function Settings() {
     setDraftAiConfig(aiConfig);
   };
 
+  const handleAddAccount = async () => {
+    const name = newAccountName.trim();
+    if (!name) return;
+    setAddingAccount(true);
+    try {
+      const created = await apis.accounts.create({ name } as IAccount);
+      setAccounts((prev) => [...prev, created]);
+      setNewAccountName('');
+      toast.success(`Account "${name}" created`);
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to create account');
+    } finally {
+      setAddingAccount(false);
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    if (!deleteConfirm) return;
+    try {
+      await apis.accounts.deleteById(deleteConfirm.id);
+      setAccounts((prev) => prev.filter((a) => a.id !== deleteConfirm.id));
+      toast.success(`Account "${deleteConfirm.name}" deleted`);
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to delete account');
+    } finally {
+      setDeleteConfirm(null);
+    }
+  };
+
   return (
     <Box sx={{ maxWidth: 680 }}>
       <Typography variant="h6" sx={{ mb: 2.5, fontWeight: 700 }}>
@@ -209,6 +252,90 @@ export default function Settings() {
           </ToggleButtonGroup>
         </SettingRow>
       </SettingsSection>
+
+      <SettingsSection title="Accounts">
+        {accounts.length === 0 ? (
+          <Stack alignItems="center" sx={{ py: 3 }}>
+            <Iconify icon="mdi:account-group-outline" width={28} sx={{ color: 'text.disabled', mb: 1 }} />
+            <Typography sx={{ fontSize: '0.82rem', color: 'text.disabled', textAlign: 'center' }}>
+              No accounts yet. Create one to start adding holdings.
+            </Typography>
+          </Stack>
+        ) : (
+          accounts.map((account) => (
+            <Stack
+              key={account.id}
+              direction="row"
+              alignItems="center"
+              justifyContent="space-between"
+              sx={{ px: 2, py: 1, borderBottom: '1px solid', borderColor: 'divider' }}
+            >
+              <Stack direction="row" alignItems="center" spacing={1.5}>
+                <Iconify icon="mdi:account-outline" width={18} sx={{ color: 'text.secondary' }} />
+                <Box>
+                  <Typography sx={{ fontSize: '0.85rem', fontWeight: 500, color: 'text.primary' }}>
+                    {account.name}
+                  </Typography>
+                  <Typography sx={{ fontSize: '0.68rem', color: 'text.disabled' }}>
+                    {account.id}
+                  </Typography>
+                </Box>
+              </Stack>
+              <Tooltip title="Delete account">
+                <IconButton
+                  size="small"
+                  onClick={() => setDeleteConfirm(account)}
+                  sx={{ color: 'text.disabled', '&:hover': { color: 'error.main' } }}
+                >
+                  <Iconify icon="mdi:delete-outline" width={18} />
+                </IconButton>
+              </Tooltip>
+            </Stack>
+          ))
+        )}
+
+        <Stack
+          direction="row"
+          alignItems="center"
+          spacing={1}
+          sx={{ px: 2, py: 1.5 }}
+        >
+          <TextField
+            size="small"
+            placeholder="Account name"
+            value={newAccountName}
+            onChange={(e) => setNewAccountName(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') handleAddAccount(); }}
+            disabled={addingAccount}
+            sx={{ flexGrow: 1, '& input': { fontSize: '0.78rem' } }}
+          />
+          <Button
+            size="small"
+            variant="contained"
+            onClick={handleAddAccount}
+            disabled={!newAccountName.trim() || addingAccount}
+            sx={{ fontSize: '0.78rem', textTransform: 'none' }}
+          >
+            {addingAccount ? 'Adding...' : 'Add'}
+          </Button>
+        </Stack>
+      </SettingsSection>
+
+      <Dialog open={!!deleteConfirm} onClose={() => setDeleteConfirm(null)}>
+        <DialogTitle>Delete Account</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Are you sure you want to delete <strong>{deleteConfirm?.name}</strong>? This will not remove
+            any holdings associated with this account.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeleteConfirm(null)}>Cancel</Button>
+          <Button onClick={handleDeleteAccount} color="error" variant="contained">
+            Delete
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       <SettingsSection title="Dashboard">
         <SettingRow
