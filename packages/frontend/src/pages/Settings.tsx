@@ -77,8 +77,10 @@ function SettingRow({
 
 export default function Settings() {
   const { mode, setMode } = useThemeMode();
-  const [apiHost, setApiHost] = React.useState(LocalStorageUtil.getItem<string>('api_host') ?? DB_HOST);
+  const savedApiHost = LocalStorageUtil.getItem<string>('api_host') ?? DB_HOST;
+  const [apiHost, setApiHost] = React.useState(savedApiHost);
   const [apiHostSaved, setApiHostSaved] = React.useState(false);
+  const isApiHostDirty = apiHost.trim() !== savedApiHost;
   const [aiConfig, setAiConfig] = React.useState<AiConfig | null>(null);
   const [draftAiConfig, setDraftAiConfig] = React.useState<AiConfig | null>(null);
   const [saving, setSaving] = React.useState(false);
@@ -102,12 +104,12 @@ export default function Settings() {
       });
   }, []);
 
-  const handleApiHostBlur = () => {
-    if (apiHost.trim()) {
-      LocalStorageUtil.setItem('api_host', apiHost.trim());
-      setApiHostSaved(true);
-      setTimeout(() => setApiHostSaved(false), 2000);
-    }
+  const handleApiHostSave = () => {
+    if (!apiHost.trim() || !isApiHostDirty) return;
+    LocalStorageUtil.setItem('api_host', apiHost.trim());
+    setApiHostSaved(true);
+    setTimeout(() => setApiHostSaved(false), 2000);
+    toast.success('Backend URL saved — reload the page to apply');
   };
 
   const handleExport = async () => {
@@ -233,9 +235,17 @@ export default function Settings() {
               size="small"
               value={apiHost}
               onChange={(e) => setApiHost(e.target.value)}
-              onBlur={handleApiHostBlur}
               sx={{ width: 240, '& input': { fontSize: '0.78rem' } }}
             />
+            <Button
+              size="small"
+              variant="contained"
+              onClick={handleApiHostSave}
+              disabled={!isApiHostDirty || !apiHost.trim()}
+              sx={{ fontSize: '0.78rem', textTransform: 'none' }}
+            >
+              Save
+            </Button>
           </Stack>
         </SettingRow>
       </SettingsSection>
