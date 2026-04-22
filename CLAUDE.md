@@ -121,6 +121,7 @@ Use `react-toastify`'s `toast.error(...)` for failures and `toast.success(...)` 
 - Follow the existing error-handling and save-button patterns exactly — do not invent new patterns.
 - Don't add comments explaining what code does. Only add a comment for a non-obvious *why*.
 - Don't add backwards-compat shims, feature flags, or defensive checks for impossible states.
+- Use `<>…</>` (shorthand fragments), never `<React.Fragment>…</React.Fragment>`.
 - Prefer editing existing files over creating new ones. Don't add docs unless asked.
 
 ### Branding

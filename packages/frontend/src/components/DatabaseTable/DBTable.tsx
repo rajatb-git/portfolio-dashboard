@@ -64,7 +64,7 @@ export default function DatabaseTable<T>({ rows, columns }: TableProps<T>) {
   const notFound = !dataFiltered.length;
 
   return (
-    <React.Fragment>
+    <>
       <Card elevation={3} sx={{ backgroundImage: 'none' }}>
         <TableToolbar filterName={filterName} onFilterName={handleFilterByName} />
 
@@ -99,6 +99,6 @@ export default function DatabaseTable<T>({ rows, columns }: TableProps<T>) {
           onRowsPerPageChange={handleChangeRowsPerPage}
         />
       </Card>
-    </React.Fragment>
+    </>
   );
 }
