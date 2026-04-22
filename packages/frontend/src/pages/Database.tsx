@@ -1,6 +1,30 @@
 import * as React from 'react';
 
-import { Box, Button, MenuItem, Select, Typography } from '@mui/material';
+import {
+  Box,
+  Button,
+  Card,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogContentText,
+  DialogTitle,
+  Divider,
+  IconButton,
+  MenuItem,
+  Select,
+  Skeleton,
+  Stack,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow as MuiTableRow,
+  TextField,
+  Tooltip,
+  Typography,
+} from '@mui/material';
 import { GridColDef } from '@mui/x-data-grid';
 import { toast } from 'react-toastify';
 
@@ -110,6 +134,140 @@ const columns: { [collection: string]: Array<GridColDef> } = {
   ],
 };
 
+function AccountsManager({ accounts, isLoading, onRefresh }: { accounts: IAccount[]; isLoading: boolean; onRefresh: () => void }) {
+  const [newName, setNewName] = React.useState('');
+  const [adding, setAdding] = React.useState(false);
+  const [deleteTarget, setDeleteTarget] = React.useState<IAccount | null>(null);
+
+  const handleAdd = async () => {
+    const name = newName.trim();
+    if (!name) return;
+    setAdding(true);
+    try {
+      await apis.accounts.create({ name } as IAccount);
+      setNewName('');
+      toast.success(`Account "${name}" created`);
+      onRefresh();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to create account');
+    } finally {
+      setAdding(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    try {
+      await apis.accounts.deleteById(deleteTarget.id);
+      toast.success(`Account "${deleteTarget.name}" deleted`);
+      onRefresh();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to delete account');
+    } finally {
+      setDeleteTarget(null);
+    }
+  };
+
+  return (
+    <>
+      <Card variant="outlined" sx={{ background: 'transparent' }}>
+        <Stack direction="row" alignItems="center" spacing={1} sx={{ px: 2, py: 1.5 }}>
+          <TextField
+            size="small"
+            placeholder="New account name"
+            value={newName}
+            onChange={(e) => setNewName(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') handleAdd(); }}
+            disabled={adding}
+            sx={{ width: 280, '& input': { fontSize: '0.82rem' } }}
+          />
+          <Button
+            size="small"
+            variant="contained"
+            startIcon={<Iconify icon="mdi:plus" width={16} />}
+            onClick={handleAdd}
+            disabled={!newName.trim() || adding}
+            sx={{ fontSize: '0.78rem', textTransform: 'none' }}
+          >
+            {adding ? 'Adding...' : 'Add Account'}
+          </Button>
+          <Box sx={{ flexGrow: 1 }} />
+          <IconButton onClick={onRefresh} size="small">
+            <Iconify icon="fa:refresh" width={16} />
+          </IconButton>
+        </Stack>
+
+        <Divider />
+
+        <TableContainer sx={{ maxHeight: '70vh' }}>
+          <Table stickyHeader size="small">
+            <TableHead>
+              <MuiTableRow>
+                <TableCell sx={{ fontWeight: 700, fontSize: '0.78rem' }}>Name</TableCell>
+                <TableCell sx={{ fontWeight: 700, fontSize: '0.78rem' }}>ID</TableCell>
+                <TableCell align="right" sx={{ fontWeight: 700, fontSize: '0.78rem', width: 80 }}>Actions</TableCell>
+              </MuiTableRow>
+            </TableHead>
+            <TableBody>
+              {isLoading ? (
+                Array.from({ length: 3 }).map((_, i) => (
+                  <MuiTableRow key={i}>
+                    <TableCell><Skeleton width="60%" /></TableCell>
+                    <TableCell><Skeleton width="80%" /></TableCell>
+                    <TableCell />
+                  </MuiTableRow>
+                ))
+              ) : accounts.length === 0 ? (
+                <MuiTableRow>
+                  <TableCell colSpan={3} align="center" sx={{ py: 4 }}>
+                    <Typography sx={{ fontSize: '0.82rem', color: 'text.disabled' }}>
+                      No accounts yet. Add one above to get started.
+                    </Typography>
+                  </TableCell>
+                </MuiTableRow>
+              ) : (
+                accounts.map((account) => (
+                  <MuiTableRow key={account.id} hover>
+                    <TableCell sx={{ fontSize: '0.82rem' }}>{account.name}</TableCell>
+                    <TableCell sx={{ fontSize: '0.78rem', color: 'text.secondary' }}>{account.id}</TableCell>
+                    <TableCell align="right">
+                      <Tooltip title="Delete account">
+                        <IconButton
+                          size="small"
+                          onClick={() => setDeleteTarget(account)}
+                          sx={{ color: 'text.disabled', '&:hover': { color: 'error.main' } }}
+                        >
+                          <Iconify icon="mdi:delete-outline" width={18} />
+                        </IconButton>
+                      </Tooltip>
+                    </TableCell>
+                  </MuiTableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      </Card>
+
+      <Dialog open={!!deleteTarget} onClose={() => setDeleteTarget(null)}>
+        <DialogTitle>Delete Account</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Are you sure you want to delete <strong>{deleteTarget?.name}</strong>? This will not remove
+            any holdings associated with this account.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeleteTarget(null)}>Cancel</Button>
+          <Button onClick={handleDelete} color="error" variant="contained">
+            Delete
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </>
+  );
+}
+
 export default function Database() {
   const [isLoading, setIsLoading] = React.useState(true);
   const [activeCollection, setActiveCollection] = React.useState<'accounts' | 'transactions' | 'holdings'>('holdings');
@@ -196,16 +354,24 @@ export default function Database() {
         </Select>
       </Box>
 
-      {!isLoading && (
-        <GenericGrid
-          initialRows={records}
-          deleteRecord={deleteRecord}
-          insertOrUpdateRecord={insertOrUpdateRecord}
-          loadData={loadData}
-          activeCollection={activeCollection}
-          dynamicColumns={columns[activeCollection]}
-          refreshPage={loadData}
+      {activeCollection === 'accounts' ? (
+        <AccountsManager
+          accounts={records as IAccount[]}
+          isLoading={isLoading}
+          onRefresh={loadData}
         />
+      ) : (
+        !isLoading && (
+          <GenericGrid
+            initialRows={records}
+            deleteRecord={deleteRecord}
+            insertOrUpdateRecord={insertOrUpdateRecord}
+            loadData={loadData}
+            activeCollection={activeCollection}
+            dynamicColumns={columns[activeCollection]}
+            refreshPage={loadData}
+          />
+        )
       )}
 
       <ImportDialog
