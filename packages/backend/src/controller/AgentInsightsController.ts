@@ -54,7 +54,9 @@ export class AgentInsightsController {
   };
 
   private buildPrompt = (symbol: string, data: Record<string, any>): string => {
-    const sections: string[] = [`Analyze ${symbol} based on the following market data and provide investment insights.`];
+    const sections: string[] = [
+      `Analyze ${symbol} based on the following market data and provide investment insights.`,
+    ];
 
     if (data.profile) {
       sections.push(
@@ -85,7 +87,10 @@ export class AgentInsightsController {
     if (data.earnings && data.earnings.length > 0) {
       const earningsLines = data.earnings
         .slice(0, 4)
-        .map((e: any) => `  ${e.period}: Actual EPS ${e.actual} vs Estimate ${e.estimate} (${e.surprise > 0 ? '+' : ''}${e.surprise})`)
+        .map(
+          (e: any) =>
+            `  ${e.period}: Actual EPS ${e.actual} vs Estimate ${e.estimate} (${e.surprise > 0 ? '+' : ''}${e.surprise})`
+        )
         .join('\n');
       sections.push(`\nEARNINGS HISTORY (last 4 quarters):\n${earningsLines}`);
     }
@@ -93,7 +98,10 @@ export class AgentInsightsController {
     if (data.insider && data.insider.length > 0) {
       const insiderLines = data.insider
         .slice(0, 5)
-        .map((t: any) => `  ${t.name} (${t.transactionType}): ${t.share} shares at $${t.transactionPrice} on ${t.transactionDate}`)
+        .map(
+          (t: any) =>
+            `  ${t.name} (${t.transactionType}): ${t.share} shares at $${t.transactionPrice} on ${t.transactionDate}`
+        )
         .join('\n');
       sections.push(`\nRECENT INSIDER TRANSACTIONS:\n${insiderLines}`);
     }
@@ -129,7 +137,10 @@ export class AgentInsightsController {
     const rawText = await provider.generateInsight(SYSTEM_PROMPT, prompt);
 
     // Strip markdown code fences if present
-    const cleaned = rawText.replace(/```(?:json)?\s*/g, '').replace(/```\s*/g, '').trim();
+    const cleaned = rawText
+      .replace(/```(?:json)?\s*/g, '')
+      .replace(/```\s*/g, '')
+      .trim();
 
     let insight: AgentInsight;
     try {
@@ -145,7 +156,11 @@ export class AgentInsightsController {
         generatedAt: moment().toISOString(),
       };
     } catch (err) {
-      logger.log({ level: 'error', label: 'AgentInsights', message: `Failed to parse response from ${provider.name}: ${cleaned}` });
+      logger.log({
+        level: 'error',
+        label: 'AgentInsights',
+        message: `Failed to parse response from ${provider.name}: ${cleaned}`,
+      });
       throw new Error(`Failed to parse ${provider.name} response as JSON`);
     }
 

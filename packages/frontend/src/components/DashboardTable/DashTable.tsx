@@ -1,5 +1,3 @@
-import React, { useState } from 'react';
-
 import { Alert, Box, Divider, Grid, ToggleButton, ToggleButtonGroup } from '@mui/material';
 import Card from '@mui/material/Card';
 import { default as MuiTable } from '@mui/material/Table';
@@ -7,21 +5,22 @@ import TableBody from '@mui/material/TableBody';
 import TableContainer from '@mui/material/TableContainer';
 import TablePagination from '@mui/material/TablePagination';
 import Case from 'case';
+import type React from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-import { HoldingAggregate } from '@/api/dashboard';
+import type { HoldingAggregate } from '@/api/dashboard';
 import BuySellDialog from '@/components/BuySellDialog';
 import { HoldingTypesEnum } from '@/lib/enums';
-import { IAccount } from '@/models/AccountsModel';
-import { Column } from '@/types';
-
+import type { IAccount } from '@/models/AccountsModel';
+import type { Column } from '@/types';
+import TableNoData from '../Table/TableNoData';
+import { TableSkeleton } from '../Table/TableSkeleton';
+import TotalCard from '../TotalCard';
 import TableHead from './DashTableHead';
 import DashTableRow from './DashTableRow';
 import TableToolbar from './DashTableToolbar';
 import { applyFilter, getComparator } from './dashTableUtils';
-import TableNoData from '../Table/TableNoData';
-import { TableSkeleton } from '../Table/TableSkeleton';
-import TotalCard from '../TotalCard';
 
 export type Total = {
   accountId: string;
@@ -50,8 +49,7 @@ export default function Table<T>({ rows, columns, accounts, refreshData, isLoadi
   const [tradeHolding, setTradeHolding] = useState<HoldingAggregate | null>(null);
   const [tradeOpen, setTradeOpen] = useState(false);
 
-  // biome-ignore lint/correctness/noUnusedVariables: <explanation>
-  const handleSort = (event: any, id: string) => {
+  const handleSort = (_event: any, id: string) => {
     const isAsc = orderBy === id && order === 'asc';
     if (id !== '') {
       setOrder(isAsc ? 'desc' : 'asc');
@@ -68,8 +66,7 @@ export default function Table<T>({ rows, columns, accounts, refreshData, isLoadi
     setTradeOpen(true);
   };
 
-  // biome-ignore lint/correctness/noUnusedVariables: <explanation>
-  const handleChangePage = (event: React.MouseEvent<HTMLButtonElement, MouseEvent> | null, newPage: number) => {
+  const handleChangePage = (_event: React.MouseEvent<HTMLButtonElement, MouseEvent> | null, newPage: number) => {
     setPage(newPage);
   };
 
@@ -126,7 +123,17 @@ export default function Table<T>({ rows, columns, accounts, refreshData, isLoadi
         </Alert>
       )}
 
-      <Box sx={{ mt: 2, mb: 1.5, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+      <Box
+        sx={{
+          mt: 2,
+          mb: 1.5,
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          gap: 1,
+          flexWrap: 'wrap',
+        }}
+      >
         <ToggleButtonGroup
           size="small"
           value={filterType}
@@ -185,12 +192,7 @@ export default function Table<T>({ rows, columns, accounts, refreshData, isLoadi
                 dataFiltered
                   .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
                   .map((row: any) => (
-                    <DashTableRow
-                      key={row.id}
-                      row={row}
-                      onRowClick={goToResearchPage}
-                      onTrade={handleTrade}
-                    />
+                    <DashTableRow key={row.id} row={row} onRowClick={goToResearchPage} onTrade={handleTrade} />
                   ))
               )}
 

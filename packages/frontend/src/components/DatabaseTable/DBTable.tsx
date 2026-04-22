@@ -1,24 +1,21 @@
 'use client';
 
-import React, { useState } from 'react';
-
 import Card from '@mui/material/Card';
 import { default as MuiTable } from '@mui/material/Table';
 import TableBody from '@mui/material/TableBody';
 import TableContainer from '@mui/material/TableContainer';
 import TablePagination from '@mui/material/TablePagination';
-
-import { IHoldings } from '@/models/HoldingsModel';
-import { ITransaction } from '@/models/TransactionsModel';
-import { IAccount } from '@/models/AccountsModel';
-import { Column } from '@/types';
-
+import React, { useState } from 'react';
+import type { IAccount } from '@/models/AccountsModel';
+import type { IHoldings } from '@/models/HoldingsModel';
+import type { ITransaction } from '@/models/TransactionsModel';
+import type { Column } from '@/types';
+import TableEmptyRows from '../Table/TableEmptyRows';
+import TableNoData from '../Table/TableNoData';
 import TableHead from './DBTableHead';
 import TableRow from './DBTableRow';
 import TableToolbar from './DBTableToolbar';
-import { emptyRows, applyFilter, getComparator } from './dbTableUtils';
-import TableEmptyRows from '../Table/TableEmptyRows';
-import TableNoData from '../Table/TableNoData';
+import { applyFilter, emptyRows, getComparator } from './dbTableUtils';
 
 type TableProps<T> = {
   rows: Array<T>;
@@ -36,8 +33,7 @@ export default function DatabaseTable<T>({ rows, columns }: TableProps<T>) {
   const [filterName, setFilterName] = useState('');
   const [rowsPerPage, setRowsPerPage] = useState(50);
 
-  // biome-ignore lint/correctness/noUnusedVariables: <explanation>
-  const handleSort = (event: any, id: string) => {
+  const handleSort = (_event: any, id: string) => {
     const isAsc = orderBy === id && order === 'asc';
     if (id !== '') {
       setOrder(isAsc ? 'desc' : 'asc');
@@ -45,8 +41,7 @@ export default function DatabaseTable<T>({ rows, columns }: TableProps<T>) {
     }
   };
 
-  // biome-ignore lint/correctness/noUnusedVariables: <explanation>
-  const handleChangePage = (event: React.MouseEvent<HTMLButtonElement, MouseEvent> | null, newPage: number) => {
+  const handleChangePage = (_event: React.MouseEvent<HTMLButtonElement, MouseEvent> | null, newPage: number) => {
     setPage(newPage);
   };
 

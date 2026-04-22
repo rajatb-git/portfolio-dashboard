@@ -51,16 +51,16 @@ export const createDashboard = async (): Promise<Array<HoldingAggregate>> => {
   const [quotes, recommendations] = await Promise.all([
     Promise.all(
       uniqueSymbols.map((sym) =>
-        quoteController.getLiveQuote(sym, symbolMeta.get(sym)).catch((e: unknown): Error =>
-          e instanceof Error ? e : new Error(String(e))
-        )
+        quoteController
+          .getLiveQuote(sym, symbolMeta.get(sym))
+          .catch((e: unknown): Error => (e instanceof Error ? e : new Error(String(e))))
       )
     ) as Promise<Array<IPriceStoreModel | Error>>,
     Promise.all(
       uniqueSymbols.map((sym) =>
-        recommendationController.getLiveRecommendation(sym).catch((e: unknown): Error =>
-          e instanceof Error ? e : new Error(String(e))
-        )
+        recommendationController
+          .getLiveRecommendation(sym)
+          .catch((e: unknown): Error => (e instanceof Error ? e : new Error(String(e))))
       )
     ) as Promise<Array<IRecommendationModel | Error>>,
   ]);

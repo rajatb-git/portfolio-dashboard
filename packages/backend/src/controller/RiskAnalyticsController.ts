@@ -82,7 +82,7 @@ export const calculateRiskMetrics = async (): Promise<RiskMetrics> => {
   // Max Drawdown
   let peak = sorted[0].totalValue;
   let maxDrawdown = 0;
-  let drawdownFrom = sorted[0].date;
+  const drawdownFrom = sorted[0].date;
   let maxDrawdownPeriod = { from: sorted[0].date, to: sorted[0].date };
   let currentDrawdownStart = sorted[0].date;
 
@@ -131,7 +131,8 @@ export const calculateRiskMetrics = async (): Promise<RiskMetrics> => {
       if (paired.length > 1) {
         const meanP = paired.reduce((s, p) => s + p.portfolio, 0) / paired.length;
         const meanS = paired.reduce((s, p) => s + p.spy, 0) / paired.length;
-        const covariance = paired.reduce((s, p) => s + (p.portfolio - meanP) * (p.spy - meanS), 0) / (paired.length - 1);
+        const covariance =
+          paired.reduce((s, p) => s + (p.portfolio - meanP) * (p.spy - meanS), 0) / (paired.length - 1);
         const spyVariance = paired.reduce((s, p) => s + Math.pow(p.spy - meanS, 2), 0) / (paired.length - 1);
         beta = spyVariance > 0 ? covariance / spyVariance : 0;
       }

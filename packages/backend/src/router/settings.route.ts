@@ -109,9 +109,15 @@ export const SettingsRouter = () => {
       const updated: IAiConfig = {
         enabled: body.enabled ?? current.enabled,
         provider: body.provider ?? current.provider,
-        claudeApiKey: body.claudeApiKey !== undefined && !body.claudeApiKey.startsWith('••') ? body.claudeApiKey : current.claudeApiKey,
+        claudeApiKey:
+          body.claudeApiKey !== undefined && !body.claudeApiKey.startsWith('••')
+            ? body.claudeApiKey
+            : current.claudeApiKey,
         claudeModel: body.claudeModel || current.claudeModel,
-        geminiApiKey: body.geminiApiKey !== undefined && !body.geminiApiKey.startsWith('••') ? body.geminiApiKey : current.geminiApiKey,
+        geminiApiKey:
+          body.geminiApiKey !== undefined && !body.geminiApiKey.startsWith('••')
+            ? body.geminiApiKey
+            : current.geminiApiKey,
         geminiModel: body.geminiModel || current.geminiModel,
         ollamaHost: body.ollamaHost || current.ollamaHost,
         ollamaModel: body.ollamaModel || current.ollamaModel,

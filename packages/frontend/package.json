@@ -13,6 +13,7 @@
     "lint:fix": "biome lint --write .",
     "format": "pnpm biome format .",
     "format:fix": "pnpm biome format --write .",
+    "fix:all": "pnpm run lint && pnpm run format",
     "do": "./scripts/do.sh"
   },
   "dependencies": {

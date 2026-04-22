@@ -90,7 +90,11 @@ export class DividendController {
         const divs = await this.fetchAndStoreDividends(sym);
         dividendsBySymbol.set(sym, divs);
       } catch (err) {
-        logger.log({ level: 'error', label: 'DividendController', message: `Failed to fetch dividends for ${sym}: ${err}` });
+        logger.log({
+          level: 'error',
+          label: 'DividendController',
+          message: `Failed to fetch dividends for ${sym}: ${err}`,
+        });
         dividendsBySymbol.set(sym, []);
       }
     }
@@ -159,9 +163,7 @@ export class DividendController {
       }
 
       const holdingYield = currentPrice > 0 ? +((annualDivPerShare / currentPrice) * 100).toFixed(2) : 0;
-      const lastPayDate = divs.length > 0
-        ? [...divs].sort((a, b) => b.date.localeCompare(a.date))[0].date
-        : '';
+      const lastPayDate = divs.length > 0 ? [...divs].sort((a, b) => b.date.localeCompare(a.date))[0].date : '';
 
       if (annualDivPerShare > 0) {
         byHolding.push({

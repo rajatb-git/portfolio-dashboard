@@ -5,7 +5,13 @@ import { LiveRecommendationController } from '../controller/LiveRecommendationCo
 import { getCompanyNews } from '../externalApis/finnHub';
 import moment from 'moment';
 import { getPriceHistoryCandleStick } from '../externalApis/nasdaq';
-import { getStockMetrics, getStockPeers, getEarningsCalendar, getEarningsHistory, getInsiderTransactions } from '../externalApis/finnHub';
+import {
+  getStockMetrics,
+  getStockPeers,
+  getEarningsCalendar,
+  getEarningsHistory,
+  getInsiderTransactions,
+} from '../externalApis/finnHub';
 import { IPOController } from '../controller/IPOController';
 import { CompanyProfileController } from '../controller/CompanyProfileController';
 import { AgentInsightsController } from '../controller/AgentInsightsController';
