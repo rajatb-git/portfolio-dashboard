@@ -1,0 +1,17 @@
+ARG BUILD_FROM
+FROM $BUILD_FROM
+
+ENV LANG C.UTF-8
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+
+RUN apk add --no-cache \
+    nodejs \
+    npm \
+    git
+
+COPY . /
+RUN cd / && npm ci --unsafe-perm
+
+RUN chmod a+x /scripts/run.sh
+
+CMD [ "/scripts/run.sh" ]
