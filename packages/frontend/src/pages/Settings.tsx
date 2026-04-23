@@ -260,7 +260,7 @@ export default function Settings() {
 			<SettingsSection title="Appearance">
 				<SettingRow
 					label="Theme"
-					description="Switch between dark and light mode"
+					description="Follow system appearance or set manually"
 				>
 					<ToggleButtonGroup
 						size="small"
@@ -270,6 +270,9 @@ export default function Settings() {
 							if (val) setMode(val);
 						}}
 					>
+						<ToggleButton value="system" sx={{ px: 2, fontSize: "0.78rem" }}>
+							System
+						</ToggleButton>
 						<ToggleButton value="dark" sx={{ px: 2, fontSize: "0.78rem" }}>
 							Dark
 						</ToggleButton>

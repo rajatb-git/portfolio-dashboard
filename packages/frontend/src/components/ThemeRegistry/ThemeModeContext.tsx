@@ -2,15 +2,17 @@ import * as React from 'react';
 
 import LocalStorageUtil from '@/utils/localStorage';
 
-type ThemeMode = 'dark' | 'light';
+export type ThemeMode = 'dark' | 'light' | 'system';
 
 type ThemeModeContextType = {
   mode: ThemeMode;
+  resolvedMode: 'dark' | 'light';
   setMode: (mode: ThemeMode) => void;
 };
 
 export const ThemeModeContext = React.createContext<ThemeModeContextType>({
   mode: 'dark',
+  resolvedMode: 'dark',
   setMode: () => {},
 });
 
@@ -19,5 +21,5 @@ export function useThemeMode() {
 }
 
 export function getInitialThemeMode(): ThemeMode {
-  return LocalStorageUtil.getItem<ThemeMode>('theme_mode') ?? 'dark';
+  return LocalStorageUtil.getItem<ThemeMode>('theme_mode') ?? 'system';
 }

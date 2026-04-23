@@ -14,7 +14,7 @@ type Props = {
 };
 
 export default function DividendHistoryChart({ monthlyHistory, isLoading }: Props) {
-  const { mode } = useThemeMode();
+  const { resolvedMode: mode } = useThemeMode();
 
   const categories = monthlyHistory.map((m) => m.month);
   const data = monthlyHistory.map((m) => m.income);

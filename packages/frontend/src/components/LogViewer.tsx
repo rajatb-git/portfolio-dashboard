@@ -72,22 +72,25 @@ export const LogsViewer = ({ data }: Props) => {
       {data
         .trim()
         .split('\n')
-        .map((x, i) => (
-          <div key={i}>
-            <Box
-              sx={{
-                width: '25px',
-                display: 'inline-block',
-                textAlign: 'right',
-                color: theme.palette.text.disabled,
-              }}
-            >
-              {i + 1}
-            </Box>
-            <Box sx={{ display: 'inline-block', px: 0.5 }}></Box>
-            <Box sx={{ display: 'inline-block' }}>{x && <LogLine splitLine={x.match(regex)} />}</Box>
-          </div>
-        ))}
+        .map((x, i) => {
+          const parts = x ? x.match(regex) : null;
+          return (
+            <div key={i}>
+              <Box
+                sx={{
+                  width: '25px',
+                  display: 'inline-block',
+                  textAlign: 'right',
+                  color: theme.palette.text.disabled,
+                }}
+              >
+                {i + 1}
+              </Box>
+              <Box sx={{ display: 'inline-block', px: 0.5 }}></Box>
+              <Box sx={{ display: 'inline-block' }}>{parts ? <LogLine splitLine={parts} /> : x}</Box>
+            </div>
+          );
+        })}
     </Box>
   );
 };
