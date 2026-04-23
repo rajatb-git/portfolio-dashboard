@@ -10,7 +10,8 @@ export const AccountsRouter = () => {
 
   router.put('/accounts', async (ctx) => {
     try {
-      ctx.body = await accountsModel.insertOne(ctx.request.body);
+      const body: any = ctx.request.body;
+      ctx.body = await accountsModel.insertOne(body, body.id);
       ctx.status = 200;
     } catch (error) {
       ctx.status = 500;
