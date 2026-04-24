@@ -1,6 +1,6 @@
 import * as React from 'react';
 
-import { Box, Button, MenuItem, Select } from '@mui/material';
+import { Button, MenuItem, Select, Stack } from '@mui/material';
 import { toast } from 'react-toastify';
 
 import apis from '@/api';
@@ -52,33 +52,39 @@ export default function Logs() {
 
   return (
     <>
-      <Box sx={{ display: 'flex', direction: 'row', justifyContent: 'space-between', mb: 2 }}>
+      <Stack
+        direction={{ xs: 'column', sm: 'row' }}
+        justifyContent="space-between"
+        gap={1}
+        sx={{ mb: 2 }}
+      >
         <Select value={file} onChange={(e) => setFile(e.target.value as File)} size="small" disabled={isLoading}>
           <MenuItem value="error">error.log</MenuItem>
-
           <MenuItem value="combined">combined.log</MenuItem>
         </Select>
 
-        <Button
-          variant="contained"
-          startIcon={<Iconify icon="mdi:delete-empty" />}
-          onClick={deleteLogs}
-          size="small"
-          color="primary"
-        >
-          Delete Logs
-        </Button>
+        <Stack direction="row" gap={1}>
+          <Button
+            variant="contained"
+            startIcon={<Iconify icon="mdi:delete-empty" />}
+            onClick={deleteLogs}
+            size="small"
+            color="primary"
+          >
+            Delete Logs
+          </Button>
 
-        <Button
-          variant="contained"
-          startIcon={<Iconify icon="mynaui:refresh" />}
-          onClick={loadData}
-          size="small"
-          color="secondary"
-        >
-          Refresh
-        </Button>
-      </Box>
+          <Button
+            variant="contained"
+            startIcon={<Iconify icon="mynaui:refresh" />}
+            onClick={loadData}
+            size="small"
+            color="secondary"
+          >
+            Refresh
+          </Button>
+        </Stack>
+      </Stack>
 
       <LogsViewer data={logData} />
     </>

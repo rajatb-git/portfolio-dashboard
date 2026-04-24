@@ -88,7 +88,7 @@ export const PriceHistoryGraph = ({ symbol }: Props) => {
   }, [symbol, range]);
 
   return (
-    <Card variant="outlined" sx={{ minWidth: 400 }}>
+    <Card variant="outlined" sx={{ width: '100%' }}>
       <CardContent>
         <ToggleButtonGroup size="small" value={range} exclusive onChange={handleRangeChange} aria-label="Range">
           {RangeOptions.map((option) => (

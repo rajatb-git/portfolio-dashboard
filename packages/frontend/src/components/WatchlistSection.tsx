@@ -145,8 +145,9 @@ export default function WatchlistSection() {
             </Typography>
           </Box>
         ) : (
+          <Box sx={{ overflowX: 'auto' }}>
           <TableContainer>
-            <Table size="small">
+            <Table size="small" sx={{ minWidth: 360 }}>
               <TableHead>
                 <TableRow>
                   {['Symbol', 'Price', 'Change', ''].map((h) => (
@@ -205,6 +206,7 @@ export default function WatchlistSection() {
               </TableBody>
             </Table>
           </TableContainer>
+          </Box>
         )}
       </AccordionDetails>
     </Accordion>

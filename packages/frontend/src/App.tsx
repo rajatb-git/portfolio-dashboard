@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Box from '@mui/material/Box';
+import useMediaQuery from '@mui/material/useMediaQuery';
 import { ToastContainer } from 'react-toastify';
 
 import Drawer from '@/components/Nav/Drawer';
@@ -20,6 +21,8 @@ export default function App() {
   const [collapsed, setCollapsed] = React.useState(
     () => localStorage.getItem('nav_collapsed') === 'true'
   );
+  const [mobileOpen, setMobileOpen] = React.useState(false);
+  const isMobile = useMediaQuery('(max-width: 899.95px)');
 
   const handleToggle = () => {
     setCollapsed((prev) => {
@@ -29,20 +32,28 @@ export default function App() {
     });
   };
 
+  const handleMobileDrawer = (open: boolean) => setMobileOpen(open);
+
   const drawerWidth = collapsed ? DRAWER_COLLAPSED_WIDTH : DRAWER_WIDTH;
 
   return (
     <BrowserRouter>
       <ThemeRegistry>
-        <Drawer collapsed={collapsed} onToggle={handleToggle} />
+        <Drawer
+          collapsed={collapsed}
+          onToggle={handleToggle}
+          isMobile={isMobile}
+          mobileOpen={mobileOpen}
+          onMobileDrawer={handleMobileDrawer}
+        />
 
         <Box
           component="main"
           sx={{
             flexGrow: 1,
             bgcolor: 'background.default',
-            ml: `${drawerWidth}px`,
-            p: 3,
+            ml: isMobile ? 0 : `${drawerWidth}px`,
+            p: { xs: 1.5, md: 3 },
             mt: '48px',
             transition: 'margin-left 0.2s ease',
           }}

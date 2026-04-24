@@ -67,8 +67,8 @@ function SettingRow({
 }) {
 	return (
 		<Stack
-			direction="row"
-			alignItems="center"
+			direction={{ xs: "column", sm: "row" }}
+			alignItems={{ xs: "flex-start", sm: "center" }}
 			justifyContent="space-between"
 			sx={{ px: 2, py: 1.5, borderBottom: "1px solid", borderColor: "divider" }}
 		>
@@ -86,7 +86,9 @@ function SettingRow({
 					</Typography>
 				)}
 			</Box>
-			{children}
+			<Box sx={{ mt: { xs: 1, sm: 0 }, width: { xs: "100%", sm: "auto" } }}>
+				{children}
+			</Box>
 		</Stack>
 	);
 }
@@ -252,7 +254,7 @@ export default function Settings() {
 	};
 
 	return (
-		<Box sx={{ maxWidth: 680 }}>
+		<Box sx={{ maxWidth: { xs: "100%", sm: 680 } }}>
 			<Typography variant="h6" sx={{ mb: 2.5, fontWeight: 700 }}>
 				Settings
 			</Typography>
@@ -440,7 +442,7 @@ export default function Settings() {
 					label="Backend URL"
 					description="Override the backend API host. Requires page reload to take effect."
 				>
-					<Stack direction="row" alignItems="center" spacing={1}>
+					<Stack direction="row" alignItems="center" spacing={1} flexWrap="wrap" useFlexGap>
 						{apiHostSaved && (
 							<Typography sx={{ fontSize: "0.72rem", color: "success.main" }}>
 								Saved
@@ -450,7 +452,7 @@ export default function Settings() {
 							size="small"
 							value={apiHost}
 							onChange={(e) => setApiHost(e.target.value)}
-							sx={{ width: 240, "& input": { fontSize: "0.78rem" } }}
+							sx={{ width: { xs: "100%", sm: 240 }, "& input": { fontSize: "0.78rem" } }}
 						/>
 						<Button
 							size="small"
@@ -560,7 +562,7 @@ export default function Settings() {
 										provider: e.target.value as AiConfig["provider"],
 									})
 								}
-								sx={{ minWidth: 200, fontSize: "0.82rem" }}
+								sx={{ minWidth: { xs: "100%", sm: 200 }, fontSize: "0.82rem" }}
 							>
 								<MenuItem value="ollama">Ollama (Local)</MenuItem>
 								<MenuItem value="gemini">Gemini (Google)</MenuItem>
@@ -582,7 +584,7 @@ export default function Settings() {
 											updateDraft({ claudeApiKey: e.target.value })
 										}
 										placeholder="sk-ant-..."
-										sx={{ width: 260, "& input": { fontSize: "0.78rem" } }}
+										sx={{ width: { xs: "100%", sm: 260 }, "& input": { fontSize: "0.78rem" } }}
 									/>
 								</SettingRow>
 								<SettingRow label="Model" description="Claude model to use">
@@ -592,7 +594,7 @@ export default function Settings() {
 										onChange={(e) =>
 											updateDraft({ claudeModel: e.target.value })
 										}
-										sx={{ width: 260, "& input": { fontSize: "0.78rem" } }}
+										sx={{ width: { xs: "100%", sm: 260 }, "& input": { fontSize: "0.78rem" } }}
 									/>
 								</SettingRow>
 							</>
@@ -612,7 +614,7 @@ export default function Settings() {
 											updateDraft({ geminiApiKey: e.target.value })
 										}
 										placeholder="AIza..."
-										sx={{ width: 260, "& input": { fontSize: "0.78rem" } }}
+										sx={{ width: { xs: "100%", sm: 260 }, "& input": { fontSize: "0.78rem" } }}
 									/>
 								</SettingRow>
 								<SettingRow label="Model" description="Gemini model to use">
@@ -622,7 +624,7 @@ export default function Settings() {
 										onChange={(e) =>
 											updateDraft({ geminiModel: e.target.value })
 										}
-										sx={{ width: 260, "& input": { fontSize: "0.78rem" } }}
+										sx={{ width: { xs: "100%", sm: 260 }, "& input": { fontSize: "0.78rem" } }}
 									/>
 								</SettingRow>
 							</>
@@ -637,7 +639,7 @@ export default function Settings() {
 										onChange={(e) =>
 											updateDraft({ ollamaHost: e.target.value })
 										}
-										sx={{ width: 260, "& input": { fontSize: "0.78rem" } }}
+										sx={{ width: { xs: "100%", sm: 260 }, "& input": { fontSize: "0.78rem" } }}
 									/>
 								</SettingRow>
 								<SettingRow
@@ -650,7 +652,7 @@ export default function Settings() {
 										onChange={(e) =>
 											updateDraft({ ollamaModel: e.target.value })
 										}
-										sx={{ width: 260, "& input": { fontSize: "0.78rem" } }}
+										sx={{ width: { xs: "100%", sm: 260 }, "& input": { fontSize: "0.78rem" } }}
 									/>
 								</SettingRow>
 							</>
