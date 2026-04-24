@@ -151,7 +151,7 @@ export default function GenericGrid(props: {
       align: 'right',
       headerAlign: 'right',
       cellClassName: 'actions',
-      flex: 1,
+      width: 100,
       getActions: (row) => {
         const isInEditMode = rowModesModel[row.id]?.mode === GridRowModes.Edit;
 
