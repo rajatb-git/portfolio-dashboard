@@ -46,7 +46,7 @@ type Props = {
 };
 
 export default function PortfolioPerformanceChart({ snapshots }: Props) {
-	const { mode } = useThemeMode();
+	const { resolvedMode: mode } = useThemeMode();
 	const [range, setRange] = React.useState<RangeKey>("6M");
 	const [spyRaw, setSpyRaw] = React.useState<any[]>([]);
 	const [isSpyLoading, setIsSpyLoading] = React.useState(false);

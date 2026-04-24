@@ -5,7 +5,8 @@ import Box from '@mui/material/Box';
 import Dialog from '@mui/material/Dialog';
 import MenuItem from '@mui/material/MenuItem';
 import { default as MuiSelect } from '@mui/material/Select';
-import { styled, Theme } from '@mui/material/styles';
+import { styled, Theme, useTheme } from '@mui/material/styles';
+import useMediaQuery from '@mui/material/useMediaQuery';
 import { default as MuiTextField } from '@mui/material/TextField';
 import Case from 'case';
 import { toast } from 'react-toastify';
@@ -43,6 +44,8 @@ type Props = {
 };
 
 export default function BuySellDialog({ open, handleDialogClose, initialValues, refreshData, accounts }: Props) {
+  const theme = useTheme();
+  const fullScreen = useMediaQuery(theme.breakpoints.down('sm'));
   const [isLoading, setIsLoading] = React.useState(false);
 
   const formFields = {
@@ -151,7 +154,7 @@ export default function BuySellDialog({ open, handleDialogClose, initialValues, 
   };
 
   return (
-    <Dialog open={open} maxWidth="md" onClose={handleDialogClose}>
+    <Dialog open={open} maxWidth="md" fullScreen={fullScreen} onClose={handleDialogClose}>
       <Typography sx={{ m: 2 }} variant="h6">
         Buy / Sell
       </Typography>

@@ -380,41 +380,40 @@ export default function Database() {
 
 	return (
 		<>
-			<Box
-				sx={{
-					display: "flex",
-					direction: "row",
-					justifyContent: "flex-start",
-					mb: 2,
-					gap: "8px",
-				}}
+			<Stack
+				direction={{ xs: "column", sm: "row" }}
+				alignItems={{ xs: "flex-start", sm: "center" }}
+				gap={1}
+				sx={{ mb: 2 }}
 			>
-				<Typography variant="h6" flexGrow={1}>
+				<Typography variant="h6" sx={{ flexGrow: 1 }}>
 					Database
 				</Typography>
 
-				<Button
-					color="primary"
-					startIcon={<Iconify icon="mage:file-upload-fill" />}
-					onClick={openImportDialog}
-				>
-					Import holdings data
-				</Button>
+				<Stack direction="row" gap={1} flexWrap="wrap">
+					<Button
+						color="primary"
+						startIcon={<Iconify icon="mage:file-upload-fill" />}
+						onClick={openImportDialog}
+					>
+						Import holdings data
+					</Button>
 
-				<Select
-					value={activeCollection}
-					displayEmpty
-					onChange={(e) => setActiveCollection(e.target.value as any)}
-					size="small"
-					disabled={isLoading}
-				>
-					{["accounts", "holdings", "transactions"].map((x) => (
-						<MenuItem key={x} value={x}>
-							{x}
-						</MenuItem>
-					))}
-				</Select>
-			</Box>
+					<Select
+						value={activeCollection}
+						displayEmpty
+						onChange={(e) => setActiveCollection(e.target.value as any)}
+						size="small"
+						disabled={isLoading}
+					>
+						{["accounts", "holdings", "transactions"].map((x) => (
+							<MenuItem key={x} value={x}>
+								{x}
+							</MenuItem>
+						))}
+					</Select>
+				</Stack>
+			</Stack>
 
 			{activeCollection === "accounts" ? (
 				<AccountsManager

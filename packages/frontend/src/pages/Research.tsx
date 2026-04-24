@@ -348,12 +348,18 @@ function Research() {
         {(price?.open || price?.dayHigh) && (
           <>
             <Divider sx={{ mt: 2, mb: 1.5 }} />
-            <Stack direction="row" divider={<Divider orientation="vertical" flexItem sx={{ opacity: 0.4 }} />}>
-              <StatItem label="Open" value={price?.open ? fnCurrency(price.open) : '—'} />
-              <StatItem label="High" value={price?.dayHigh ? fnCurrency(price.dayHigh) : '—'} />
-              <StatItem label="Low" value={price?.dayLow ? fnCurrency(price.dayLow) : '—'} />
-              <StatItem label="Prev Close" value={price?.prevClose ? fnCurrency(price.prevClose) : '—'} />
-            </Stack>
+            <Grid container spacing={1}>
+              {[
+                { label: 'Open', value: price?.open ? fnCurrency(price.open) : '—' },
+                { label: 'High', value: price?.dayHigh ? fnCurrency(price.dayHigh) : '—' },
+                { label: 'Low', value: price?.dayLow ? fnCurrency(price.dayLow) : '—' },
+                { label: 'Prev Close', value: price?.prevClose ? fnCurrency(price.prevClose) : '—' },
+              ].map((s) => (
+                <Grid key={s.label} size={{ xs: 6, sm: 3 }}>
+                  <StatItem label={s.label} value={s.value} />
+                </Grid>
+              ))}
+            </Grid>
           </>
         )}
       </Card>

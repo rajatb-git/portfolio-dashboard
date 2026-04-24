@@ -175,8 +175,9 @@ export default function Table<T>({ rows, columns, accounts, refreshData, isLoadi
 
         <Divider />
 
+        <Box sx={{ overflowX: 'auto' }}>
         <TableContainer sx={{ maxHeight: '60vh' }}>
-          <MuiTable stickyHeader>
+          <MuiTable stickyHeader sx={{ minWidth: 720 }}>
             <TableHead
               order={order}
               orderBy={orderBy}
@@ -200,6 +201,7 @@ export default function Table<T>({ rows, columns, accounts, refreshData, isLoadi
             </TableBody>
           </MuiTable>
         </TableContainer>
+        </Box>
 
         <Divider />
 

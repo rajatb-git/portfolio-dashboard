@@ -16,7 +16,7 @@ type Props = {
 const RangeOptions = ['1d', '5d', '1M', '3M', '6M', '1y', '2y', '3y'];
 
 export const PriceHistoryGraph = ({ symbol }: Props) => {
-  const { mode } = useThemeMode();
+  const { resolvedMode: mode } = useThemeMode();
   const theme = useTheme();
   const [series, setSeries] = React.useState<any>();
   const [range, setRange] = React.useState<Range>('6M');
@@ -88,7 +88,7 @@ export const PriceHistoryGraph = ({ symbol }: Props) => {
   }, [symbol, range]);
 
   return (
-    <Card variant="outlined" sx={{ minWidth: 400 }}>
+    <Card variant="outlined" sx={{ width: '100%' }}>
       <CardContent>
         <ToggleButtonGroup size="small" value={range} exclusive onChange={handleRangeChange} aria-label="Range">
           {RangeOptions.map((option) => (
