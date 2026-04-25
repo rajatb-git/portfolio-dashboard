@@ -11,7 +11,7 @@ import { TableCell } from '@/components/Table/TableCell';
 import { fnCurrency } from '@/utils/formatNumber';
 
 type TableRowProps = {
-  row: HoldingAggregate;
+  row: HoldingAggregate & { accountPercent?: number };
   onRowClick: (symbol: string) => void;
   onTrade: (row: HoldingAggregate) => void;
 };
@@ -109,6 +109,12 @@ export default function DashTableRow({ row, onRowClick, onTrade }: TableRowProps
       </TableCell>
 
       <TableCell align="right">{fnCurrency(row.marketValue)}</TableCell>
+
+      <TableCell align="right">
+        <Typography variant="body2" noWrap>
+          {row.accountPercent != null ? `${row.accountPercent.toFixed(1)}%` : '—'}
+        </Typography>
+      </TableCell>
 
       <TableCell>{row.accountId}</TableCell>
 

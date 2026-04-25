@@ -5,8 +5,7 @@ import TableBody from '@mui/material/TableBody';
 import TableContainer from '@mui/material/TableContainer';
 import TablePagination from '@mui/material/TablePagination';
 import Case from 'case';
-import type React from 'react';
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import type { HoldingAggregate } from '@/api/dashboard';
@@ -90,8 +89,22 @@ export default function Table<T>({ rows, columns, accounts, refreshData, isLoadi
     setFilterAccount(event.target.value);
   };
 
+  const enrichedRows = React.useMemo(() => {
+    const accountTotals: Record<string, number> = {};
+    (rows as unknown as HoldingAggregate[]).forEach((r) => {
+      accountTotals[r.accountId] = (accountTotals[r.accountId] ?? 0) + (r.marketValue ?? 0);
+    });
+    return (rows as unknown as HoldingAggregate[]).map((r) => ({
+      ...r,
+      accountPercent:
+        (accountTotals[r.accountId] ?? 0) > 0
+          ? ((r.marketValue ?? 0) / accountTotals[r.accountId]) * 100
+          : 0,
+    }));
+  }, [rows]);
+
   const { dataFiltered, totals } = applyFilter({
-    inputData: rows,
+    inputData: enrichedRows,
     comparator: getComparator(order, orderBy),
     filterName,
     filterAccount,
@@ -177,7 +190,7 @@ export default function Table<T>({ rows, columns, accounts, refreshData, isLoadi
 
         <Box sx={{ overflowX: 'auto' }}>
         <TableContainer sx={{ maxHeight: '60vh' }}>
-          <MuiTable stickyHeader sx={{ minWidth: 720 }}>
+          <MuiTable stickyHeader sx={{ minWidth: 820 }}>
             <TableHead
               order={order}
               orderBy={orderBy}
