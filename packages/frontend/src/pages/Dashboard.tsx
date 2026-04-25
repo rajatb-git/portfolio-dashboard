@@ -35,6 +35,7 @@ export default function Dashboard() {
       align: 'right',
     },
     { id: 'marketValue', label: 'Market Value', align: 'right' },
+    { id: 'accountPercent', label: '% of Account', align: 'right' },
     { id: 'accountId', label: 'Owner' },
     { id: '', label: 'Recommendation' },
     { id: '', label: '' },
