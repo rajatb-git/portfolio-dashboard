@@ -40,7 +40,7 @@ export default function DashTableRow({ row, onRowClick, onTrade }: TableRowProps
     >
       <TableCell component="th" scope="row">
         <Stack direction="column" spacing={0}>
-          <Stack direction="row" alignItems="center" spacing={0.75}>
+          <Stack direction="row" spacing={0.75}>
             <Typography variant="subtitle2" noWrap>
               {row.symbol}
             </Typography>
@@ -69,7 +69,7 @@ export default function DashTableRow({ row, onRowClick, onTrade }: TableRowProps
       </TableCell>
 
       <TableCell align="right">
-        <Stack direction="column" spacing={0} alignItems="flex-end">
+        <Stack direction="column" spacing={0}>
           <Label
             color={row.percentChange === 0 ? 'default' : row.percentChange! > 0 ? 'success' : 'error'}
             sx={{ fontSize: '0.9rem' }}
@@ -84,7 +84,7 @@ export default function DashTableRow({ row, onRowClick, onTrade }: TableRowProps
       </TableCell>
 
       <TableCell align="right">
-        <Stack direction="column" spacing={0} alignItems="flex-end">
+        <Stack direction="column" spacing={0}>
           <Label
             color={row.totalGLPercent === 0 ? 'default' : row.totalGLPercent! > 0 ? 'success' : 'error'}
             sx={{ fontSize: '0.9rem' }}
@@ -100,7 +100,7 @@ export default function DashTableRow({ row, onRowClick, onTrade }: TableRowProps
       </TableCell>
 
       <TableCell align="right">
-        <Stack direction="column" spacing={0} alignItems="flex-end">
+        <Stack direction="column" spacing={0}>
           {fnCurrency(row.currentPrice)}
           <Typography variant="caption" noWrap>
             {row.dayLow?.toFixed(2)} - {row.dayHigh?.toFixed(2)}

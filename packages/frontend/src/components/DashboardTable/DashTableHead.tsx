@@ -1,11 +1,10 @@
 import Box from '@mui/material/Box';
+import { useTheme } from '@mui/material/styles';
 import { default as MuiTableHead } from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
 import TableSortLabel from '@mui/material/TableSortLabel';
-import { useTheme } from '@mui/material/styles';
-
-import { visuallyHidden } from './dashTableUtils';
 import { TableCell } from '../Table/TableCell';
+import { visuallyHidden } from './dashTableUtils';
 
 type TableHeadProps = {
   order: 'asc' | 'desc';
