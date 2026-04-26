@@ -28,7 +28,7 @@ export default class HoldingsAPI {
   // update
   insertOrUpdateById = async (holding: IHoldings): Promise<IHoldings> =>
     axios
-      .post(DB_HOST + '/holdings', { data: holding })
+      .post(DB_HOST + '/holdings', { ...holding })
       .then((response) => response.data)
       .catch(catchCustomError);
 
