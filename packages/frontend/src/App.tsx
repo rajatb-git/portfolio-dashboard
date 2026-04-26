@@ -6,6 +6,7 @@ import { ToastContainer } from 'react-toastify';
 
 import Drawer from '@/components/Nav/Drawer';
 import ThemeRegistry from '@/components/ThemeRegistry/ThemeRegistry';
+import PWAInstallPrompt from '@/components/PWAInstallPrompt';
 import { DRAWER_WIDTH, DRAWER_COLLAPSED_WIDTH } from '@/config';
 
 // Lazy load pages for better code splitting
@@ -71,6 +72,8 @@ export default function App() {
             </Routes>
           </React.Suspense>
         </Box>
+
+        <PWAInstallPrompt />
 
         <ToastContainer
           position="bottom-right"
