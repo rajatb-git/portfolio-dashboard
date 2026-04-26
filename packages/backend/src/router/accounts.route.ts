@@ -13,7 +13,7 @@ export const AccountsRouter = () => {
       const body: any = ctx.request.body;
       ctx.body = await accountsModel.insertOne(body, body.id);
       ctx.status = 200;
-    } catch (error) {
+    } catch (error: any) {
       ctx.status = 500;
       ctx.body = errorBody('Failed to insert account', error.message);
     }
@@ -24,7 +24,7 @@ export const AccountsRouter = () => {
     try {
       ctx.body = accountsModel.getAllRecords();
       ctx.status = 200;
-    } catch (error) {
+    } catch (error: any) {
       ctx.status = 500;
       ctx.body = errorBody('Failed to get accounts', error.message);
     }
@@ -39,7 +39,7 @@ export const AccountsRouter = () => {
       }
       ctx.status = 400;
       ctx.body = errorBody('Account ID is required', 'Account ID is required');
-    } catch (error) {
+    } catch (error: any) {
       ctx.status = 500;
       ctx.body = errorBody('Failed to get account', error.message);
     }
@@ -51,7 +51,7 @@ export const AccountsRouter = () => {
       const body: any = ctx.request.body;
       ctx.body = await accountsModel.insertOrUpdate(body, body.id);
       ctx.status = 200;
-    } catch (error) {
+    } catch (error: any) {
       ctx.status = 500;
       ctx.body = errorBody('Failed to update account', error.message);
     }
@@ -68,7 +68,7 @@ export const AccountsRouter = () => {
       }
       ctx.status = 400;
       ctx.body = errorBody('Account ID is required', 'Account ID is required');
-    } catch (error) {
+    } catch (error: any) {
       ctx.status = 500;
       ctx.body = errorBody('Failed to delete account', error.message);
     }

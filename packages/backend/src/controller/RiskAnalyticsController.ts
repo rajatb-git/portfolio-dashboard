@@ -136,7 +136,7 @@ export const calculateRiskMetrics = async (): Promise<RiskMetrics> => {
         beta = spyVariance > 0 ? covariance / spyVariance : 0;
       }
     }
-  } catch (err) {
+  } catch (err: any) {
     logger.log({
       level: 'error',
       label: 'RiskAnalytics',

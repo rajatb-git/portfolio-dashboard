@@ -1,8 +1,8 @@
 import KoaRouter from 'koa-router';
 import moment from 'moment';
-import { logger } from '../utils/winston';
-import { errorBody } from '../utils/error';
 import { WatchlistDBModel } from '../models/WatchlistModel';
+import { errorBody } from '../utils/error';
+import { logger } from '../utils/winston';
 
 const watchlistModel = WatchlistDBModel();
 watchlistModel.initialize();
@@ -15,7 +15,7 @@ export const WatchlistRouter = () => {
       const items = watchlistModel.getAllRecords();
       ctx.body = items;
       ctx.status = 200;
-    } catch (err) {
+    } catch (err: any) {
       logger.log({ level: 'error', message: err.message, label: 'Get watchlist' });
       ctx.body = errorBody('Failed to get watchlist', err.message);
       ctx.status = 400;
@@ -34,7 +34,7 @@ export const WatchlistRouter = () => {
       const item = await watchlistModel.insertOne({ symbol: sym, addedAt: moment().toISOString() }, sym);
       ctx.body = item;
       ctx.status = 201;
-    } catch (err) {
+    } catch (err: any) {
       logger.log({ level: 'error', message: err.message, label: `Add watchlist "${ctx.params.sym}"` });
       ctx.body = errorBody('Failed to add to watchlist', err.message);
       ctx.status = 400;
@@ -46,7 +46,7 @@ export const WatchlistRouter = () => {
       await watchlistModel.deleteById(ctx.params.sym.toUpperCase());
       ctx.body = { deleted: ctx.params.sym.toUpperCase() };
       ctx.status = 200;
-    } catch (err) {
+    } catch (err: any) {
       logger.log({ level: 'error', message: err.message, label: `Delete watchlist "${ctx.params.sym}"` });
       ctx.body = errorBody('Failed to remove from watchlist', err.message);
       ctx.status = 400;

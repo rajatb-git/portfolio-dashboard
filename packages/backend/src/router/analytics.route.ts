@@ -2,8 +2,8 @@ import KoaRouter from 'koa-router';
 
 import { calculateRiskMetrics } from '../controller/RiskAnalyticsController';
 import { getSectorAllocation } from '../controller/SectorController';
-import { logger } from '../utils/winston';
 import { errorBody } from '../utils/error';
+import { logger } from '../utils/winston';
 
 export const AnalyticsRouter = () => {
   const router = new KoaRouter();
@@ -12,7 +12,7 @@ export const AnalyticsRouter = () => {
     try {
       ctx.body = await calculateRiskMetrics();
       ctx.status = 200;
-    } catch (error) {
+    } catch (error: any) {
       logger.log({ level: 'error', message: error.message, label: 'Risk analytics route' });
       ctx.body = errorBody('Failed to calculate risk metrics', error.message);
       ctx.status = 400;
@@ -23,7 +23,7 @@ export const AnalyticsRouter = () => {
     try {
       ctx.body = await getSectorAllocation();
       ctx.status = 200;
-    } catch (error) {
+    } catch (error: any) {
       logger.log({ level: 'error', message: error.message, label: 'Sector allocation route' });
       ctx.body = errorBody('Failed to get sector allocation', error.message);
       ctx.status = 400;

@@ -15,7 +15,7 @@ export const logSellTransaction = async (transactionHolding: Partial<IHoldings>)
       type: transactionHolding.type,
       action: 'sell',
     });
-  } catch (error) {
+  } catch (error: any) {
     logger.log({
       level: 'error',
       label: 'buy',
@@ -36,7 +36,7 @@ export const logBuyTransaction = async (transactionHolding: Partial<IHoldings>):
       type: transactionHolding.type,
       action: 'buy',
     });
-  } catch (error) {
+  } catch (error: any) {
     logger.log({
       level: 'error',
       label: 'buy',
@@ -57,7 +57,7 @@ export const logDepositTransaction = async (transactionHolding: Partial<IHolding
       type: transactionHolding.type,
       action: 'deposit',
     });
-  } catch (error) {
+  } catch (error: any) {
     logger.log({
       level: 'error',
       label: 'buy',

@@ -1,5 +1,5 @@
-import { createLogger, format, transports } from 'winston';
 import moment from 'moment';
+import { createLogger, format, transports } from 'winston';
 
 const { combine, timestamp, printf } = format;
 
@@ -14,7 +14,7 @@ const { combine, timestamp, printf } = format;
 // };
 
 const myFormat = printf(
-  ({ level, message, label, timestamp, ...meta }) =>
+  ({ level, message, label, timestamp, ...meta }: any) =>
     `${moment(timestamp).format()} ${level.toUpperCase()} [${label}] (${message}): ${typeof meta === 'string' ? meta : JSON.stringify(meta)}`
 );
 

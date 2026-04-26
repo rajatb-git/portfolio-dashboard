@@ -7,7 +7,7 @@ class LocalStorageUtil {
         const serializedValue = JSON.stringify(value);
         localStorage.setItem(key, serializedValue);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error(`Error setting item in localStorage: ${error}`);
     }
   }
@@ -21,7 +21,7 @@ class LocalStorageUtil {
         return null;
       }
       return JSON.parse(serializedValue) as T;
-    } catch (error) {
+    } catch (error: any) {
       console.error(`Error getting item from localStorage: ${error}`);
       return null;
     }
@@ -32,7 +32,7 @@ class LocalStorageUtil {
       if (this.isLocalStorageAvailable()) {
         localStorage.removeItem(key);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error(`Error removing item from localStorage: ${error}`);
     }
   }
@@ -42,7 +42,7 @@ class LocalStorageUtil {
       if (this.isLocalStorageAvailable()) {
         localStorage.clear();
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error(`Error clearing localStorage: ${error}`);
     }
   }

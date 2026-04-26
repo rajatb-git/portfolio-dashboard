@@ -5,7 +5,7 @@
   "license": "ISC",
   "author": "Rajat Bansal",
   "scripts": {
-    "dev": "pnpm -r --parallel run dev",
+    "dev": "pnpm -r install && pnpm -r --parallel run dev",
     "dev:frontend": "pnpm --filter @portfolio/frontend dev",
     "dev:backend": "pnpm --filter @portfolio/backend dev",
     "build": "pnpm -r run build",

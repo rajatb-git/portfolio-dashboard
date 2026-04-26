@@ -1,21 +1,21 @@
 import KoaRouter from 'koa-router';
-import { logger } from '../utils/winston';
+import moment from 'moment';
+import { AgentInsightsController } from '../controller/AgentInsightsController';
+import { CompanyProfileController } from '../controller/CompanyProfileController';
+import { IPOController } from '../controller/IPOController';
 import { LiveQuoteController } from '../controller/LiveQuoteController';
 import { LiveRecommendationController } from '../controller/LiveRecommendationController';
-import { getCompanyNews } from '../externalApis/finnHub';
-import moment from 'moment';
-import { getPriceHistoryCandleStick } from '../externalApis/nasdaq';
 import {
-  getStockMetrics,
-  getStockPeers,
+  getCompanyNews,
   getEarningsCalendar,
   getEarningsHistory,
   getInsiderTransactions,
+  getStockMetrics,
+  getStockPeers,
 } from '../externalApis/finnHub';
-import { IPOController } from '../controller/IPOController';
-import { CompanyProfileController } from '../controller/CompanyProfileController';
-import { AgentInsightsController } from '../controller/AgentInsightsController';
+import { getPriceHistoryCandleStick } from '../externalApis/nasdaq';
 import { errorBody } from '../utils/error';
+import { logger } from '../utils/winston';
 
 export const LiveRouter = () => {
   const router = new KoaRouter();
@@ -26,7 +26,7 @@ export const LiveRouter = () => {
 
       ctx.body = result;
       ctx.status = 200;
-    } catch (err) {
+    } catch (err: any) {
       logger.log({ level: 'error', message: err.message, label: `Get live quote "${ctx.params.sym}"` });
       ctx.body = errorBody('Failed to get live quote', err.message);
       ctx.status = 400;
@@ -39,7 +39,7 @@ export const LiveRouter = () => {
 
       ctx.body = result;
       ctx.status = 200;
-    } catch (err) {
+    } catch (err: any) {
       logger.log({ level: 'error', message: err.message, label: `Get live recommendation "${ctx.params.sym}"` });
       ctx.body = errorBody('Failed to get recommendation', err.message);
       ctx.status = 400;
@@ -56,7 +56,7 @@ export const LiveRouter = () => {
 
       ctx.body = result;
       ctx.status = 200;
-    } catch (err) {
+    } catch (err: any) {
       logger.log({ level: 'error', message: err.message, label: `Get live company news "${ctx.params.sym}"` });
       ctx.body = errorBody('Failed to get news', err.message);
       ctx.status = 400;
@@ -74,7 +74,7 @@ export const LiveRouter = () => {
 
       ctx.body = result;
       ctx.status = 200;
-    } catch (err) {
+    } catch (err: any) {
       logger.log({ level: 'error', message: err.message, label: `Get price history "${ctx.params.sym}"` });
       ctx.body = errorBody('Failed to get price history', err.message);
       ctx.status = 400;
@@ -87,7 +87,7 @@ export const LiveRouter = () => {
 
       ctx.body = result;
       ctx.status = 200;
-    } catch (err) {
+    } catch (err: any) {
       logger.log({ level: 'error', message: err.message, label: 'Get IPOs' });
       ctx.body = errorBody('Failed to get IPOs', err.message);
       ctx.status = 400;
@@ -105,7 +105,7 @@ export const LiveRouter = () => {
       }
       ctx.status = 400;
       ctx.body = errorBody('Symbol is required', 'Symbol is required');
-    } catch (err) {
+    } catch (err: any) {
       logger.log({ level: 'error', message: err.message, label: `Get company profile "${ctx.params.sym}"` });
       ctx.status = 500;
       ctx.body = errorBody('Failed to get company profile', err.message);
@@ -117,7 +117,7 @@ export const LiveRouter = () => {
       const result = await getStockMetrics(ctx.params.sym.toUpperCase());
       ctx.body = result;
       ctx.status = 200;
-    } catch (err) {
+    } catch (err: any) {
       logger.log({ level: 'error', message: err.message, label: `Get stock metrics "${ctx.params.sym}"` });
       ctx.body = errorBody('Failed to get stock metrics', err.message);
       ctx.status = 400;
@@ -129,7 +129,7 @@ export const LiveRouter = () => {
       const result = await getStockPeers(ctx.params.sym.toUpperCase());
       ctx.body = result;
       ctx.status = 200;
-    } catch (err) {
+    } catch (err: any) {
       logger.log({ level: 'error', message: err.message, label: `Get stock peers "${ctx.params.sym}"` });
       ctx.body = errorBody('Failed to get stock peers', err.message);
       ctx.status = 400;
@@ -141,7 +141,7 @@ export const LiveRouter = () => {
       const result = await getEarningsCalendar(ctx.params.sym.toUpperCase());
       ctx.body = result;
       ctx.status = 200;
-    } catch (err) {
+    } catch (err: any) {
       logger.log({ level: 'error', message: err.message, label: `Get earnings calendar "${ctx.params.sym}"` });
       ctx.body = errorBody('Failed to get earnings', err.message);
       ctx.status = 400;
@@ -153,7 +153,7 @@ export const LiveRouter = () => {
       const result = await getEarningsHistory(ctx.params.sym.toUpperCase());
       ctx.body = result;
       ctx.status = 200;
-    } catch (err) {
+    } catch (err: any) {
       logger.log({ level: 'error', message: err.message, label: `Get earnings history "${ctx.params.sym}"` });
       ctx.body = errorBody('Failed to get earnings history', err.message);
       ctx.status = 400;
@@ -165,7 +165,7 @@ export const LiveRouter = () => {
       const result = await getInsiderTransactions(ctx.params.sym.toUpperCase());
       ctx.body = result;
       ctx.status = 200;
-    } catch (err) {
+    } catch (err: any) {
       logger.log({ level: 'error', message: err.message, label: `Get insider transactions "${ctx.params.sym}"` });
       ctx.body = errorBody('Failed to get insider transactions', err.message);
       ctx.status = 400;
@@ -177,7 +177,7 @@ export const LiveRouter = () => {
       const result = await new AgentInsightsController().getInsights(ctx.params.sym.toUpperCase());
       ctx.body = result;
       ctx.status = 200;
-    } catch (err) {
+    } catch (err: any) {
       logger.log({ level: 'error', message: err.message, label: `Get agent insights "${ctx.params.sym}"` });
       ctx.body = errorBody('Failed to get agent insights', err.message);
       ctx.status = 400;

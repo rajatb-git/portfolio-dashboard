@@ -1,8 +1,8 @@
-import KoaRouter from 'koa-router';
 import fs from 'fs';
+import KoaRouter from 'koa-router';
 import path from 'path';
-import { logger } from '../utils/winston';
 import { errorBody } from '../utils/error';
+import { logger } from '../utils/winston';
 
 const ALLOWED_LOG_FILES = ['combined', 'error'];
 
@@ -19,7 +19,7 @@ export const LogsRouter = () => {
       }
       ctx.body = fs.readFileSync(path.resolve(`${file}.log`), 'utf8');
       ctx.status = 200;
-    } catch (err) {
+    } catch (err: any) {
       logger.log({ level: 'error', message: err.message, label: 'Get logs' });
       ctx.body = errorBody('Failed to read logs', err.message);
       ctx.status = 400;
@@ -38,7 +38,7 @@ export const LogsRouter = () => {
       fs.writeFileSync(logPath, '', 'utf8');
       ctx.body = fs.readFileSync(logPath, 'utf8');
       ctx.status = 200;
-    } catch (err) {
+    } catch (err: any) {
       logger.log({ level: 'error', message: err.message, label: 'Delete logs' });
       ctx.body = errorBody('Failed to clear logs', err.message);
       ctx.status = 400;

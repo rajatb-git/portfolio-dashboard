@@ -1,7 +1,7 @@
-import { getCompanyProfile } from '../externalApis/finnHub';
-import { HoldingsModel } from '../models/HoldingsModel';
-import { CacheDBModel } from '../models/CacheModel';
 import { LiveQuoteController } from '../controller/LiveQuoteController';
+import { getCompanyProfile } from '../externalApis/finnHub';
+import { CacheDBModel } from '../models/CacheModel';
+import { HoldingsModel } from '../models/HoldingsModel';
 import { logger } from '../utils/winston';
 
 export type SectorAllocation = {
@@ -37,7 +37,7 @@ export const getSectorAllocation = async (): Promise<SectorAllocation[]> => {
       const sector = profile.finnhubIndustry || 'Unknown';
       sectorMap.set(sym, sector);
       await cacheModel.insertOrUpdate({ key: cacheKey, value: sector }, cacheKey);
-    } catch (err) {
+    } catch (err: any) {
       logger.log({ level: 'error', label: 'SectorController', message: `Failed to get sector for ${sym}: ${err}` });
       sectorMap.set(sym, 'Unknown');
     }

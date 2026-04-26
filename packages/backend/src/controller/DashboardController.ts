@@ -1,11 +1,10 @@
 import moment from 'moment';
-
-import { HoldingsModel } from '../models/HoldingsModel';
-import { IPriceStoreModel } from '../models/PriceStoreModel';
-import { IRecommendationModel } from '../models/RecommendationModel';
 import { LiveQuoteController } from '../controller/LiveQuoteController';
 import { LiveRecommendationController } from '../controller/LiveRecommendationController';
+import { HoldingsModel } from '../models/HoldingsModel';
 import { PortfolioSnapshotDBModel } from '../models/PortfolioSnapshotModel';
+import { IPriceStoreModel } from '../models/PriceStoreModel';
+import { IRecommendationModel } from '../models/RecommendationModel';
 
 type HoldingAggregate = {
   accountId: string;
@@ -99,7 +98,7 @@ export const createDashboard = async (): Promise<Array<HoldingAggregate>> => {
           strongBuy: recommendation.strongBuy,
           strongSell: recommendation.strongSell,
         }),
-      });
+      } as any);
     }
   }
 

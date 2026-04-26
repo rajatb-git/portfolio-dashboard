@@ -1,11 +1,11 @@
-import KoaRouter from 'koa-router';
-import archiver from 'archiver';
-import unzipper from 'unzipper';
 import fs from 'node:fs';
 import path from 'node:path';
 import { PassThrough } from 'node:stream';
+import archiver from 'archiver';
+import KoaRouter from 'koa-router';
+import unzipper from 'unzipper';
 
-import { getAiConfig, saveAiConfig, maskAiConfig, IAiConfig } from '../models/AiConfigModel';
+import { getAiConfig, IAiConfig, maskAiConfig, saveAiConfig } from '../models/AiConfigModel';
 import { errorBody } from '../utils/error';
 import { logger } from '../utils/winston';
 
@@ -34,7 +34,7 @@ export const SettingsRouter = () => {
       ctx.set('Content-Type', 'application/zip');
       ctx.body = passthrough;
       ctx.status = 200;
-    } catch (error) {
+    } catch (error: any) {
       logger.log({ level: 'error', message: error.message, label: 'DB export' });
       ctx.status = 500;
       ctx.body = errorBody('Failed to export database', error.message);
@@ -83,7 +83,7 @@ export const SettingsRouter = () => {
 
       ctx.body = { message: 'Import completed. Restart the backend for changes to take effect.' };
       ctx.status = 200;
-    } catch (error) {
+    } catch (error: any) {
       logger.log({ level: 'error', message: error.message, label: 'DB import' });
       ctx.status = 500;
       ctx.body = errorBody('Failed to import database', error.message);
@@ -95,7 +95,7 @@ export const SettingsRouter = () => {
       const config = await getAiConfig();
       ctx.body = maskAiConfig(config);
       ctx.status = 200;
-    } catch (error) {
+    } catch (error: any) {
       ctx.status = 500;
       ctx.body = errorBody('Failed to get AI config', error.message);
     }
@@ -126,7 +126,7 @@ export const SettingsRouter = () => {
       await saveAiConfig(updated);
       ctx.body = maskAiConfig(updated);
       ctx.status = 200;
-    } catch (error) {
+    } catch (error: any) {
       ctx.status = 500;
       ctx.body = errorBody('Failed to save AI config', error.message);
     }

@@ -1,10 +1,9 @@
 import KoaRouter from 'koa-router';
-
-import { HoldingsModel } from '../models/HoldingsModel';
-import { logger } from '../utils/winston';
 import { buy } from '../controller/BuyController';
 import { sell } from '../controller/SellController';
+import { HoldingsModel } from '../models/HoldingsModel';
 import { errorBody } from '../utils/error';
+import { logger } from '../utils/winston';
 
 const holdingsModel = HoldingsModel();
 holdingsModel.initialize();
@@ -17,7 +16,7 @@ export const HoldingsRouter = () => {
     try {
       ctx.body = holdingsModel.insertOne(ctx.request.body);
       ctx.status = 200;
-    } catch (error) {
+    } catch (error: any) {
       ctx.status = 500;
       ctx.body = errorBody('Failed to insert holding', error.message);
     }
@@ -28,7 +27,7 @@ export const HoldingsRouter = () => {
     try {
       ctx.body = holdingsModel.getAllRecords();
       ctx.status = 200;
-    } catch (error) {
+    } catch (error: any) {
       ctx.status = 500;
       ctx.body = errorBody('Failed to get holdings', error.message);
     }
@@ -43,7 +42,7 @@ export const HoldingsRouter = () => {
       }
       ctx.status = 400;
       ctx.body = errorBody('Holding ID is required', 'Holding ID is required');
-    } catch (error) {
+    } catch (error: any) {
       ctx.status = 500;
       ctx.body = errorBody('Failed to get holding', error.message);
     }
@@ -56,7 +55,7 @@ export const HoldingsRouter = () => {
 
       ctx.body = holdingsModel.insertOrUpdate(body.id, body);
       ctx.status = 200;
-    } catch (error) {
+    } catch (error: any) {
       ctx.status = 500;
       ctx.body = errorBody('Failed to update holding', error.message);
     }
@@ -74,7 +73,7 @@ export const HoldingsRouter = () => {
       }
       ctx.status = 400;
       ctx.body = errorBody('Holding ID is required', 'Holding ID is required');
-    } catch (error) {
+    } catch (error: any) {
       ctx.status = 500;
       ctx.body = errorBody('Failed to delete Holding', error.message);
     }
@@ -88,7 +87,7 @@ export const HoldingsRouter = () => {
         ctx.body = buy(body);
         ctx.status = 200;
         return;
-      } catch (error) {
+      } catch (error: any) {
         logger.log({
           level: 'error',
           label: 'buy',
@@ -116,7 +115,7 @@ export const HoldingsRouter = () => {
         ctx.body = sell(body);
         ctx.status = 200;
         return;
-      } catch (error) {
+      } catch (error: any) {
         logger.log({
           level: 'error',
           lable: 'sell',
@@ -151,7 +150,7 @@ export const HoldingsRouter = () => {
 
       holdingsModel.insertMany(arrHolding);
       ctx.status = 200;
-    } catch (error) {
+    } catch (error: any) {
       ctx.status = 500;
       ctx.body = errorBody('Failed to import', error.message);
     }

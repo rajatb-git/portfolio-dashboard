@@ -1,9 +1,8 @@
 import KoaRouter from 'koa-router';
-
-import { logger } from '../utils/winston';
-import { errorBody } from '../utils/error';
 import { createDashboard } from '../controller/DashboardController';
 import { PortfolioSnapshotDBModel } from '../models/PortfolioSnapshotModel';
+import { errorBody } from '../utils/error';
+import { logger } from '../utils/winston';
 
 export const DashboardRouter = () => {
   const router = new KoaRouter();
@@ -14,7 +13,7 @@ export const DashboardRouter = () => {
 
       ctx.body = result;
       ctx.status = 200;
-    } catch (err) {
+    } catch (err: any) {
       logger.log({ level: 'error', message: err.toString() + err.stack, label: 'Dashboard get route' });
 
       ctx.body = { name: 'Failed to generate dashboard', message: err.message };
@@ -29,7 +28,7 @@ export const DashboardRouter = () => {
       const sorted = [...all].sort((a, b) => a.date.localeCompare(b.date));
       ctx.body = sorted;
       ctx.status = 200;
-    } catch (err) {
+    } catch (err: any) {
       logger.log({ level: 'error', message: err.message, label: 'Portfolio snapshots route' });
       ctx.body = errorBody('Failed to get portfolio snapshots', err.message);
       ctx.status = 400;

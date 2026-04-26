@@ -1,9 +1,8 @@
 import KoaRouter from 'koa-router';
-
-import { DividendDBModel } from '../models/DividendModel';
 import { DividendController } from '../controller/DividendController';
-import { logger } from '../utils/winston';
+import { DividendDBModel } from '../models/DividendModel';
 import { errorBody } from '../utils/error';
+import { logger } from '../utils/winston';
 
 export const DividendRouter = () => {
   const router = new KoaRouter();
@@ -15,7 +14,7 @@ export const DividendRouter = () => {
       const dividendModel = await DividendDBModel().initialize();
       ctx.body = dividendModel.getAllRecords();
       ctx.status = 200;
-    } catch (error) {
+    } catch (error: any) {
       ctx.status = 500;
       ctx.body = errorBody('Failed to get dividends', error.message);
     }
@@ -26,7 +25,7 @@ export const DividendRouter = () => {
     try {
       ctx.body = await dividendController.getDividendSummary();
       ctx.status = 200;
-    } catch (error) {
+    } catch (error: any) {
       logger.log({ level: 'error', message: error.message, label: 'Dividend summary route' });
       ctx.body = errorBody('Failed to get dividend summary', error.message);
       ctx.status = 400;
@@ -40,7 +39,7 @@ export const DividendRouter = () => {
       const all = dividendModel.getAllRecords().filter((d) => d.holdingSymbol === ctx.params.symbol);
       ctx.body = all;
       ctx.status = 200;
-    } catch (error) {
+    } catch (error: any) {
       ctx.status = 500;
       ctx.body = errorBody('Failed to get dividends for symbol', error.message);
     }
@@ -51,7 +50,7 @@ export const DividendRouter = () => {
     try {
       ctx.body = await dividendController.fetchAndStoreDividends(ctx.params.symbol);
       ctx.status = 200;
-    } catch (error) {
+    } catch (error: any) {
       logger.log({ level: 'error', message: error.message, label: 'Live dividend fetch route' });
       ctx.body = errorBody('Failed to fetch dividends', error.message);
       ctx.status = 400;
@@ -64,7 +63,7 @@ export const DividendRouter = () => {
       const dividendModel = await DividendDBModel().initialize();
       ctx.body = await dividendModel.insertOne(ctx.request.body);
       ctx.status = 200;
-    } catch (error) {
+    } catch (error: any) {
       ctx.status = 500;
       ctx.body = errorBody('Failed to insert dividend', error.message);
     }
@@ -82,7 +81,7 @@ export const DividendRouter = () => {
       }
       ctx.status = 400;
       ctx.body = errorBody('Dividend ID is required', 'Dividend ID is required');
-    } catch (error) {
+    } catch (error: any) {
       ctx.status = 500;
       ctx.body = errorBody('Failed to delete dividend', error.message);
     }

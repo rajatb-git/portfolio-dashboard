@@ -1,10 +1,9 @@
 import moment from 'moment';
-
+import { LiveQuoteController } from '../controller/LiveQuoteController';
 import { getStockDividends } from '../externalApis/finnHub';
+import { CacheDBModel } from '../models/CacheModel';
 import { DividendDBModel, IDividendModel } from '../models/DividendModel';
 import { HoldingsModel, IHoldingsModel } from '../models/HoldingsModel';
-import { LiveQuoteController } from '../controller/LiveQuoteController';
-import { CacheDBModel } from '../models/CacheModel';
 import { logger } from '../utils/winston';
 
 const CACHE_KEY_PREFIX = 'dividend_fetch_';
@@ -89,7 +88,7 @@ export class DividendController {
       try {
         const divs = await this.fetchAndStoreDividends(sym);
         dividendsBySymbol.set(sym, divs);
-      } catch (err) {
+      } catch (err: any) {
         logger.log({
           level: 'error',
           label: 'DividendController',

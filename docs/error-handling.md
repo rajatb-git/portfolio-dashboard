@@ -49,7 +49,7 @@ router.get('/things/:id', async (ctx) => {
     const result = await getThing(ctx.params.id);
     ctx.body = result;
     ctx.status = 200;
-  } catch (err) {
+  } catch (err: any) {
     logger.log({ level: 'error', label: `Get thing "${ctx.params.id}"`, message: err.message });
     ctx.body = errorBody('Failed to get thing', err.message);
     ctx.status = 400;

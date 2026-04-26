@@ -1,7 +1,7 @@
 import https from 'node:https';
 import axios, { AxiosError } from 'axios';
-import { logger } from '../utils/winston';
 import moment from 'moment';
+import { logger } from '../utils/winston';
 
 type Range = '1d' | '5d' | '1M' | '3M' | '6M' | '1y' | '2y' | '3y';
 
@@ -34,7 +34,7 @@ export const getPriceHistoryAreaChart = (symbol: string, range: Range): Promise<
     .then((response) => {
       const rows = response.data?.data?.tradesTable?.rows;
       if (!rows) return [];
-      return rows.map((x) => {
+      return rows.map((x: any) => {
         return [parseInt(moment(x.date).format('x')), parseFloat(x.close.replace(/\$|\,/g, ''))];
       });
     })
@@ -75,7 +75,7 @@ export const getPriceHistoryCandleStick = (symbol: string, range: Range): Promis
     .then((response) => {
       const rows = response.data?.data?.tradesTable?.rows;
       if (!rows) return [];
-      return rows.map((x) => {
+      return rows.map((x: any) => {
         return {
           x: new Date(x.date),
           y: [
