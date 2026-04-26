@@ -695,7 +695,7 @@ export default function Settings() {
 			<SettingsSection title="About">
 				<SettingRow label="Application" description="Portfolio Dashboard">
 					<Typography sx={{ fontSize: "0.78rem", color: "text.disabled" }}>
-						v1.0.0
+						v{__APP_VERSION__}
 					</Typography>
 				</SettingRow>
 				<SettingRow label="Data Provider" description="Real-time market data">
