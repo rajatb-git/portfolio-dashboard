@@ -24,7 +24,7 @@ type Props = {
 
 function MetricRow({ label, value, tooltip }: { label: string; value: string; tooltip?: string }) {
   const content = (
-    <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ py: 1, px: 2, borderBottom: '1px solid', borderColor: 'divider' }}>
+    <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', py: 1, px: 2, borderBottom: '1px solid', borderColor: 'divider' }}>
       <Typography sx={{ fontSize: '0.78rem', color: 'text.secondary' }}>{label}</Typography>
       <Typography sx={{ fontSize: '0.78rem', fontWeight: 600, color: 'text.primary' }}>{value}</Typography>
     </Stack>
@@ -51,7 +51,7 @@ export default function ResearchMetricsCard({ metrics, currentPrice, isLoading }
         <Box>
           {/* 52-week range bar */}
           <Box sx={{ px: 2, pt: 1.5, pb: 1 }}>
-            <Stack direction="row" justifyContent="space-between" sx={{ mb: 0.5 }}>
+            <Stack direction="row" sx={{ justifyContent: 'space-between', mb: 0.5 }}>
               <Typography sx={{ fontSize: '0.7rem', color: 'text.disabled' }}>52W Low ${metrics.week52Low.toFixed(2)}</Typography>
               <Typography sx={{ fontSize: '0.7rem', fontWeight: 600, color: 'text.secondary' }}>52-Week Range</Typography>
               <Typography sx={{ fontSize: '0.7rem', color: 'text.disabled' }}>52W High ${metrics.week52High.toFixed(2)}</Typography>

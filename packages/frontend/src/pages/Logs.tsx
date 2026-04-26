@@ -54,16 +54,14 @@ export default function Logs() {
     <>
       <Stack
         direction={{ xs: 'column', sm: 'row' }}
-        justifyContent="space-between"
-        gap={1}
-        sx={{ mb: 2 }}
+        sx={{ justifyContent: 'space-between', gap: 1, mb: 2 }}
       >
         <Select value={file} onChange={(e) => setFile(e.target.value as File)} size="small" disabled={isLoading}>
           <MenuItem value="error">error.log</MenuItem>
           <MenuItem value="combined">combined.log</MenuItem>
         </Select>
 
-        <Stack direction="row" gap={1}>
+        <Stack direction="row" sx={{ gap: 1 }}>
           <Button
             variant="contained"
             startIcon={<Iconify icon="mdi:delete-empty" />}

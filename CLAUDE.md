@@ -150,3 +150,13 @@ Use `react-toastify`'s `toast.error(...)` for failures and `toast.success(...)` 
 - Branch naming is enforced by the host — use the branch specified in your task prompt (`claude/…` with a matching session id).
 - Commit messages: short subject, blank line, bulleted body explaining *why*. Always include the `https://claude.ai/code/session_<id>` footer when instructed.
 - Never push to `main`. Never use `--no-verify`, `--force-with-lease` without explicit permission, or amend published commits.
+
+### Version bumping (required on every commit)
+
+**Before every commit, bump the patch version in all three `package.json` files:**
+
+- `package.json` (root)
+- `packages/frontend/package.json`
+- `packages/backend/package.json`
+
+Increment the patch segment (`z` in `x.y.z`) by 1 in each file. Do this as part of the same commit — do not make a separate version-bump commit.

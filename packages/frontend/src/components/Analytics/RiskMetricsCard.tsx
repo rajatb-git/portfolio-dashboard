@@ -42,7 +42,7 @@ function MetricItem({ label, value, subtext, color }: MetricItemProps) {
 			>
 				{label}
 			</Typography>
-			<Stack direction="row" alignItems="center" spacing={0.75}>
+			<Stack direction="row" sx={{ alignItems: 'center' }} spacing={0.75}>
 				<Typography
 					sx={{
 						fontSize: "1.1rem",

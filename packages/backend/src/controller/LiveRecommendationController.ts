@@ -15,7 +15,7 @@ export class LiveRecommendationController {
       // cases when recommendation is not available like index funds
       // insert dummy record
       if (!apiFetch && !dbFetch) {
-        await recommendationModel.insertOne(
+        return recommendationModel.insertOne(
           {
             buy: -1,
             hold: -1,
@@ -28,9 +28,9 @@ export class LiveRecommendationController {
         );
       }
 
-      return apiFetch ? recommendationModel.insertOrUpdate(apiFetch, symbol) : dbFetch;
+      return apiFetch ? recommendationModel.insertOrUpdate(apiFetch, symbol) : dbFetch!;
     } else {
-      return dbFetch;
+      return dbFetch!;
     }
   };
 

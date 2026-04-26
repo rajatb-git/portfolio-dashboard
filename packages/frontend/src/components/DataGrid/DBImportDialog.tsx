@@ -141,7 +141,7 @@ export default function ImportDialog({
 
               <Box>
                 <Typography variant="body2">{file.name}</Typography>
-                <Typography fontSize={theme.typography.pxToRem(10)} fontWeight={600}>
+                <Typography sx={{ fontSize: theme.typography.pxToRem(10), fontWeight: 600 }}>
                   {fnBytes(file?.size)}
                 </Typography>
               </Box>

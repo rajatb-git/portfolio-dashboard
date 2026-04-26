@@ -173,9 +173,7 @@ export default function PortfolioPerformanceChart({ snapshots }: Props) {
 		<Card variant="outlined">
 			<Stack
 				direction="row"
-				alignItems="center"
-				justifyContent="space-between"
-				sx={{ px: 2, pt: 1.5, pb: 1 }}
+				sx={{ alignItems: 'center', justifyContent: 'space-between', px: 2, pt: 1.5, pb: 1 }}
 			>
 				<Typography
 					sx={{
@@ -215,9 +213,7 @@ export default function PortfolioPerformanceChart({ snapshots }: Props) {
 					/>
 				) : isEmpty ? (
 					<Stack
-						alignItems="center"
-						justifyContent="center"
-						sx={{ height: 320 }}
+						sx={{ alignItems: 'center', justifyContent: 'center', height: 320 }}
 					>
 						<Typography
 							sx={{

@@ -84,10 +84,9 @@ function AllocationDonut({
               <Stack
                 key={item.label}
                 direction="row"
-                alignItems="center"
-                justifyContent="space-between"
+                sx={{ alignItems: 'center', justifyContent: 'space-between' }}
               >
-                <Stack direction="row" alignItems="center" spacing={1}>
+                <Stack direction="row" sx={{ alignItems: 'center' }} spacing={1}>
                   <Box
                     sx={{
                       width: 8,
@@ -101,7 +100,7 @@ function AllocationDonut({
                     {item.label}
                   </Typography>
                 </Stack>
-                <Stack direction="row" alignItems="center" spacing={1}>
+                <Stack direction="row" sx={{ alignItems: 'center' }} spacing={1}>
                   <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, color: 'text.primary' }}>
                     {fnCurrency(item.value)}
                   </Typography>

@@ -197,9 +197,8 @@ function AccountsManager({
 			<Card variant="outlined" sx={{ background: "transparent" }}>
 				<Stack
 					direction="row"
-					alignItems="center"
 					spacing={1}
-					sx={{ px: 2, py: 1.5 }}
+					sx={{ alignItems: 'center', px: 2, py: 1.5 }}
 				>
 					<TextField
 						size="small"
@@ -396,15 +395,13 @@ export default function Database() {
 		<>
 			<Stack
 				direction={{ xs: "column", sm: "row" }}
-				alignItems={{ xs: "flex-start", sm: "center" }}
-				gap={1}
-				sx={{ mb: 2 }}
+				sx={{ alignItems: { xs: "flex-start", sm: "center" }, gap: 1, mb: 2 }}
 			>
 				<Typography variant="h6" sx={{ flexGrow: 1 }}>
 					Database
 				</Typography>
 
-				<Stack direction="row" gap={1} flexWrap="wrap">
+				<Stack direction="row" sx={{ gap: 1, flexWrap: 'wrap' }}>
 					<Button
 						color="primary"
 						startIcon={<Iconify icon="mage:file-upload-fill" />}
