@@ -26,7 +26,7 @@ export default class TransactionsAPI {
 
   insertOrUpdateById = async (transaction: ITransaction): Promise<ITransaction> =>
     axios
-      .post(DB_HOST + '/transactions', { data: transaction })
+      .post(DB_HOST + '/transactions', { ...transaction })
       .then((response) => response.data)
       .catch(catchCustomError);
 

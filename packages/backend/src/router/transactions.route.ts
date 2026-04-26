@@ -49,10 +49,10 @@ export const TransactionsRouter = () => {
   });
 
   // update
-  router.post('/transactions', (ctx) => {
+  router.post('/transactions', async (ctx) => {
     try {
       const body: any = ctx.request.body;
-      ctx.body = transactionModel.insertOrUpdate(body.id, body);
+      ctx.body = await transactionModel.insertOrUpdate(body, body.id);
       ctx.status = 200;
     } catch (err: any) {
       logger.log({ level: 'error', message: err.message, label: 'Update transaction' });

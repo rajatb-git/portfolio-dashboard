@@ -49,13 +49,20 @@ export const HoldingsRouter = () => {
   });
 
   // update
-  router.post('/holdings', (ctx) => {
+  router.post('/holdings', async (ctx) => {
     try {
       const body: any = ctx.request.body;
 
-      ctx.body = holdingsModel.insertOrUpdate(body.id, body);
+      ctx.body = await holdingsModel.insertOrUpdate(body, body.id);
       ctx.status = 200;
     } catch (error: any) {
+      logger.log({
+        level: 'error',
+        label: 'Update holding',
+        message: error.message,
+        name: error.name,
+        stack: error.stack,
+      });
       ctx.status = 500;
       ctx.body = errorBody('Failed to update holding', error.message);
     }
