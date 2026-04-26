@@ -88,7 +88,7 @@ export default function ResearchDetailsCard({
 										>
 											<ListItemText
 												primary={x.label}
-												slotProps={{ primary: { textTransform: "capitalize" } }}
+												slotProps={{ primary: { sx: { textTransform: "capitalize" } } }}
 											/>
 										</ListItem>
 									),

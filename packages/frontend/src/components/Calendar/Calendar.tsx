@@ -42,13 +42,13 @@ export default function CalendarView({ events, refreshData, isLoading }: Props) 
     <>
       <Stack
         direction="row"
-        alignItems="center"
-        justifyContent="flex-start"
         sx={{
+          alignItems: 'center',
+          justifyContent: 'flex-start',
           mb: 2,
         }}
       >
-        <Typography variant="h6" flexGrow={1}>
+        <Typography variant="h6" sx={{ flexGrow: 1 }}>
           Calendar
         </Typography>
 

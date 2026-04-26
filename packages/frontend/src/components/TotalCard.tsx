@@ -52,7 +52,7 @@ export default function TotalCard({ total }: TotalCardProps) {
       }}
     >
       <Stack direction="column" spacing={1}>
-        <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
+        <Stack direction="row" sx={{ justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <Stack direction="column" spacing={0}>
             <Typography
               sx={{
@@ -82,9 +82,9 @@ export default function TotalCard({ total }: TotalCardProps) {
 
           <Stack
             direction="row"
-            alignItems="center"
             spacing={0.5}
             sx={{
+              alignItems: 'center',
               bgcolor: pillBg,
               border: `1px solid ${borderColor}`,
               borderRadius: '6px',
@@ -106,8 +106,7 @@ export default function TotalCard({ total }: TotalCardProps) {
 
         <Stack
           direction="row"
-          justifyContent="space-between"
-          sx={{ borderTop: `1px solid ${borderColor}`, pt: 1 }}
+          sx={{ justifyContent: 'space-between', borderTop: `1px solid ${borderColor}`, pt: 1 }}
         >
           <Stack direction="column" spacing={0}>
             <Typography sx={{ fontSize: '0.62rem', color: dimAccent, opacity: 0.7, fontWeight: 500 }}>
@@ -118,7 +117,7 @@ export default function TotalCard({ total }: TotalCardProps) {
             </Typography>
           </Stack>
 
-          <Stack direction="column" spacing={0} alignItems="flex-end">
+          <Stack direction="column" spacing={0} sx={{ alignItems: 'flex-end' }}>
             <Typography sx={{ fontSize: '0.62rem', color: dimAccent, opacity: 0.7, fontWeight: 500 }}>
               Value
             </Typography>

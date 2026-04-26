@@ -68,9 +68,7 @@ function SettingRow({
 	return (
 		<Stack
 			direction={{ xs: "column", sm: "row" }}
-			alignItems={{ xs: "flex-start", sm: "center" }}
-			justifyContent="space-between"
-			sx={{ px: 2, py: 1.5, borderBottom: "1px solid", borderColor: "divider" }}
+			sx={{ alignItems: { xs: "flex-start", sm: "center" }, justifyContent: "space-between", px: 2, py: 1.5, borderBottom: "1px solid", borderColor: "divider" }}
 		>
 			<Box>
 				<Typography
@@ -287,7 +285,7 @@ export default function Settings() {
 
 			<SettingsSection title="Accounts">
 				{accounts.length === 0 ? (
-					<Stack alignItems="center" sx={{ py: 3 }}>
+					<Stack sx={{ alignItems: "center", py: 3 }}>
 						<Iconify
 							icon="mdi:account-group-outline"
 							width={28}
@@ -308,16 +306,16 @@ export default function Settings() {
 						<Stack
 							key={account.id}
 							direction="row"
-							alignItems="center"
-							justifyContent="space-between"
 							sx={{
+								alignItems: "center",
+								justifyContent: "space-between",
 								px: 2,
 								py: 1,
 								borderBottom: "1px solid",
 								borderColor: "divider",
 							}}
 						>
-							<Stack direction="row" alignItems="center" spacing={1.5}>
+							<Stack direction="row" sx={{ alignItems: "center" }} spacing={1.5}>
 								<Iconify
 									icon="mdi:account-outline"
 									width={18}
@@ -358,9 +356,8 @@ export default function Settings() {
 
 				<Stack
 					direction="row"
-					alignItems="center"
 					spacing={1}
-					sx={{ px: 2, py: 1.5 }}
+					sx={{ alignItems: "center", px: 2, py: 1.5 }}
 				>
 					<TextField
 						size="small"
@@ -442,7 +439,7 @@ export default function Settings() {
 					label="Backend URL"
 					description="Override the backend API host. Requires page reload to take effect."
 				>
-					<Stack direction="row" alignItems="center" spacing={1} flexWrap="wrap" useFlexGap>
+					<Stack direction="row" spacing={1} useFlexGap sx={{ alignItems: "center", flexWrap: "wrap" }}>
 						{apiHostSaved && (
 							<Typography sx={{ fontSize: "0.72rem", color: "success.main" }}>
 								Saved
@@ -663,10 +660,8 @@ export default function Settings() {
 				{draftAiConfig && (
 					<Stack
 						direction="row"
-						justifyContent="flex-end"
-						alignItems="center"
 						spacing={1}
-						sx={{ px: 2, py: 1.5 }}
+						sx={{ justifyContent: "flex-end", alignItems: "center", px: 2, py: 1.5 }}
 					>
 						{isAiConfigDirty && (
 							<Typography

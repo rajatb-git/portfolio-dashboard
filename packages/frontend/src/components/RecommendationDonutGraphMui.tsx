@@ -78,10 +78,9 @@ export default function RecommendationDonutGraphMui({
 							<Stack
 								key={item.label}
 								direction="row"
-								alignItems="center"
-								justifyContent="space-between"
+								sx={{ alignItems: 'center', justifyContent: 'space-between' }}
 							>
-								<Stack direction="row" alignItems="center" spacing={1}>
+								<Stack direction="row" sx={{ alignItems: 'center' }} spacing={1}>
 									<Box
 										sx={{
 											width: 8,
@@ -97,7 +96,7 @@ export default function RecommendationDonutGraphMui({
 										{LABELS[i]}
 									</Typography>
 								</Stack>
-								<Stack direction="row" alignItems="center" spacing={1}>
+								<Stack direction="row" sx={{ alignItems: 'center' }} spacing={1}>
 									<Typography
 										sx={{
 											fontSize: "0.78rem",

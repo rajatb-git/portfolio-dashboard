@@ -195,7 +195,7 @@ function Research() {
     <Stack spacing={2}>
       {/* ── Hero header card ── */}
       <Card sx={{ p: 2.5 }}>
-        <Stack direction="row" spacing={2.5} alignItems="flex-start">
+        <Stack direction="row" spacing={2.5} sx={{ alignItems: 'flex-start' }}>
           {/* Logo */}
           {isCompanyProfileLoading ? (
             <Skeleton variant="rounded" width={60} height={60} sx={{ borderRadius: '12px', flexShrink: 0 }} />
@@ -225,8 +225,8 @@ function Research() {
               </Stack>
             ) : (
               <>
-                <Stack direction="row" alignItems="center" spacing={1} flexWrap="wrap" sx={{ mb: 0.75 }}>
-                  <Typography variant="h6" fontWeight={700} noWrap>
+                <Stack direction="row" spacing={1} sx={{ alignItems: 'center', flexWrap: 'wrap', mb: 0.75 }}>
+                  <Typography variant="h6" sx={{ fontWeight: 700 }} noWrap>
                     {companyProfile?.name}
                   </Typography>
                   {companyProfile?.ticker && (
@@ -274,7 +274,7 @@ function Research() {
                   )}
                 </Stack>
 
-                <Stack direction="row" alignItems="baseline" spacing={1.5}>
+                <Stack direction="row" spacing={1.5} sx={{ alignItems: 'baseline' }}>
                   <Typography sx={{ fontSize: '1.75rem', fontWeight: 700, lineHeight: 1 }}>
                     {fnCurrency(price?.price)}
                   </Typography>
@@ -317,7 +317,7 @@ function Research() {
           </Box>
 
           {/* Refresh + watchlist + timestamp */}
-          <Stack alignItems="flex-end" spacing={0.5} sx={{ flexShrink: 0 }}>
+          <Stack spacing={0.5} sx={{ alignItems: 'flex-end', flexShrink: 0 }}>
             <Stack direction="row" spacing={0.5}>
               <Tooltip title={isInWatchlist ? 'Remove from Watchlist' : 'Add to Watchlist'}>
                 <IconButton
@@ -375,7 +375,7 @@ function Research() {
       )}
 
       {/* ── Row 1: Details + Recommendations | News ── */}
-      <Grid container spacing={2} alignItems="stretch">
+      <Grid container spacing={2} sx={{ alignItems: 'stretch' }}>
         <Grid size={{ xs: 12, md: 4 }} sx={{ display: 'flex' }}>
           <Stack spacing={2} sx={{ width: '100%', height: '100%' }}>
             <ResearchDetailsCard
@@ -394,7 +394,7 @@ function Research() {
       </Grid>
 
       {/* ── Row 2: Key Metrics | Peers + Earnings ── */}
-      <Grid container spacing={2} alignItems="stretch">
+      <Grid container spacing={2} sx={{ alignItems: 'stretch' }}>
         <Grid size={{ xs: 12, md: 8 }} sx={{ display: 'flex' }}>
           <ResearchMetricsCard
             metrics={metrics}
@@ -414,7 +414,7 @@ function Research() {
       </Grid>
 
       {/* ── Row 3: Earnings History | Insider Transactions ── */}
-      <Grid container spacing={2} alignItems="stretch">
+      <Grid container spacing={2} sx={{ alignItems: 'stretch' }}>
         <Grid size={{ xs: 12, md: 6 }} sx={{ display: 'flex', flexDirection: 'column' }}>
           <ResearchEarningsHistoryCard history={earningsHistory} isLoading={isEarningsHistoryLoading} />
         </Grid>

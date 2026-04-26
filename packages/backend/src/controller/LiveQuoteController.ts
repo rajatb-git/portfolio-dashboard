@@ -40,7 +40,7 @@ export class LiveQuoteController {
         );
       }
     } else {
-      return dbFetch;
+      return dbFetch!;
     }
   };
 

@@ -23,12 +23,12 @@ export default function TotalCard({ total }: TotalCardProps) {
         bgcolor: `${color}.dark`,
       }}
     >
-      <Stack direction="column" justifyContent="space-between">
-        <Stack direction="row" justifyContent="space-between">
+      <Stack direction="column" sx={{ justifyContent: 'space-between' }}>
+        <Stack direction="row" sx={{ justifyContent: 'space-between' }}>
           <Typography sx={{ typography: 'h5', mr: 6 }}>{fnCurrency(total.totalGL)}</Typography>
           {/* <Typography sx={{ mb: 0, typography: 'subtitle2' }}>{total.accountId}</Typography> */}
 
-          <Stack direction="row" alignItems="center" justifyContent="flex-end">
+          <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'flex-end' }}>
             <Iconify icon={total.percentGL >= 0 ? 'eva:trending-up-fill' : 'eva:trending-down-fill'} />
 
             <Typography variant="subtitle2" component="span" sx={{ ml: 0.5 }}>
@@ -42,7 +42,7 @@ export default function TotalCard({ total }: TotalCardProps) {
           <Typography sx={{ mb: 0, typography: 'caption' }}>{total.accountId}</Typography>
         </Divider>
 
-        <Stack direction="row" justifyContent="space-between">
+        <Stack direction="row" sx={{ justifyContent: 'space-between' }}>
           <Stack direction="column">
             <Typography variant="caption" sx={{ fontSize: '0.9rem' }}>
               Total Investment

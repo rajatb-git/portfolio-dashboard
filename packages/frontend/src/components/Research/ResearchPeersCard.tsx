@@ -74,7 +74,7 @@ export default function ResearchPeersCard({ peers, earnings, currentSymbol, isPe
           <Skeleton variant="rectangular" height={80} sx={{ m: 2, borderRadius: 1 }} />
         ) : earnings ? (
           <Box sx={{ p: 2 }}>
-            <Stack direction="row" alignItems="baseline" spacing={1} sx={{ mb: 1.5 }}>
+            <Stack direction="row" sx={{ alignItems: 'baseline', mb: 1.5 }} spacing={1}>
               <Typography sx={{ fontSize: '1.1rem', fontWeight: 700, color: 'text.primary' }}>
                 {moment(earnings.date).format('MMM D, YYYY')}
               </Typography>

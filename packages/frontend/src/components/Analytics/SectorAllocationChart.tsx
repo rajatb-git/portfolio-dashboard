@@ -86,10 +86,9 @@ export default function SectorAllocationChart({ sectors, isLoading }: Props) {
 							<Stack
 								key={item.sector}
 								direction="row"
-								alignItems="center"
-								justifyContent="space-between"
+								sx={{ alignItems: 'center', justifyContent: 'space-between' }}
 							>
-								<Stack direction="row" alignItems="center" spacing={1}>
+								<Stack direction="row" sx={{ alignItems: 'center' }} spacing={1}>
 									<Box
 										sx={{
 											width: 8,
@@ -105,7 +104,7 @@ export default function SectorAllocationChart({ sectors, isLoading }: Props) {
 										{item.sector}
 									</Typography>
 								</Stack>
-								<Stack direction="row" alignItems="center" spacing={1}>
+								<Stack direction="row" sx={{ alignItems: 'center' }} spacing={1}>
 									<Typography
 										sx={{
 											fontSize: "0.75rem",

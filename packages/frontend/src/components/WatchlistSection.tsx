@@ -111,7 +111,7 @@ export default function WatchlistSection() {
         expandIcon={<Iconify icon="eva:chevron-down-fill" width={18} />}
         sx={{ minHeight: 44, '& .MuiAccordionSummary-content': { my: '10px' } }}
       >
-        <Stack direction="row" alignItems="center" spacing={1.5}>
+        <Stack direction="row" sx={{ alignItems: 'center' }} spacing={1.5}>
           <Iconify icon="mdi:eye-outline" width={16} sx={{ color: 'text.secondary' }} />
           <Typography
             sx={{ fontWeight: 700, fontSize: '0.72rem', color: 'text.secondary', letterSpacing: '0.06em', textTransform: 'uppercase' }}

@@ -55,9 +55,8 @@ function InsightSection({ title, icon, iconColor, items }: SectionProps) {
 		<Box>
 			<Stack
 				direction="row"
-				alignItems="center"
 				spacing={0.75}
-				sx={{ px: 2, pt: 1.5, pb: 0.5 }}
+				sx={{ alignItems: 'center', px: 2, pt: 1.5, pb: 0.5 }}
 			>
 				<Iconify icon={icon} width={15} sx={{ color: iconColor }} />
 				<Typography
@@ -131,15 +130,12 @@ export default function AgentInsightsCard({
 		>
 			<Stack
 				direction="row"
-				alignItems="center"
-				justifyContent="space-between"
-				sx={{ pr: 1 }}
+				sx={{ alignItems: 'center', justifyContent: 'space-between', pr: 1 }}
 			>
 				<Stack
 					direction="row"
-					alignItems="center"
 					spacing={1}
-					sx={{ p: "10px 16px" }}
+					sx={{ alignItems: 'center', p: "10px 16px" }}
 				>
 					<Iconify
 						icon="fluent:brain-sparkle-20-filled"
@@ -181,9 +177,7 @@ export default function AgentInsightsCard({
 				</Stack>
 			) : error ? (
 				<Stack
-					alignItems="center"
-					justifyContent="center"
-					sx={{ p: 3, flexGrow: 1 }}
+					sx={{ alignItems: 'center', justifyContent: 'center', p: 3, flexGrow: 1 }}
 				>
 					<Iconify
 						icon="mdi:alert-circle-outline"
@@ -213,9 +207,7 @@ export default function AgentInsightsCard({
 				</Stack>
 			) : !insight ? (
 				<Stack
-					alignItems="center"
-					justifyContent="center"
-					sx={{ p: 3, flexGrow: 1 }}
+					sx={{ alignItems: 'center', justifyContent: 'center', p: 3, flexGrow: 1 }}
 				>
 					<Iconify
 						icon="fluent:brain-sparkle-20-regular"
@@ -238,11 +230,9 @@ export default function AgentInsightsCard({
 					{sentimentStyle && (
 						<Stack
 							direction="row"
-							alignItems="center"
-							justifyContent="space-between"
-							sx={{ px: 2, pt: 1.5 }}
+							sx={{ alignItems: 'center', justifyContent: 'space-between', px: 2, pt: 1.5 }}
 						>
-							<Stack direction="row" alignItems="center" spacing={1}>
+							<Stack direction="row" sx={{ alignItems: 'center' }} spacing={1}>
 								<Chip
 									icon={<Iconify icon={sentimentStyle.icon} width={16} />}
 									label={sentimentStyle.label}
