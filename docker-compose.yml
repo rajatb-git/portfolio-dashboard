@@ -24,8 +24,8 @@ services:
       - "80:80"
       - "443:443"
     volumes:
-      - ./certs/cert.pem:/etc/nginx/certs/cert.pem:ro
-      - ./certs/key.pem:/etc/nginx/certs/key.pem:ro
+      - /etc/letsencrypt/live/portfolio.rajatbansal.dev/fullchain.pem:/etc/nginx/certs/cert.pem:ro
+      - /etc/letsencrypt/live/portfolio.rajatbansal.dev/privkey.pem:/etc/nginx/certs/key.pem:ro
     depends_on:
       - backend
 
