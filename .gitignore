@@ -13,6 +13,9 @@ coverage/
 # misc
 .DS_Store
 *.pem
+*.key
+certs/*
+!certs/.gitkeep
 
 # debug
 npm-debug.log*

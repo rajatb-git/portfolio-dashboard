@@ -22,6 +22,10 @@ services:
     restart: unless-stopped
     ports:
       - "80:80"
+      - "443:443"
+    volumes:
+      - ./certs/cert.pem:/etc/nginx/certs/cert.pem:ro
+      - ./certs/key.pem:/etc/nginx/certs/key.pem:ro
     depends_on:
       - backend
 
