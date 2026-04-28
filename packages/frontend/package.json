@@ -1,6 +1,9 @@
 {
   "name": "@portfolio/frontend",
-  "version": "1.0.6",
+
+  
+  "version": "1.0.7",
+
   "private": true,
   "license": "ISC",
   "author": "Rajat Bansal",
