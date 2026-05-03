@@ -7,7 +7,6 @@ type Metrics = {
   week52LowDate: string;
   beta: number;
   peRatio: number;
-  dividendYield: number;
   priceToBook: number;
   roeTTM: number;
   revenueGrowthTTMYoy: number;
@@ -71,7 +70,6 @@ export default function ResearchMetricsCard({ metrics, currentPrice, isLoading }
 
           <MetricRow label="P/E Ratio (TTM)" value={metrics.peRatio?.toFixed(2) ?? '—'} tooltip="Price-to-Earnings ratio (trailing 12 months)" />
           <MetricRow label="Beta" value={metrics.beta?.toFixed(3) ?? '—'} tooltip="Volatility relative to the S&P 500" />
-          <MetricRow label="Dividend Yield" value={metrics.dividendYield ? `${metrics.dividendYield.toFixed(2)}%` : '—'} tooltip="Annual dividend as % of current price" />
           <MetricRow label="Price / Book" value={metrics.priceToBook?.toFixed(2) ?? '—'} tooltip="Price-to-book ratio (annual)" />
           <MetricRow label="ROE (TTM)" value={metrics.roeTTM ? `${metrics.roeTTM.toFixed(1)}%` : '—'} tooltip="Return on equity (trailing 12 months)" />
           <MetricRow label="Revenue Growth (YoY)" value={metrics.revenueGrowthTTMYoy ? `${metrics.revenueGrowthTTMYoy.toFixed(2)}%` : '—'} tooltip="TTM revenue growth vs prior year" />

@@ -5,7 +5,6 @@ import LogsAPI from './logs';
 import TransactionsAPI from './transactions';
 import AccountsAPI from './account';
 import WatchlistAPI from './watchlist';
-import DividendAPI from './dividends';
 import AnalyticsAPI from './analytics';
 
 const apis = {
@@ -16,7 +15,6 @@ const apis = {
   transactions: new TransactionsAPI(),
   logs: new LogsAPI(),
   watchlist: new WatchlistAPI(),
-  dividends: new DividendAPI(),
   analytics: new AnalyticsAPI(),
 };
 

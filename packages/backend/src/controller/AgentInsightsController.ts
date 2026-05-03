@@ -81,7 +81,7 @@ export class AgentInsightsController {
     if (data.metrics) {
       const m = data.metrics;
       sections.push(
-        `\nKEY METRICS:\nP/E Ratio: ${m.peRatio ?? 'N/A'}\n52W High: $${m.week52High ?? 'N/A'}\n52W Low: $${m.week52Low ?? 'N/A'}\nBeta: ${m.beta ?? 'N/A'}\nDividend Yield: ${m.dividendYield ?? 'N/A'}%\nROE TTM: ${m.roeTTM ?? 'N/A'}\nRevenue Growth YoY: ${m.revenueGrowthTTMYoy ?? 'N/A'}%`
+        `\nKEY METRICS:\nP/E Ratio: ${m.peRatio ?? 'N/A'}\n52W High: $${m.week52High ?? 'N/A'}\n52W Low: $${m.week52Low ?? 'N/A'}\nBeta: ${m.beta ?? 'N/A'}\nROE TTM: ${m.roeTTM ?? 'N/A'}\nRevenue Growth YoY: ${m.revenueGrowthTTMYoy ?? 'N/A'}%`
       );
     }
 
