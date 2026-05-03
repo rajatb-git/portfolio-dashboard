@@ -30,6 +30,9 @@
       "bracketSpacing": true
     }
   },
+  "files": {
+    "includes": ["**", "!dist", "!**/dist/**"]
+  },
   "linter": {
     "enabled": true,
     "rules": {

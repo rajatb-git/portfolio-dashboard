@@ -28,10 +28,11 @@
       "quoteStyle": "single",
       "attributePosition": "auto",
       "bracketSpacing": true
-    }
+    },
+    "globals": ["__APP_VERSION__"]
   },
   "files": {
-    "includes": ["**", "!.next", "!.github", "!HAapp"]
+    "includes": ["**", "!.next", "!.github", "!HAapp", "!dist", "!**/dist/**"]
   },
   "linter": {
     "enabled": true,

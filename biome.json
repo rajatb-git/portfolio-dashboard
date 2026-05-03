@@ -31,7 +31,7 @@
     }
   },
   "files": {
-    "includes": ["**", "!.next", "!.github", "!HAapp"]
+    "includes": ["**", "!.next", "!.github", "!HAapp", "!dist", "!**/dist/**"]
   },
   "linter": {
     "enabled": true,
