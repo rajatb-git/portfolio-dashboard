@@ -45,24 +45,35 @@ export class LiveQuoteController {
   };
 
   liveFetchRequiredQuote = (dbFetch: IPriceStoreModel | undefined): boolean => {
-    if (dbFetch) {
-      // Derive current time in ET so market-hours checks are timezone-correct.
-      const etNow = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/New_York' }));
-      const day = etNow.getDay();
+    if (!dbFetch) return true;
 
-      // Weekend: prices don't move, serve cache.
-      if (day === 0 || day === 6) return false;
+    // Derive current time in ET so market-hours checks are timezone-correct.
+    const etNow = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/New_York' }));
+    const day = etNow.getDay();
+    const minutesSinceMidnight = etNow.getHours() * 60 + etNow.getMinutes();
+    const marketOpen = 9 * 60 + 30;
+    const marketClose = 16 * 60;
+    const isWeekend = day === 0 || day === 6;
+    const isMarketHours =
+      !isWeekend && minutesSinceMidnight >= marketOpen && minutesSinceMidnight < marketClose;
 
-      // NYSE regular session: 9:30am–4:00pm ET.
-      const minutesSinceMidnight = etNow.getHours() * 60 + etNow.getMinutes();
-      const marketOpen = 9 * 60 + 30;
-      const marketClose = 16 * 60;
-      if (minutesSinceMidnight < marketOpen || minutesSinceMidnight >= marketClose) return false;
-
+    if (isMarketHours) {
       // Within market hours: refresh if cached quote is older than 120 seconds.
       return moment().diff(moment(dbFetch.updatedAt), 'seconds') >= 120;
     }
 
-    return true;
+    // Outside market hours: refresh if cache was last updated before the most recent
+    // market close, so a quote stored on a previous trading day doesn't persist indefinitely.
+    const updatedAtEt = new Date(
+      new Date(dbFetch.updatedAt).toLocaleString('en-US', { timeZone: 'America/New_York' })
+    );
+    return updatedAtEt < this.mostRecentMarketCloseEt(etNow);
+  };
+
+  mostRecentMarketCloseEt = (etNow: Date): Date => {
+    const close = new Date(etNow.getFullYear(), etNow.getMonth(), etNow.getDate(), 16, 0, 0, 0);
+    if (close > etNow) close.setDate(close.getDate() - 1);
+    while (close.getDay() === 0 || close.getDay() === 6) close.setDate(close.getDate() - 1);
+    return close;
   };
 }
