@@ -109,6 +109,6 @@ Always `Skeleton` from MUI — never spinners. Match the skeleton's shape and ap
 
 ## Charts
 
-- **ApexCharts** for time-series (portfolio performance, dividend history).
+- **ApexCharts** for time-series (portfolio performance).
 - **MUI X Charts / DataGrid** for tables and pie/donut visualizations.
 - Chart axis and grid lines should match the active palette's `divider`/`text.disabled`.

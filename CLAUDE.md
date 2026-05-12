@@ -4,7 +4,7 @@ Context for Claude (and other AI assistants) working on this repository. Read th
 
 ## Project overview
 
-Portfolio Dashboard: a self-hosted web app for tracking stock and crypto holdings across multiple accounts. Live market data from Finnhub and NASDAQ, optional AI-generated equity analysis via Claude / Gemini / Ollama, portfolio analytics (risk, sectors, dividends), watchlist, IPO calendar, and an import/export backup flow.
+Portfolio Dashboard: a self-hosted web app for tracking stock and crypto holdings across multiple accounts. Live market data from Finnhub and NASDAQ, optional AI-generated equity analysis via Claude / Gemini / Ollama, portfolio analytics (risk, sectors), watchlist, IPO calendar, and an import/export backup flow.
 
 Single user, runs locally. No auth.
 

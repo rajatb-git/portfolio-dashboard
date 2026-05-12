@@ -9,7 +9,6 @@ dotenv.config();
 import { AccountsRouter } from './router/accounts.route';
 import { AnalyticsRouter } from './router/analytics.route';
 import { DashboardRouter } from './router/dashboard.route';
-import { DividendRouter } from './router/dividend.route';
 import { HealthRouter } from './router/health.route';
 import { HoldingsRouter } from './router/holdings.route';
 import { LiveRouter } from './router/live.route';
@@ -52,7 +51,6 @@ app.use(DashboardRouter().routes()).use(DashboardRouter().allowedMethods());
 app.use(TransactionsRouter().routes()).use(TransactionsRouter().allowedMethods());
 app.use(LogsRouter().routes()).use(LogsRouter().allowedMethods());
 app.use(WatchlistRouter().routes()).use(WatchlistRouter().allowedMethods());
-app.use(DividendRouter().routes()).use(DividendRouter().allowedMethods());
 app.use(AnalyticsRouter().routes()).use(AnalyticsRouter().allowedMethods());
 app.use(SettingsRouter().routes()).use(SettingsRouter().allowedMethods());
 

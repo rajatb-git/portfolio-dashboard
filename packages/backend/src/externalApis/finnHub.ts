@@ -218,7 +218,6 @@ export const getStockMetrics = (symbol: string): Promise<any> =>
         week52LowDate: m['52WeekLowDate'],
         beta: m['beta'],
         peRatio: m['peBasicExclExtraTTM'],
-        dividendYield: m['dividendYieldIndicatedAnnual'],
         priceToBook: m['pbAnnual'],
         roeTTM: m['roeTTM'],
         revenueGrowthTTMYoy: m['revenueGrowthTTMYoy'],
@@ -274,36 +273,6 @@ export const getInsiderTransactions = (symbol: string): Promise<any[]> =>
       headers: { 'X-Finnhub-Token': process.env.FINN_HUB_API_KEY, 'Content-Type': 'application/json' },
     })
     .then((response) => (response.data?.data ?? []).slice(0, 10))
-    .catch((error: AxiosError) => {
-      logger.log({ level: 'error', label: error.status, message: error.message });
-      throw error;
-    });
-
-export type DividendResponse = Array<{
-  symbol: string;
-  date: string; // ex-dividend date YYYY-MM-DD
-  amount: number;
-  adjustedAmount: number;
-  payDate: string;
-  recordDate: string;
-  declarationDate: string;
-  currency: string;
-}>;
-
-export const getStockDividends = (symbol: string, fromDate: string, toDate: string): Promise<DividendResponse> =>
-  axios
-    .get(process.env.FINN_HUB_API + `/stock/dividend?symbol=${symbol}&from=${fromDate}&to=${toDate}`, {
-      headers: { 'X-Finnhub-Token': process.env.FINN_HUB_API_KEY, 'Content-Type': 'application/json' },
-    })
-    .then((response) => {
-      logger.log({
-        level: 'info',
-        response: JSON.stringify(response.data),
-        message: `${response.config.url}`,
-        label: 'dividend request',
-      });
-      return response.data ?? [];
-    })
     .catch((error: AxiosError) => {
       logger.log({ level: 'error', label: error.status, message: error.message });
       throw error;
