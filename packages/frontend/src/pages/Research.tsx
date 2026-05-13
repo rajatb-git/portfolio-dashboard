@@ -17,7 +17,10 @@ import ResearchPeersCard from '@/components/Research/ResearchPeersCard';
 import ResearchEarningsHistoryCard from '@/components/Research/ResearchEarningsHistoryCard';
 import ResearchInsiderCard from '@/components/Research/ResearchInsiderCard';
 import AgentInsightsCard from '@/components/Research/AgentInsightsCard';
+import ResearchPositionDetailsCard from '@/components/Research/ResearchPositionDetailsCard';
 import { AgentInsight, AiConfig } from '@/api/live';
+import { HoldingAggregate } from '@/api/dashboard';
+import { IAccount } from '@/models/AccountsModel';
 import { Iconify } from '@/components/Iconify';
 import RecommendationDonutGraphMui from '@/components/RecommendationDonutGraphMui';
 import { PriceHistoryGraph } from '@/components/PriceHistoryGraph';
@@ -63,6 +66,9 @@ function Research() {
   const [earningsHistory, setEarningsHistory] = React.useState<any[]>([]);
   const [insiderTransactions, setInsiderTransactions] = React.useState<any[]>([]);
   const [watchlist, setWatchlist] = React.useState<string[]>([]);
+  const [positions, setPositions] = React.useState<HoldingAggregate[]>([]);
+  const [accounts, setAccounts] = React.useState<IAccount[]>([]);
+  const [isPositionsLoading, setIsPositionsLoading] = React.useState(false);
   const [searchText, setSearchText] = React.useState(searchParams.get('searchText')?.toUpperCase() || '');
 
   const getResearchData = (searchTicker: string) => {
@@ -138,6 +144,16 @@ function Research() {
         })
         .finally(() => setIsInsiderLoading(false));
 
+      setIsPositionsLoading(true);
+      apis.holdings
+        .getBySymbol(searchTicker)
+        .then((res) => setPositions(res ?? []))
+        .catch((err) => {
+          setPositions([]);
+          toast.error(err.message || 'Failed to load position details');
+        })
+        .finally(() => setIsPositionsLoading(false));
+
       if (agentEnabled) {
         fetchAgentInsights(searchTicker);
       }
@@ -171,6 +187,9 @@ function Research() {
     apis.live.getAiConfig()
       .then((config) => setAgentEnabled(config.enabled))
       .catch(() => {});
+    apis.accounts.getAll()
+      .then((res) => setAccounts(res ?? []))
+      .catch((err) => toast.error(err.message || 'Failed to load accounts'));
   }, []);
 
   const isInWatchlist = watchlist.includes(searchText);
@@ -363,6 +382,15 @@ function Research() {
           </>
         )}
       </Card>
+
+      {/* ── Position Details ── */}
+      {searchText && (
+        <ResearchPositionDetailsCard
+          positions={positions}
+          accounts={accounts}
+          isLoading={isPositionsLoading}
+        />
+      )}
 
       {/* ── AI Agent Insights ── */}
       {agentEnabled && searchText && (

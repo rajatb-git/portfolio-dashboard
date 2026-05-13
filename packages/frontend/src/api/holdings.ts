@@ -2,6 +2,7 @@ import axios from 'axios';
 
 import { DB_HOST } from '@/config';
 import { IHoldings } from '@/models/HoldingsModel';
+import { HoldingAggregate } from './dashboard';
 import { catchCustomError } from './apiUtil';
 
 export default class HoldingsAPI {
@@ -55,6 +56,12 @@ export default class HoldingsAPI {
       .then((response) => {
         return response.data;
       })
+      .catch(catchCustomError);
+
+  getBySymbol = async (symbol: string): Promise<Array<HoldingAggregate>> =>
+    axios
+      .get(DB_HOST + `/holdings/symbol/${encodeURIComponent(symbol)}`)
+      .then((response) => response.data)
       .catch(catchCustomError);
 
   // file import
