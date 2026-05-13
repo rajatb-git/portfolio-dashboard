@@ -7,8 +7,10 @@ services:
     restart: unless-stopped
     ports:
       - "3001:3001"
-    env_file:
-      - ./packages/backend/.env
+    environment:
+      PORT: ${PORT:-3001}
+      FINN_HUB_API: ${FINN_HUB_API:-https://finnhub.io/api/v1}
+      FINN_HUB_API_KEY: ${FINN_HUB_API_KEY:-}
     volumes:
       - backend-storage:/app/storage
 
