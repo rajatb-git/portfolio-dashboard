@@ -1,6 +1,8 @@
+import moment from 'moment';
 import KoaRouter from 'koa-router';
 import { buy } from '../controller/BuyController';
 import { sell } from '../controller/SellController';
+import { LiveQuoteController } from '../controller/LiveQuoteController';
 import { HoldingsModel } from '../models/HoldingsModel';
 import { errorBody } from '../utils/error';
 import { logger } from '../utils/winston';
@@ -30,6 +32,57 @@ export const HoldingsRouter = () => {
     } catch (error: any) {
       ctx.status = 500;
       ctx.body = errorBody('Failed to get holdings', error.message);
+    }
+  });
+
+  router.get('/holdings/symbol/:symbol', async (ctx) => {
+    try {
+      const { symbol } = ctx.params;
+      if (!symbol || !/^[A-Za-z0-9.\-^]{1,20}$/.test(symbol)) {
+        ctx.status = 400;
+        ctx.body = errorBody('Invalid symbol', 'Symbol must be 1-20 alphanumeric characters');
+        return;
+      }
+      const upperSymbol = symbol.toUpperCase();
+      const matching = holdingsModel.getAllRecords().filter((h) => h.symbol.toUpperCase() === upperSymbol);
+
+      if (matching.length === 0) {
+        ctx.body = [];
+        ctx.status = 200;
+        return;
+      }
+
+      const isCrypto = matching[0].type === 'crypto';
+      const quoteController = new LiveQuoteController();
+      const livePrice = await quoteController.getLiveQuote(upperSymbol, isCrypto).catch(() => null);
+
+      if (!livePrice) {
+        ctx.body = [];
+        ctx.status = 200;
+        return;
+      }
+
+      ctx.body = matching.map((holding) => {
+        const originalValue = holding.qty * holding.averagePrice;
+        const totalGL = +(holding.qty * livePrice.price - originalValue).toFixed(2);
+        return {
+          ...holding,
+          currentPrice: +livePrice.price.toFixed(2),
+          priceDate: moment(livePrice.priceDate).format('lll'),
+          percentChange: +livePrice.percentChange.toFixed(2),
+          dayHigh: livePrice.dayHigh,
+          dayLow: livePrice.dayLow,
+          originalValue,
+          totalGL,
+          totalGLPercent: +((totalGL / originalValue) * 100).toFixed(2),
+          marketValue: +(holding.qty * livePrice.price).toFixed(2),
+        };
+      });
+      ctx.status = 200;
+    } catch (error: any) {
+      logger.log({ level: 'error', label: 'holdings by symbol', message: error.message, name: error.name, stack: error.stack });
+      ctx.status = 500;
+      ctx.body = errorBody('Failed to get holdings by symbol', error.message);
     }
   });
 
