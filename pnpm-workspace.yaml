@@ -1,7 +1,7 @@
 packages:
   - 'packages/*'
 
-ignoredBuiltDependencies:
-  - '@google/genai'
-  - esbuild
-  - protobufjs
+allowBuilds:
+  '@google/genai': false
+  esbuild: false
+  protobufjs: false
