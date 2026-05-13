@@ -8,7 +8,8 @@ services:
     ports:
       - "3001:3001"
     env_file:
-      - ./packages/backend/.env
+      - path: ./packages/backend/.env
+        required: false
     volumes:
       - backend-storage:/app/storage
 
