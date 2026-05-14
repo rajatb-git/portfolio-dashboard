@@ -18,6 +18,12 @@ export default class TransactionsAPI {
       .then((response) => response.data)
       .catch(catchCustomError);
 
+  getBySymbol = async (symbol: string): Promise<Array<ITransaction>> =>
+    axios
+      .get(DB_HOST + `/transactions/symbol/${encodeURIComponent(symbol)}`)
+      .then((response) => response.data)
+      .catch(catchCustomError);
+
   getById = async (id: string): Promise<ITransaction> =>
     axios
       .get(DB_HOST + `/transactions/${id}`)

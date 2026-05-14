@@ -4,7 +4,7 @@ export interface ITransaction {
   symbol: string;
   qty: number;
   price: number;
-  type: 'stock' | 'crypto';
+  type: 'stock' | 'crypto' | 'cash';
   action: string;
   createdAt: string;
 }

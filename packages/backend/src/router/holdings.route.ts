@@ -140,11 +140,11 @@ export const HoldingsRouter = () => {
   });
 
   // complete buy transaction
-  router.post('/holdings/buy', (ctx) => {
+  router.post('/holdings/buy', async (ctx) => {
     const body: any = ctx.request.body;
     if (body) {
       try {
-        ctx.body = buy(body);
+        ctx.body = await buy(body);
         ctx.status = 200;
         return;
       } catch (error: any) {
@@ -167,18 +167,18 @@ export const HoldingsRouter = () => {
   });
 
   // complete sell transaction
-  router.post('/holdings/sell', (ctx) => {
+  router.post('/holdings/sell', async (ctx) => {
     const body: any = ctx.request.body;
 
     if (body) {
       try {
-        ctx.body = sell(body);
+        ctx.body = await sell(body);
         ctx.status = 200;
         return;
       } catch (error: any) {
         logger.log({
           level: 'error',
-          lable: 'sell',
+          label: 'sell',
           message: error.message,
           name: error.name,
           stack: error.stack,

@@ -32,6 +32,27 @@ export const TransactionsRouter = () => {
       ctx.status = 400;
     }
   });
+
+  router.get('/transactions/symbol/:symbol', (ctx) => {
+    try {
+      const { symbol } = ctx.params;
+      if (!symbol || !/^[A-Za-z0-9.\-^]{1,20}$/.test(symbol)) {
+        ctx.status = 400;
+        ctx.body = errorBody('Invalid symbol', 'Symbol must be 1-20 alphanumeric characters');
+        return;
+      }
+      const upperSymbol = symbol.toUpperCase();
+      ctx.body = transactionModel
+        .getAllRecords()
+        .filter((t) => (t.symbol ?? '').toUpperCase() === upperSymbol);
+      ctx.status = 200;
+    } catch (err: any) {
+      logger.log({ level: 'error', message: err.message, label: 'Get transactions by symbol' });
+      ctx.body = errorBody('Failed to get transactions', err.message);
+      ctx.status = 400;
+    }
+  });
+
   router.get('/transactions/:id', (ctx) => {
     try {
       if (ctx.params.id) {
