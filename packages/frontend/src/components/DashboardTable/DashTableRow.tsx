@@ -111,6 +111,15 @@ export default function DashTableRow({ row, onRowClick, onTrade }: TableRowProps
       <TableCell align="right">{fnCurrency(row.marketValue)}</TableCell>
 
       <TableCell align="right">
+        <Stack direction="column" spacing={0}>
+          {fnCurrency(row.averagePrice * row.qty)}
+          <Typography variant="caption" noWrap>
+            {fnCurrency(row.averagePrice)} / Share
+          </Typography>
+        </Stack>
+      </TableCell>
+
+      <TableCell align="right">
         <Typography variant="body2" noWrap>
           {row.accountPercent != null ? `${row.accountPercent.toFixed(1)}%` : '—'}
         </Typography>

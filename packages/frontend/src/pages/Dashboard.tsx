@@ -38,8 +38,9 @@ export default function Dashboard() {
 		},
 
 		{ id: "marketValue", label: "Market Value", align: "right" },
+		{ id: "costBasis", label: "Cost Basis", align: "right" },
 		{ id: "accountPercent", label: "% of Account", align: "right" },
-		{ id: "accountId", label: "Owner" },
+		{ id: "accountId", label: "Account" },
 		{ id: "", label: "Recommendation" },
 		{ id: "", label: "" },
 	];
