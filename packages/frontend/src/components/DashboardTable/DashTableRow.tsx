@@ -70,6 +70,15 @@ export default function DashTableRow({ row, onRowClick, onTrade }: TableRowProps
 
       <TableCell align="right">
         <Stack direction="column" spacing={0}>
+          {fnCurrency(row.currentPrice)}
+          <Typography variant="caption" noWrap>
+            {row.dayLow?.toFixed(2)} - {row.dayHigh?.toFixed(2)}
+          </Typography>
+        </Stack>
+      </TableCell>
+
+      <TableCell align="right">
+        <Stack direction="column" spacing={0}>
           <Label
             color={row.percentChange === 0 ? 'default' : row.percentChange! > 0 ? 'success' : 'error'}
             sx={{ fontSize: '0.9rem' }}
@@ -95,15 +104,6 @@ export default function DashTableRow({ row, onRowClick, onTrade }: TableRowProps
 
           <Typography variant="caption" noWrap sx={{ fontWeight: 700 }}>
             {fnCurrency(row.totalGL)}
-          </Typography>
-        </Stack>
-      </TableCell>
-
-      <TableCell align="right">
-        <Stack direction="column" spacing={0}>
-          {fnCurrency(row.currentPrice)}
-          <Typography variant="caption" noWrap>
-            {row.dayLow?.toFixed(2)} - {row.dayHigh?.toFixed(2)}
           </Typography>
         </Stack>
       </TableCell>
