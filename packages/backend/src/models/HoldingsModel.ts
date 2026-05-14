@@ -22,4 +22,11 @@ export const HoldingsSchema: SchemaType = {
 
 export interface IHoldingsModel extends IHoldings, ISkewerModel {}
 
-export const HoldingsModel = () => new SkewerModel<IHoldingsModel>('holdings', HoldingsSchema);
+let instance: SkewerModel<IHoldingsModel> | null = null;
+
+export const HoldingsModel = (): SkewerModel<IHoldingsModel> => {
+  if (!instance) {
+    instance = new SkewerModel<IHoldingsModel>('holdings', HoldingsSchema);
+  }
+  return instance;
+};

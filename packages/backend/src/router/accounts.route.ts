@@ -1,6 +1,8 @@
 import KoaRouter from 'koa-router';
+import { recordCashMovement } from '../controller/CashController';
 import { AccountModel } from '../models/AccountModel';
 import { errorBody } from '../utils/error';
+import { logger } from '../utils/winston';
 
 const accountsModel = AccountModel();
 accountsModel.initialize();
@@ -54,6 +56,34 @@ export const AccountsRouter = () => {
     } catch (error: any) {
       ctx.status = 500;
       ctx.body = errorBody('Failed to update account', error.message);
+    }
+  });
+
+  // deposit/withdraw cash
+  router.post('/accounts/:id/cash', async (ctx) => {
+    try {
+      if (!ctx.params.id) {
+        ctx.status = 400;
+        ctx.body = errorBody('Account ID is required', 'Account ID is required');
+        return;
+      }
+      const body: any = ctx.request.body;
+      const action = body?.action;
+      const amount = Number(body?.amount);
+
+      if (action !== 'deposit' && action !== 'withdraw') {
+        ctx.status = 400;
+        ctx.body = errorBody('Invalid action', "action must be 'deposit' or 'withdraw'");
+        return;
+      }
+
+      const result = await recordCashMovement(ctx.params.id, amount, action);
+      ctx.body = result;
+      ctx.status = 200;
+    } catch (error: any) {
+      logger.log({ level: 'error', message: error.message, label: 'Cash movement' });
+      ctx.status = 400;
+      ctx.body = errorBody('Failed to update cash balance', error.message);
     }
   });
 

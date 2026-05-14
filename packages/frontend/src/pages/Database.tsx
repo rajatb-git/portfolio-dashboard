@@ -34,6 +34,7 @@ import { Iconify } from "@/components/Iconify";
 import type { IAccount } from "@/models/AccountsModel";
 import type { IHoldings } from "@/models/HoldingsModel";
 import type { ITransaction } from "@/models/TransactionsModel";
+import { fnCurrency } from "@/utils/formatNumber";
 
 const columns: { [collection: string]: Array<GridColDef> } = {
 	holdings: [
@@ -97,6 +98,17 @@ const columns: { [collection: string]: Array<GridColDef> } = {
 			minWidth: 140,
 			editable: true,
 		},
+		{
+			field: "cashBalance",
+			headerName: "Cash",
+			flex: 1,
+			minWidth: 100,
+			type: "number",
+			editable: true,
+			align: "right",
+			headerAlign: "right",
+			valueFormatter: (value: number | undefined) => fnCurrency(value ?? 0),
+		},
 	],
 	transactions: [
 		{
@@ -147,6 +159,99 @@ const columns: { [collection: string]: Array<GridColDef> } = {
 	],
 };
 
+function CashDialog({
+	account,
+	onClose,
+	onSaved,
+}: {
+	account: IAccount | null;
+	onClose: () => void;
+	onSaved: () => void;
+}) {
+	const [action, setAction] = React.useState<"deposit" | "withdraw">("deposit");
+	const [amount, setAmount] = React.useState("");
+	const [saving, setSaving] = React.useState(false);
+
+	React.useEffect(() => {
+		if (account) {
+			setAction("deposit");
+			setAmount("");
+		}
+	}, [account]);
+
+	const handleSave = async () => {
+		if (!account) return;
+		const value = parseFloat(amount);
+		if (!Number.isFinite(value) || value <= 0) {
+			toast.error("Enter a positive amount");
+			return;
+		}
+		setSaving(true);
+		try {
+			await apis.accounts.moveCash(account.id, action, value);
+			toast.success(
+				`${action === "deposit" ? "Deposited" : "Withdrew"} ${fnCurrency(value)} ${
+					action === "deposit" ? "into" : "from"
+				} ${account.name}`,
+			);
+			onSaved();
+			onClose();
+		} catch (err: any) {
+			toast.error(err.message || "Failed to update cash balance");
+		} finally {
+			setSaving(false);
+		}
+	};
+
+	return (
+		<Dialog open={!!account} onClose={onClose} maxWidth="xs" fullWidth>
+			<DialogTitle>Cash — {account?.name}</DialogTitle>
+			<DialogContent>
+				<Stack spacing={2} sx={{ mt: 1 }}>
+					<Box>
+						<Typography sx={{ fontSize: "0.72rem", color: "text.disabled", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+							Current Balance
+						</Typography>
+						<Typography sx={{ fontSize: "1.2rem", fontWeight: 700 }}>
+							{fnCurrency(account?.cashBalance ?? 0)}
+						</Typography>
+					</Box>
+					<Select
+						value={action}
+						onChange={(e) => setAction(e.target.value as "deposit" | "withdraw")}
+						size="small"
+						disabled={saving}
+					>
+						<MenuItem value="deposit">Deposit</MenuItem>
+						<MenuItem value="withdraw">Withdraw</MenuItem>
+					</Select>
+					<TextField
+						size="small"
+						label="Amount"
+						type="number"
+						value={amount}
+						onChange={(e) => setAmount(e.target.value)}
+						disabled={saving}
+						slotProps={{ htmlInput: { min: 0, step: "0.01" } }}
+					/>
+				</Stack>
+			</DialogContent>
+			<DialogActions>
+				<Button onClick={onClose} disabled={saving}>
+					Cancel
+				</Button>
+				<Button
+					onClick={handleSave}
+					variant="contained"
+					disabled={saving || !amount}
+				>
+					{saving ? "Saving..." : action === "deposit" ? "Deposit" : "Withdraw"}
+				</Button>
+			</DialogActions>
+		</Dialog>
+	);
+}
+
 function AccountsManager({
 	accounts,
 	isLoading,
@@ -159,6 +264,7 @@ function AccountsManager({
 	const [newName, setNewName] = React.useState("");
 	const [adding, setAdding] = React.useState(false);
 	const [deleteTarget, setDeleteTarget] = React.useState<IAccount | null>(null);
+	const [cashTarget, setCashTarget] = React.useState<IAccount | null>(null);
 
 	const handleAdd = async () => {
 		const name = newName.trim();
@@ -168,6 +274,7 @@ function AccountsManager({
 			await apis.accounts.create({
 				name,
 				id: name.replace(/\s/g, ""),
+				cashBalance: 0,
 			} as IAccount);
 			setNewName("");
 			toast.success(`Account "${name}" created`);
@@ -191,6 +298,8 @@ function AccountsManager({
 			setDeleteTarget(null);
 		}
 	};
+
+	const totalCash = accounts.reduce((sum, a) => sum + (a.cashBalance ?? 0), 0);
 
 	return (
 		<>
@@ -222,6 +331,16 @@ function AccountsManager({
 						{adding ? "Adding..." : "Add Account"}
 					</Button>
 					<Box sx={{ flexGrow: 1 }} />
+					{accounts.length > 0 && (
+						<Box sx={{ textAlign: 'right', mr: 1 }}>
+							<Typography sx={{ fontSize: '0.62rem', color: 'text.disabled', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+								Total Cash
+							</Typography>
+							<Typography sx={{ fontSize: '0.92rem', fontWeight: 700, color: 'text.primary' }}>
+								{fnCurrency(totalCash)}
+							</Typography>
+						</Box>
+					)}
 					<IconButton onClick={onRefresh} size="small">
 						<Iconify icon="fa:refresh" width={16} />
 					</IconButton>
@@ -239,9 +358,12 @@ function AccountsManager({
 								<TableCell sx={{ fontWeight: 700, fontSize: "0.78rem" }}>
 									ID
 								</TableCell>
+								<TableCell align="right" sx={{ fontWeight: 700, fontSize: "0.78rem" }}>
+									Cash Balance
+								</TableCell>
 								<TableCell
 									align="right"
-									sx={{ fontWeight: 700, fontSize: "0.78rem", width: 80 }}
+									sx={{ fontWeight: 700, fontSize: "0.78rem", width: 140 }}
 								>
 									Actions
 								</TableCell>
@@ -257,12 +379,15 @@ function AccountsManager({
 										<TableCell>
 											<Skeleton width="80%" />
 										</TableCell>
+										<TableCell>
+											<Skeleton width="60%" />
+										</TableCell>
 										<TableCell />
 									</MuiTableRow>
 								))
 							) : accounts.length === 0 ? (
 								<MuiTableRow>
-									<TableCell colSpan={3} align="center" sx={{ py: 4 }}>
+									<TableCell colSpan={4} align="center" sx={{ py: 4 }}>
 										<Typography
 											sx={{ fontSize: "0.82rem", color: "text.disabled" }}
 										>
@@ -271,37 +396,70 @@ function AccountsManager({
 									</TableCell>
 								</MuiTableRow>
 							) : (
-								accounts.map((account) => (
-									<MuiTableRow key={account.id} hover>
-										<TableCell sx={{ fontSize: "0.82rem" }}>
-											{account.name}
-										</TableCell>
-										<TableCell
-											sx={{ fontSize: "0.78rem", color: "text.secondary" }}
-										>
-											{account.id}
-										</TableCell>
-										<TableCell align="right">
-											<Tooltip title="Delete account">
-												<IconButton
-													size="small"
-													onClick={() => setDeleteTarget(account)}
-													sx={{
-														color: "text.disabled",
-														"&:hover": { color: "error.main" },
-													}}
-												>
-													<Iconify icon="mdi:delete-outline" width={18} />
-												</IconButton>
-											</Tooltip>
-										</TableCell>
-									</MuiTableRow>
-								))
+								accounts.map((account) => {
+									const cash = account.cashBalance ?? 0;
+									const isNegative = cash < 0;
+									return (
+										<MuiTableRow key={account.id} hover>
+											<TableCell sx={{ fontSize: "0.82rem" }}>
+												{account.name}
+											</TableCell>
+											<TableCell
+												sx={{ fontSize: "0.78rem", color: "text.secondary" }}
+											>
+												{account.id}
+											</TableCell>
+											<TableCell
+												align="right"
+												sx={{
+													fontSize: "0.82rem",
+													fontWeight: 600,
+													color: isNegative ? "#f87171" : "text.primary",
+													fontVariantNumeric: "tabular-nums",
+												}}
+											>
+												{fnCurrency(cash)}
+											</TableCell>
+											<TableCell align="right">
+												<Tooltip title="Deposit / Withdraw cash">
+													<IconButton
+														size="small"
+														onClick={() => setCashTarget(account)}
+														sx={{
+															color: "text.disabled",
+															"&:hover": { color: "primary.main" },
+														}}
+													>
+														<Iconify icon="mdi:cash-multiple" width={18} />
+													</IconButton>
+												</Tooltip>
+												<Tooltip title="Delete account">
+													<IconButton
+														size="small"
+														onClick={() => setDeleteTarget(account)}
+														sx={{
+															color: "text.disabled",
+															"&:hover": { color: "error.main" },
+														}}
+													>
+														<Iconify icon="mdi:delete-outline" width={18} />
+													</IconButton>
+												</Tooltip>
+											</TableCell>
+										</MuiTableRow>
+									);
+								})
 							)}
 						</TableBody>
 					</Table>
 				</TableContainer>
 			</Card>
+
+			<CashDialog
+				account={cashTarget}
+				onClose={() => setCashTarget(null)}
+				onSaved={onRefresh}
+			/>
 
 			<Dialog open={!!deleteTarget} onClose={() => setDeleteTarget(null)}>
 				<DialogTitle>Delete Account</DialogTitle>

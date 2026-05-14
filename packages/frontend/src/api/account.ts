@@ -37,4 +37,15 @@ export default class AccountsAPI {
       .delete(DB_HOST + "/accounts/" + id)
       .then((response) => response.data)
       .catch(catchCustomError);
+
+  // cash deposit/withdraw
+  moveCash = async (
+    id: string,
+    action: "deposit" | "withdraw",
+    amount: number,
+  ): Promise<{ cashBalance: number }> =>
+    axios
+      .post(DB_HOST + `/accounts/${id}/cash`, { action, amount })
+      .then((response) => response.data)
+      .catch(catchCustomError);
 }

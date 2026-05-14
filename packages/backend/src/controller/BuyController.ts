@@ -1,5 +1,6 @@
 import { IHoldings, IHoldingsModel, HoldingsModel } from '../models/HoldingsModel';
 import { calulateAveragePriceBuy } from '../utils';
+import { adjustCash } from './CashController';
 import { logBuyTransaction } from './TransactionController';
 
 const holdingsModel = HoldingsModel();
@@ -8,6 +9,7 @@ holdingsModel.initialize();
 export const buy = async (newHolding: IHoldings): Promise<IHoldingsModel> => {
   const existingHolding = holdingsModel.find({ symbol: newHolding.symbol, accountId: newHolding.accountId })[0];
 
+  let result: IHoldingsModel;
   if (existingHolding) {
     const newAverageValues = calulateAveragePriceBuy(
       existingHolding.qty,
@@ -16,23 +18,16 @@ export const buy = async (newHolding: IHoldings): Promise<IHoldingsModel> => {
       newHolding.averagePrice
     );
 
-    const result = await holdingsModel.updateById(existingHolding.id, {
+    result = await holdingsModel.updateById(existingHolding.id, {
       ...newAverageValues,
       ...(newHolding.targetPrice && { targetPrice: newHolding.targetPrice }),
     });
-
-    if (!(result instanceof Error)) {
-      logBuyTransaction(newHolding);
-    }
-
-    return result;
   } else {
-    const result = await holdingsModel.insertOne(newHolding);
-
-    if (!(result instanceof Error)) {
-      logBuyTransaction(newHolding);
-    }
-
-    return result;
+    result = await holdingsModel.insertOne(newHolding);
   }
+
+  await logBuyTransaction(newHolding);
+  await adjustCash(newHolding.accountId, -(newHolding.qty * newHolding.averagePrice));
+
+  return result;
 };
