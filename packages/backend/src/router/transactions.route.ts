@@ -1,5 +1,4 @@
 import KoaRouter from 'koa-router';
-import { enrichWithPnl } from '../controller/TransactionController';
 import { TransactionModel } from '../models/TransactionModel';
 import { errorBody } from '../utils/error';
 import { logger } from '../utils/winston';
@@ -25,7 +24,7 @@ export const TransactionsRouter = () => {
   /// read
   router.get('/transactions', (ctx) => {
     try {
-      ctx.body = enrichWithPnl(transactionModel.getAllRecords());
+      ctx.body = transactionModel.getAllRecords();
       ctx.status = 200;
     } catch (err: any) {
       logger.log({ level: 'error', message: err.message, label: 'Get transactions' });
@@ -43,11 +42,9 @@ export const TransactionsRouter = () => {
         return;
       }
       const upperSymbol = symbol.toUpperCase();
-      // P/L needs the full history (avg cost depends on prior buys), so compute
-      // over all transactions first and then filter to the requested symbol.
-      ctx.body = enrichWithPnl(transactionModel.getAllRecords()).filter(
-        (t) => (t.symbol ?? '').toUpperCase() === upperSymbol
-      );
+      ctx.body = transactionModel
+        .getAllRecords()
+        .filter((t) => (t.symbol ?? '').toUpperCase() === upperSymbol);
       ctx.status = 200;
     } catch (err: any) {
       logger.log({ level: 'error', message: err.message, label: 'Get transactions by symbol' });
