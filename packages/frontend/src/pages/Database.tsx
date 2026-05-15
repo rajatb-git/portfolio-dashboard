@@ -151,6 +151,34 @@ const columns: { [collection: string]: Array<GridColDef> } = {
 			headerAlign: "right",
 		},
 		{
+			field: "pnl",
+			headerName: "P/L",
+			flex: 1,
+			minWidth: 90,
+			type: "number",
+			editable: false,
+			align: "right",
+			headerAlign: "right",
+			renderCell: (params) => {
+				const v = params.value as number | undefined;
+				if (v === undefined || v === null) return "—";
+				const isGain = v >= 0;
+				return (
+					<Box
+						component="span"
+						sx={{
+							fontWeight: 600,
+							color: isGain ? "#4ade80" : "#f87171",
+							fontVariantNumeric: "tabular-nums",
+						}}
+					>
+						{isGain ? "+" : ""}
+						{fnCurrency(v)}
+					</Box>
+				);
+			},
+		},
+		{
 			field: "type",
 			headerName: "Type",
 			flex: 1,
