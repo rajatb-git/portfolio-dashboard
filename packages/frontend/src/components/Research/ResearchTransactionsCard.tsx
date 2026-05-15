@@ -48,6 +48,8 @@ export default function ResearchTransactionsCard({ transactions, accounts, isLoa
 
   const buyCount = sorted.filter((t) => t.action === 'buy').length;
   const sellCount = sorted.filter((t) => t.action === 'sell').length;
+  const realizedPnl = sorted.reduce((sum, t) => sum + (t.pnl ?? 0), 0);
+  const hasRealizedPnl = sorted.some((t) => t.pnl !== undefined);
 
   return (
     <Card variant="outlined">
@@ -91,6 +93,24 @@ export default function ResearchTransactionsCard({ transactions, accounts, isLoa
           </Typography>
         )}
         <Box sx={{ flexGrow: 1 }} />
+        {hasRealizedPnl && (
+          <Stack direction="row" spacing={0.75} sx={{ alignItems: 'baseline' }}>
+            <Typography sx={{ fontSize: '0.62rem', color: 'text.disabled', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              Realized
+            </Typography>
+            <Typography
+              sx={{
+                fontSize: '0.82rem',
+                fontWeight: 700,
+                color: realizedPnl >= 0 ? '#4ade80' : '#f87171',
+                fontVariantNumeric: 'tabular-nums',
+              }}
+            >
+              {realizedPnl >= 0 ? '+' : ''}
+              {fnCurrency(realizedPnl)}
+            </Typography>
+          </Stack>
+        )}
         <IconButton size="small" sx={{ color: 'text.disabled' }}>
           <Iconify icon={expanded ? 'mdi:chevron-up' : 'mdi:chevron-down'} width={20} />
         </IconButton>
@@ -109,7 +129,7 @@ export default function ResearchTransactionsCard({ transactions, accounts, isLoa
             <Table size="small">
               <TableHead>
                 <TableRow>
-                  {['Date', 'Account', 'Action', 'Qty', 'Price', 'Total'].map((h) => (
+                  {['Date', 'Account', 'Action', 'Qty', 'Price', 'Total', 'P/L'].map((h) => (
                     <TableCell
                       key={h}
                       sx={{
@@ -185,6 +205,25 @@ export default function ResearchTransactionsCard({ transactions, accounts, isLoa
                       </TableCell>
                       <TableCell sx={{ fontSize: '0.78rem', color: 'text.secondary', borderBottom: '1px solid', borderColor: 'divider', fontVariantNumeric: 'tabular-nums' }}>
                         {fnCurrency(total)}
+                      </TableCell>
+                      <TableCell
+                        sx={{
+                          fontSize: '0.78rem',
+                          fontWeight: 600,
+                          color:
+                            t.pnl === undefined
+                              ? 'text.disabled'
+                              : t.pnl >= 0
+                                ? '#4ade80'
+                                : '#f87171',
+                          borderBottom: '1px solid',
+                          borderColor: 'divider',
+                          fontVariantNumeric: 'tabular-nums',
+                        }}
+                      >
+                        {t.pnl === undefined
+                          ? '—'
+                          : `${t.pnl >= 0 ? '+' : ''}${fnCurrency(t.pnl)}`}
                       </TableCell>
                     </TableRow>
                   );
