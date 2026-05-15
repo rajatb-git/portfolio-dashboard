@@ -7,5 +7,6 @@ export interface ITransaction {
   type: 'stock' | 'crypto' | 'cash';
   action: string;
   createdAt: string;
+  updatedAt?: string;
   pnl?: number;
 }

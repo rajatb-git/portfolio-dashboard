@@ -7,6 +7,7 @@ export interface ITransaction {
   price: number;
   type: 'stock' | 'crypto' | 'cash';
   action: string;
+  pnl?: number;
 }
 
 export const TransactionSchema: SchemaType = {
@@ -16,6 +17,7 @@ export const TransactionSchema: SchemaType = {
   price: { type: Number, required: false },
   type: { type: String, enum: ['stock', 'crypto', 'cash'], required: true },
   action: { type: String, required: true },
+  pnl: { type: Number, required: false },
 };
 
 export interface ITransactionModel extends ITransaction, ISkewerModel {}

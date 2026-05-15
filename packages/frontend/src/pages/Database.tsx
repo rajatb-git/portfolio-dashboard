@@ -24,6 +24,7 @@ import {
 	Typography,
 } from "@mui/material";
 import type { GridColDef } from "@mui/x-data-grid";
+import moment from "moment";
 import * as React from "react";
 import { toast } from "react-toastify";
 
@@ -36,6 +37,27 @@ import type { IAccount } from "@/models/AccountsModel";
 import type { IHoldings } from "@/models/HoldingsModel";
 import type { ITransaction } from "@/models/TransactionsModel";
 import { fnCurrency } from "@/utils/formatNumber";
+
+const timestampColumns: Array<GridColDef> = [
+	{
+		field: "createdAt",
+		headerName: "Created",
+		flex: 1,
+		minWidth: 150,
+		editable: false,
+		valueFormatter: (value: string | undefined) =>
+			value ? moment(value).format("MMM D, YYYY h:mm a") : "—",
+	},
+	{
+		field: "updatedAt",
+		headerName: "Updated",
+		flex: 1,
+		minWidth: 150,
+		editable: false,
+		valueFormatter: (value: string | undefined) =>
+			value ? moment(value).format("MMM D, YYYY h:mm a") : "—",
+	},
+];
 
 const columns: { [collection: string]: Array<GridColDef> } = {
 	holdings: [
@@ -65,13 +87,17 @@ const columns: { [collection: string]: Array<GridColDef> } = {
 			headerName: "Quantity",
 			flex: 1,
 			minWidth: 80,
+			type: "number",
 			editable: true,
+			align: "right",
+			headerAlign: "right",
 		},
 		{
 			field: "averagePrice",
 			headerName: "Avg Price",
 			flex: 1,
 			minWidth: 90,
+			type: "number",
 			editable: true,
 			align: "right",
 			headerAlign: "right",
@@ -83,6 +109,7 @@ const columns: { [collection: string]: Array<GridColDef> } = {
 			minWidth: 70,
 			editable: true,
 		},
+		...timestampColumns,
 	],
 	accounts: [
 		{
@@ -110,6 +137,7 @@ const columns: { [collection: string]: Array<GridColDef> } = {
 			headerAlign: "right",
 			valueFormatter: (value: number | undefined) => fnCurrency(value ?? 0),
 		},
+		...timestampColumns,
 	],
 	transactions: [
 		{
@@ -131,8 +159,10 @@ const columns: { [collection: string]: Array<GridColDef> } = {
 			headerName: "Quantity",
 			flex: 1,
 			minWidth: 80,
+			type: "number",
 			editable: true,
 			align: "right",
+			headerAlign: "right",
 		},
 		{
 			field: "action",
@@ -146,6 +176,7 @@ const columns: { [collection: string]: Array<GridColDef> } = {
 			headerName: "Price",
 			flex: 1,
 			minWidth: 80,
+			type: "number",
 			editable: true,
 			align: "right",
 			headerAlign: "right",
@@ -156,7 +187,7 @@ const columns: { [collection: string]: Array<GridColDef> } = {
 			flex: 1,
 			minWidth: 90,
 			type: "number",
-			editable: false,
+			editable: true,
 			align: "right",
 			headerAlign: "right",
 			renderCell: (params) => {
@@ -185,6 +216,7 @@ const columns: { [collection: string]: Array<GridColDef> } = {
 			minWidth: 70,
 			editable: true,
 		},
+		...timestampColumns,
 	],
 };
 

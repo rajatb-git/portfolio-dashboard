@@ -22,7 +22,9 @@ export const sell = async (soldHolding: IHoldings): Promise<IHoldingsModel> => {
           qty: existingHolding.qty - soldHolding.qty,
         });
 
-  await logSellTransaction(soldHolding);
+  const pnl = (soldHolding.averagePrice - existingHolding.averagePrice) * soldHolding.qty;
+
+  await logSellTransaction(soldHolding, pnl);
   await adjustCash(soldHolding.accountId, soldHolding.qty * soldHolding.averagePrice);
 
   return result;
