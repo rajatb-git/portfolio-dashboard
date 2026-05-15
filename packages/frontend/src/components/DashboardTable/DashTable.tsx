@@ -10,6 +10,7 @@ import { useNavigate } from 'react-router-dom';
 
 import type { HoldingAggregate } from '@/api/dashboard';
 import BuySellDialog from '@/components/BuySellDialog';
+import CashDialog from '@/components/CashDialog';
 import { HoldingTypesEnum } from '@/lib/enums';
 import type { IAccount } from '@/models/AccountsModel';
 import type { Column } from '@/types';
@@ -47,6 +48,8 @@ export default function Table<T>({ rows, columns, accounts, refreshData, isLoadi
   const [filterAccount, setFilterAccount] = useState('all');
   const [tradeHolding, setTradeHolding] = useState<HoldingAggregate | null>(null);
   const [tradeOpen, setTradeOpen] = useState(false);
+  const [cashTarget, setCashTarget] = useState<IAccount | null>(null);
+  const [cashOpen, setCashOpen] = useState(false);
 
   const handleSort = (_event: any, id: string) => {
     const isAsc = orderBy === id && order === 'asc';
@@ -109,7 +112,14 @@ export default function Table<T>({ rows, columns, accounts, refreshData, isLoadi
     filterName,
     filterAccount,
     filterType,
+    accounts,
   });
+
+  const handleManageCash = (accountId: string) => {
+    const acc = accounts.find((a) => a.id === accountId) ?? null;
+    setCashTarget(acc);
+    setCashOpen(true);
+  };
 
   const nearTargetCount = (rows as HoldingAggregate[]).filter(
     (r) => r.targetPrice && r.currentPrice && Math.abs(r.currentPrice - r.targetPrice) / r.targetPrice <= 0.05
@@ -122,7 +132,7 @@ export default function Table<T>({ rows, columns, accounts, refreshData, isLoadi
       <Grid container spacing={1}>
         {totals.map((total) => (
           <Grid key={total.accountId} size={{ xs: 12, sm: 6, md: 4, lg: 2.5 }}>
-            <TotalCard total={total} />
+            <TotalCard total={total} onManageCash={handleManageCash} />
           </Grid>
         ))}
       </Grid>
@@ -237,6 +247,14 @@ export default function Table<T>({ rows, columns, accounts, refreshData, isLoadi
         handleDialogClose={() => setTradeOpen(false)}
         refreshData={refreshData}
         accounts={accounts}
+      />
+
+      <CashDialog
+        open={cashOpen}
+        account={cashTarget}
+        accounts={accounts}
+        onClose={() => setCashOpen(false)}
+        onSaved={refreshData}
       />
     </>
   );

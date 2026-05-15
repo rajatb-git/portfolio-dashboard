@@ -1,5 +1,7 @@
+import Button from '@mui/material/Button';
 import Card from '@mui/material/Card';
 import Stack from '@mui/material/Stack';
+import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
 import { useTheme } from '@mui/material/styles';
 
@@ -10,9 +12,10 @@ import { Total } from './DashboardTable/dashTableUtils';
 
 type TotalCardProps = {
   total: Total;
+  onManageCash?: (accountId: string) => void;
 };
 
-export default function TotalCard({ total }: TotalCardProps) {
+export default function TotalCard({ total, onManageCash }: TotalCardProps) {
   const theme = useTheme();
   const isLight = theme.palette.mode === 'light';
   const isPositive = total.totalGL > 0;
@@ -64,7 +67,7 @@ export default function TotalCard({ total }: TotalCardProps) {
                 opacity: 0.8,
               }}
             >
-              {total.accountId}
+              {total.accountName ?? total.accountId}
             </Typography>
             <Typography
               sx={{
@@ -125,6 +128,48 @@ export default function TotalCard({ total }: TotalCardProps) {
               {fnCurrency(total.totalValue)}
             </Typography>
           </Stack>
+        </Stack>
+
+        <Stack
+          direction="row"
+          sx={{ justifyContent: 'space-between', alignItems: 'center', borderTop: `1px solid ${borderColor}`, pt: 1 }}
+        >
+          <Stack direction="column" spacing={0}>
+            <Typography sx={{ fontSize: '0.62rem', color: dimAccent, opacity: 0.7, fontWeight: 500 }}>
+              Cash
+            </Typography>
+            <Typography
+              sx={{
+                fontSize: '0.8rem',
+                fontWeight: 600,
+                color: (total.cashBalance ?? 0) < 0 ? (isLight ? '#dc2626' : '#f87171') : 'text.primary',
+              }}
+            >
+              {fnCurrency(total.cashBalance ?? 0)}
+            </Typography>
+          </Stack>
+
+          {onManageCash && (
+            <Tooltip title="Deposit / Withdraw cash">
+              <Button
+                size="small"
+                variant="text"
+                onClick={() => onManageCash(total.accountId)}
+                startIcon={<Iconify icon="mdi:cash-plus" width={14} />}
+                sx={{
+                  fontSize: '0.68rem',
+                  textTransform: 'none',
+                  color: dimAccent,
+                  minWidth: 0,
+                  px: 1,
+                  py: 0.25,
+                  '&:hover': { bgcolor: pillBg },
+                }}
+              >
+                Manage
+              </Button>
+            </Tooltip>
+          )}
         </Stack>
       </Stack>
     </Card>

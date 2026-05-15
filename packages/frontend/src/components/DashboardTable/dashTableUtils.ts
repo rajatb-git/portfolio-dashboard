@@ -1,4 +1,5 @@
 import { HoldingAggregate } from '@/api/dashboard';
+import { IAccount } from '@/models/AccountsModel';
 import { IHoldings } from '@/models/HoldingsModel';
 
 export const visuallyHidden = {
@@ -37,13 +38,15 @@ export function getComparator(order: 'asc' | 'desc', orderBy: string) {
 
 export type Total = {
   accountId: string;
+  accountName?: string;
+  cashBalance?: number;
   totalGL: number;
   percentGL: number;
   totalInvestment: number;
   totalValue: number;
 };
 
-const calculateTotals = (inputData: any): Array<Total> => {
+const calculateTotals = (inputData: any, accounts: Array<IAccount> = []): Array<Total> => {
   const tempMap: { [key: string]: Total } = {};
 
   inputData.forEach((x: HoldingAggregate) => {
@@ -55,10 +58,23 @@ const calculateTotals = (inputData: any): Array<Total> => {
     tempMap[x.accountId].totalInvestment += x.originalValue || 0;
   });
 
+  // Make sure every account is represented even if it currently has no holdings,
+  // so cash-only accounts still appear in the summary cards.
+  accounts.forEach((a) => {
+    if (!tempMap[a.id]) {
+      tempMap[a.id] = { accountId: a.id, totalGL: 0, percentGL: 0, totalInvestment: 0, totalValue: 0 };
+    }
+  });
+
+  const accountMap = new Map(accounts.map((a) => [a.id, a]));
+
   const tempArray = Object.values(tempMap);
   tempArray.forEach((x) => {
-    x.percentGL = x.totalGL / x.totalInvestment;
+    x.percentGL = x.totalInvestment > 0 ? x.totalGL / x.totalInvestment : 0;
     x.totalValue = x.totalGL + x.totalInvestment;
+    const acc = accountMap.get(x.accountId);
+    x.accountName = acc?.name ?? x.accountId;
+    x.cashBalance = acc?.cashBalance ?? 0;
   });
 
   return tempArray;
@@ -70,12 +86,14 @@ export function applyFilter({
   filterName,
   filterAccount,
   filterType,
+  accounts = [],
 }: {
   filterName: string;
   comparator: Function;
   inputData: any;
   filterAccount: string;
   filterType: string;
+  accounts?: Array<IAccount>;
 }) {
   const stabilizedThis = inputData.map((el: any, index: number) => [el, index]);
 
@@ -103,5 +121,5 @@ export function applyFilter({
     inputData = inputData.filter((x: IHoldings) => x.accountId === filterAccount);
   }
 
-  return { dataFiltered: inputData, totals: calculateTotals(inputData) };
+  return { dataFiltered: inputData, totals: calculateTotals(inputData, accounts) };
 }
