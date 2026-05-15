@@ -42,7 +42,6 @@ export default function Dashboard() {
 		{ id: "accountPercent", label: "% of Account", align: "right" },
 		{ id: "accountId", label: "Account" },
 		{ id: "", label: "Recommendation" },
-		{ id: "", label: "" },
 	];
 
 	const loadData = async () => {

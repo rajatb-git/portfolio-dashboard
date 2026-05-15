@@ -46,7 +46,7 @@ export default function Table<T>({ rows, columns, accounts, refreshData, isLoadi
   const [rowsPerPage, setRowsPerPage] = useState(50);
   const [filterType, setFilterType] = useState<string>('all');
   const [filterAccount, setFilterAccount] = useState('all');
-  const [tradeHolding, setTradeHolding] = useState<HoldingAggregate | null>(null);
+  const [tradeHolding, _setTradeHolding] = useState<HoldingAggregate | null>(null);
   const [tradeOpen, setTradeOpen] = useState(false);
   const [cashTarget, setCashTarget] = useState<IAccount | null>(null);
   const [cashOpen, setCashOpen] = useState(false);
@@ -61,11 +61,6 @@ export default function Table<T>({ rows, columns, accounts, refreshData, isLoadi
 
   const goToResearchPage = (symbol: string) => {
     navigate(`/research?searchText=${symbol}`);
-  };
-
-  const handleTrade = (holding: HoldingAggregate) => {
-    setTradeHolding(holding);
-    setTradeOpen(true);
   };
 
   const handleChangePage = (_event: React.MouseEvent<HTMLButtonElement, MouseEvent> | null, newPage: number) => {
@@ -216,7 +211,7 @@ export default function Table<T>({ rows, columns, accounts, refreshData, isLoadi
                 dataFiltered
                   .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
                   .map((row: any) => (
-                    <DashTableRow key={row.id} row={row} onRowClick={goToResearchPage} onTrade={handleTrade} />
+                    <DashTableRow key={row.id} row={row} onRowClick={goToResearchPage} />
                   ))
               )}
 
