@@ -28,6 +28,7 @@ import * as React from "react";
 import { toast } from "react-toastify";
 
 import apis from "@/api";
+import CashDialog from "@/components/CashDialog";
 import GenericGrid from "@/components/DataGrid";
 import ImportDialog from "@/components/DataGrid/DBImportDialog";
 import { Iconify } from "@/components/Iconify";
@@ -158,99 +159,6 @@ const columns: { [collection: string]: Array<GridColDef> } = {
 		},
 	],
 };
-
-function CashDialog({
-	account,
-	onClose,
-	onSaved,
-}: {
-	account: IAccount | null;
-	onClose: () => void;
-	onSaved: () => void;
-}) {
-	const [action, setAction] = React.useState<"deposit" | "withdraw">("deposit");
-	const [amount, setAmount] = React.useState("");
-	const [saving, setSaving] = React.useState(false);
-
-	React.useEffect(() => {
-		if (account) {
-			setAction("deposit");
-			setAmount("");
-		}
-	}, [account]);
-
-	const handleSave = async () => {
-		if (!account) return;
-		const value = parseFloat(amount);
-		if (!Number.isFinite(value) || value <= 0) {
-			toast.error("Enter a positive amount");
-			return;
-		}
-		setSaving(true);
-		try {
-			await apis.accounts.moveCash(account.id, action, value);
-			toast.success(
-				`${action === "deposit" ? "Deposited" : "Withdrew"} ${fnCurrency(value)} ${
-					action === "deposit" ? "into" : "from"
-				} ${account.name}`,
-			);
-			onSaved();
-			onClose();
-		} catch (err: any) {
-			toast.error(err.message || "Failed to update cash balance");
-		} finally {
-			setSaving(false);
-		}
-	};
-
-	return (
-		<Dialog open={!!account} onClose={onClose} maxWidth="xs" fullWidth>
-			<DialogTitle>Cash — {account?.name}</DialogTitle>
-			<DialogContent>
-				<Stack spacing={2} sx={{ mt: 1 }}>
-					<Box>
-						<Typography sx={{ fontSize: "0.72rem", color: "text.disabled", textTransform: "uppercase", letterSpacing: "0.05em" }}>
-							Current Balance
-						</Typography>
-						<Typography sx={{ fontSize: "1.2rem", fontWeight: 700 }}>
-							{fnCurrency(account?.cashBalance ?? 0)}
-						</Typography>
-					</Box>
-					<Select
-						value={action}
-						onChange={(e) => setAction(e.target.value as "deposit" | "withdraw")}
-						size="small"
-						disabled={saving}
-					>
-						<MenuItem value="deposit">Deposit</MenuItem>
-						<MenuItem value="withdraw">Withdraw</MenuItem>
-					</Select>
-					<TextField
-						size="small"
-						label="Amount"
-						type="number"
-						value={amount}
-						onChange={(e) => setAmount(e.target.value)}
-						disabled={saving}
-						slotProps={{ htmlInput: { min: 0, step: "0.01" } }}
-					/>
-				</Stack>
-			</DialogContent>
-			<DialogActions>
-				<Button onClick={onClose} disabled={saving}>
-					Cancel
-				</Button>
-				<Button
-					onClick={handleSave}
-					variant="contained"
-					disabled={saving || !amount}
-				>
-					{saving ? "Saving..." : action === "deposit" ? "Deposit" : "Withdraw"}
-				</Button>
-			</DialogActions>
-		</Dialog>
-	);
-}
 
 function AccountsManager({
 	accounts,
@@ -456,6 +364,7 @@ function AccountsManager({
 			</Card>
 
 			<CashDialog
+				open={!!cashTarget}
 				account={cashTarget}
 				onClose={() => setCashTarget(null)}
 				onSaved={onRefresh}
