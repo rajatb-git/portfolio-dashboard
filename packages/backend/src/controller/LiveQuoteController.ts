@@ -1,5 +1,6 @@
 import moment from 'moment';
 import { getQuoteForSymbol } from '../externalApis/finnHub';
+import { getQuoteFromNasdaq } from '../externalApis/nasdaq';
 import { IPriceStoreModel, PriceStoreDBModel } from '../models/PriceStoreModel';
 
 const priceStoreModel = PriceStoreDBModel();
@@ -10,7 +11,15 @@ export class LiveQuoteController {
     const dbFetch = priceStoreModel.findById(symbol);
 
     if (this.liveFetchRequiredQuote(dbFetch)) {
-      const apiFetch = await getQuoteForSymbol(symbol, isCrypto);
+      let apiFetch = await getQuoteForSymbol(symbol, isCrypto);
+
+      // Finnhub's free tier returns c=0 for symbols it doesn't cover (notably most US ETFs).
+      // Fall back to NASDAQ; if that also can't price the symbol it throws and the dashboard
+      // skips this holding rather than caching a zero.
+      if (!isCrypto && (!apiFetch.c || apiFetch.c <= 0)) {
+        apiFetch = await getQuoteFromNasdaq(symbol);
+      }
+
       const priceDate = moment.unix(apiFetch.t).toISOString();
 
       if (dbFetch) {
