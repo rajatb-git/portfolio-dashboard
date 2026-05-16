@@ -1,6 +1,6 @@
 {
   "name": "@portfolio/backend",
-  "version": "1.0.23",
+  "version": "1.0.24",
   "description": "",
   "main": "dist",
   "scripts": {
@@ -16,7 +16,7 @@
     "dev": "nodemon --ignore '*.json' src/server.ts"
   },
   "author": "Rajat Bansal",
-  "license": "ISC",
+  "license": "MIT",
   "private": true,
   "dependencies": {
     "@anthropic-ai/sdk": "^0.91.1",

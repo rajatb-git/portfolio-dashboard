@@ -1,8 +1,8 @@
 {
   "name": "portfolio-dashboard-monorepo",
-  "version": "1.0.23",
+  "version": "1.0.24",
   "private": true,
-  "license": "ISC",
+  "license": "MIT",
   "author": "Rajat Bansal",
   "scripts": {
     "dev": "pnpm -r install && pnpm -r --parallel run dev",
