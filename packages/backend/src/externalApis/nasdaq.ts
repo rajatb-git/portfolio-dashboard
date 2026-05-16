@@ -1,6 +1,7 @@
 import https from 'node:https';
 import axios, { AxiosError } from 'axios';
 import moment from 'moment';
+import { QuoteResponse } from './types';
 import { logger } from '../utils/winston';
 
 type Range = '1d' | '5d' | '1M' | '3M' | '6M' | '1y' | '2y' | '3y';
@@ -16,6 +17,76 @@ const nasdaqAgent = new https.Agent({
     'ECDHE-RSA-AES128-GCM-SHA256',
   ].join(':'),
 });
+
+const nasdaqHeaders = { 'Content-Type': 'application/json', 'User-Agent': 'PostmanRuntime/7.26.8' };
+
+const parseDollarAmount = (raw: string | undefined | null): number => {
+  if (!raw || raw === 'N/A') return 0;
+  const num = parseFloat(raw.replace(/[$,+\s]/g, ''));
+  return Number.isFinite(num) ? num : 0;
+};
+
+const fetchNasdaqQuote = async (
+  symbol: string,
+  assetclass: 'etf' | 'stocks'
+): Promise<QuoteResponse | null> => {
+  const base = `https://api.nasdaq.com/api/quote/${symbol}`;
+  const opts = { httpsAgent: nasdaqAgent, headers: nasdaqHeaders };
+
+  let info: any;
+  try {
+    const res = await axios.get(`${base}/info?assetclass=${assetclass}`, opts);
+    info = res.data?.data;
+  } catch {
+    return null;
+  }
+
+  const price = parseDollarAmount(info?.primaryData?.lastSalePrice);
+  if (!price) return null;
+
+  let summary: any = {};
+  try {
+    const res = await axios.get(`${base}/summary?assetclass=${assetclass}`, opts);
+    summary = res.data?.data?.summaryData ?? {};
+  } catch {
+    // summary is optional; the /info response alone is enough for the core fields.
+  }
+
+  const change = parseDollarAmount(info.primaryData.netChange);
+  const percentChange = parseFloat(
+    (info.primaryData.percentageChange ?? '0').replace(/[+%]/g, '')
+  ) || 0;
+
+  const prevClose = parseDollarAmount(summary.PreviousClose?.value);
+  const dayRange: string = summary.TodayHighLow?.value ?? summary.DayRange?.value ?? '';
+  const [low, high] = dayRange.split(/\s*[-/]\s*/).map(parseDollarAmount);
+
+  return {
+    c: price,
+    d: change,
+    dp: percentChange,
+    h: high || price,
+    l: low || price,
+    o: 0,
+    pc: prevClose || price,
+    t: Math.floor(Date.now() / 1000),
+  };
+};
+
+export const getQuoteFromNasdaq = async (symbol: string): Promise<QuoteResponse> => {
+  for (const assetclass of ['etf', 'stocks'] as const) {
+    const quote = await fetchNasdaqQuote(symbol, assetclass);
+    if (quote) {
+      logger.log({
+        level: 'info',
+        label: `NASDAQ quote ${symbol}`,
+        message: `Fetched as ${assetclass} (price ${quote.c})`,
+      });
+      return quote;
+    }
+  }
+  throw new Error(`NASDAQ has no quote for symbol ${symbol}`);
+};
 
 export const getPriceHistoryAreaChart = (symbol: string, range: Range): Promise<any> => {
   const toDate = moment().format('YYYY-MM-DD');
