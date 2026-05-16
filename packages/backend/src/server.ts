@@ -1,3 +1,4 @@
+import './utils/storageRepair';
 import cors from '@koa/cors';
 import * as dotenv from 'dotenv';
 import Koa from 'koa';

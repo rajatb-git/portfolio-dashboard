@@ -18,9 +18,11 @@ import ResearchEarningsHistoryCard from '@/components/Research/ResearchEarningsH
 import ResearchInsiderCard from '@/components/Research/ResearchInsiderCard';
 import AgentInsightsCard from '@/components/Research/AgentInsightsCard';
 import ResearchPositionDetailsCard from '@/components/Research/ResearchPositionDetailsCard';
+import ResearchTransactionsCard from '@/components/Research/ResearchTransactionsCard';
 import { AgentInsight, AiConfig } from '@/api/live';
 import { HoldingAggregate } from '@/api/dashboard';
 import { IAccount } from '@/models/AccountsModel';
+import { ITransaction } from '@/models/TransactionsModel';
 import { Iconify } from '@/components/Iconify';
 import RecommendationDonutGraphMui from '@/components/RecommendationDonutGraphMui';
 import { PriceHistoryGraph } from '@/components/PriceHistoryGraph';
@@ -69,6 +71,8 @@ function Research() {
   const [positions, setPositions] = React.useState<HoldingAggregate[]>([]);
   const [accounts, setAccounts] = React.useState<IAccount[]>([]);
   const [isPositionsLoading, setIsPositionsLoading] = React.useState(false);
+  const [symbolTransactions, setSymbolTransactions] = React.useState<ITransaction[]>([]);
+  const [isTransactionsLoading, setIsTransactionsLoading] = React.useState(false);
   const [searchText, setSearchText] = React.useState(searchParams.get('searchText')?.toUpperCase() || '');
 
   const getResearchData = (searchTicker: string) => {
@@ -153,6 +157,16 @@ function Research() {
           toast.error(err.message || 'Failed to load position details');
         })
         .finally(() => setIsPositionsLoading(false));
+
+      setIsTransactionsLoading(true);
+      apis.transactions
+        .getBySymbol(searchTicker)
+        .then((res) => setSymbolTransactions(res ?? []))
+        .catch((err) => {
+          setSymbolTransactions([]);
+          toast.error(err.message || 'Failed to load transaction history');
+        })
+        .finally(() => setIsTransactionsLoading(false));
 
       if (agentEnabled) {
         fetchAgentInsights(searchTicker);
@@ -389,6 +403,15 @@ function Research() {
           positions={positions}
           accounts={accounts}
           isLoading={isPositionsLoading}
+        />
+      )}
+
+      {/* ── Transaction History (collapsed by default) ── */}
+      {searchText && (
+        <ResearchTransactionsCard
+          transactions={symbolTransactions}
+          accounts={accounts}
+          isLoading={isTransactionsLoading}
         />
       )}
 

@@ -24,16 +24,40 @@ import {
 	Typography,
 } from "@mui/material";
 import type { GridColDef } from "@mui/x-data-grid";
+import moment from "moment";
 import * as React from "react";
 import { toast } from "react-toastify";
 
 import apis from "@/api";
+import CashDialog from "@/components/CashDialog";
 import GenericGrid from "@/components/DataGrid";
 import ImportDialog from "@/components/DataGrid/DBImportDialog";
 import { Iconify } from "@/components/Iconify";
 import type { IAccount } from "@/models/AccountsModel";
 import type { IHoldings } from "@/models/HoldingsModel";
 import type { ITransaction } from "@/models/TransactionsModel";
+import { fnCurrency } from "@/utils/formatNumber";
+
+const timestampColumns: Array<GridColDef> = [
+	{
+		field: "createdAt",
+		headerName: "Created",
+		flex: 1,
+		minWidth: 150,
+		editable: false,
+		valueFormatter: (value: string | undefined) =>
+			value ? moment(value).format("MMM D, YYYY h:mm a") : "—",
+	},
+	{
+		field: "updatedAt",
+		headerName: "Updated",
+		flex: 1,
+		minWidth: 150,
+		editable: false,
+		valueFormatter: (value: string | undefined) =>
+			value ? moment(value).format("MMM D, YYYY h:mm a") : "—",
+	},
+];
 
 const columns: { [collection: string]: Array<GridColDef> } = {
 	holdings: [
@@ -63,13 +87,17 @@ const columns: { [collection: string]: Array<GridColDef> } = {
 			headerName: "Quantity",
 			flex: 1,
 			minWidth: 80,
+			type: "number",
 			editable: true,
+			align: "right",
+			headerAlign: "right",
 		},
 		{
 			field: "averagePrice",
 			headerName: "Avg Price",
 			flex: 1,
 			minWidth: 90,
+			type: "number",
 			editable: true,
 			align: "right",
 			headerAlign: "right",
@@ -81,6 +109,7 @@ const columns: { [collection: string]: Array<GridColDef> } = {
 			minWidth: 70,
 			editable: true,
 		},
+		...timestampColumns,
 	],
 	accounts: [
 		{
@@ -97,6 +126,18 @@ const columns: { [collection: string]: Array<GridColDef> } = {
 			minWidth: 140,
 			editable: true,
 		},
+		{
+			field: "cashBalance",
+			headerName: "Cash",
+			flex: 1,
+			minWidth: 100,
+			type: "number",
+			editable: true,
+			align: "right",
+			headerAlign: "right",
+			valueFormatter: (value: number | undefined) => fnCurrency(value ?? 0),
+		},
+		...timestampColumns,
 	],
 	transactions: [
 		{
@@ -118,8 +159,10 @@ const columns: { [collection: string]: Array<GridColDef> } = {
 			headerName: "Quantity",
 			flex: 1,
 			minWidth: 80,
+			type: "number",
 			editable: true,
 			align: "right",
+			headerAlign: "right",
 		},
 		{
 			field: "action",
@@ -133,9 +176,38 @@ const columns: { [collection: string]: Array<GridColDef> } = {
 			headerName: "Price",
 			flex: 1,
 			minWidth: 80,
+			type: "number",
 			editable: true,
 			align: "right",
 			headerAlign: "right",
+		},
+		{
+			field: "pnl",
+			headerName: "P/L",
+			flex: 1,
+			minWidth: 90,
+			type: "number",
+			editable: true,
+			align: "right",
+			headerAlign: "right",
+			renderCell: (params) => {
+				const v = params.value as number | undefined;
+				if (v === undefined || v === null) return "—";
+				const isGain = v >= 0;
+				return (
+					<Box
+						component="span"
+						sx={{
+							fontWeight: 600,
+							color: isGain ? "#4ade80" : "#f87171",
+							fontVariantNumeric: "tabular-nums",
+						}}
+					>
+						{isGain ? "+" : ""}
+						{fnCurrency(v)}
+					</Box>
+				);
+			},
 		},
 		{
 			field: "type",
@@ -144,6 +216,7 @@ const columns: { [collection: string]: Array<GridColDef> } = {
 			minWidth: 70,
 			editable: true,
 		},
+		...timestampColumns,
 	],
 };
 
@@ -159,6 +232,7 @@ function AccountsManager({
 	const [newName, setNewName] = React.useState("");
 	const [adding, setAdding] = React.useState(false);
 	const [deleteTarget, setDeleteTarget] = React.useState<IAccount | null>(null);
+	const [cashTarget, setCashTarget] = React.useState<IAccount | null>(null);
 
 	const handleAdd = async () => {
 		const name = newName.trim();
@@ -168,6 +242,7 @@ function AccountsManager({
 			await apis.accounts.create({
 				name,
 				id: name.replace(/\s/g, ""),
+				cashBalance: 0,
 			} as IAccount);
 			setNewName("");
 			toast.success(`Account "${name}" created`);
@@ -191,6 +266,8 @@ function AccountsManager({
 			setDeleteTarget(null);
 		}
 	};
+
+	const totalCash = accounts.reduce((sum, a) => sum + (a.cashBalance ?? 0), 0);
 
 	return (
 		<>
@@ -222,6 +299,16 @@ function AccountsManager({
 						{adding ? "Adding..." : "Add Account"}
 					</Button>
 					<Box sx={{ flexGrow: 1 }} />
+					{accounts.length > 0 && (
+						<Box sx={{ textAlign: 'right', mr: 1 }}>
+							<Typography sx={{ fontSize: '0.62rem', color: 'text.disabled', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+								Total Cash
+							</Typography>
+							<Typography sx={{ fontSize: '0.92rem', fontWeight: 700, color: 'text.primary' }}>
+								{fnCurrency(totalCash)}
+							</Typography>
+						</Box>
+					)}
 					<IconButton onClick={onRefresh} size="small">
 						<Iconify icon="fa:refresh" width={16} />
 					</IconButton>
@@ -239,9 +326,12 @@ function AccountsManager({
 								<TableCell sx={{ fontWeight: 700, fontSize: "0.78rem" }}>
 									ID
 								</TableCell>
+								<TableCell align="right" sx={{ fontWeight: 700, fontSize: "0.78rem" }}>
+									Cash Balance
+								</TableCell>
 								<TableCell
 									align="right"
-									sx={{ fontWeight: 700, fontSize: "0.78rem", width: 80 }}
+									sx={{ fontWeight: 700, fontSize: "0.78rem", width: 140 }}
 								>
 									Actions
 								</TableCell>
@@ -257,12 +347,15 @@ function AccountsManager({
 										<TableCell>
 											<Skeleton width="80%" />
 										</TableCell>
+										<TableCell>
+											<Skeleton width="60%" />
+										</TableCell>
 										<TableCell />
 									</MuiTableRow>
 								))
 							) : accounts.length === 0 ? (
 								<MuiTableRow>
-									<TableCell colSpan={3} align="center" sx={{ py: 4 }}>
+									<TableCell colSpan={4} align="center" sx={{ py: 4 }}>
 										<Typography
 											sx={{ fontSize: "0.82rem", color: "text.disabled" }}
 										>
@@ -271,37 +364,71 @@ function AccountsManager({
 									</TableCell>
 								</MuiTableRow>
 							) : (
-								accounts.map((account) => (
-									<MuiTableRow key={account.id} hover>
-										<TableCell sx={{ fontSize: "0.82rem" }}>
-											{account.name}
-										</TableCell>
-										<TableCell
-											sx={{ fontSize: "0.78rem", color: "text.secondary" }}
-										>
-											{account.id}
-										</TableCell>
-										<TableCell align="right">
-											<Tooltip title="Delete account">
-												<IconButton
-													size="small"
-													onClick={() => setDeleteTarget(account)}
-													sx={{
-														color: "text.disabled",
-														"&:hover": { color: "error.main" },
-													}}
-												>
-													<Iconify icon="mdi:delete-outline" width={18} />
-												</IconButton>
-											</Tooltip>
-										</TableCell>
-									</MuiTableRow>
-								))
+								accounts.map((account) => {
+									const cash = account.cashBalance ?? 0;
+									const isNegative = cash < 0;
+									return (
+										<MuiTableRow key={account.id} hover>
+											<TableCell sx={{ fontSize: "0.82rem" }}>
+												{account.name}
+											</TableCell>
+											<TableCell
+												sx={{ fontSize: "0.78rem", color: "text.secondary" }}
+											>
+												{account.id}
+											</TableCell>
+											<TableCell
+												align="right"
+												sx={{
+													fontSize: "0.82rem",
+													fontWeight: 600,
+													color: isNegative ? "#f87171" : "text.primary",
+													fontVariantNumeric: "tabular-nums",
+												}}
+											>
+												{fnCurrency(cash)}
+											</TableCell>
+											<TableCell align="right">
+												<Tooltip title="Deposit / Withdraw cash">
+													<IconButton
+														size="small"
+														onClick={() => setCashTarget(account)}
+														sx={{
+															color: "text.disabled",
+															"&:hover": { color: "primary.main" },
+														}}
+													>
+														<Iconify icon="mdi:cash-multiple" width={18} />
+													</IconButton>
+												</Tooltip>
+												<Tooltip title="Delete account">
+													<IconButton
+														size="small"
+														onClick={() => setDeleteTarget(account)}
+														sx={{
+															color: "text.disabled",
+															"&:hover": { color: "error.main" },
+														}}
+													>
+														<Iconify icon="mdi:delete-outline" width={18} />
+													</IconButton>
+												</Tooltip>
+											</TableCell>
+										</MuiTableRow>
+									);
+								})
 							)}
 						</TableBody>
 					</Table>
 				</TableContainer>
 			</Card>
+
+			<CashDialog
+				open={!!cashTarget}
+				account={cashTarget}
+				onClose={() => setCashTarget(null)}
+				onSaved={onRefresh}
+			/>
 
 			<Dialog open={!!deleteTarget} onClose={() => setDeleteTarget(null)}>
 				<DialogTitle>Delete Account</DialogTitle>

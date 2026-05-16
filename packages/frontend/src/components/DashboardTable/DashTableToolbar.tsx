@@ -5,6 +5,7 @@ import InputAdornment from '@mui/material/InputAdornment';
 import OutlinedInput from '@mui/material/OutlinedInput';
 import Toolbar from '@mui/material/Toolbar';
 
+import CashDialog from '@/components/CashDialog';
 import { Iconify } from '@/components/Iconify';
 import { IAccount } from '@/models/AccountsModel';
 import { useToggle } from '@/utils/useToggle';
@@ -20,6 +21,7 @@ type TableToolbarProps = {
 
 export default function DashTableToolbar({ filterName, onFilterName, refreshData, accounts }: TableToolbarProps) {
   const { closeToggle, openToggle, toggleState } = useToggle();
+  const cash = useToggle();
   return (
     <Toolbar
       component={Stack}
@@ -54,6 +56,16 @@ export default function DashTableToolbar({ filterName, onFilterName, refreshData
       <Button
         size="small"
         variant="outlined"
+        onClick={cash.openToggle}
+        sx={{ whiteSpace: 'nowrap', borderColor: 'divider', color: 'text.secondary' }}
+        startIcon={<Iconify icon="mdi:cash-plus" width={14} />}
+      >
+        Cash
+      </Button>
+
+      <Button
+        size="small"
+        variant="outlined"
         onClick={openToggle}
         sx={{ whiteSpace: 'nowrap', borderColor: 'divider', color: 'text.secondary' }}
         startIcon={<Iconify icon="fa6-solid:right-left" width={13} />}
@@ -66,6 +78,13 @@ export default function DashTableToolbar({ filterName, onFilterName, refreshData
       </IconButton>
 
       <BuySellDialog handleDialogClose={closeToggle} open={toggleState} refreshData={refreshData} accounts={accounts} />
+      <CashDialog
+        open={cash.toggleState}
+        account={null}
+        accounts={accounts}
+        onClose={cash.closeToggle}
+        onSaved={refreshData}
+      />
     </Toolbar>
   );
 }

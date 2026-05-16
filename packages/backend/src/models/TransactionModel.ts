@@ -5,8 +5,9 @@ export interface ITransaction {
   symbol: string;
   qty: number;
   price: number;
-  type: 'stock' | 'crypto';
+  type: 'stock' | 'crypto' | 'cash';
   action: string;
+  pnl?: number;
 }
 
 export const TransactionSchema: SchemaType = {
@@ -14,10 +15,18 @@ export const TransactionSchema: SchemaType = {
   symbol: { type: String, required: false },
   qty: { type: Number, required: true },
   price: { type: Number, required: false },
-  type: { type: String, enum: ['stock', 'crypto'], required: true },
+  type: { type: String, enum: ['stock', 'crypto', 'cash'], required: true },
   action: { type: String, required: true },
+  pnl: { type: Number, required: false },
 };
 
 export interface ITransactionModel extends ITransaction, ISkewerModel {}
 
-export const TransactionModel = () => new SkewerModel<ITransactionModel>('Transaction', TransactionSchema);
+let instance: SkewerModel<ITransactionModel> | null = null;
+
+export const TransactionModel = (): SkewerModel<ITransactionModel> => {
+  if (!instance) {
+    instance = new SkewerModel<ITransactionModel>('Transaction', TransactionSchema);
+  }
+  return instance;
+};

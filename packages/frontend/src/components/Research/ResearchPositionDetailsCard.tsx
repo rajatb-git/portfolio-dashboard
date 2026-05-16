@@ -44,7 +44,7 @@ export default function ResearchPositionDetailsCard({ positions, accounts, isLoa
           <Table size="small">
             <TableHead>
               <TableRow>
-                {['Account', 'Qty', 'Avg Price', 'Market Value', 'P&L', 'P&L %'].map((h) => (
+                {['Account', 'Qty', 'Avg Price', 'Market Value', 'P&L'].map((h) => (
                   <TableCell
                     key={h}
                     sx={{
@@ -101,8 +101,6 @@ export default function ResearchPositionDetailsCard({ positions, accounts, isLoa
                     >
                       {isGain ? '+' : ''}
                       {fnCurrency(pos.totalGL)}
-                    </TableCell>
-                    <TableCell sx={{ borderBottom: '1px solid', borderColor: 'divider' }}>
                       <Chip
                         label={`${isGain ? '+' : ''}${pos.totalGLPercent.toFixed(2)}%`}
                         size="small"
