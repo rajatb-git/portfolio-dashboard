@@ -7,7 +7,19 @@ import { IRecommendation } from '@/models/RecommendationModel';
 import { useSearchParams } from 'react-router-dom';
 import { CompanyProfile } from '@/models/CompanyProfileModel';
 import { fnCurrency } from '@/utils/formatNumber';
-import { Avatar, Box, Card, Chip, Divider, Grid, IconButton, Skeleton, Stack, Tooltip, Typography } from '@mui/material';
+import {
+  Avatar,
+  Box,
+  Card,
+  Chip,
+  Divider,
+  Grid,
+  IconButton,
+  Skeleton,
+  Stack,
+  Tooltip,
+  Typography,
+} from '@mui/material';
 import moment from 'moment';
 import { toast } from 'react-toastify';
 import ResearchDetailsCard from '@/components/Research/ResearchDetailsCard';
@@ -31,12 +43,18 @@ import LocalStorageArray from '@/utils/localStorageArray';
 function StatItem({ label, value }: { label: string; value?: string }) {
   return (
     <Box sx={{ textAlign: 'center', px: 1.5 }}>
-      <Typography sx={{ fontSize: '0.65rem', color: 'text.disabled', textTransform: 'uppercase', letterSpacing: '0.05em', mb: 0.25 }}>
+      <Typography
+        sx={{
+          fontSize: '0.65rem',
+          color: 'text.disabled',
+          textTransform: 'uppercase',
+          letterSpacing: '0.05em',
+          mb: 0.25,
+        }}
+      >
         {label}
       </Typography>
-      <Typography sx={{ fontSize: '0.82rem', fontWeight: 600, color: 'text.secondary' }}>
-        {value ?? '—'}
-      </Typography>
+      <Typography sx={{ fontSize: '0.82rem', fontWeight: 600, color: 'text.secondary' }}>{value ?? '—'}</Typography>
     </Box>
   );
 }
@@ -195,13 +213,16 @@ function Research() {
   }, [searchParams]);
 
   React.useEffect(() => {
-    apis.watchlist.getAll()
+    apis.watchlist
+      .getAll()
       .then((items) => setWatchlist((items ?? []).map((i: any) => i.symbol)))
       .catch((err) => toast.error(err.message || 'Failed to load watchlist'));
-    apis.live.getAiConfig()
+    apis.live
+      .getAiConfig()
       .then((config) => setAgentEnabled(config.enabled))
       .catch(() => {});
-    apis.accounts.getAll()
+    apis.accounts
+      .getAll()
       .then((res) => setAccounts(res ?? []))
       .catch((err) => toast.error(err.message || 'Failed to load accounts'));
   }, []);
@@ -287,7 +308,8 @@ function Research() {
                         fontWeight: 500,
                         bgcolor: 'action.hover',
                         color: 'text.secondary',
-                        border: '1px solid', borderColor: 'divider',
+                        border: '1px solid',
+                        borderColor: 'divider',
                       }}
                     />
                   )}
@@ -301,7 +323,8 @@ function Research() {
                         fontWeight: 500,
                         bgcolor: 'action.hover',
                         color: 'text.secondary',
-                        border: '1px solid', borderColor: 'divider',
+                        border: '1px solid',
+                        borderColor: 'divider',
                       }}
                     />
                   )}
@@ -340,8 +363,11 @@ function Research() {
                     </Typography>
                   </Box>
                   {!!price?.change && (
-                    <Typography sx={{ fontSize: '0.82rem', color: isPositive ? '#4ade80' : '#f87171', fontWeight: 500 }}>
-                      ({isPositive ? '+' : ''}{fnCurrency(price.change)})
+                    <Typography
+                      sx={{ fontSize: '0.82rem', color: isPositive ? '#4ade80' : '#f87171', fontWeight: 500 }}
+                    >
+                      ({isPositive ? '+' : ''}
+                      {fnCurrency(price.change)})
                     </Typography>
                   )}
                 </Stack>
@@ -362,11 +388,7 @@ function Research() {
                 </IconButton>
               </Tooltip>
               <Tooltip title="Refresh">
-                <IconButton
-                  size="small"
-                  onClick={() => getResearchData(searchText)}
-                  sx={{ color: 'primary.main' }}
-                >
+                <IconButton size="small" onClick={() => getResearchData(searchText)} sx={{ color: 'primary.main' }}>
                   <Iconify icon="mingcute:refresh-3-fill" width={20} />
                 </IconButton>
               </Tooltip>
@@ -399,11 +421,7 @@ function Research() {
 
       {/* ── Position Details ── */}
       {searchText && (
-        <ResearchPositionDetailsCard
-          positions={positions}
-          accounts={accounts}
-          isLoading={isPositionsLoading}
-        />
+        <ResearchPositionDetailsCard positions={positions} accounts={accounts} isLoading={isPositionsLoading} />
       )}
 
       {/* ── Transaction History (collapsed by default) ── */}
@@ -429,14 +447,8 @@ function Research() {
       <Grid container spacing={2} sx={{ alignItems: 'stretch' }}>
         <Grid size={{ xs: 12, md: 4 }} sx={{ display: 'flex' }}>
           <Stack spacing={2} sx={{ width: '100%', height: '100%' }}>
-            <ResearchDetailsCard
-              companyProfile={companyProfile}
-              isCompanyProfileLoading={isCompanyProfileLoading}
-            />
-            <RecommendationDonutGraphMui
-              recommendation={recommendation}
-              isLoading={isRecommendationLoading}
-            />
+            <ResearchDetailsCard companyProfile={companyProfile} isCompanyProfileLoading={isCompanyProfileLoading} />
+            <RecommendationDonutGraphMui recommendation={recommendation} isLoading={isRecommendationLoading} />
           </Stack>
         </Grid>
         <Grid size={{ xs: 12, md: 8 }} sx={{ display: 'flex' }}>
@@ -447,11 +459,7 @@ function Research() {
       {/* ── Row 2: Key Metrics | Peers + Earnings ── */}
       <Grid container spacing={2} sx={{ alignItems: 'stretch' }}>
         <Grid size={{ xs: 12, md: 8 }} sx={{ display: 'flex' }}>
-          <ResearchMetricsCard
-            metrics={metrics}
-            currentPrice={price?.price}
-            isLoading={isMetricsLoading}
-          />
+          <ResearchMetricsCard metrics={metrics} currentPrice={price?.price} isLoading={isMetricsLoading} />
         </Grid>
         <Grid size={{ xs: 12, md: 4 }} sx={{ display: 'flex' }}>
           <ResearchPeersCard

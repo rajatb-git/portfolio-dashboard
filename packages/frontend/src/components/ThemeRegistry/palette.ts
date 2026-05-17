@@ -126,7 +126,7 @@ export default function palette(themeMode: 'light' | 'dark') {
     background: {
       paper: '#0d1929',
       default: '#060c18',
-      neutral: alpha(GREY[500], 0.10),
+      neutral: alpha(GREY[500], 0.1),
     },
     action: {
       ...COMMON.action,

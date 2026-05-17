@@ -21,15 +21,7 @@ const COLORS = [
 
 type DonutData = { label: string; value: number };
 
-function AllocationDonut({
-  title,
-  data,
-  isLoading,
-}: {
-  title: string;
-  data: DonutData[];
-  isLoading: boolean;
-}) {
+function AllocationDonut({ title, data, isLoading }: { title: string; data: DonutData[]; isLoading: boolean }) {
   const total = data.reduce((s, d) => s + d.value, 0);
 
   return (
@@ -52,9 +44,7 @@ function AllocationDonut({
         <Skeleton variant="rectangular" height={240} sx={{ m: 2, borderRadius: 1 }} />
       ) : data.length === 0 ? (
         <Box sx={{ p: 3, textAlign: 'center' }}>
-          <Typography sx={{ color: 'text.disabled', fontSize: '0.82rem' }}>
-            No data available
-          </Typography>
+          <Typography sx={{ color: 'text.disabled', fontSize: '0.82rem' }}>No data available</Typography>
         </Box>
       ) : (
         <Box sx={{ p: 1 }}>
@@ -67,9 +57,7 @@ function AllocationDonut({
                 innerRadius: 46,
                 outerRadius: 74,
                 arcLabel: (params) =>
-                  params.value / total > 0.08
-                    ? `${Math.round((params.value / total) * 100)}%`
-                    : '',
+                  params.value / total > 0.08 ? `${Math.round((params.value / total) * 100)}%` : '',
                 arcLabelMinAngle: 20,
                 valueFormatter: (item) => fnCurrency(item.value),
               },
@@ -81,11 +69,7 @@ function AllocationDonut({
           {/* Custom legend */}
           <Stack spacing={0.5} sx={{ px: 1.5, pb: 1.5 }}>
             {data.map((item, i) => (
-              <Stack
-                key={item.label}
-                direction="row"
-                sx={{ alignItems: 'center', justifyContent: 'space-between' }}
-              >
+              <Stack key={item.label} direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between' }}>
                 <Stack direction="row" sx={{ alignItems: 'center' }} spacing={1}>
                   <Box
                     sx={{
@@ -96,9 +80,7 @@ function AllocationDonut({
                       flexShrink: 0,
                     }}
                   />
-                  <Typography sx={{ fontSize: '0.75rem', color: 'text.secondary' }}>
-                    {item.label}
-                  </Typography>
+                  <Typography sx={{ fontSize: '0.75rem', color: 'text.secondary' }}>{item.label}</Typography>
                 </Stack>
                 <Stack direction="row" sx={{ alignItems: 'center' }} spacing={1}>
                   <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, color: 'text.primary' }}>

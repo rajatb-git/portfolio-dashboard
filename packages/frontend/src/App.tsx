@@ -19,9 +19,7 @@ const Research = React.lazy(() => import('@/pages/Research'));
 const Settings = React.lazy(() => import('@/pages/Settings'));
 
 export default function App() {
-  const [collapsed, setCollapsed] = React.useState(
-    () => localStorage.getItem('nav_collapsed') === 'true'
-  );
+  const [collapsed, setCollapsed] = React.useState(() => localStorage.getItem('nav_collapsed') === 'true');
   const [mobileOpen, setMobileOpen] = React.useState(false);
   const isMobile = useMediaQuery('(max-width: 899.95px)');
 

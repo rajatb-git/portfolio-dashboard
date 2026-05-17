@@ -58,7 +58,7 @@ export default function CashDialog({ open, account, accounts, onClose, onSaved }
       toast.success(
         `${action === 'deposit' ? 'Deposited' : 'Withdrew'} ${fnCurrency(value)} ${
           action === 'deposit' ? 'into' : 'from'
-        } ${selected?.name ?? accountId}`,
+        } ${selected?.name ?? accountId}`
       );
       onSaved();
       onClose();
@@ -76,7 +76,15 @@ export default function CashDialog({ open, account, accounts, onClose, onSaved }
         <Stack spacing={2} sx={{ mt: 1 }}>
           {accounts && accounts.length > 0 && (
             <Box>
-              <Typography sx={{ fontSize: '0.7rem', color: 'text.disabled', textTransform: 'uppercase', letterSpacing: '0.05em', mb: 0.5 }}>
+              <Typography
+                sx={{
+                  fontSize: '0.7rem',
+                  color: 'text.disabled',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.05em',
+                  mb: 0.5,
+                }}
+              >
                 Account
               </Typography>
               <Select
@@ -96,7 +104,9 @@ export default function CashDialog({ open, account, accounts, onClose, onSaved }
           )}
 
           <Box>
-            <Typography sx={{ fontSize: '0.7rem', color: 'text.disabled', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            <Typography
+              sx={{ fontSize: '0.7rem', color: 'text.disabled', textTransform: 'uppercase', letterSpacing: '0.05em' }}
+            >
               Current Balance
             </Typography>
             <Typography sx={{ fontSize: '1.2rem', fontWeight: 700 }}>

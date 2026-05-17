@@ -90,7 +90,12 @@ export function SearchTickerModal({ refreshSearchHistory, searchHistory, isOpen,
         <Button
           variant="outlined"
           onClick={onClose}
-          sx={{ p: '0px 8px', minWidth: 'auto', borderColor: theme.palette.divider, color: theme.palette.text.disabled }}
+          sx={{
+            p: '0px 8px',
+            minWidth: 'auto',
+            borderColor: theme.palette.divider,
+            color: theme.palette.text.disabled,
+          }}
         >
           <kbd>esc</kbd>
         </Button>

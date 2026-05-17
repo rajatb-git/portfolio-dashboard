@@ -80,7 +80,13 @@ export const HoldingsRouter = () => {
       });
       ctx.status = 200;
     } catch (error: any) {
-      logger.log({ level: 'error', label: 'holdings by symbol', message: error.message, name: error.name, stack: error.stack });
+      logger.log({
+        level: 'error',
+        label: 'holdings by symbol',
+        message: error.message,
+        name: error.name,
+        stack: error.stack,
+      });
       ctx.status = 500;
       ctx.body = errorBody('Failed to get holdings by symbol', error.message);
     }

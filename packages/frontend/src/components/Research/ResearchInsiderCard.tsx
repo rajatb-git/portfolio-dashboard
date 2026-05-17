@@ -1,4 +1,16 @@
-import { Box, Card, Chip, Divider, Skeleton, Table, TableBody, TableCell, TableHead, TableRow, Typography } from '@mui/material';
+import {
+  Box,
+  Card,
+  Chip,
+  Divider,
+  Skeleton,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableRow,
+  Typography,
+} from '@mui/material';
 import moment from 'moment';
 
 type Props = {
@@ -36,7 +48,9 @@ export default function ResearchInsiderCard({ transactions, isLoading }: Props) 
       {isLoading ? (
         <Skeleton variant="rectangular" height={120} sx={{ m: 2, borderRadius: 1 }} />
       ) : rows.length === 0 ? (
-        <Typography sx={{ p: 2, fontSize: '0.78rem', color: 'text.disabled' }}>No insider transactions found.</Typography>
+        <Typography sx={{ p: 2, fontSize: '0.78rem', color: 'text.disabled' }}>
+          No insider transactions found.
+        </Typography>
       ) : (
         <Box sx={{ overflowX: 'auto' }}>
           <Table size="small">
@@ -45,7 +59,14 @@ export default function ResearchInsiderCard({ transactions, isLoading }: Props) 
                 {['Name', 'Type', 'Shares', 'Value', 'Date'].map((h) => (
                   <TableCell
                     key={h}
-                    sx={{ fontSize: '0.68rem', color: 'text.disabled', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid', borderColor: 'divider' }}
+                    sx={{
+                      fontSize: '0.68rem',
+                      color: 'text.disabled',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.05em',
+                      borderBottom: '1px solid',
+                      borderColor: 'divider',
+                    }}
                   >
                     {h}
                   </TableCell>
@@ -58,7 +79,18 @@ export default function ResearchInsiderCard({ transactions, isLoading }: Props) 
                 const txLabel = isBuy ? 'Buy' : 'Sell';
                 return (
                   <TableRow key={i} sx={{ '&:last-child td': { border: 0 } }}>
-                    <TableCell sx={{ fontSize: '0.78rem', color: 'text.primary', borderBottom: '1px solid', borderColor: 'divider', maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    <TableCell
+                      sx={{
+                        fontSize: '0.78rem',
+                        color: 'text.primary',
+                        borderBottom: '1px solid',
+                        borderColor: 'divider',
+                        maxWidth: 140,
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
                       {tx.name ?? '—'}
                     </TableCell>
                     <TableCell sx={{ borderBottom: '1px solid', borderColor: 'divider' }}>
@@ -76,13 +108,34 @@ export default function ResearchInsiderCard({ transactions, isLoading }: Props) 
                         }}
                       />
                     </TableCell>
-                    <TableCell sx={{ fontSize: '0.78rem', color: 'text.secondary', borderBottom: '1px solid', borderColor: 'divider' }}>
+                    <TableCell
+                      sx={{
+                        fontSize: '0.78rem',
+                        color: 'text.secondary',
+                        borderBottom: '1px solid',
+                        borderColor: 'divider',
+                      }}
+                    >
                       {tx.share != null ? Math.abs(tx.share).toLocaleString() : '—'}
                     </TableCell>
-                    <TableCell sx={{ fontSize: '0.78rem', color: 'text.secondary', borderBottom: '1px solid', borderColor: 'divider' }}>
+                    <TableCell
+                      sx={{
+                        fontSize: '0.78rem',
+                        color: 'text.secondary',
+                        borderBottom: '1px solid',
+                        borderColor: 'divider',
+                      }}
+                    >
                       {formatValue(tx.value ?? null)}
                     </TableCell>
-                    <TableCell sx={{ fontSize: '0.78rem', color: 'text.disabled', borderBottom: '1px solid', borderColor: 'divider' }}>
+                    <TableCell
+                      sx={{
+                        fontSize: '0.78rem',
+                        color: 'text.disabled',
+                        borderBottom: '1px solid',
+                        borderColor: 'divider',
+                      }}
+                    >
                       {tx.filingDate ? moment(tx.filingDate).format('MMM D, YYYY') : '—'}
                     </TableCell>
                   </TableRow>
