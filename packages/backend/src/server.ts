@@ -7,8 +7,10 @@ import KoaHelmet from 'koa-helmet';
 
 dotenv.config();
 
+import { authMiddleware } from './middleware/auth';
 import { AccountsRouter } from './router/accounts.route';
 import { AnalyticsRouter } from './router/analytics.route';
+import { AuthRouter } from './router/auth.route';
 import { DashboardRouter } from './router/dashboard.route';
 import { HealthRouter } from './router/health.route';
 import { HoldingsRouter } from './router/holdings.route';
@@ -34,6 +36,7 @@ app.use(async (ctx, next) => {
 });
 app.use(KoaBodyParser());
 app.use(KoaHelmet());
+app.use(authMiddleware);
 
 const port = process.env.PORT || 3001;
 
@@ -45,6 +48,7 @@ app.use(async (ctx, next) => {
 });
 
 app.use(HealthRouter().routes()).use(HealthRouter().allowedMethods());
+app.use(AuthRouter().routes()).use(AuthRouter().allowedMethods());
 app.use(HoldingsRouter().routes()).use(HoldingsRouter().allowedMethods());
 app.use(AccountsRouter().routes()).use(AccountsRouter().allowedMethods());
 app.use(LiveRouter().routes()).use(LiveRouter().allowedMethods());

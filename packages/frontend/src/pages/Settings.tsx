@@ -23,9 +23,11 @@ import * as React from "react";
 import { toast } from "react-toastify";
 import apis from "@/api";
 import type { AiConfig } from "@/api/live";
+import type { LockStatus } from "@/api/settings";
 import { Iconify } from "@/components/Iconify";
 import { useThemeMode } from "@/components/ThemeRegistry/ThemeModeContext";
 import { DB_HOST } from "@/config";
+import { useAuth } from "@/contexts/AuthContext";
 import type { IAccount } from "@/models/AccountsModel";
 import LocalStorageUtil from "@/utils/localStorage";
 
@@ -91,8 +93,19 @@ function SettingRow({
 	);
 }
 
+const IDLE_OPTIONS: Array<{ label: string; value: number }> = [
+	{ label: "1 minute", value: 1 },
+	{ label: "5 minutes", value: 5 },
+	{ label: "15 minutes", value: 15 },
+	{ label: "30 minutes", value: 30 },
+	{ label: "Never", value: 0 },
+];
+
+const DEFAULT_LOCK: LockStatus = { enabled: false, idleTimeoutMinutes: 15 };
+
 export default function Settings() {
 	const { mode, setMode } = useThemeMode();
+	const { refreshStatus } = useAuth();
 	const savedApiHost = LocalStorageUtil.getItem<string>("api_host") ?? DB_HOST;
 	const [apiHost, setApiHost] = React.useState(savedApiHost);
 	const [apiHostSaved, setApiHostSaved] = React.useState(false);
@@ -102,6 +115,13 @@ export default function Settings() {
 		null,
 	);
 	const [saving, setSaving] = React.useState(false);
+
+	const [savedLock, setSavedLock] = React.useState<LockStatus>(DEFAULT_LOCK);
+	const [draftLock, setDraftLock] = React.useState<LockStatus>(DEFAULT_LOCK);
+	const [lockCurrentCode, setLockCurrentCode] = React.useState("");
+	const [lockNewCode, setLockNewCode] = React.useState("");
+	const [lockConfirmCode, setLockConfirmCode] = React.useState("");
+	const [savingLock, setSavingLock] = React.useState(false);
 	const [exporting, setExporting] = React.useState(false);
 	const [importing, setImporting] = React.useState(false);
 	const [importConfirmOpen, setImportConfirmOpen] = React.useState(false);
@@ -137,7 +157,75 @@ export default function Settings() {
 			.getAll()
 			.then(setAccounts)
 			.catch((err) => toast.error(err.message || "Failed to load accounts"));
+
+		apis.settings
+			.getLock()
+			.then((lock) => {
+				setSavedLock(lock);
+				setDraftLock(lock);
+			})
+			.catch((err) =>
+				toast.error(err.message || "Failed to load security settings"),
+			);
 	}, []);
+
+	const isLockDirty =
+		JSON.stringify(savedLock) !== JSON.stringify(draftLock) ||
+		lockCurrentCode.length > 0 ||
+		lockNewCode.length > 0 ||
+		lockConfirmCode.length > 0;
+
+	const togglingEnabled = draftLock.enabled !== savedLock.enabled;
+	const isEnabling = togglingEnabled && draftLock.enabled;
+	const isDisabling = togglingEnabled && !draftLock.enabled;
+	const isChangingCode =
+		savedLock.enabled && draftLock.enabled && lockNewCode.length > 0;
+
+	const handleSaveLock = async () => {
+		if (isEnabling || isChangingCode) {
+			if (!/^\d{6}$/.test(lockNewCode)) {
+				toast.error("New code must be 6 digits");
+				return;
+			}
+			if (lockNewCode !== lockConfirmCode) {
+				toast.error("New code and confirmation do not match");
+				return;
+			}
+		}
+		if ((isDisabling || isChangingCode) && !lockCurrentCode) {
+			toast.error("Current code is required");
+			return;
+		}
+
+		setSavingLock(true);
+		try {
+			const payload = {
+				enabled: draftLock.enabled,
+				idleTimeoutMinutes: draftLock.idleTimeoutMinutes,
+				...(isEnabling || isChangingCode ? { code: lockNewCode } : {}),
+				...(savedLock.enabled ? { currentCode: lockCurrentCode } : {}),
+			};
+			const next = await apis.settings.saveLock(payload);
+			setSavedLock(next);
+			setDraftLock(next);
+			setLockCurrentCode("");
+			setLockNewCode("");
+			setLockConfirmCode("");
+			await refreshStatus();
+			toast.success("Security settings saved");
+		} catch (err: any) {
+			toast.error(err.message || "Failed to save security settings");
+		} finally {
+			setSavingLock(false);
+		}
+	};
+
+	const handleResetLock = () => {
+		setDraftLock(savedLock);
+		setLockCurrentCode("");
+		setLockNewCode("");
+		setLockConfirmCode("");
+	};
 
 	const handleApiHostSave = () => {
 		if (!apiHost.trim() || !isApiHostDirty) return;
@@ -690,6 +778,151 @@ export default function Settings() {
 						</Button>
 					</Stack>
 				)}
+			</SettingsSection>
+
+			<SettingsSection title="Security">
+				<SettingRow
+					label="Enable lock"
+					description="Require a 6-digit code to access this dashboard"
+				>
+					<Switch
+						checked={draftLock.enabled}
+						onChange={(_, checked) =>
+							setDraftLock((prev) => ({ ...prev, enabled: checked }))
+						}
+					/>
+				</SettingRow>
+
+				{savedLock.enabled && (isDisabling || isChangingCode) && (
+					<SettingRow
+						label="Current code"
+						description="Confirm the code currently in use"
+					>
+						<TextField
+							size="small"
+							type="password"
+							inputMode="numeric"
+							value={lockCurrentCode}
+							onChange={(e) =>
+								setLockCurrentCode(e.target.value.replace(/\D/g, "").slice(0, 6))
+							}
+							slotProps={{ htmlInput: { maxLength: 6 } }}
+							sx={{
+								width: { xs: "100%", sm: 200 },
+								"& input": { fontSize: "0.82rem", letterSpacing: "0.15em" },
+							}}
+						/>
+					</SettingRow>
+				)}
+
+				{(isEnabling || (savedLock.enabled && draftLock.enabled)) && (
+					<>
+						<SettingRow
+							label="New code"
+							description="6 digits — keep it private"
+						>
+							<TextField
+								size="small"
+								type="password"
+								inputMode="numeric"
+								value={lockNewCode}
+								onChange={(e) =>
+									setLockNewCode(e.target.value.replace(/\D/g, "").slice(0, 6))
+								}
+								slotProps={{ htmlInput: { maxLength: 6 } }}
+								placeholder={
+									savedLock.enabled ? "Leave blank to keep current" : ""
+								}
+								sx={{
+									width: { xs: "100%", sm: 200 },
+									"& input": { fontSize: "0.82rem", letterSpacing: "0.15em" },
+								}}
+							/>
+						</SettingRow>
+						<SettingRow label="Confirm new code" description="Re-enter the new code">
+							<TextField
+								size="small"
+								type="password"
+								inputMode="numeric"
+								value={lockConfirmCode}
+								onChange={(e) =>
+									setLockConfirmCode(
+										e.target.value.replace(/\D/g, "").slice(0, 6),
+									)
+								}
+								slotProps={{ htmlInput: { maxLength: 6 } }}
+								sx={{
+									width: { xs: "100%", sm: 200 },
+									"& input": { fontSize: "0.82rem", letterSpacing: "0.15em" },
+								}}
+							/>
+						</SettingRow>
+					</>
+				)}
+
+				<SettingRow
+					label="Auto-lock after"
+					description="Lock the dashboard after this much idle time"
+				>
+					<Select
+						size="small"
+						value={draftLock.idleTimeoutMinutes}
+						onChange={(e) =>
+							setDraftLock((prev) => ({
+								...prev,
+								idleTimeoutMinutes: Number(e.target.value),
+							}))
+						}
+						sx={{ minWidth: { xs: "100%", sm: 200 }, fontSize: "0.82rem" }}
+					>
+						{IDLE_OPTIONS.map((opt) => (
+							<MenuItem key={opt.value} value={opt.value}>
+								{opt.label}
+							</MenuItem>
+						))}
+					</Select>
+				</SettingRow>
+
+				<Stack
+					direction="row"
+					spacing={1}
+					sx={{
+						justifyContent: "flex-end",
+						alignItems: "center",
+						px: 2,
+						py: 1.5,
+					}}
+				>
+					{isLockDirty && (
+						<Typography
+							sx={{
+								fontSize: "0.72rem",
+								color: "warning.main",
+								mr: "auto",
+							}}
+						>
+							Unsaved changes
+						</Typography>
+					)}
+					<Button
+						size="small"
+						variant="outlined"
+						onClick={handleResetLock}
+						disabled={!isLockDirty || savingLock}
+						sx={{ fontSize: "0.78rem", textTransform: "none" }}
+					>
+						Reset
+					</Button>
+					<Button
+						size="small"
+						variant="contained"
+						onClick={handleSaveLock}
+						disabled={!isLockDirty || savingLock}
+						sx={{ fontSize: "0.78rem", textTransform: "none" }}
+					>
+						{savingLock ? "Saving..." : "Save"}
+					</Button>
+				</Stack>
 			</SettingsSection>
 
 			<SettingsSection title="About">

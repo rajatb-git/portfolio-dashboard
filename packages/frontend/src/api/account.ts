@@ -1,4 +1,4 @@
-import axios from "axios";
+import axios from "./axios";
 
 import { DB_HOST } from "@/config";
 import type { IAccount } from "@/models/AccountsModel";
