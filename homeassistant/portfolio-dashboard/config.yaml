@@ -1,0 +1,38 @@
+slug: portfolio-dashboard
+name: Portfolio Dashboard
+version: "1.0.29"
+description: Self-hosted dashboard for tracking stock and crypto holdings across accounts
+arch:
+  - amd64
+  - aarch64
+  - armv7
+url: https://github.com/rajatb-git/portfolio-dashboard
+image: ghcr.io/rajatb-git/portfolio-dashboard/ha-{arch}
+init: false
+startup: services
+boot: auto
+ingress: true
+ingress_port: 8099
+panel_icon: mdi:chart-line
+panel_title: Portfolio
+panel_admin: true
+ports:
+  "3000/tcp": null
+  "3001/tcp": null
+ports_description:
+  "3000/tcp": Frontend (optional direct access)
+  "3001/tcp": Backend API (optional direct access)
+apparmor: true
+homeassistant_api: false
+hassio_api: false
+host_network: false
+host_pid: false
+privileged: []
+options:
+  log_level: info
+  finnhub_api: ""
+  finnhub_api_key: ""
+schema:
+  log_level: list(debug|info|warn|error)
+  finnhub_api: "str?"
+  finnhub_api_key: "password?"
