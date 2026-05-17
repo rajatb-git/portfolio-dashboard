@@ -45,5 +45,5 @@ packages/backend/storage/
 # ignore files
 ignore*
 
-# Claude Code harness state
+# Claude Code harness state (worktrees, local settings)
 .claude/
