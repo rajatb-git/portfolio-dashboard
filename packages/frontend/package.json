@@ -2,7 +2,7 @@
   "name": "@portfolio/frontend",
 
 
-  "version": "1.0.24",
+  "version": "1.0.25",
 
   "private": true,
   "license": "MIT",
@@ -28,36 +28,36 @@
     "@fullcalendar/list": "^6.1.20",
     "@fullcalendar/react": "^6.1.20",
     "@iconify/react": "^6.0.2",
-    "@mui/icons-material": "^9.0.0",
-    "@mui/lab": "9.0.0-beta.2",
-    "@mui/material": "^9.0.0",
-    "@mui/x-charts": "^9.0.2",
-    "@mui/x-data-grid": "^9.0.2",
-    "apexcharts": "^5.10.6",
-    "axios": "^1.15.2",
+    "@mui/icons-material": "^9.0.1",
+    "@mui/lab": "9.0.0-beta.3",
+    "@mui/material": "^9.0.1",
+    "@mui/x-charts": "^9.2.0",
+    "@mui/x-data-grid": "^9.2.0",
+    "apexcharts": "^5.12.0",
+    "axios": "^1.16.1",
     "case": "^1.6.3",
     "csvtojson": "^2.0.14",
     "framer-motion": "^12.38.0",
     "lodash": "^4.18.1",
     "moment": "^2.30.1",
     "numeral": "^2.0.6",
-    "react": "^19.2.5",
+    "react": "^19.2.6",
     "react-apexcharts": "^2.1.0",
-    "react-dom": "^19.2.5",
+    "react-dom": "^19.2.6",
     "react-dropzone": "^15.0.0",
-    "react-router-dom": "^7.14.2",
+    "react-router-dom": "^7.15.1",
     "react-toastify": "^11.1.0",
     "typescript": "^6.0.3",
-    "vite": "^8.0.10"
+    "vite": "^8.0.13"
   },
   "devDependencies": {
-    "@biomejs/biome": "2.4.13",
+    "@biomejs/biome": "2.4.15",
     "@types/lodash": "^4.17.24",
-    "@types/node": "^25.6.0",
+    "@types/node": "^25.8.0",
     "@types/numeral": "^2.0.5",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
-    "@vitejs/plugin-react": "^6.0.1",
-    "vite-plugin-pwa": "^1.2.0"
+    "@vitejs/plugin-react": "^6.0.2",
+    "vite-plugin-pwa": "^1.3.0"
   }
 }
