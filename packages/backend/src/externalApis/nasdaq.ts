@@ -26,10 +26,7 @@ const parseDollarAmount = (raw: string | undefined | null): number => {
   return Number.isFinite(num) ? num : 0;
 };
 
-const fetchNasdaqQuote = async (
-  symbol: string,
-  assetclass: 'etf' | 'stocks'
-): Promise<QuoteResponse | null> => {
+const fetchNasdaqQuote = async (symbol: string, assetclass: 'etf' | 'stocks'): Promise<QuoteResponse | null> => {
   const base = `https://api.nasdaq.com/api/quote/${symbol}`;
   const opts = { httpsAgent: nasdaqAgent, headers: nasdaqHeaders };
 
@@ -53,9 +50,7 @@ const fetchNasdaqQuote = async (
   }
 
   const change = parseDollarAmount(info.primaryData.netChange);
-  const percentChange = parseFloat(
-    (info.primaryData.percentageChange ?? '0').replace(/[+%]/g, '')
-  ) || 0;
+  const percentChange = parseFloat((info.primaryData.percentageChange ?? '0').replace(/[+%]/g, '')) || 0;
 
   const prevClose = parseDollarAmount(summary.PreviousClose?.value);
   const dayRange: string = summary.TodayHighLow?.value ?? summary.DayRange?.value ?? '';

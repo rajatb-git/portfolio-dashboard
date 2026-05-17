@@ -1,4 +1,16 @@
-import { Box, Card, Chip, Divider, Skeleton, Table, TableBody, TableCell, TableHead, TableRow, Typography } from '@mui/material';
+import {
+  Box,
+  Card,
+  Chip,
+  Divider,
+  Skeleton,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableRow,
+  Typography,
+} from '@mui/material';
 import { HoldingAggregate } from '@/api/dashboard';
 import { IAccount } from '@/models/AccountsModel';
 import { fnCurrency } from '@/utils/formatNumber';
@@ -81,13 +93,34 @@ export default function ResearchPositionDetailsCard({ positions, accounts, isLoa
                     >
                       {accountMap.get(pos.accountId) ?? pos.accountId}
                     </TableCell>
-                    <TableCell sx={{ fontSize: '0.78rem', color: 'text.secondary', borderBottom: '1px solid', borderColor: 'divider' }}>
+                    <TableCell
+                      sx={{
+                        fontSize: '0.78rem',
+                        color: 'text.secondary',
+                        borderBottom: '1px solid',
+                        borderColor: 'divider',
+                      }}
+                    >
                       {pos.qty.toLocaleString()}
                     </TableCell>
-                    <TableCell sx={{ fontSize: '0.78rem', color: 'text.secondary', borderBottom: '1px solid', borderColor: 'divider' }}>
+                    <TableCell
+                      sx={{
+                        fontSize: '0.78rem',
+                        color: 'text.secondary',
+                        borderBottom: '1px solid',
+                        borderColor: 'divider',
+                      }}
+                    >
                       {fnCurrency(pos.averagePrice)}
                     </TableCell>
-                    <TableCell sx={{ fontSize: '0.78rem', color: 'text.secondary', borderBottom: '1px solid', borderColor: 'divider' }}>
+                    <TableCell
+                      sx={{
+                        fontSize: '0.78rem',
+                        color: 'text.secondary',
+                        borderBottom: '1px solid',
+                        borderColor: 'divider',
+                      }}
+                    >
                       {fnCurrency(pos.marketValue)}
                     </TableCell>
                     <TableCell
@@ -126,7 +159,15 @@ export default function ResearchPositionDetailsCard({ positions, accounts, isLoa
               <Divider />
               <Box sx={{ px: 2, py: 1.5, display: 'flex', gap: 3, flexWrap: 'wrap' }}>
                 <Box>
-                  <Typography sx={{ fontSize: '0.68rem', color: 'text.disabled', textTransform: 'uppercase', letterSpacing: '0.05em', mb: 0.25 }}>
+                  <Typography
+                    sx={{
+                      fontSize: '0.68rem',
+                      color: 'text.disabled',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.05em',
+                      mb: 0.25,
+                    }}
+                  >
                     Total Value
                   </Typography>
                   <Typography sx={{ fontSize: '0.82rem', fontWeight: 600, color: 'text.secondary' }}>
@@ -134,10 +175,20 @@ export default function ResearchPositionDetailsCard({ positions, accounts, isLoa
                   </Typography>
                 </Box>
                 <Box>
-                  <Typography sx={{ fontSize: '0.68rem', color: 'text.disabled', textTransform: 'uppercase', letterSpacing: '0.05em', mb: 0.25 }}>
+                  <Typography
+                    sx={{
+                      fontSize: '0.68rem',
+                      color: 'text.disabled',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.05em',
+                      mb: 0.25,
+                    }}
+                  >
                     Total P&L
                   </Typography>
-                  <Typography sx={{ fontSize: '0.82rem', fontWeight: 600, color: totalGL >= 0 ? '#4ade80' : '#f87171' }}>
+                  <Typography
+                    sx={{ fontSize: '0.82rem', fontWeight: 600, color: totalGL >= 0 ? '#4ade80' : '#f87171' }}
+                  >
                     {totalGL >= 0 ? '+' : ''}
                     {fnCurrency(totalGL)} ({totalGLPercent >= 0 ? '+' : ''}
                     {totalGLPercent.toFixed(2)}%)

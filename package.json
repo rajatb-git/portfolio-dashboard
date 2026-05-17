@@ -13,12 +13,14 @@
     "build:backend": "pnpm --filter @portfolio/backend build",
     "lint": "pnpm -r run lint",
     "format": "pnpm -r run format",
-    "clean": "pnpm -r run clean"
+    "clean": "pnpm -r run clean",
+    "knip": "knip"
   },
   "engines": {
     "node": ">=22"
   },
-  "dependencies": {
-    "@biomejs/biome": "^2.4.13"
+  "devDependencies": {
+    "@biomejs/biome": "^2.4.15",
+    "knip": "^6.14.1"
   }
 }

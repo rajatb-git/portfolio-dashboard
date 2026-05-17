@@ -59,38 +59,35 @@ function SettingsSection({
 }
 
 function SettingRow({
-	label,
-	description,
-	children,
+  label,
+  description,
+  children,
 }: {
-	label: string;
-	description?: string;
-	children: React.ReactNode;
+  label: string;
+  description?: string;
+  children: React.ReactNode;
 }) {
-	return (
-		<Stack
-			direction={{ xs: "column", sm: "row" }}
-			sx={{ alignItems: { xs: "flex-start", sm: "center" }, justifyContent: "space-between", px: 2, py: 1.5, borderBottom: "1px solid", borderColor: "divider" }}
-		>
-			<Box>
-				<Typography
-					sx={{ fontSize: "0.85rem", fontWeight: 500, color: "text.primary" }}
-				>
-					{label}
-				</Typography>
-				{description && (
-					<Typography
-						sx={{ fontSize: "0.75rem", color: "text.disabled", mt: 0.25 }}
-					>
-						{description}
-					</Typography>
-				)}
-			</Box>
-			<Box sx={{ mt: { xs: 1, sm: 0 }, width: { xs: "100%", sm: "auto" } }}>
-				{children}
-			</Box>
-		</Stack>
-	);
+  return (
+    <Stack
+      direction={{ xs: 'column', sm: 'row' }}
+      sx={{
+        alignItems: { xs: 'flex-start', sm: 'center' },
+        justifyContent: 'space-between',
+        px: 2,
+        py: 1.5,
+        borderBottom: '1px solid',
+        borderColor: 'divider',
+      }}
+    >
+      <Box>
+        <Typography sx={{ fontSize: '0.85rem', fontWeight: 500, color: 'text.primary' }}>{label}</Typography>
+        {description && (
+          <Typography sx={{ fontSize: '0.75rem', color: 'text.disabled', mt: 0.25 }}>{description}</Typography>
+        )}
+      </Box>
+      <Box sx={{ mt: { xs: 1, sm: 0 }, width: { xs: '100%', sm: 'auto' } }}>{children}</Box>
+    </Stack>
+  );
 }
 
 const IDLE_OPTIONS: Array<{ label: string; value: number }> = [

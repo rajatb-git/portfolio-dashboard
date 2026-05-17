@@ -5,10 +5,7 @@ import { logger } from '../utils/winston';
 const transactionModel = TransactionModel();
 transactionModel.initialize();
 
-export const logSellTransaction = async (
-  transactionHolding: Partial<IHoldings>,
-  pnl?: number
-): Promise<void> => {
+export const logSellTransaction = async (transactionHolding: Partial<IHoldings>, pnl?: number): Promise<void> => {
   try {
     await transactionModel.insertOne({
       accountId: transactionHolding.accountId,

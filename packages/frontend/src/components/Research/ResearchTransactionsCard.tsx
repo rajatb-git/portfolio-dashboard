@@ -39,11 +39,8 @@ export default function ResearchTransactionsCard({ transactions, accounts, isLoa
   const accountMap = new Map(accounts.map((a) => [a.id, a.name]));
 
   const sorted = React.useMemo(
-    () =>
-      [...transactions].sort((a, b) =>
-        moment(b.createdAt).valueOf() - moment(a.createdAt).valueOf(),
-      ),
-    [transactions],
+    () => [...transactions].sort((a, b) => moment(b.createdAt).valueOf() - moment(a.createdAt).valueOf()),
+    [transactions]
   );
 
   const buyCount = sorted.filter((t) => t.action === 'buy').length;
@@ -95,7 +92,9 @@ export default function ResearchTransactionsCard({ transactions, accounts, isLoa
         <Box sx={{ flexGrow: 1 }} />
         {hasRealizedPnl && (
           <Stack direction="row" spacing={0.75} sx={{ alignItems: 'baseline' }}>
-            <Typography sx={{ fontSize: '0.62rem', color: 'text.disabled', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            <Typography
+              sx={{ fontSize: '0.62rem', color: 'text.disabled', textTransform: 'uppercase', letterSpacing: '0.05em' }}
+            >
               Realized
             </Typography>
             <Typography
@@ -197,33 +196,48 @@ export default function ResearchTransactionsCard({ transactions, accounts, isLoa
                           }}
                         />
                       </TableCell>
-                      <TableCell sx={{ fontSize: '0.78rem', color: 'text.secondary', borderBottom: '1px solid', borderColor: 'divider' }}>
+                      <TableCell
+                        sx={{
+                          fontSize: '0.78rem',
+                          color: 'text.secondary',
+                          borderBottom: '1px solid',
+                          borderColor: 'divider',
+                        }}
+                      >
                         {t.qty?.toLocaleString()}
                       </TableCell>
-                      <TableCell sx={{ fontSize: '0.78rem', color: 'text.secondary', borderBottom: '1px solid', borderColor: 'divider' }}>
+                      <TableCell
+                        sx={{
+                          fontSize: '0.78rem',
+                          color: 'text.secondary',
+                          borderBottom: '1px solid',
+                          borderColor: 'divider',
+                        }}
+                      >
                         {fnCurrency(t.price)}
                       </TableCell>
-                      <TableCell sx={{ fontSize: '0.78rem', color: 'text.secondary', borderBottom: '1px solid', borderColor: 'divider', fontVariantNumeric: 'tabular-nums' }}>
+                      <TableCell
+                        sx={{
+                          fontSize: '0.78rem',
+                          color: 'text.secondary',
+                          borderBottom: '1px solid',
+                          borderColor: 'divider',
+                          fontVariantNumeric: 'tabular-nums',
+                        }}
+                      >
                         {fnCurrency(total)}
                       </TableCell>
                       <TableCell
                         sx={{
                           fontSize: '0.78rem',
                           fontWeight: 600,
-                          color:
-                            t.pnl === undefined
-                              ? 'text.disabled'
-                              : t.pnl >= 0
-                                ? '#4ade80'
-                                : '#f87171',
+                          color: t.pnl === undefined ? 'text.disabled' : t.pnl >= 0 ? '#4ade80' : '#f87171',
                           borderBottom: '1px solid',
                           borderColor: 'divider',
                           fontVariantNumeric: 'tabular-nums',
                         }}
                       >
-                        {t.pnl === undefined
-                          ? '—'
-                          : `${t.pnl >= 0 ? '+' : ''}${fnCurrency(t.pnl)}`}
+                        {t.pnl === undefined ? '—' : `${t.pnl >= 0 ? '+' : ''}${fnCurrency(t.pnl)}`}
                       </TableCell>
                     </TableRow>
                   );

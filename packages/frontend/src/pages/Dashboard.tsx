@@ -1,86 +1,84 @@
-import * as React from "react";
+import * as React from 'react';
 
-import { toast } from "react-toastify";
+import { toast } from 'react-toastify';
 
-import apis from "@/api";
-import type { HoldingAggregate } from "@/api/dashboard";
-import DashboardTable from "@/components/DashboardTable/DashTable";
-import WatchlistSection from "@/components/WatchlistSection";
-import type { IAccount } from "@/models/AccountsModel";
-import type { Column } from "@/types";
+import apis from '@/api';
+import type { HoldingAggregate } from '@/api/dashboard';
+import DashboardTable from '@/components/DashboardTable/DashTable';
+import WatchlistSection from '@/components/WatchlistSection';
+import type { IAccount } from '@/models/AccountsModel';
+import type { Column } from '@/types';
 
 export default function Dashboard() {
-	const [isLoading, setIsLoading] = React.useState(true);
-	const [accounts, setAccounts] = React.useState<Array<IAccount>>([]);
-	const [dashboardData, setDashboardData] = React.useState<
-		Array<HoldingAggregate>
-	>([]);
+  const [isLoading, setIsLoading] = React.useState(true);
+  const [accounts, setAccounts] = React.useState<Array<IAccount>>([]);
+  const [dashboardData, setDashboardData] = React.useState<Array<HoldingAggregate>>([]);
 
-	const columns: Array<Column> = [
-		{
-			id: "symbol",
-			label: "SYM",
-		},
-		{
-			id: "currentPrice",
-			label: "Current Price",
-			align: "right",
-		},
-		{
-			id: "percentChange",
-			label: "Change",
-			align: "right",
-		},
-		{
-			id: "totalGLPercent",
-			label: "Total G/L",
-			align: "right",
-		},
+  const columns: Array<Column> = [
+    {
+      id: 'symbol',
+      label: 'SYM',
+    },
+    {
+      id: 'currentPrice',
+      label: 'Current Price',
+      align: 'right',
+    },
+    {
+      id: 'percentChange',
+      label: 'Change',
+      align: 'right',
+    },
+    {
+      id: 'totalGLPercent',
+      label: 'Total G/L',
+      align: 'right',
+    },
 
-		{ id: "marketValue", label: "Market Value", align: "right" },
-		{ id: "costBasis", label: "Cost Basis", align: "right" },
-		{ id: "accountPercent", label: "% of Account", align: "right" },
-		{ id: "accountId", label: "Account" },
-		{ id: "", label: "Recommendation" },
-	];
+    { id: 'marketValue', label: 'Market Value', align: 'right' },
+    { id: 'costBasis', label: 'Cost Basis', align: 'right' },
+    { id: 'accountPercent', label: '% of Account', align: 'right' },
+    { id: 'accountId', label: 'Account' },
+    { id: '', label: 'Recommendation' },
+  ];
 
-	const loadData = async () => {
-		setIsLoading(true);
+  const loadData = async () => {
+    setIsLoading(true);
 
-		apis.dashboard
-			.getDashboard()
-			.then((response) => setDashboardData(response))
-			.catch((err) => {
-				toast.error(err.message);
-			})
-			.finally(() => {
-				setIsLoading(false);
-			});
+    apis.dashboard
+      .getDashboard()
+      .then((response) => setDashboardData(response))
+      .catch((err) => {
+        toast.error(err.message);
+      })
+      .finally(() => {
+        setIsLoading(false);
+      });
 
-		apis.accounts
-			.getAll()
-			.then((response) => {
-				setAccounts(response);
-			})
-			.catch((err) => {
-				toast.error(err.message);
-			});
-	};
+    apis.accounts
+      .getAll()
+      .then((response) => {
+        setAccounts(response);
+      })
+      .catch((err) => {
+        toast.error(err.message);
+      });
+  };
 
-	React.useEffect(() => {
-		loadData();
-	}, []);
+  React.useEffect(() => {
+    loadData();
+  }, []);
 
-	return (
-		<>
-			<DashboardTable
-				isLoading={isLoading}
-				refreshData={loadData}
-				rows={dashboardData}
-				accounts={accounts}
-				columns={columns}
-			/>
-			<WatchlistSection />
-		</>
-	);
+  return (
+    <>
+      <DashboardTable
+        isLoading={isLoading}
+        refreshData={loadData}
+        rows={dashboardData}
+        accounts={accounts}
+        columns={columns}
+      />
+      <WatchlistSection />
+    </>
+  );
 }
