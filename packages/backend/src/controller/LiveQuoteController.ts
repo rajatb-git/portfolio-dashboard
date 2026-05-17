@@ -63,8 +63,7 @@ export class LiveQuoteController {
     const marketOpen = 9 * 60 + 30;
     const marketClose = 16 * 60;
     const isWeekend = day === 0 || day === 6;
-    const isMarketHours =
-      !isWeekend && minutesSinceMidnight >= marketOpen && minutesSinceMidnight < marketClose;
+    const isMarketHours = !isWeekend && minutesSinceMidnight >= marketOpen && minutesSinceMidnight < marketClose;
 
     if (isMarketHours) {
       // Within market hours: refresh if cached quote is older than 120 seconds.
@@ -73,9 +72,7 @@ export class LiveQuoteController {
 
     // Outside market hours: refresh if cache was last updated before the most recent
     // market close, so a quote stored on a previous trading day doesn't persist indefinitely.
-    const updatedAtEt = new Date(
-      new Date(dbFetch.updatedAt).toLocaleString('en-US', { timeZone: 'America/New_York' })
-    );
+    const updatedAtEt = new Date(new Date(dbFetch.updatedAt).toLocaleString('en-US', { timeZone: 'America/New_York' }));
     return updatedAtEt < this.mostRecentMarketCloseEt(etNow);
   };
 

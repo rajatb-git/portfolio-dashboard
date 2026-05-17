@@ -30,8 +30,7 @@ export default function ThemeRegistry({ children }: { children: React.ReactNode 
     LocalStorageUtil.setItem('theme_mode', newMode);
   }, []);
 
-  const resolvedMode: 'dark' | 'light' =
-    mode === 'system' ? (systemIsDark ? 'dark' : 'light') : mode;
+  const resolvedMode: 'dark' | 'light' = mode === 'system' ? (systemIsDark ? 'dark' : 'light') : mode;
 
   const theme = React.useMemo(() => {
     const t = createTheme({

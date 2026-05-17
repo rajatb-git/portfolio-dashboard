@@ -42,9 +42,7 @@ export const TransactionsRouter = () => {
         return;
       }
       const upperSymbol = symbol.toUpperCase();
-      ctx.body = transactionModel
-        .getAllRecords()
-        .filter((t) => (t.symbol ?? '').toUpperCase() === upperSymbol);
+      ctx.body = transactionModel.getAllRecords().filter((t) => (t.symbol ?? '').toUpperCase() === upperSymbol);
       ctx.status = 200;
     } catch (err: any) {
       logger.log({ level: 'error', message: err.message, label: 'Get transactions by symbol' });

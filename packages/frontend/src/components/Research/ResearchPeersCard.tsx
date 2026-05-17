@@ -26,14 +26,29 @@ function formatRevenue(v: number | null) {
   return `$${v}`;
 }
 
-export default function ResearchPeersCard({ peers, earnings, currentSymbol, isPeersLoading, isEarningsLoading }: Props) {
+export default function ResearchPeersCard({
+  peers,
+  earnings,
+  currentSymbol,
+  isPeersLoading,
+  isEarningsLoading,
+}: Props) {
   const navigate = useNavigate();
 
   return (
     <Stack spacing={2} sx={{ height: '100%' }}>
       {/* Peers */}
       <Card variant="outlined">
-        <Typography sx={{ p: '10px 16px', color: 'text.secondary', fontWeight: 700, fontSize: '0.72rem', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+        <Typography
+          sx={{
+            p: '10px 16px',
+            color: 'text.secondary',
+            fontWeight: 700,
+            fontSize: '0.72rem',
+            letterSpacing: '0.06em',
+            textTransform: 'uppercase',
+          }}
+        >
           Peer Companies
         </Typography>
         <Divider />
@@ -66,7 +81,16 @@ export default function ResearchPeersCard({ peers, earnings, currentSymbol, isPe
 
       {/* Next Earnings */}
       <Card variant="outlined">
-        <Typography sx={{ p: '10px 16px', color: 'text.secondary', fontWeight: 700, fontSize: '0.72rem', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+        <Typography
+          sx={{
+            p: '10px 16px',
+            color: 'text.secondary',
+            fontWeight: 700,
+            fontSize: '0.72rem',
+            letterSpacing: '0.06em',
+            textTransform: 'uppercase',
+          }}
+        >
           Next Earnings
         </Typography>
         <Divider />
@@ -79,24 +103,55 @@ export default function ResearchPeersCard({ peers, earnings, currentSymbol, isPe
                 {moment(earnings.date).format('MMM D, YYYY')}
               </Typography>
               <Typography sx={{ fontSize: '0.72rem', color: 'text.disabled' }}>
-                Q{earnings.quarter} FY{earnings.year}{earnings.hour === 'bmo' ? ' · Pre-market' : earnings.hour === 'amc' ? ' · After-close' : ''}
+                Q{earnings.quarter} FY{earnings.year}
+                {earnings.hour === 'bmo' ? ' · Pre-market' : earnings.hour === 'amc' ? ' · After-close' : ''}
               </Typography>
             </Stack>
             <Stack direction="row" spacing={3}>
               <Box>
-                <Typography sx={{ fontSize: '0.68rem', color: 'text.disabled', mb: 0.25, textTransform: 'uppercase', letterSpacing: '0.05em' }}>EPS Est.</Typography>
+                <Typography
+                  sx={{
+                    fontSize: '0.68rem',
+                    color: 'text.disabled',
+                    mb: 0.25,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.05em',
+                  }}
+                >
+                  EPS Est.
+                </Typography>
                 <Typography sx={{ fontSize: '0.88rem', fontWeight: 600, color: 'text.primary' }}>
                   {earnings.epsEstimate != null ? `$${earnings.epsEstimate.toFixed(2)}` : '—'}
                 </Typography>
               </Box>
               <Box>
-                <Typography sx={{ fontSize: '0.68rem', color: 'text.disabled', mb: 0.25, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Rev. Est.</Typography>
+                <Typography
+                  sx={{
+                    fontSize: '0.68rem',
+                    color: 'text.disabled',
+                    mb: 0.25,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.05em',
+                  }}
+                >
+                  Rev. Est.
+                </Typography>
                 <Typography sx={{ fontSize: '0.88rem', fontWeight: 600, color: 'text.primary' }}>
                   {formatRevenue(earnings.revenueEstimate)}
                 </Typography>
               </Box>
               <Box>
-                <Typography sx={{ fontSize: '0.68rem', color: 'text.disabled', mb: 0.25, textTransform: 'uppercase', letterSpacing: '0.05em' }}>In</Typography>
+                <Typography
+                  sx={{
+                    fontSize: '0.68rem',
+                    color: 'text.disabled',
+                    mb: 0.25,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.05em',
+                  }}
+                >
+                  In
+                </Typography>
                 <Typography sx={{ fontSize: '0.88rem', fontWeight: 600, color: '#93c5fd' }}>
                   {moment(earnings.date).fromNow()}
                 </Typography>
@@ -104,7 +159,9 @@ export default function ResearchPeersCard({ peers, earnings, currentSymbol, isPe
             </Stack>
           </Box>
         ) : (
-          <Typography sx={{ p: 2, fontSize: '0.78rem', color: 'text.disabled' }}>No upcoming earnings found.</Typography>
+          <Typography sx={{ p: 2, fontSize: '0.78rem', color: 'text.disabled' }}>
+            No upcoming earnings found.
+          </Typography>
         )}
       </Card>
     </Stack>

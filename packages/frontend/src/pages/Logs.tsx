@@ -52,10 +52,7 @@ export default function Logs() {
 
   return (
     <>
-      <Stack
-        direction={{ xs: 'column', sm: 'row' }}
-        sx={{ justifyContent: 'space-between', gap: 1, mb: 2 }}
-      >
+      <Stack direction={{ xs: 'column', sm: 'row' }} sx={{ justifyContent: 'space-between', gap: 1, mb: 2 }}>
         <Select value={file} onChange={(e) => setFile(e.target.value as File)} size="small" disabled={isLoading}>
           <MenuItem value="error">error.log</MenuItem>
           <MenuItem value="combined">combined.log</MenuItem>

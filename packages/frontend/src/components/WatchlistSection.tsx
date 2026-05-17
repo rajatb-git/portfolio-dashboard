@@ -114,7 +114,13 @@ export default function WatchlistSection() {
         <Stack direction="row" sx={{ alignItems: 'center' }} spacing={1.5}>
           <Iconify icon="mdi:eye-outline" width={16} sx={{ color: 'text.secondary' }} />
           <Typography
-            sx={{ fontWeight: 700, fontSize: '0.72rem', color: 'text.secondary', letterSpacing: '0.06em', textTransform: 'uppercase' }}
+            sx={{
+              fontWeight: 700,
+              fontSize: '0.72rem',
+              color: 'text.secondary',
+              letterSpacing: '0.06em',
+              textTransform: 'uppercase',
+            }}
           >
             Watchlist
           </Typography>
@@ -146,66 +152,92 @@ export default function WatchlistSection() {
           </Box>
         ) : (
           <Box sx={{ overflowX: 'auto' }}>
-          <TableContainer>
-            <Table size="small" sx={{ minWidth: 360 }}>
-              <TableHead>
-                <TableRow>
-                  {['Symbol', 'Price', 'Change', ''].map((h) => (
-                    <TableCell
-                      key={h}
-                      sx={{ fontSize: '0.68rem', color: 'text.disabled', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid', borderColor: 'divider' }}
-                    >
-                      {h}
-                    </TableCell>
-                  ))}
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {rows.map((row) => {
-                  const isPos = (row.percentChange ?? 0) >= 0;
-                  return (
-                    <TableRow
-                      key={row.symbol}
-                      hover
-                      sx={{ cursor: 'pointer', '&:last-child td': { border: 0 } }}
-                      onClick={() => navigate(`/research?searchText=${row.symbol}`)}
-                    >
-                      <TableCell sx={{ fontWeight: 700, fontSize: '0.82rem', color: 'text.primary', borderBottom: '1px solid', borderColor: 'divider' }}>
-                        {row.symbol}
+            <TableContainer>
+              <Table size="small" sx={{ minWidth: 360 }}>
+                <TableHead>
+                  <TableRow>
+                    {['Symbol', 'Price', 'Change', ''].map((h) => (
+                      <TableCell
+                        key={h}
+                        sx={{
+                          fontSize: '0.68rem',
+                          color: 'text.disabled',
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.05em',
+                          borderBottom: '1px solid',
+                          borderColor: 'divider',
+                        }}
+                      >
+                        {h}
                       </TableCell>
-                      <TableCell sx={{ fontSize: '0.82rem', color: 'text.primary', borderBottom: '1px solid', borderColor: 'divider' }}>
-                        {row.isLoading ? <Skeleton width={60} /> : row.price ? fnCurrency(row.price) : '—'}
-                      </TableCell>
-                      <TableCell sx={{ borderBottom: '1px solid', borderColor: 'divider' }}>
-                        {row.isLoading ? (
-                          <Skeleton width={50} />
-                        ) : row.percentChange != null ? (
-                          <Typography
-                            sx={{ fontSize: '0.78rem', fontWeight: 600, color: isPos ? '#4ade80' : '#f87171' }}
-                          >
-                            {isPos ? '+' : ''}{row.percentChange.toFixed(2)}%
-                          </Typography>
-                        ) : (
-                          '—'
-                        )}
-                      </TableCell>
-                      <TableCell align="right" sx={{ borderBottom: '1px solid', borderColor: 'divider', pr: 1 }}>
-                        <Tooltip title="Remove from watchlist">
-                          <IconButton
-                            size="small"
-                            onClick={(e) => { e.stopPropagation(); handleRemove(row.symbol); }}
-                            sx={{ color: 'text.disabled', '&:hover': { color: 'error.main' } }}
-                          >
-                            <Iconify icon="mdi:close" width={14} />
-                          </IconButton>
-                        </Tooltip>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          </TableContainer>
+                    ))}
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {rows.map((row) => {
+                    const isPos = (row.percentChange ?? 0) >= 0;
+                    return (
+                      <TableRow
+                        key={row.symbol}
+                        hover
+                        sx={{ cursor: 'pointer', '&:last-child td': { border: 0 } }}
+                        onClick={() => navigate(`/research?searchText=${row.symbol}`)}
+                      >
+                        <TableCell
+                          sx={{
+                            fontWeight: 700,
+                            fontSize: '0.82rem',
+                            color: 'text.primary',
+                            borderBottom: '1px solid',
+                            borderColor: 'divider',
+                          }}
+                        >
+                          {row.symbol}
+                        </TableCell>
+                        <TableCell
+                          sx={{
+                            fontSize: '0.82rem',
+                            color: 'text.primary',
+                            borderBottom: '1px solid',
+                            borderColor: 'divider',
+                          }}
+                        >
+                          {row.isLoading ? <Skeleton width={60} /> : row.price ? fnCurrency(row.price) : '—'}
+                        </TableCell>
+                        <TableCell sx={{ borderBottom: '1px solid', borderColor: 'divider' }}>
+                          {row.isLoading ? (
+                            <Skeleton width={50} />
+                          ) : row.percentChange != null ? (
+                            <Typography
+                              sx={{ fontSize: '0.78rem', fontWeight: 600, color: isPos ? '#4ade80' : '#f87171' }}
+                            >
+                              {isPos ? '+' : ''}
+                              {row.percentChange.toFixed(2)}%
+                            </Typography>
+                          ) : (
+                            '—'
+                          )}
+                        </TableCell>
+                        <TableCell align="right" sx={{ borderBottom: '1px solid', borderColor: 'divider', pr: 1 }}>
+                          <Tooltip title="Remove from watchlist">
+                            <IconButton
+                              size="small"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleRemove(row.symbol);
+                              }}
+                              sx={{ color: 'text.disabled', '&:hover': { color: 'error.main' } }}
+                            >
+                              <Iconify icon="mdi:close" width={14} />
+                            </IconButton>
+                          </Tooltip>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </TableContainer>
           </Box>
         )}
       </AccordionDetails>

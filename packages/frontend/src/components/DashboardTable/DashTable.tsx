@@ -95,9 +95,7 @@ export default function Table<T>({ rows, columns, accounts, refreshData, isLoadi
     return (rows as unknown as HoldingAggregate[]).map((r) => ({
       ...r,
       accountPercent:
-        (accountTotals[r.accountId] ?? 0) > 0
-          ? ((r.marketValue ?? 0) / accountTotals[r.accountId]) * 100
-          : 0,
+        (accountTotals[r.accountId] ?? 0) > 0 ? ((r.marketValue ?? 0) / accountTotals[r.accountId]) * 100 : 0,
     }));
   }, [rows]);
 
@@ -194,31 +192,29 @@ export default function Table<T>({ rows, columns, accounts, refreshData, isLoadi
         <Divider />
 
         <Box sx={{ overflowX: 'auto' }}>
-        <TableContainer sx={{ maxHeight: '60vh' }}>
-          <MuiTable stickyHeader sx={{ minWidth: 820 }}>
-            <TableHead
-              order={order}
-              orderBy={orderBy}
-              rowCount={rows.length}
-              onRequestSort={handleSort}
-              headLabel={columns}
-            />
+          <TableContainer sx={{ maxHeight: '60vh' }}>
+            <MuiTable stickyHeader sx={{ minWidth: 820 }}>
+              <TableHead
+                order={order}
+                orderBy={orderBy}
+                rowCount={rows.length}
+                onRequestSort={handleSort}
+                headLabel={columns}
+              />
 
-            <TableBody>
-              {isLoading ? (
-                <TableSkeleton />
-              ) : (
-                dataFiltered
-                  .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-                  .map((row: any) => (
-                    <DashTableRow key={row.id} row={row} onRowClick={goToResearchPage} />
-                  ))
-              )}
+              <TableBody>
+                {isLoading ? (
+                  <TableSkeleton />
+                ) : (
+                  dataFiltered
+                    .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+                    .map((row: any) => <DashTableRow key={row.id} row={row} onRowClick={goToResearchPage} />)
+                )}
 
-              {notFound && !isLoading && <TableNoData query={filterName} />}
-            </TableBody>
-          </MuiTable>
-        </TableContainer>
+                {notFound && !isLoading && <TableNoData query={filterName} />}
+              </TableBody>
+            </MuiTable>
+          </TableContainer>
         </Box>
 
         <Divider />
