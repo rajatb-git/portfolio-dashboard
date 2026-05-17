@@ -99,7 +99,7 @@ jobs:
           cache-to: type=gha,mode=max,scope=ha-${{ matrix.arch }}
 
   sync-addon-version:
-    needs: [build-and-push-ha-addon]
+    if: always()
     runs-on: ubuntu-latest
     permissions:
       contents: write
