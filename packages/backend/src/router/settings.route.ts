@@ -6,6 +6,7 @@ import KoaRouter from 'koa-router';
 import unzipper from 'unzipper';
 
 import { getAiConfig, IAiConfig, maskAiConfig, saveAiConfig } from '../models/AiConfigModel';
+import { getLockStatus, setLockConfig } from '../models/LockConfigModel';
 import { errorBody } from '../utils/error';
 import { logger } from '../utils/winston';
 
@@ -129,6 +130,79 @@ export const SettingsRouter = () => {
     } catch (error: any) {
       ctx.status = 500;
       ctx.body = errorBody('Failed to save AI config', error.message);
+    }
+  });
+
+  router.get('/settings/lock', async (ctx) => {
+    try {
+      const status = await getLockStatus();
+      ctx.body = status;
+      ctx.status = 200;
+    } catch (error: any) {
+      logger.log({ level: 'error', message: error.message, label: 'lock status' });
+      ctx.status = 500;
+      ctx.body = errorBody('Failed to get lock status', error.message);
+    }
+  });
+
+  router.post('/settings/lock', async (ctx) => {
+    try {
+      const body = (ctx.request.body || {}) as {
+        enabled?: boolean;
+        code?: string;
+        currentCode?: string;
+        idleTimeoutMinutes?: number;
+      };
+
+      if (typeof body.enabled !== 'boolean') {
+        ctx.status = 400;
+        ctx.body = errorBody('Invalid request', '"enabled" boolean is required');
+        return;
+      }
+
+      const current = await getLockStatus();
+
+      if (current.enabled && !body.currentCode) {
+        ctx.status = 400;
+        ctx.body = errorBody('Wrong code', 'Current code is required');
+        return;
+      }
+
+      if (body.enabled && !current.enabled && !body.code) {
+        ctx.status = 400;
+        ctx.body = errorBody('Invalid code', 'A new code is required to enable the lock');
+        return;
+      }
+
+      if (body.enabled && current.enabled && body.code && !body.currentCode) {
+        ctx.status = 400;
+        ctx.body = errorBody('Wrong code', 'Current code is required to change the code');
+        return;
+      }
+
+      if (body.code !== undefined && !/^\d{6}$/.test(body.code)) {
+        ctx.status = 400;
+        ctx.body = errorBody('Invalid code', 'Code must be 6 digits');
+        return;
+      }
+
+      try {
+        const next = await setLockConfig({
+          enabled: body.enabled,
+          code: body.code,
+          currentCode: body.currentCode,
+          idleTimeoutMinutes: body.idleTimeoutMinutes,
+        });
+        ctx.body = next;
+        ctx.status = 200;
+      } catch (inner: any) {
+        ctx.status = 400;
+        ctx.body = errorBody(inner.name || 'Invalid request', inner.message || 'Failed to update lock');
+      }
+    } catch (error: any) {
+      logger.log({ level: 'error', message: error.message, label: 'lock save' });
+      ctx.status = 500;
+      ctx.body = errorBody('Failed to save lock settings', error.message);
     }
   });
 

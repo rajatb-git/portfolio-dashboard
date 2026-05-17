@@ -6,6 +6,8 @@ import TransactionsAPI from './transactions';
 import AccountsAPI from './account';
 import WatchlistAPI from './watchlist';
 import AnalyticsAPI from './analytics';
+import AuthAPI from './auth';
+import SettingsAPI from './settings';
 
 const apis = {
   dashboard: new DashboardAPI(),
@@ -16,6 +18,8 @@ const apis = {
   logs: new LogsAPI(),
   watchlist: new WatchlistAPI(),
   analytics: new AnalyticsAPI(),
+  auth: new AuthAPI(),
+  settings: new SettingsAPI(),
 };
 
 export default apis;

@@ -1,53 +1,61 @@
 import {
-  Box,
-  Button,
-  Card,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogContentText,
-  DialogTitle,
-  Divider,
-  IconButton,
-  MenuItem,
-  Select,
-  Stack,
-  Switch,
-  TextField,
-  ToggleButton,
-  ToggleButtonGroup,
-  Tooltip,
-  Typography,
-} from '@mui/material';
-import * as React from 'react';
-import { toast } from 'react-toastify';
-import apis from '@/api';
-import type { AiConfig } from '@/api/live';
-import { Iconify } from '@/components/Iconify';
-import { useThemeMode } from '@/components/ThemeRegistry/ThemeModeContext';
-import { DB_HOST } from '@/config';
-import type { IAccount } from '@/models/AccountsModel';
-import LocalStorageUtil from '@/utils/localStorage';
+	Box,
+	Button,
+	Card,
+	Dialog,
+	DialogActions,
+	DialogContent,
+	DialogContentText,
+	DialogTitle,
+	Divider,
+	IconButton,
+	MenuItem,
+	Select,
+	Stack,
+	Switch,
+	TextField,
+	ToggleButton,
+	ToggleButtonGroup,
+	Tooltip,
+	Typography,
+} from "@mui/material";
+import * as React from "react";
+import { toast } from "react-toastify";
+import apis from "@/api";
+import type { AiConfig } from "@/api/live";
+import type { LockStatus } from "@/api/settings";
+import { Iconify } from "@/components/Iconify";
+import { useThemeMode } from "@/components/ThemeRegistry/ThemeModeContext";
+import { DB_HOST } from "@/config";
+import { useAuth } from "@/contexts/AuthContext";
+import type { IAccount } from "@/models/AccountsModel";
+import LocalStorageUtil from "@/utils/localStorage";
 
-function SettingsSection({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <Card variant="outlined" sx={{ mb: 2 }}>
-      <Typography
-        sx={{
-          p: '10px 16px',
-          color: 'text.secondary',
-          fontWeight: 700,
-          fontSize: '0.72rem',
-          letterSpacing: '0.06em',
-          textTransform: 'uppercase',
-        }}
-      >
-        {title}
-      </Typography>
-      <Divider />
-      {children}
-    </Card>
-  );
+function SettingsSection({
+	title,
+	children,
+}: {
+	title: string;
+	children: React.ReactNode;
+}) {
+	return (
+		<Card variant="outlined" sx={{ mb: 2 }}>
+			<Typography
+				sx={{
+					p: "10px 16px",
+					color: "text.secondary",
+					fontWeight: 700,
+					fontSize: "0.72rem",
+					letterSpacing: "0.06em",
+					textTransform: "uppercase",
+				}}
+			>
+				{title}
+			</Typography>
+			<Divider />
+			{children}
+		</Card>
+	);
 }
 
 function SettingRow({
@@ -82,529 +90,855 @@ function SettingRow({
   );
 }
 
+const IDLE_OPTIONS: Array<{ label: string; value: number }> = [
+	{ label: "1 minute", value: 1 },
+	{ label: "5 minutes", value: 5 },
+	{ label: "15 minutes", value: 15 },
+	{ label: "30 minutes", value: 30 },
+	{ label: "Never", value: 0 },
+];
+
+const DEFAULT_LOCK: LockStatus = { enabled: false, idleTimeoutMinutes: 15 };
+
 export default function Settings() {
-  const { mode, setMode } = useThemeMode();
-  const savedApiHost = LocalStorageUtil.getItem<string>('api_host') ?? DB_HOST;
-  const [apiHost, setApiHost] = React.useState(savedApiHost);
-  const [apiHostSaved, setApiHostSaved] = React.useState(false);
-  const isApiHostDirty = apiHost.trim() !== savedApiHost;
-  const [aiConfig, setAiConfig] = React.useState<AiConfig | null>(null);
-  const [draftAiConfig, setDraftAiConfig] = React.useState<AiConfig | null>(null);
-  const [saving, setSaving] = React.useState(false);
-  const [exporting, setExporting] = React.useState(false);
-  const [importing, setImporting] = React.useState(false);
-  const [importConfirmOpen, setImportConfirmOpen] = React.useState(false);
-  const [pendingImportFile, setPendingImportFile] = React.useState<File | null>(null);
-  const fileInputRef = React.useRef<HTMLInputElement>(null);
+	const { mode, setMode } = useThemeMode();
+	const { refreshStatus } = useAuth();
+	const savedApiHost = LocalStorageUtil.getItem<string>("api_host") ?? DB_HOST;
+	const [apiHost, setApiHost] = React.useState(savedApiHost);
+	const [apiHostSaved, setApiHostSaved] = React.useState(false);
+	const isApiHostDirty = apiHost.trim() !== savedApiHost;
+	const [aiConfig, setAiConfig] = React.useState<AiConfig | null>(null);
+	const [draftAiConfig, setDraftAiConfig] = React.useState<AiConfig | null>(
+		null,
+	);
+	const [saving, setSaving] = React.useState(false);
 
-  const [accounts, setAccounts] = React.useState<IAccount[]>([]);
-  const [newAccountName, setNewAccountName] = React.useState('');
-  const [addingAccount, setAddingAccount] = React.useState(false);
-  const [deleteConfirm, setDeleteConfirm] = React.useState<IAccount | null>(null);
+	const [savedLock, setSavedLock] = React.useState<LockStatus>(DEFAULT_LOCK);
+	const [draftLock, setDraftLock] = React.useState<LockStatus>(DEFAULT_LOCK);
+	const [lockCurrentCode, setLockCurrentCode] = React.useState("");
+	const [lockNewCode, setLockNewCode] = React.useState("");
+	const [lockConfirmCode, setLockConfirmCode] = React.useState("");
+	const [savingLock, setSavingLock] = React.useState(false);
+	const [exporting, setExporting] = React.useState(false);
+	const [importing, setImporting] = React.useState(false);
+	const [importConfirmOpen, setImportConfirmOpen] = React.useState(false);
+	const [pendingImportFile, setPendingImportFile] = React.useState<File | null>(
+		null,
+	);
+	const fileInputRef = React.useRef<HTMLInputElement>(null);
 
-  const isAiConfigDirty = !!aiConfig && !!draftAiConfig && JSON.stringify(aiConfig) !== JSON.stringify(draftAiConfig);
+	const [accounts, setAccounts] = React.useState<IAccount[]>([]);
+	const [newAccountName, setNewAccountName] = React.useState("");
+	const [addingAccount, setAddingAccount] = React.useState(false);
+	const [deleteConfirm, setDeleteConfirm] = React.useState<IAccount | null>(
+		null,
+	);
 
-  React.useEffect(() => {
-    apis.live
-      .getAiConfig()
-      .then((config) => {
-        setAiConfig(config);
-        setDraftAiConfig(config);
-      })
-      .catch((err) => {
-        toast.error(err.message || 'Failed to load AI configuration');
-      });
+	const isAiConfigDirty =
+		!!aiConfig &&
+		!!draftAiConfig &&
+		JSON.stringify(aiConfig) !== JSON.stringify(draftAiConfig);
 
-    apis.accounts
-      .getAll()
-      .then(setAccounts)
-      .catch((err) => toast.error(err.message || 'Failed to load accounts'));
-  }, []);
+	React.useEffect(() => {
+		apis.live
+			.getAiConfig()
+			.then((config) => {
+				setAiConfig(config);
+				setDraftAiConfig(config);
+			})
+			.catch((err) => {
+				toast.error(err.message || "Failed to load AI configuration");
+			});
 
-  const handleApiHostSave = () => {
-    if (!apiHost.trim() || !isApiHostDirty) return;
-    LocalStorageUtil.setItem('api_host', apiHost.trim());
-    setApiHostSaved(true);
-    setTimeout(() => setApiHostSaved(false), 2000);
-    toast.success('Backend URL saved — reload the page to apply');
-  };
+		apis.accounts
+			.getAll()
+			.then(setAccounts)
+			.catch((err) => toast.error(err.message || "Failed to load accounts"));
 
-  const handleExport = async () => {
-    setExporting(true);
-    try {
-      const blob = await apis.live.exportDb();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `portfolio-backup-${new Date().toISOString().slice(0, 10)}.zip`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-      toast.success('Database exported successfully');
-    } catch (err: any) {
-      toast.error(err.message || 'Export failed');
-    } finally {
-      setExporting(false);
-    }
-  };
+		apis.settings
+			.getLock()
+			.then((lock) => {
+				setSavedLock(lock);
+				setDraftLock(lock);
+			})
+			.catch((err) =>
+				toast.error(err.message || "Failed to load security settings"),
+			);
+	}, []);
 
-  const handleImportFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (!file.name.endsWith('.zip')) {
-      toast.error('Please select a .zip backup file');
-      return;
-    }
-    setPendingImportFile(file);
-    setImportConfirmOpen(true);
-    if (fileInputRef.current) fileInputRef.current.value = '';
-  };
+	const isLockDirty =
+		JSON.stringify(savedLock) !== JSON.stringify(draftLock) ||
+		lockCurrentCode.length > 0 ||
+		lockNewCode.length > 0 ||
+		lockConfirmCode.length > 0;
 
-  const handleImportConfirm = async () => {
-    if (!pendingImportFile) return;
-    setImportConfirmOpen(false);
-    setImporting(true);
-    try {
-      const result = await apis.live.importDb(pendingImportFile);
-      toast.success(result.message || 'Import completed');
-    } catch (err: any) {
-      toast.error(err.message || 'Import failed');
-    } finally {
-      setImporting(false);
-      setPendingImportFile(null);
-    }
-  };
+	const togglingEnabled = draftLock.enabled !== savedLock.enabled;
+	const isEnabling = togglingEnabled && draftLock.enabled;
+	const isDisabling = togglingEnabled && !draftLock.enabled;
+	const isChangingCode =
+		savedLock.enabled && draftLock.enabled && lockNewCode.length > 0;
 
-  const updateDraft = (partial: Partial<AiConfig>) => {
-    if (!draftAiConfig) return;
-    setDraftAiConfig({ ...draftAiConfig, ...partial });
-  };
+	const handleSaveLock = async () => {
+		if (isEnabling || isChangingCode) {
+			if (!/^\d{6}$/.test(lockNewCode)) {
+				toast.error("New code must be 6 digits");
+				return;
+			}
+			if (lockNewCode !== lockConfirmCode) {
+				toast.error("New code and confirmation do not match");
+				return;
+			}
+		}
+		if ((isDisabling || isChangingCode) && !lockCurrentCode) {
+			toast.error("Current code is required");
+			return;
+		}
 
-  const handleSaveAiConfig = () => {
-    if (!draftAiConfig || !isAiConfigDirty) return;
-    setSaving(true);
-    apis.live
-      .saveAiConfig(draftAiConfig)
-      .then((saved) => {
-        setAiConfig(saved);
-        setDraftAiConfig(saved);
-        toast.success('AI configuration saved');
-      })
-      .catch((err) => {
-        toast.error(err.message || 'Failed to save AI configuration');
-      })
-      .finally(() => setSaving(false));
-  };
+		setSavingLock(true);
+		try {
+			const payload = {
+				enabled: draftLock.enabled,
+				idleTimeoutMinutes: draftLock.idleTimeoutMinutes,
+				...(isEnabling || isChangingCode ? { code: lockNewCode } : {}),
+				...(savedLock.enabled ? { currentCode: lockCurrentCode } : {}),
+			};
+			const next = await apis.settings.saveLock(payload);
+			setSavedLock(next);
+			setDraftLock(next);
+			setLockCurrentCode("");
+			setLockNewCode("");
+			setLockConfirmCode("");
+			await refreshStatus();
+			toast.success("Security settings saved");
+		} catch (err: any) {
+			toast.error(err.message || "Failed to save security settings");
+		} finally {
+			setSavingLock(false);
+		}
+	};
 
-  const handleResetAiConfig = () => {
-    setDraftAiConfig(aiConfig);
-  };
+	const handleResetLock = () => {
+		setDraftLock(savedLock);
+		setLockCurrentCode("");
+		setLockNewCode("");
+		setLockConfirmCode("");
+	};
 
-  const handleAddAccount = async () => {
-    const name = newAccountName.trim();
-    if (!name) return;
-    setAddingAccount(true);
-    try {
-      const created = await apis.accounts.create({
-        name,
-        id: name.replace(/\s/g, ''),
-      } as IAccount);
-      setAccounts((prev) => [...prev, created]);
-      setNewAccountName('');
-      toast.success(`Account "${name}" created`);
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to create account');
-    } finally {
-      setAddingAccount(false);
-    }
-  };
+	const handleApiHostSave = () => {
+		if (!apiHost.trim() || !isApiHostDirty) return;
+		LocalStorageUtil.setItem("api_host", apiHost.trim());
+		setApiHostSaved(true);
+		setTimeout(() => setApiHostSaved(false), 2000);
+		toast.success("Backend URL saved — reload the page to apply");
+	};
 
-  const handleDeleteAccount = async () => {
-    if (!deleteConfirm) return;
-    try {
-      await apis.accounts.deleteById(deleteConfirm.id);
-      setAccounts((prev) => prev.filter((a) => a.id !== deleteConfirm.id));
-      toast.success(`Account "${deleteConfirm.name}" deleted`);
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to delete account');
-    } finally {
-      setDeleteConfirm(null);
-    }
-  };
+	const handleExport = async () => {
+		setExporting(true);
+		try {
+			const blob = await apis.live.exportDb();
+			const url = URL.createObjectURL(blob);
+			const a = document.createElement("a");
+			a.href = url;
+			a.download = `portfolio-backup-${new Date().toISOString().slice(0, 10)}.zip`;
+			document.body.appendChild(a);
+			a.click();
+			document.body.removeChild(a);
+			URL.revokeObjectURL(url);
+			toast.success("Database exported successfully");
+		} catch (err: any) {
+			toast.error(err.message || "Export failed");
+		} finally {
+			setExporting(false);
+		}
+	};
 
-  return (
-    <Box sx={{ maxWidth: { xs: '100%', sm: 680 } }}>
-      <Typography variant="h6" sx={{ mb: 2.5, fontWeight: 700 }}>
-        Settings
-      </Typography>
+	const handleImportFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+		const file = e.target.files?.[0];
+		if (!file) return;
+		if (!file.name.endsWith(".zip")) {
+			toast.error("Please select a .zip backup file");
+			return;
+		}
+		setPendingImportFile(file);
+		setImportConfirmOpen(true);
+		if (fileInputRef.current) fileInputRef.current.value = "";
+	};
 
-      <SettingsSection title="Appearance">
-        <SettingRow label="Theme" description="Follow system appearance or set manually">
-          <ToggleButtonGroup
-            size="small"
-            value={mode}
-            exclusive
-            onChange={(_, val) => {
-              if (val) setMode(val);
-            }}
-          >
-            <ToggleButton value="system" sx={{ px: 2, fontSize: '0.78rem' }}>
-              System
-            </ToggleButton>
-            <ToggleButton value="dark" sx={{ px: 2, fontSize: '0.78rem' }}>
-              Dark
-            </ToggleButton>
-            <ToggleButton value="light" sx={{ px: 2, fontSize: '0.78rem' }}>
-              Light
-            </ToggleButton>
-          </ToggleButtonGroup>
-        </SettingRow>
-      </SettingsSection>
+	const handleImportConfirm = async () => {
+		if (!pendingImportFile) return;
+		setImportConfirmOpen(false);
+		setImporting(true);
+		try {
+			const result = await apis.live.importDb(pendingImportFile);
+			toast.success(result.message || "Import completed");
+		} catch (err: any) {
+			toast.error(err.message || "Import failed");
+		} finally {
+			setImporting(false);
+			setPendingImportFile(null);
+		}
+	};
 
-      <SettingsSection title="Accounts">
-        {accounts.length === 0 ? (
-          <Stack sx={{ alignItems: 'center', py: 3 }}>
-            <Iconify icon="mdi:account-group-outline" width={28} sx={{ color: 'text.disabled', mb: 1 }} />
-            <Typography
-              sx={{
-                fontSize: '0.82rem',
-                color: 'text.disabled',
-                textAlign: 'center',
-              }}
-            >
-              No accounts yet. Create one to start adding holdings.
-            </Typography>
-          </Stack>
-        ) : (
-          accounts.map((account) => (
-            <Stack
-              key={account.id}
-              direction="row"
-              sx={{
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                px: 2,
-                py: 1,
-                borderBottom: '1px solid',
-                borderColor: 'divider',
-              }}
-            >
-              <Stack direction="row" sx={{ alignItems: 'center' }} spacing={1.5}>
-                <Iconify icon="mdi:account-outline" width={18} sx={{ color: 'text.secondary' }} />
-                <Box>
-                  <Typography
-                    sx={{
-                      fontSize: '0.85rem',
-                      fontWeight: 500,
-                      color: 'text.primary',
-                    }}
-                  >
-                    {account.name}
-                  </Typography>
-                  <Typography sx={{ fontSize: '0.68rem', color: 'text.disabled' }}>{account.id}</Typography>
-                </Box>
-              </Stack>
-              <Tooltip title="Delete account">
-                <IconButton
-                  size="small"
-                  onClick={() => setDeleteConfirm(account)}
-                  sx={{
-                    color: 'text.disabled',
-                    '&:hover': { color: 'error.main' },
-                  }}
-                >
-                  <Iconify icon="mdi:delete-outline" width={18} />
-                </IconButton>
-              </Tooltip>
-            </Stack>
-          ))
-        )}
+	const updateDraft = (partial: Partial<AiConfig>) => {
+		if (!draftAiConfig) return;
+		setDraftAiConfig({ ...draftAiConfig, ...partial });
+	};
 
-        <Stack direction="row" spacing={1} sx={{ alignItems: 'center', px: 2, py: 1.5 }}>
-          <TextField
-            size="small"
-            placeholder="Account name"
-            value={newAccountName}
-            onChange={(e) => setNewAccountName(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') handleAddAccount();
-            }}
-            disabled={addingAccount}
-            sx={{ flexGrow: 1, '& input': { fontSize: '0.78rem' } }}
-          />
-          <Button
-            size="small"
-            variant="contained"
-            onClick={handleAddAccount}
-            disabled={!newAccountName.trim() || addingAccount}
-            sx={{ fontSize: '0.78rem', textTransform: 'none' }}
-          >
-            {addingAccount ? 'Adding...' : 'Add'}
-          </Button>
-        </Stack>
-      </SettingsSection>
+	const handleSaveAiConfig = () => {
+		if (!draftAiConfig || !isAiConfigDirty) return;
+		setSaving(true);
+		apis.live
+			.saveAiConfig(draftAiConfig)
+			.then((saved) => {
+				setAiConfig(saved);
+				setDraftAiConfig(saved);
+				toast.success("AI configuration saved");
+			})
+			.catch((err) => {
+				toast.error(err.message || "Failed to save AI configuration");
+			})
+			.finally(() => setSaving(false));
+	};
 
-      <Dialog open={!!deleteConfirm} onClose={() => setDeleteConfirm(null)}>
-        <DialogTitle>Delete Account</DialogTitle>
-        <DialogContent>
-          <DialogContentText>
-            Are you sure you want to delete <strong>{deleteConfirm?.name}</strong>? This will not remove any holdings
-            associated with this account.
-          </DialogContentText>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setDeleteConfirm(null)}>Cancel</Button>
-          <Button onClick={handleDeleteAccount} color="error" variant="contained">
-            Delete
-          </Button>
-        </DialogActions>
-      </Dialog>
+	const handleResetAiConfig = () => {
+		setDraftAiConfig(aiConfig);
+	};
 
-      <SettingsSection title="Dashboard">
-        <SettingRow
-          label="Price Alert Threshold"
-          description="Show 'Near Target' badge when price is within this % of target"
-        >
-          <Typography
-            sx={{
-              fontSize: '0.82rem',
-              color: 'text.secondary',
-              fontWeight: 600,
-            }}
-          >
-            5%
-          </Typography>
-        </SettingRow>
-        <SettingRow label="Default Rows Per Page" description="Number of holdings shown per page">
-          <Typography
-            sx={{
-              fontSize: '0.82rem',
-              color: 'text.secondary',
-              fontWeight: 600,
-            }}
-          >
-            50
-          </Typography>
-        </SettingRow>
-      </SettingsSection>
+	const handleAddAccount = async () => {
+		const name = newAccountName.trim();
+		if (!name) return;
+		setAddingAccount(true);
+		try {
+			const created = await apis.accounts.create({
+				name,
+				id: name.replace(/\s/g, ""),
+			} as IAccount);
+			setAccounts((prev) => [...prev, created]);
+			setNewAccountName("");
+			toast.success(`Account "${name}" created`);
+		} catch (err: any) {
+			toast.error(err.message || "Failed to create account");
+		} finally {
+			setAddingAccount(false);
+		}
+	};
 
-      <SettingsSection title="API">
-        <SettingRow
-          label="Backend URL"
-          description="Override the backend API host. Requires page reload to take effect."
-        >
-          <Stack direction="row" spacing={1} useFlexGap sx={{ alignItems: 'center', flexWrap: 'wrap' }}>
-            {apiHostSaved && <Typography sx={{ fontSize: '0.72rem', color: 'success.main' }}>Saved</Typography>}
-            <TextField
-              size="small"
-              value={apiHost}
-              onChange={(e) => setApiHost(e.target.value)}
-              sx={{ width: { xs: '100%', sm: 240 }, '& input': { fontSize: '0.78rem' } }}
-            />
-            <Button
-              size="small"
-              variant="contained"
-              onClick={handleApiHostSave}
-              disabled={!isApiHostDirty || !apiHost.trim()}
-              sx={{ fontSize: '0.78rem', textTransform: 'none' }}
-            >
-              Save
-            </Button>
-          </Stack>
-        </SettingRow>
-      </SettingsSection>
+	const handleDeleteAccount = async () => {
+		if (!deleteConfirm) return;
+		try {
+			await apis.accounts.deleteById(deleteConfirm.id);
+			setAccounts((prev) => prev.filter((a) => a.id !== deleteConfirm.id));
+			toast.success(`Account "${deleteConfirm.name}" deleted`);
+		} catch (err: any) {
+			toast.error(err.message || "Failed to delete account");
+		} finally {
+			setDeleteConfirm(null);
+		}
+	};
 
-      <SettingsSection title="Data">
-        <SettingRow label="Export Database" description="Download a zip backup of all your portfolio data">
-          <Button
-            variant="outlined"
-            size="small"
-            onClick={handleExport}
-            disabled={exporting}
-            sx={{ fontSize: '0.78rem', textTransform: 'none' }}
-          >
-            {exporting ? 'Exporting...' : 'Export'}
-          </Button>
-        </SettingRow>
-        <SettingRow label="Import Database" description="Restore from a previously exported zip backup">
-          <input
-            type="file"
-            accept=".zip"
-            ref={fileInputRef}
-            onChange={handleImportFileSelect}
-            style={{ display: 'none' }}
-          />
-          <Button
-            variant="outlined"
-            size="small"
-            color="warning"
-            onClick={() => fileInputRef.current?.click()}
-            disabled={importing}
-            sx={{ fontSize: '0.78rem', textTransform: 'none' }}
-          >
-            {importing ? 'Importing...' : 'Import'}
-          </Button>
-        </SettingRow>
-      </SettingsSection>
+	return (
+		<Box sx={{ maxWidth: { xs: "100%", sm: 680 } }}>
+			<Typography variant="h6" sx={{ mb: 2.5, fontWeight: 700 }}>
+				Settings
+			</Typography>
 
-      <Dialog open={importConfirmOpen} onClose={() => setImportConfirmOpen(false)}>
-        <DialogTitle>Confirm Import</DialogTitle>
-        <DialogContent>
-          <DialogContentText>
-            This will <strong>overwrite all existing data</strong> with the contents of the backup file. This action
-            cannot be undone. Are you sure you want to continue?
-          </DialogContentText>
-        </DialogContent>
-        <DialogActions>
-          <Button
-            onClick={() => {
-              setImportConfirmOpen(false);
-              setPendingImportFile(null);
-            }}
-          >
-            Cancel
-          </Button>
-          <Button onClick={handleImportConfirm} color="warning" variant="contained">
-            Overwrite &amp; Import
-          </Button>
-        </DialogActions>
-      </Dialog>
+			<SettingsSection title="Appearance">
+				<SettingRow
+					label="Theme"
+					description="Follow system appearance or set manually"
+				>
+					<ToggleButtonGroup
+						size="small"
+						value={mode}
+						exclusive
+						onChange={(_, val) => {
+							if (val) setMode(val);
+						}}
+					>
+						<ToggleButton value="system" sx={{ px: 2, fontSize: "0.78rem" }}>
+							System
+						</ToggleButton>
+						<ToggleButton value="dark" sx={{ px: 2, fontSize: "0.78rem" }}>
+							Dark
+						</ToggleButton>
+						<ToggleButton value="light" sx={{ px: 2, fontSize: "0.78rem" }}>
+							Light
+						</ToggleButton>
+					</ToggleButtonGroup>
+				</SettingRow>
+			</SettingsSection>
 
-      <SettingsSection title="AI Agent">
-        <SettingRow label="Enable AI Insights" description="Show AI-powered analysis on the Research page">
-          <Switch
-            checked={draftAiConfig?.enabled ?? false}
-            onChange={(_, checked) => updateDraft({ enabled: checked })}
-          />
-        </SettingRow>
+			<SettingsSection title="Accounts">
+				{accounts.length === 0 ? (
+					<Stack sx={{ alignItems: "center", py: 3 }}>
+						<Iconify
+							icon="mdi:account-group-outline"
+							width={28}
+							sx={{ color: "text.disabled", mb: 1 }}
+						/>
+						<Typography
+							sx={{
+								fontSize: "0.82rem",
+								color: "text.disabled",
+								textAlign: "center",
+							}}
+						>
+							No accounts yet. Create one to start adding holdings.
+						</Typography>
+					</Stack>
+				) : (
+					accounts.map((account) => (
+						<Stack
+							key={account.id}
+							direction="row"
+							sx={{
+								alignItems: "center",
+								justifyContent: "space-between",
+								px: 2,
+								py: 1,
+								borderBottom: "1px solid",
+								borderColor: "divider",
+							}}
+						>
+							<Stack direction="row" sx={{ alignItems: "center" }} spacing={1.5}>
+								<Iconify
+									icon="mdi:account-outline"
+									width={18}
+									sx={{ color: "text.secondary" }}
+								/>
+								<Box>
+									<Typography
+										sx={{
+											fontSize: "0.85rem",
+											fontWeight: 500,
+											color: "text.primary",
+										}}
+									>
+										{account.name}
+									</Typography>
+									<Typography
+										sx={{ fontSize: "0.68rem", color: "text.disabled" }}
+									>
+										{account.id}
+									</Typography>
+								</Box>
+							</Stack>
+							<Tooltip title="Delete account">
+								<IconButton
+									size="small"
+									onClick={() => setDeleteConfirm(account)}
+									sx={{
+										color: "text.disabled",
+										"&:hover": { color: "error.main" },
+									}}
+								>
+									<Iconify icon="mdi:delete-outline" width={18} />
+								</IconButton>
+							</Tooltip>
+						</Stack>
+					))
+				)}
 
-        {draftAiConfig?.enabled && (
-          <>
-            <SettingRow label="Provider" description="Select which AI provider to use">
-              <Select
-                size="small"
-                value={draftAiConfig.provider}
-                onChange={(e) =>
-                  updateDraft({
-                    provider: e.target.value as AiConfig['provider'],
-                  })
-                }
-                sx={{ minWidth: { xs: '100%', sm: 200 }, fontSize: '0.82rem' }}
-              >
-                <MenuItem value="ollama">Ollama (Local)</MenuItem>
-                <MenuItem value="gemini">Gemini (Google)</MenuItem>
-                <MenuItem value="claude">Claude (Anthropic)</MenuItem>
-              </Select>
-            </SettingRow>
+				<Stack
+					direction="row"
+					spacing={1}
+					sx={{ alignItems: "center", px: 2, py: 1.5 }}
+				>
+					<TextField
+						size="small"
+						placeholder="Account name"
+						value={newAccountName}
+						onChange={(e) => setNewAccountName(e.target.value)}
+						onKeyDown={(e) => {
+							if (e.key === "Enter") handleAddAccount();
+						}}
+						disabled={addingAccount}
+						sx={{ flexGrow: 1, "& input": { fontSize: "0.78rem" } }}
+					/>
+					<Button
+						size="small"
+						variant="contained"
+						onClick={handleAddAccount}
+						disabled={!newAccountName.trim() || addingAccount}
+						sx={{ fontSize: "0.78rem", textTransform: "none" }}
+					>
+						{addingAccount ? "Adding..." : "Add"}
+					</Button>
+				</Stack>
+			</SettingsSection>
 
-            {draftAiConfig.provider === 'claude' && (
-              <>
-                <SettingRow label="API Key" description="Your Anthropic API key">
-                  <TextField
-                    size="small"
-                    type="password"
-                    value={draftAiConfig.claudeApiKey}
-                    onChange={(e) => updateDraft({ claudeApiKey: e.target.value })}
-                    placeholder="sk-ant-..."
-                    sx={{ width: { xs: '100%', sm: 260 }, '& input': { fontSize: '0.78rem' } }}
-                  />
-                </SettingRow>
-                <SettingRow label="Model" description="Claude model to use">
-                  <TextField
-                    size="small"
-                    value={draftAiConfig.claudeModel}
-                    onChange={(e) => updateDraft({ claudeModel: e.target.value })}
-                    sx={{ width: { xs: '100%', sm: 260 }, '& input': { fontSize: '0.78rem' } }}
-                  />
-                </SettingRow>
-              </>
-            )}
+			<Dialog open={!!deleteConfirm} onClose={() => setDeleteConfirm(null)}>
+				<DialogTitle>Delete Account</DialogTitle>
+				<DialogContent>
+					<DialogContentText>
+						Are you sure you want to delete{" "}
+						<strong>{deleteConfirm?.name}</strong>? This will not remove any
+						holdings associated with this account.
+					</DialogContentText>
+				</DialogContent>
+				<DialogActions>
+					<Button onClick={() => setDeleteConfirm(null)}>Cancel</Button>
+					<Button
+						onClick={handleDeleteAccount}
+						color="error"
+						variant="contained"
+					>
+						Delete
+					</Button>
+				</DialogActions>
+			</Dialog>
 
-            {draftAiConfig.provider === 'gemini' && (
-              <>
-                <SettingRow label="API Key" description="Your Google Gemini API key">
-                  <TextField
-                    size="small"
-                    type="password"
-                    value={draftAiConfig.geminiApiKey}
-                    onChange={(e) => updateDraft({ geminiApiKey: e.target.value })}
-                    placeholder="AIza..."
-                    sx={{ width: { xs: '100%', sm: 260 }, '& input': { fontSize: '0.78rem' } }}
-                  />
-                </SettingRow>
-                <SettingRow label="Model" description="Gemini model to use">
-                  <TextField
-                    size="small"
-                    value={draftAiConfig.geminiModel}
-                    onChange={(e) => updateDraft({ geminiModel: e.target.value })}
-                    sx={{ width: { xs: '100%', sm: 260 }, '& input': { fontSize: '0.78rem' } }}
-                  />
-                </SettingRow>
-              </>
-            )}
+			<SettingsSection title="Dashboard">
+				<SettingRow
+					label="Price Alert Threshold"
+					description="Show 'Near Target' badge when price is within this % of target"
+				>
+					<Typography
+						sx={{
+							fontSize: "0.82rem",
+							color: "text.secondary",
+							fontWeight: 600,
+						}}
+					>
+						5%
+					</Typography>
+				</SettingRow>
+				<SettingRow
+					label="Default Rows Per Page"
+					description="Number of holdings shown per page"
+				>
+					<Typography
+						sx={{
+							fontSize: "0.82rem",
+							color: "text.secondary",
+							fontWeight: 600,
+						}}
+					>
+						50
+					</Typography>
+				</SettingRow>
+			</SettingsSection>
 
-            {draftAiConfig.provider === 'ollama' && (
-              <>
-                <SettingRow label="Host" description="Ollama server URL">
-                  <TextField
-                    size="small"
-                    value={draftAiConfig.ollamaHost}
-                    onChange={(e) => updateDraft({ ollamaHost: e.target.value })}
-                    sx={{ width: { xs: '100%', sm: 260 }, '& input': { fontSize: '0.78rem' } }}
-                  />
-                </SettingRow>
-                <SettingRow label="Model" description="Ollama model name (e.g. llama3.1, mistral)">
-                  <TextField
-                    size="small"
-                    value={draftAiConfig.ollamaModel}
-                    onChange={(e) => updateDraft({ ollamaModel: e.target.value })}
-                    sx={{ width: { xs: '100%', sm: 260 }, '& input': { fontSize: '0.78rem' } }}
-                  />
-                </SettingRow>
-              </>
-            )}
-          </>
-        )}
+			<SettingsSection title="API">
+				<SettingRow
+					label="Backend URL"
+					description="Override the backend API host. Requires page reload to take effect."
+				>
+					<Stack direction="row" spacing={1} useFlexGap sx={{ alignItems: "center", flexWrap: "wrap" }}>
+						{apiHostSaved && (
+							<Typography sx={{ fontSize: "0.72rem", color: "success.main" }}>
+								Saved
+							</Typography>
+						)}
+						<TextField
+							size="small"
+							value={apiHost}
+							onChange={(e) => setApiHost(e.target.value)}
+							sx={{ width: { xs: "100%", sm: 240 }, "& input": { fontSize: "0.78rem" } }}
+						/>
+						<Button
+							size="small"
+							variant="contained"
+							onClick={handleApiHostSave}
+							disabled={!isApiHostDirty || !apiHost.trim()}
+							sx={{ fontSize: "0.78rem", textTransform: "none" }}
+						>
+							Save
+						</Button>
+					</Stack>
+				</SettingRow>
+			</SettingsSection>
 
-        {draftAiConfig && (
-          <Stack direction="row" spacing={1} sx={{ justifyContent: 'flex-end', alignItems: 'center', px: 2, py: 1.5 }}>
-            {isAiConfigDirty && (
-              <Typography sx={{ fontSize: '0.72rem', color: 'warning.main', mr: 'auto' }}>Unsaved changes</Typography>
-            )}
-            <Button
-              size="small"
-              variant="outlined"
-              onClick={handleResetAiConfig}
-              disabled={!isAiConfigDirty || saving}
-              sx={{ fontSize: '0.78rem', textTransform: 'none' }}
-            >
-              Reset
-            </Button>
-            <Button
-              size="small"
-              variant="contained"
-              onClick={handleSaveAiConfig}
-              disabled={!isAiConfigDirty || saving}
-              sx={{ fontSize: '0.78rem', textTransform: 'none' }}
-            >
-              {saving ? 'Saving...' : 'Save'}
-            </Button>
-          </Stack>
-        )}
-      </SettingsSection>
+			<SettingsSection title="Data">
+				<SettingRow
+					label="Export Database"
+					description="Download a zip backup of all your portfolio data"
+				>
+					<Button
+						variant="outlined"
+						size="small"
+						onClick={handleExport}
+						disabled={exporting}
+						sx={{ fontSize: "0.78rem", textTransform: "none" }}
+					>
+						{exporting ? "Exporting..." : "Export"}
+					</Button>
+				</SettingRow>
+				<SettingRow
+					label="Import Database"
+					description="Restore from a previously exported zip backup"
+				>
+					<input
+						type="file"
+						accept=".zip"
+						ref={fileInputRef}
+						onChange={handleImportFileSelect}
+						style={{ display: "none" }}
+					/>
+					<Button
+						variant="outlined"
+						size="small"
+						color="warning"
+						onClick={() => fileInputRef.current?.click()}
+						disabled={importing}
+						sx={{ fontSize: "0.78rem", textTransform: "none" }}
+					>
+						{importing ? "Importing..." : "Import"}
+					</Button>
+				</SettingRow>
+			</SettingsSection>
 
-      <SettingsSection title="About">
-        <SettingRow label="Application" description="Portfolio Dashboard">
-          <Typography sx={{ fontSize: '0.78rem', color: 'text.disabled' }}>v{__APP_VERSION__}</Typography>
-        </SettingRow>
-        <SettingRow label="Data Provider" description="Real-time market data">
-          <Typography sx={{ fontSize: '0.78rem', color: 'text.disabled' }}>Finnhub + NASDAQ</Typography>
-        </SettingRow>
-        <SettingRow label="Charts" description="Charting libraries">
-          <Typography sx={{ fontSize: '0.78rem', color: 'text.disabled' }}>ApexCharts + MUI X</Typography>
-        </SettingRow>
-      </SettingsSection>
-    </Box>
-  );
+			<Dialog
+				open={importConfirmOpen}
+				onClose={() => setImportConfirmOpen(false)}
+			>
+				<DialogTitle>Confirm Import</DialogTitle>
+				<DialogContent>
+					<DialogContentText>
+						This will <strong>overwrite all existing data</strong> with the
+						contents of the backup file. This action cannot be undone. Are you
+						sure you want to continue?
+					</DialogContentText>
+				</DialogContent>
+				<DialogActions>
+					<Button
+						onClick={() => {
+							setImportConfirmOpen(false);
+							setPendingImportFile(null);
+						}}
+					>
+						Cancel
+					</Button>
+					<Button
+						onClick={handleImportConfirm}
+						color="warning"
+						variant="contained"
+					>
+						Overwrite &amp; Import
+					</Button>
+				</DialogActions>
+			</Dialog>
+
+			<SettingsSection title="AI Agent">
+				<SettingRow
+					label="Enable AI Insights"
+					description="Show AI-powered analysis on the Research page"
+				>
+					<Switch
+						checked={draftAiConfig?.enabled ?? false}
+						onChange={(_, checked) => updateDraft({ enabled: checked })}
+					/>
+				</SettingRow>
+
+				{draftAiConfig?.enabled && (
+					<>
+						<SettingRow
+							label="Provider"
+							description="Select which AI provider to use"
+						>
+							<Select
+								size="small"
+								value={draftAiConfig.provider}
+								onChange={(e) =>
+									updateDraft({
+										provider: e.target.value as AiConfig["provider"],
+									})
+								}
+								sx={{ minWidth: { xs: "100%", sm: 200 }, fontSize: "0.82rem" }}
+							>
+								<MenuItem value="ollama">Ollama (Local)</MenuItem>
+								<MenuItem value="gemini">Gemini (Google)</MenuItem>
+								<MenuItem value="claude">Claude (Anthropic)</MenuItem>
+							</Select>
+						</SettingRow>
+
+						{draftAiConfig.provider === "claude" && (
+							<>
+								<SettingRow
+									label="API Key"
+									description="Your Anthropic API key"
+								>
+									<TextField
+										size="small"
+										type="password"
+										value={draftAiConfig.claudeApiKey}
+										onChange={(e) =>
+											updateDraft({ claudeApiKey: e.target.value })
+										}
+										placeholder="sk-ant-..."
+										sx={{ width: { xs: "100%", sm: 260 }, "& input": { fontSize: "0.78rem" } }}
+									/>
+								</SettingRow>
+								<SettingRow label="Model" description="Claude model to use">
+									<TextField
+										size="small"
+										value={draftAiConfig.claudeModel}
+										onChange={(e) =>
+											updateDraft({ claudeModel: e.target.value })
+										}
+										sx={{ width: { xs: "100%", sm: 260 }, "& input": { fontSize: "0.78rem" } }}
+									/>
+								</SettingRow>
+							</>
+						)}
+
+						{draftAiConfig.provider === "gemini" && (
+							<>
+								<SettingRow
+									label="API Key"
+									description="Your Google Gemini API key"
+								>
+									<TextField
+										size="small"
+										type="password"
+										value={draftAiConfig.geminiApiKey}
+										onChange={(e) =>
+											updateDraft({ geminiApiKey: e.target.value })
+										}
+										placeholder="AIza..."
+										sx={{ width: { xs: "100%", sm: 260 }, "& input": { fontSize: "0.78rem" } }}
+									/>
+								</SettingRow>
+								<SettingRow label="Model" description="Gemini model to use">
+									<TextField
+										size="small"
+										value={draftAiConfig.geminiModel}
+										onChange={(e) =>
+											updateDraft({ geminiModel: e.target.value })
+										}
+										sx={{ width: { xs: "100%", sm: 260 }, "& input": { fontSize: "0.78rem" } }}
+									/>
+								</SettingRow>
+							</>
+						)}
+
+						{draftAiConfig.provider === "ollama" && (
+							<>
+								<SettingRow label="Host" description="Ollama server URL">
+									<TextField
+										size="small"
+										value={draftAiConfig.ollamaHost}
+										onChange={(e) =>
+											updateDraft({ ollamaHost: e.target.value })
+										}
+										sx={{ width: { xs: "100%", sm: 260 }, "& input": { fontSize: "0.78rem" } }}
+									/>
+								</SettingRow>
+								<SettingRow
+									label="Model"
+									description="Ollama model name (e.g. llama3.1, mistral)"
+								>
+									<TextField
+										size="small"
+										value={draftAiConfig.ollamaModel}
+										onChange={(e) =>
+											updateDraft({ ollamaModel: e.target.value })
+										}
+										sx={{ width: { xs: "100%", sm: 260 }, "& input": { fontSize: "0.78rem" } }}
+									/>
+								</SettingRow>
+							</>
+						)}
+					</>
+				)}
+
+				{draftAiConfig && (
+					<Stack
+						direction="row"
+						spacing={1}
+						sx={{ justifyContent: "flex-end", alignItems: "center", px: 2, py: 1.5 }}
+					>
+						{isAiConfigDirty && (
+							<Typography
+								sx={{ fontSize: "0.72rem", color: "warning.main", mr: "auto" }}
+							>
+								Unsaved changes
+							</Typography>
+						)}
+						<Button
+							size="small"
+							variant="outlined"
+							onClick={handleResetAiConfig}
+							disabled={!isAiConfigDirty || saving}
+							sx={{ fontSize: "0.78rem", textTransform: "none" }}
+						>
+							Reset
+						</Button>
+						<Button
+							size="small"
+							variant="contained"
+							onClick={handleSaveAiConfig}
+							disabled={!isAiConfigDirty || saving}
+							sx={{ fontSize: "0.78rem", textTransform: "none" }}
+						>
+							{saving ? "Saving..." : "Save"}
+						</Button>
+					</Stack>
+				)}
+			</SettingsSection>
+
+			<SettingsSection title="Security">
+				<SettingRow
+					label="Enable lock"
+					description="Require a 6-digit code to access this dashboard"
+				>
+					<Switch
+						checked={draftLock.enabled}
+						onChange={(_, checked) =>
+							setDraftLock((prev) => ({ ...prev, enabled: checked }))
+						}
+					/>
+				</SettingRow>
+
+				{savedLock.enabled && (isDisabling || isChangingCode) && (
+					<SettingRow
+						label="Current code"
+						description="Confirm the code currently in use"
+					>
+						<TextField
+							size="small"
+							type="password"
+							inputMode="numeric"
+							value={lockCurrentCode}
+							onChange={(e) =>
+								setLockCurrentCode(e.target.value.replace(/\D/g, "").slice(0, 6))
+							}
+							slotProps={{ htmlInput: { maxLength: 6 } }}
+							sx={{
+								width: { xs: "100%", sm: 200 },
+								"& input": { fontSize: "0.82rem", letterSpacing: "0.15em" },
+							}}
+						/>
+					</SettingRow>
+				)}
+
+				{(isEnabling || (savedLock.enabled && draftLock.enabled)) && (
+					<>
+						<SettingRow
+							label="New code"
+							description="6 digits — keep it private"
+						>
+							<TextField
+								size="small"
+								type="password"
+								inputMode="numeric"
+								value={lockNewCode}
+								onChange={(e) =>
+									setLockNewCode(e.target.value.replace(/\D/g, "").slice(0, 6))
+								}
+								slotProps={{ htmlInput: { maxLength: 6 } }}
+								placeholder={
+									savedLock.enabled ? "Leave blank to keep current" : ""
+								}
+								sx={{
+									width: { xs: "100%", sm: 200 },
+									"& input": { fontSize: "0.82rem", letterSpacing: "0.15em" },
+								}}
+							/>
+						</SettingRow>
+						<SettingRow label="Confirm new code" description="Re-enter the new code">
+							<TextField
+								size="small"
+								type="password"
+								inputMode="numeric"
+								value={lockConfirmCode}
+								onChange={(e) =>
+									setLockConfirmCode(
+										e.target.value.replace(/\D/g, "").slice(0, 6),
+									)
+								}
+								slotProps={{ htmlInput: { maxLength: 6 } }}
+								sx={{
+									width: { xs: "100%", sm: 200 },
+									"& input": { fontSize: "0.82rem", letterSpacing: "0.15em" },
+								}}
+							/>
+						</SettingRow>
+					</>
+				)}
+
+				<SettingRow
+					label="Auto-lock after"
+					description="Lock the dashboard after this much idle time"
+				>
+					<Select
+						size="small"
+						value={draftLock.idleTimeoutMinutes}
+						onChange={(e) =>
+							setDraftLock((prev) => ({
+								...prev,
+								idleTimeoutMinutes: Number(e.target.value),
+							}))
+						}
+						sx={{ minWidth: { xs: "100%", sm: 200 }, fontSize: "0.82rem" }}
+					>
+						{IDLE_OPTIONS.map((opt) => (
+							<MenuItem key={opt.value} value={opt.value}>
+								{opt.label}
+							</MenuItem>
+						))}
+					</Select>
+				</SettingRow>
+
+				<Stack
+					direction="row"
+					spacing={1}
+					sx={{
+						justifyContent: "flex-end",
+						alignItems: "center",
+						px: 2,
+						py: 1.5,
+					}}
+				>
+					{isLockDirty && (
+						<Typography
+							sx={{
+								fontSize: "0.72rem",
+								color: "warning.main",
+								mr: "auto",
+							}}
+						>
+							Unsaved changes
+						</Typography>
+					)}
+					<Button
+						size="small"
+						variant="outlined"
+						onClick={handleResetLock}
+						disabled={!isLockDirty || savingLock}
+						sx={{ fontSize: "0.78rem", textTransform: "none" }}
+					>
+						Reset
+					</Button>
+					<Button
+						size="small"
+						variant="contained"
+						onClick={handleSaveLock}
+						disabled={!isLockDirty || savingLock}
+						sx={{ fontSize: "0.78rem", textTransform: "none" }}
+					>
+						{savingLock ? "Saving..." : "Save"}
+					</Button>
+				</Stack>
+			</SettingsSection>
+
+			<SettingsSection title="About">
+				<SettingRow label="Application" description="Portfolio Dashboard">
+					<Typography sx={{ fontSize: "0.78rem", color: "text.disabled" }}>
+						v{__APP_VERSION__}
+					</Typography>
+				</SettingRow>
+				<SettingRow label="Data Provider" description="Real-time market data">
+					<Typography sx={{ fontSize: "0.78rem", color: "text.disabled" }}>
+						Finnhub + NASDAQ
+					</Typography>
+				</SettingRow>
+				<SettingRow label="Charts" description="Charting libraries">
+					<Typography sx={{ fontSize: "0.78rem", color: "text.disabled" }}>
+						ApexCharts + MUI X
+					</Typography>
+				</SettingRow>
+			</SettingsSection>
+		</Box>
+	);
 }
