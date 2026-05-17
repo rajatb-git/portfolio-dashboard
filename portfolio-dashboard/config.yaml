@@ -1,6 +1,6 @@
 slug: portfolio-dashboard
 name: Portfolio Dashboard
-version: "1.0.33"
+version: "1.0.34"
 description: Self-hosted dashboard for tracking stock and crypto holdings across accounts
 arch:
   - amd64

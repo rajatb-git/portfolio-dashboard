@@ -1,9 +1,11 @@
 ARG BUILD_FROM=ghcr.io/home-assistant/amd64-base:latest
-FROM ${BUILD_FROM}
 
-ENV LANG=C.UTF-8
+# Build on host arch (no QEMU) — Vite 8 uses rolldown which has per-arch
+# native bindings that pnpm fails to install correctly under emulation.
+# Backend deps are all pure JS so node_modules ships cross-arch fine.
+FROM --platform=$BUILDPLATFORM node:22-alpine AS builder
 
-RUN apk add --no-cache nodejs npm nginx \
+RUN apk add --no-cache git \
     && npm install -g pnpm
 
 WORKDIR /build
@@ -13,12 +15,17 @@ RUN pnpm install --frozen-lockfile=false \
     && pnpm --filter @portfolio/backend run build \
     && VITE_DB_HOST=/api pnpm --filter @portfolio/frontend run build
 
-RUN mkdir -p /app/backend /app/frontend \
-    && cp -r packages/backend/dist /app/backend/dist \
-    && cp packages/backend/package.json /app/backend/package.json \
-    && cp -r packages/backend/node_modules /app/backend/node_modules \
-    && cp -r packages/frontend/dist/* /app/frontend/ \
-    && rm -rf /build /root/.local/share/pnpm /root/.npm
+FROM ${BUILD_FROM}
+
+ENV LANG=C.UTF-8
+
+RUN apk add --no-cache nodejs nginx
+
+RUN mkdir -p /app/backend /app/frontend
+COPY --from=builder /build/packages/backend/dist /app/backend/dist
+COPY --from=builder /build/packages/backend/package.json /app/backend/package.json
+COPY --from=builder /build/packages/backend/node_modules /app/backend/node_modules
+COPY --from=builder /build/packages/frontend/dist /app/frontend
 
 COPY portfolio-dashboard/nginx.conf /etc/nginx/http.d/portfolio.conf
 RUN rm -f /etc/nginx/http.d/default.conf
