@@ -97,3 +97,49 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha,scope=ha-${{ matrix.arch }}
           cache-to: type=gha,mode=max,scope=ha-${{ matrix.arch }}
+
+  sync-addon-version:
+    needs: [build-and-push-ha-addon]
+    if: github.event_name == 'release' && github.event.release.tag_name != ''
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout develop
+        uses: actions/checkout@v4
+        with:
+          ref: develop
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Compute version from release tag
+        id: ver
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          if ! [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Release tag '$GITHUB_REF_NAME' is not a valid semver; skipping sync." >&2
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Write version to addon config and package manifests
+        if: steps.ver.outputs.skip != 'true'
+        run: |
+          VERSION="${{ steps.ver.outputs.version }}"
+          sed -i -E "s/^version: \".*\"$/version: \"${VERSION}\"/" portfolio-dashboard/config.yaml
+          for f in package.json packages/frontend/package.json packages/backend/package.json; do
+            node -e "const fs=require('fs'); const f='$f'; const j=JSON.parse(fs.readFileSync(f,'utf8')); j.version='${VERSION}'; fs.writeFileSync(f, JSON.stringify(j,null,2)+'\n');"
+          done
+
+      - name: Commit and push
+        if: steps.ver.outputs.skip != 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add portfolio-dashboard/config.yaml package.json packages/frontend/package.json packages/backend/package.json
+          if git diff --staged --quiet; then
+            echo "Versions already in sync; nothing to commit."
+            exit 0
+          fi
+          git commit -m "ci: sync addon and package versions to ${{ steps.ver.outputs.version }} [skip ci]"
+          git push origin develop
