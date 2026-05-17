@@ -4,8 +4,7 @@ FROM ${BUILD_FROM}
 ENV LANG=C.UTF-8
 
 RUN apk add --no-cache nodejs npm nginx \
-    && corepack enable \
-    && corepack prepare pnpm@latest --activate
+    && npm install -g pnpm
 
 WORKDIR /build
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
@@ -21,10 +20,10 @@ RUN mkdir -p /app/backend /app/frontend \
     && cp -r packages/frontend/dist/* /app/frontend/ \
     && rm -rf /build /root/.local/share/pnpm /root/.npm
 
-COPY homeassistant/portfolio-dashboard/nginx.conf /etc/nginx/http.d/portfolio.conf
+COPY portfolio-dashboard/nginx.conf /etc/nginx/http.d/portfolio.conf
 RUN rm -f /etc/nginx/http.d/default.conf
 
-COPY homeassistant/portfolio-dashboard/rootfs /
+COPY portfolio-dashboard/rootfs /
 
 RUN chmod a+x /etc/cont-init.d/00-init.sh \
     /etc/services.d/backend/run /etc/services.d/backend/finish \
@@ -36,7 +35,7 @@ LABEL \
   org.opencontainers.image.authors="Rajat Bansal" \
   org.opencontainers.image.source="https://github.com/rajatb-git/portfolio-dashboard" \
   org.opencontainers.image.url="https://github.com/rajatb-git/portfolio-dashboard" \
-  org.opencontainers.image.documentation="https://github.com/rajatb-git/portfolio-dashboard/blob/develop/homeassistant/portfolio-dashboard/DOCS.md" \
+  org.opencontainers.image.documentation="https://github.com/rajatb-git/portfolio-dashboard/blob/develop/portfolio-dashboard/DOCS.md" \
   org.opencontainers.image.licenses="MIT" \
   org.opencontainers.image.vendor="Rajat Bansal"
 

@@ -32,7 +32,7 @@ Storage persists to a named Docker volume.
 Multi-arch images (amd64, aarch64, armv7) are published to GHCR. Persistent
 data lives at `/data/storage` inside the addon and survives restarts and
 updates. Full options reference is in
-[`homeassistant/portfolio-dashboard/DOCS.md`](homeassistant/portfolio-dashboard/DOCS.md).
+[`portfolio-dashboard/DOCS.md`](portfolio-dashboard/DOCS.md).
 
 ## Develop locally
 

@@ -133,7 +133,7 @@ jobs:
             org.opencontainers.image.authors=Rajat Bansal
             org.opencontainers.image.source=https://github.com/rajatb-git/portfolio-dashboard
             org.opencontainers.image.url=https://github.com/rajatb-git/portfolio-dashboard
-            org.opencontainers.image.documentation=https://github.com/rajatb-git/portfolio-dashboard/blob/develop/homeassistant/portfolio-dashboard/DOCS.md
+            org.opencontainers.image.documentation=https://github.com/rajatb-git/portfolio-dashboard/blob/develop/portfolio-dashboard/DOCS.md
             org.opencontainers.image.licenses=MIT
             org.opencontainers.image.vendor=Rajat Bansal
 
@@ -141,7 +141,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: ./homeassistant/portfolio-dashboard/Dockerfile
+          file: ./portfolio-dashboard/Dockerfile
           build-args: |
             BUILD_FROM=ghcr.io/home-assistant/${{ matrix.arch }}-base:latest
           platforms: ${{ matrix.platform }}
