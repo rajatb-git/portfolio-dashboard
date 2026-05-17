@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.0.29
+## 1.0.30
 
 - Initial Home Assistant add-on release.
 - Single-container build: backend (Koa 3 + SkewerDB) and frontend (React +
