@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.0.2
+
+- Fix `/bin/sh: can't open '/init': Permission denied` on container start by
+  granting read permission alongside execute (`rix`) in the AppArmor profile
+  for `/init` and standard binary paths. The s6-overlay `/init` and several
+  helpers (e.g. `bashio`, `with-contenv`, `execlineb`) are shell/execline
+  scripts, so the interpreter must be able to read them.
+
 ## 1.0.30
 
 - Initial Home Assistant add-on release.
