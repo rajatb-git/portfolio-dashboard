@@ -1,11 +1,16 @@
+import * as dotenv from 'dotenv';
+
+dotenv.config();
+
+import { ensureStorageCwd } from './utils/storage';
+
+ensureStorageCwd();
+
 import './utils/storageRepair';
 import cors from '@koa/cors';
-import * as dotenv from 'dotenv';
 import Koa from 'koa';
 import KoaBodyParser from 'koa-bodyparser';
 import KoaHelmet from 'koa-helmet';
-
-dotenv.config();
 
 import { authMiddleware } from './middleware/auth';
 import { AccountsRouter } from './router/accounts.route';

@@ -8,9 +8,8 @@ import unzipper from 'unzipper';
 import { getAiConfig, IAiConfig, maskAiConfig, saveAiConfig } from '../models/AiConfigModel';
 import { getLockStatus, setLockConfig } from '../models/LockConfigModel';
 import { errorBody } from '../utils/error';
+import { STORAGE_DIR } from '../utils/storage';
 import { logger } from '../utils/winston';
-
-const STORAGE_DIR = path.resolve(process.cwd(), 'storage');
 
 export const SettingsRouter = () => {
   const router = new KoaRouter();

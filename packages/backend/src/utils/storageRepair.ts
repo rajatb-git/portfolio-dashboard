@@ -1,7 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 
-const STORAGE_DIR = path.join(process.cwd(), 'storage');
+import { STORAGE_DIR } from './storage';
 
 const findValidJsonEnd = (s: string): number => {
   let depth = 0;
