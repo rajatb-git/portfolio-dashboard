@@ -4,8 +4,7 @@ FROM ${BUILD_FROM}
 ENV LANG=C.UTF-8
 
 RUN apk add --no-cache nodejs npm nginx \
-    && corepack enable \
-    && corepack prepare pnpm@latest --activate
+    && npm install -g pnpm
 
 WORKDIR /build
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
