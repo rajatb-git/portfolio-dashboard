@@ -26,20 +26,6 @@ jobs:
             exit 1
           fi
 
-  create-tag-on-release:
-    if: github.event_name == 'release'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - name: Create tag for release
-        env:
-          VERSION: ${{ github.event.release.tag_name }}
-        run: |
-          git fetch --tags
-          git tag "${VERSION}"
-          git push origin "${VERSION}"
-
   build-and-push:
     needs: [require-tag]
     if: always()
