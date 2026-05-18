@@ -4,8 +4,16 @@ set -e
 mkdir -p /data/storage
 
 LOG_LEVEL=$(bashio::config 'log_level')
-FINN_HUB_API=$(bashio::config 'finnhub_api')
-FINN_HUB_API_KEY=$(bashio::config 'finnhub_api_key')
+
+FINN_HUB_API=""
+if bashio::config.has_value 'finnhub_api'; then
+    FINN_HUB_API=$(bashio::config 'finnhub_api')
+fi
+
+FINN_HUB_API_KEY=""
+if bashio::config.has_value 'finnhub_api_key'; then
+    FINN_HUB_API_KEY=$(bashio::config 'finnhub_api_key')
+fi
 
 mkdir -p /run
 cat <<EOF > /run/portfolio.env

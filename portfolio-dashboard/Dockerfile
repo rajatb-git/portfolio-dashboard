@@ -32,9 +32,9 @@ RUN rm -f /etc/nginx/http.d/default.conf
 
 COPY portfolio-dashboard/rootfs /
 
-RUN chmod a+x /etc/cont-init.d/00-init.sh \
-    /etc/services.d/backend/run /etc/services.d/backend/finish \
-    /etc/services.d/nginx/run /etc/services.d/nginx/finish
+RUN chmod a+x /etc/s6-overlay/scripts/init \
+    /etc/s6-overlay/s6-rc.d/backend/run \
+    /etc/s6-overlay/s6-rc.d/nginx/run
 
 LABEL \
   org.opencontainers.image.title="Portfolio Dashboard (Home Assistant Addon)" \

@@ -1,3 +1,0 @@
-#!/usr/bin/with-contenv bashio
-bashio::log.warning "Backend service exited with code ${1}"
-exec /run/s6/basedir/bin/halt
