@@ -1,7 +1,0 @@
-#!/usr/bin/with-contenv bashio
-set -e
-set -a
-. /run/portfolio.env
-set +a
-cd /app/backend
-exec node dist/server.js

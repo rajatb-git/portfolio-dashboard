@@ -33,9 +33,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 
-# Home Assistant
-HAapp
-
 # backend storage
 packages/backend/storage/
 
