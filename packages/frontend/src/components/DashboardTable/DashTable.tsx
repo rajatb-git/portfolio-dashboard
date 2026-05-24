@@ -22,13 +22,6 @@ import DashTableRow from './DashTableRow';
 import TableToolbar from './DashTableToolbar';
 import { applyFilter, getComparator } from './dashTableUtils';
 
-export type Total = {
-  accountId: string;
-  totalGL: number;
-  percentGL: number;
-  totalInvestment: number;
-};
-
 type TableProps<T> = {
   rows: Array<T>;
   columns: Array<Column>;

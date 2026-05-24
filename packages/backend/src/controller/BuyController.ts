@@ -1,4 +1,4 @@
-import { IHoldings, IHoldingsModel, HoldingsModel } from '../models/HoldingsModel';
+import { HoldingsModel, IHoldings, IHoldingsModel } from '../models/HoldingsModel';
 import { calulateAveragePriceBuy } from '../utils';
 import { adjustCash } from './CashController';
 import { logBuyTransaction } from './TransactionController';

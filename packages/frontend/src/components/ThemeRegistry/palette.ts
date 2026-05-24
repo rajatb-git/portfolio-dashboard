@@ -1,12 +1,6 @@
 /* eslint-disable no-unused-vars */
 import { alpha } from '@mui/material/styles';
 
-// ----------------------------------------------------------------------
-
-export type ColorSchema = 'primary' | 'secondary' | 'info' | 'success' | 'warning' | 'error';
-
-// SETUP COLORS
-
 const GREY = {
   0: '#FFFFFF',
   100: '#F9FAFB',

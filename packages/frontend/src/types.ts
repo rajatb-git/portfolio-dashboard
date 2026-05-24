@@ -7,8 +7,3 @@ export type Column = {
   minWidth?: string;
   type?: 'text' | 'iconButton' | 'button';
 };
-
-export type BackendError = {
-  name: string;
-  message: string;
-};

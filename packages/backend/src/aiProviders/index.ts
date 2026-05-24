@@ -1,8 +1,8 @@
-import { AiProvider, AiProviderName } from './types';
+import { getAiConfig, IAiConfig } from '../models/AiConfigModel';
 import { ClaudeProvider } from './claudeProvider';
 import { GeminiProvider } from './geminiProvider';
 import { OllamaProvider } from './ollamaProvider';
-import { getAiConfig, IAiConfig } from '../models/AiConfigModel';
+import { AiProvider, AiProviderName } from './types';
 
 export { SYSTEM_PROMPT } from './types';
 export type { AiProvider, AiProviderName };
