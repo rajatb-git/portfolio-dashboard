@@ -1,4 +1,4 @@
-import KoaRouter from 'koa-router';
+import Router from '@koa/router';
 
 import { calculateRiskMetrics } from '../controller/RiskAnalyticsController';
 import { getSectorAllocation } from '../controller/SectorController';
@@ -6,7 +6,7 @@ import { errorBody } from '../utils/error';
 import { logger } from '../utils/winston';
 
 export const AnalyticsRouter = () => {
-  const router = new KoaRouter();
+  const router = new Router();
 
   router.get('/analytics/risk', async (ctx) => {
     try {

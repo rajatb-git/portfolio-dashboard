@@ -1,4 +1,4 @@
-import KoaRouter from 'koa-router';
+import Router from '@koa/router';
 import { recordCashMovement } from '../controller/CashController';
 import { AccountModel } from '../models/AccountModel';
 import { errorBody } from '../utils/error';
@@ -8,7 +8,7 @@ const accountsModel = AccountModel();
 accountsModel.initialize();
 
 export const AccountsRouter = () => {
-  const router = new KoaRouter();
+  const router = new Router();
 
   router.put('/accounts', async (ctx) => {
     try {

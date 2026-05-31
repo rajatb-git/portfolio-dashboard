@@ -1,11 +1,11 @@
-import KoaRouter from 'koa-router';
+import Router from '@koa/router';
 import { createDashboard } from '../controller/DashboardController';
 import { PortfolioSnapshotDBModel } from '../models/PortfolioSnapshotModel';
 import { errorBody } from '../utils/error';
 import { logger } from '../utils/winston';
 
 export const DashboardRouter = () => {
-  const router = new KoaRouter();
+  const router = new Router();
 
   router.get('/dashboard', async (ctx) => {
     try {
