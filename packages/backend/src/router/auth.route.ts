@@ -1,4 +1,4 @@
-import KoaRouter from 'koa-router';
+import Router from '@koa/router';
 import { issueToken } from '../middleware/auth';
 import { getLockStatus, verifyCode } from '../models/LockConfigModel';
 import { errorBody } from '../utils/error';
@@ -22,7 +22,7 @@ function getRateState(ip: string): RateState {
 }
 
 export const AuthRouter = () => {
-  const router = new KoaRouter();
+  const router = new Router();
 
   router.get('/auth/status', async (ctx) => {
     try {

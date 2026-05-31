@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { PassThrough } from 'node:stream';
 import archiver from 'archiver';
-import KoaRouter from 'koa-router';
+import Router from '@koa/router';
 import unzipper from 'unzipper';
 
 import { getAiConfig, IAiConfig, maskAiConfig, saveAiConfig } from '../models/AiConfigModel';
@@ -12,7 +12,7 @@ import { STORAGE_DIR } from '../utils/storage';
 import { logger } from '../utils/winston';
 
 export const SettingsRouter = () => {
-  const router = new KoaRouter();
+  const router = new Router();
 
   router.get('/settings/db/export', async (ctx) => {
     try {

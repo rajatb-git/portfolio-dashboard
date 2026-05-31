@@ -1,4 +1,4 @@
-import KoaRouter from 'koa-router';
+import Router from '@koa/router';
 import moment from 'moment';
 import { AgentInsightsController } from '../controller/AgentInsightsController';
 import { CompanyProfileController } from '../controller/CompanyProfileController';
@@ -18,7 +18,7 @@ import { errorBody } from '../utils/error';
 import { logger } from '../utils/winston';
 
 export const LiveRouter = () => {
-  const router = new KoaRouter();
+  const router = new Router();
 
   router.get('/live/quote/:sym', async (ctx) => {
     try {

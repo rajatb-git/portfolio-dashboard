@@ -1,5 +1,5 @@
 import moment from 'moment';
-import KoaRouter from 'koa-router';
+import Router from '@koa/router';
 import { buy } from '../controller/BuyController';
 import { sell } from '../controller/SellController';
 import { LiveQuoteController } from '../controller/LiveQuoteController';
@@ -11,7 +11,7 @@ const holdingsModel = HoldingsModel();
 holdingsModel.initialize();
 
 export const HoldingsRouter = () => {
-  const router = new KoaRouter();
+  const router = new Router();
 
   // create
   router.put('/holdings', (ctx) => {

@@ -1,5 +1,5 @@
 import fs from 'fs';
-import KoaRouter from 'koa-router';
+import Router from '@koa/router';
 import path from 'path';
 import { errorBody } from '../utils/error';
 import { logger } from '../utils/winston';
@@ -7,7 +7,7 @@ import { logger } from '../utils/winston';
 const ALLOWED_LOG_FILES = ['combined', 'error'];
 
 export const LogsRouter = () => {
-  const router = new KoaRouter();
+  const router = new Router();
 
   router.get('/logs/:file', async (ctx) => {
     try {

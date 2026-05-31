@@ -1,4 +1,4 @@
-import KoaRouter from 'koa-router';
+import Router from '@koa/router';
 import { TransactionModel } from '../models/TransactionModel';
 import { errorBody } from '../utils/error';
 import { logger } from '../utils/winston';
@@ -7,7 +7,7 @@ const transactionModel = TransactionModel();
 transactionModel.initialize();
 
 export const TransactionsRouter = () => {
-  const router = new KoaRouter();
+  const router = new Router();
 
   // create
   router.put('/transactions', (ctx) => {

@@ -1,4 +1,4 @@
-import KoaRouter from 'koa-router';
+import Router from '@koa/router';
 import moment from 'moment';
 import { WatchlistDBModel } from '../models/WatchlistModel';
 import { errorBody } from '../utils/error';
@@ -8,7 +8,7 @@ const watchlistModel = WatchlistDBModel();
 watchlistModel.initialize();
 
 export const WatchlistRouter = () => {
-  const router = new KoaRouter();
+  const router = new Router();
 
   router.get('/watchlist', async (ctx) => {
     try {
