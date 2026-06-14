@@ -9,4 +9,6 @@ export interface ITransaction {
   createdAt: string;
   updatedAt?: string;
   pnl?: number;
+  // Original trade date for rows brought in via CSV import (createdAt is the import time).
+  date?: string;
 }

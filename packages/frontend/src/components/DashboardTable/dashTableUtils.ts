@@ -121,5 +121,10 @@ export function applyFilter({
     inputData = inputData.filter((x: IHoldings) => x.accountId === filterAccount);
   }
 
-  return { dataFiltered: inputData, totals: calculateTotals(inputData, accounts) };
+  // When an account is selected, only summarize that account so the cards don't
+  // show every other account at $0 and misrepresent the portfolio.
+  const accountsForTotals =
+    filterAccount && filterAccount !== 'all' ? accounts.filter((a) => a.id === filterAccount) : accounts;
+
+  return { dataFiltered: inputData, totals: calculateTotals(inputData, accountsForTotals) };
 }

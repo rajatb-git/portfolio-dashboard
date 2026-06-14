@@ -32,6 +32,7 @@ import apis from '@/api';
 import CashDialog from '@/components/CashDialog';
 import GenericGrid from '@/components/DataGrid';
 import ImportDialog from '@/components/DataGrid/DBImportDialog';
+import TransactionImportDialog from '@/components/DataGrid/TransactionImportDialog';
 import { Iconify } from '@/components/Iconify';
 import type { IAccount } from '@/models/AccountsModel';
 import type { IHoldings } from '@/models/HoldingsModel';
@@ -213,6 +214,14 @@ const columns: { [collection: string]: Array<GridColDef> } = {
       flex: 1,
       minWidth: 70,
       editable: true,
+    },
+    {
+      field: 'date',
+      headerName: 'Trade Date',
+      flex: 1,
+      minWidth: 150,
+      editable: false,
+      valueFormatter: (value: string | undefined) => (value ? moment(value).format('MMM D, YYYY') : '—'),
     },
     ...timestampColumns,
   ],
@@ -435,6 +444,7 @@ export default function Database() {
   const [activeCollection, setActiveCollection] = React.useState<'accounts' | 'transactions' | 'holdings'>('holdings');
   const [records, setRecords] = React.useState<Array<IAccount | IHoldings | ITransaction>>([]);
   const [importDialogOpen, setImportDialogOpen] = React.useState(false);
+  const [txnImportDialogOpen, setTxnImportDialogOpen] = React.useState(false);
   const [accountsData, setAccountsData] = React.useState<Array<IAccount>>([]);
 
   const deleteRecord = async (recordId: string) => {
@@ -446,11 +456,16 @@ export default function Database() {
       setAccountsData(response);
     });
 
-    setImportDialogOpen(true);
+    if (activeCollection === 'transactions') {
+      setTxnImportDialogOpen(true);
+    } else {
+      setImportDialogOpen(true);
+    }
   };
 
   const closeImportDialog = () => {
     setImportDialogOpen(false);
+    setTxnImportDialogOpen(false);
     setAccountsData([]);
   };
 
@@ -463,6 +478,17 @@ export default function Database() {
       .insertHoldings(newData)
       .then(() => {
         toast.success('Successfully imported holdings data!');
+      })
+      .catch((err) => {
+        toast.error(err.message);
+      });
+  };
+
+  const importTransactions = async (rows: Array<Partial<ITransaction>>): Promise<void> => {
+    await apis.transactions
+      .importTransactions(rows)
+      .then((res) => {
+        toast.success(res.message || 'Successfully imported transactions!');
       })
       .catch((err) => {
         toast.error(err.message);
@@ -501,9 +527,11 @@ export default function Database() {
         </Typography>
 
         <Stack direction="row" sx={{ gap: 1, flexWrap: 'wrap' }}>
-          <Button color="primary" startIcon={<Iconify icon="mage:file-upload-fill" />} onClick={openImportDialog}>
-            Import holdings data
-          </Button>
+          {activeCollection !== 'accounts' && (
+            <Button color="primary" startIcon={<Iconify icon="mage:file-upload-fill" />} onClick={openImportDialog}>
+              {activeCollection === 'transactions' ? 'Import transactions' : 'Import holdings data'}
+            </Button>
+          )}
 
           <Select
             value={activeCollection}
@@ -541,6 +569,14 @@ export default function Database() {
         open={importDialogOpen}
         handleDialogClose={closeImportDialog}
         insertHoldingsData={insertHoldingsData}
+        accountsData={accountsData}
+        refreshPage={loadData}
+      />
+
+      <TransactionImportDialog
+        open={txnImportDialogOpen}
+        handleDialogClose={closeImportDialog}
+        importTransactions={importTransactions}
         accountsData={accountsData}
         refreshPage={loadData}
       />

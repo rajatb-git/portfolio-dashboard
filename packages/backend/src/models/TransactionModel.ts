@@ -8,6 +8,9 @@ export interface ITransaction {
   type: 'stock' | 'crypto' | 'cash';
   action: string;
   pnl?: number;
+  // Actual trade date for imported history. SkewerDB always stamps createdAt with
+  // the insert time, so imported rows carry the original date here instead.
+  date?: string;
 }
 
 export const TransactionSchema: SchemaType = {
@@ -18,6 +21,7 @@ export const TransactionSchema: SchemaType = {
   type: { type: String, enum: ['stock', 'crypto', 'cash'], required: true },
   action: { type: String, required: true },
   pnl: { type: Number, required: false },
+  date: { type: String, required: false },
 };
 
 export interface ITransactionModel extends ITransaction, ISkewerModel {}

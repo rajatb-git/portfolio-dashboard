@@ -4,10 +4,14 @@ import { getQuoteFromNasdaq } from '../externalApis/nasdaq';
 import { IPriceStoreModel, PriceStoreDBModel } from '../models/PriceStoreModel';
 
 const priceStoreModel = PriceStoreDBModel();
-priceStoreModel.initialize();
+const priceStoreReady = priceStoreModel.initialize();
 
 export class LiveQuoteController {
   getLiveQuote = async (symbol: string, isCrypto = false): Promise<IPriceStoreModel> => {
+    // Ensure the on-disk price cache has finished loading before querying it.
+    // Otherwise a cold-start request reads an empty cache, refetches every symbol
+    // live, and rate-limited failures drop holdings from the total.
+    await priceStoreReady;
     const dbFetch = priceStoreModel.findById(symbol);
 
     if (this.liveFetchRequiredQuote(dbFetch)) {

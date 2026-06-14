@@ -102,14 +102,19 @@ export const createDashboard = async (): Promise<Array<HoldingAggregate>> => {
     }
   }
 
-  // Save today's portfolio snapshot (idempotent — skips if already recorded)
+  // Save today's portfolio snapshot (idempotent — skips if already recorded).
+  // Only record once every holding was successfully priced; a partial total
+  // (some holdings dropped due to a failed live fetch) would otherwise be frozen
+  // in as today's snapshot and corrupt the performance chart.
   try {
-    const today = moment().format('YYYY-MM-DD');
-    const totalValue = +result.reduce((sum, h) => sum + h.marketValue, 0).toFixed(2);
-    const snapshotModel = await PortfolioSnapshotDBModel().initialize();
-    const existing = snapshotModel.findById(today);
-    if (!existing) {
-      await snapshotModel.insertOne({ date: today, totalValue }, today);
+    if (result.length === allHoldings.length) {
+      const today = moment().format('YYYY-MM-DD');
+      const totalValue = +result.reduce((sum, h) => sum + h.marketValue, 0).toFixed(2);
+      const snapshotModel = await PortfolioSnapshotDBModel().initialize();
+      const existing = snapshotModel.findById(today);
+      if (!existing) {
+        await snapshotModel.insertOne({ date: today, totalValue }, today);
+      }
     }
   } catch {
     // snapshot errors must never break the dashboard response
