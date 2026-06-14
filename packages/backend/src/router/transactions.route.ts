@@ -1,4 +1,5 @@
 import Router from '@koa/router';
+import moment from 'moment';
 import { TransactionModel } from '../models/TransactionModel';
 import { errorBody } from '../utils/error';
 import { logger } from '../utils/winston';
@@ -6,8 +7,75 @@ import { logger } from '../utils/winston';
 const transactionModel = TransactionModel();
 transactionModel.initialize();
 
+const VALID_TYPES = ['stock', 'crypto', 'cash'];
+const VALID_ACTIONS = ['buy', 'sell', 'deposit', 'withdraw'];
+
+const parseMoney = (value: unknown): number | undefined => {
+  if (value === undefined || value === null || value === '') return undefined;
+  const parsed = parseFloat(String(value).replace(/[$,\s]/g, ''));
+  return Number.isNaN(parsed) ? undefined : parsed;
+};
+
 export const TransactionsRouter = () => {
   const router = new Router();
+
+  // bulk import (generic CSV template -> transaction log, no holdings side effects)
+  router.post('/transactions/import', async (ctx) => {
+    try {
+      const incoming = ctx.request.body;
+      if (!Array.isArray(incoming) || incoming.length === 0) {
+        ctx.status = 400;
+        ctx.body = errorBody('Invalid import', 'Expected a non-empty array of transactions');
+        return;
+      }
+
+      const rows = incoming.map((raw: any, i: number) => {
+        const row = `Row ${i + 1}`;
+        const accountId = String(raw.accountId ?? '').trim();
+        if (!accountId) throw new Error(`${row}: accountId is required`);
+
+        const type = String(raw.type ?? '')
+          .trim()
+          .toLowerCase();
+        if (!VALID_TYPES.includes(type)) {
+          throw new Error(`${row}: type must be one of ${VALID_TYPES.join(', ')}`);
+        }
+
+        const action = String(raw.action ?? '')
+          .trim()
+          .toLowerCase();
+        if (!VALID_ACTIONS.includes(action)) {
+          throw new Error(`${row}: action must be one of ${VALID_ACTIONS.join(', ')}`);
+        }
+
+        const qty = parseFloat(String(raw.qty));
+        if (Number.isNaN(qty)) throw new Error(`${row}: qty must be a number`);
+
+        const price = parseMoney(raw.price);
+        const pnl = parseMoney(raw.pnl);
+        const date = raw.date ? moment(String(raw.date)) : undefined;
+
+        return {
+          accountId,
+          type,
+          action,
+          qty,
+          ...(raw.symbol && { symbol: String(raw.symbol).trim().toUpperCase() }),
+          ...(price !== undefined && { price }),
+          ...(pnl !== undefined && { pnl }),
+          ...(date?.isValid() && { date: date.toISOString() }),
+        };
+      });
+
+      const inserted = await transactionModel.insertMany(rows);
+      ctx.status = 200;
+      ctx.body = { message: `Imported ${inserted.length} transaction(s)`, count: inserted.length };
+    } catch (err: any) {
+      logger.log({ level: 'error', message: err.message, label: 'Import transactions' });
+      ctx.body = errorBody('Failed to import transactions', err.message);
+      ctx.status = 400;
+    }
+  });
 
   // create
   router.put('/transactions', (ctx) => {

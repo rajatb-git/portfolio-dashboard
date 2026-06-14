@@ -3,10 +3,11 @@ import { getRecommendation } from '../externalApis/finnHub';
 import { IRecommendationModel, RecommendationDBModel } from '../models/RecommendationModel';
 
 const recommendationModel = RecommendationDBModel();
-recommendationModel.initialize();
+const recommendationReady = recommendationModel.initialize();
 
 export class LiveRecommendationController {
   getLiveRecommendation = async (symbol: string): Promise<IRecommendationModel> => {
+    await recommendationReady;
     const dbFetch = recommendationModel.findById(symbol);
 
     if (this.liveFetchRequired(dbFetch)) {

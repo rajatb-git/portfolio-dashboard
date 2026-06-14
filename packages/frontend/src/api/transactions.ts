@@ -41,4 +41,11 @@ export default class TransactionsAPI {
       .delete(DB_HOST + '/transactions', { data: { id } })
       .then((response) => response.data)
       .catch(catchCustomError);
+
+  // file import
+  importTransactions = async (rows: Array<Partial<ITransaction>>): Promise<{ message: string; count: number }> =>
+    axios
+      .post(DB_HOST + '/transactions/import', rows)
+      .then((response) => response.data)
+      .catch(catchCustomError);
 }
