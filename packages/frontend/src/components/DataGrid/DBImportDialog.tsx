@@ -183,8 +183,12 @@ export default function ImportDialog({
               Drop a file here or click to select from system
             </Typography>
 
-            <Typography variant="caption" sx={{ fontStyle: 'italic' }}>
-              symbol, name, qty and averagePrice columns are rquired
+            <Typography variant="caption" sx={{ fontStyle: 'italic', display: 'block' }}>
+              symbol, name, qty and averagePrice columns are required
+            </Typography>
+
+            <Typography variant="caption" sx={{ fontStyle: 'italic', display: 'block' }}>
+              use a row with symbol CASH (qty = amount) to set a cash balance
             </Typography>
           </Box>
         )}
