@@ -33,4 +33,10 @@ export default class AnalyticsAPI {
       .get(DB_HOST + '/analytics/sectors')
       .then((response) => response.data)
       .catch(catchCustomError);
+
+  getPerformanceAttribution = async (): Promise<any> =>
+    axios
+      .get(DB_HOST + '/analytics/performance-attribution')
+      .then((response) => response.data)
+      .catch(catchCustomError);
 }

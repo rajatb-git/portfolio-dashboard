@@ -5,8 +5,10 @@ import { toast } from 'react-toastify';
 import apis from '@/api';
 import type { HoldingAggregate } from '@/api/dashboard';
 import DashboardTable from '@/components/DashboardTable/DashTable';
+import PriceAlertsCard from '@/components/Dashboard/PriceAlertsCard';
 import WatchlistSection from '@/components/WatchlistSection';
 import type { IAccount } from '@/models/AccountsModel';
+import LocalStorageUtil from '@/utils/localStorage';
 import type { Column } from '@/types';
 
 export default function Dashboard() {
@@ -41,6 +43,8 @@ export default function Dashboard() {
     { id: 'accountId', label: 'Account' },
     { id: '', label: 'Recommendation' },
   ];
+
+  const threshold = Number(LocalStorageUtil.getItem<string>('alert_threshold') ?? '5') || 5;
 
   const loadData = async () => {
     setIsLoading(true);
@@ -78,6 +82,7 @@ export default function Dashboard() {
         accounts={accounts}
         columns={columns}
       />
+      <PriceAlertsCard holdings={dashboardData} threshold={threshold} />
       <WatchlistSection />
     </>
   );
