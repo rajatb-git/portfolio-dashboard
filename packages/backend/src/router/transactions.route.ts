@@ -1,5 +1,6 @@
 import Router from '@koa/router';
 import moment from 'moment';
+import { adjustCash, transactionCashImpact } from '../controller/CashController';
 import { TransactionModel } from '../models/TransactionModel';
 import { errorBody } from '../utils/error';
 import { logger } from '../utils/winston';
@@ -139,7 +140,18 @@ export const TransactionsRouter = () => {
   router.post('/transactions', async (ctx) => {
     try {
       const body: any = ctx.request.body;
-      ctx.body = await transactionModel.insertOrUpdate(body, body.id);
+      const previous = body.id ? transactionModel.findById(body.id) : null;
+
+      const saved = await transactionModel.insertOrUpdate(body, body.id);
+
+      // Keep account cash in sync with manual edits to the transaction log:
+      // undo the previous row's cash effect, then apply the saved row's effect.
+      if (previous) {
+        await adjustCash(previous.accountId, -transactionCashImpact(previous));
+      }
+      await adjustCash(saved.accountId, transactionCashImpact(saved));
+
+      ctx.body = saved;
       ctx.status = 200;
     } catch (err: any) {
       logger.log({ level: 'error', message: err.message, label: 'Update transaction' });
@@ -149,10 +161,16 @@ export const TransactionsRouter = () => {
   });
 
   // delete
-  router.delete('/transactions', (ctx) => {
+  router.delete('/transactions', async (ctx) => {
     try {
       const body: any = ctx.request.body;
+      const previous = body.id ? transactionModel.findById(body.id) : null;
+
       ctx.body = transactionModel.deleteById(body.id);
+
+      if (previous) {
+        await adjustCash(previous.accountId, -transactionCashImpact(previous));
+      }
       ctx.status = 200;
     } catch (err: any) {
       logger.log({ level: 'error', message: err.message, label: 'Delete transaction' });
