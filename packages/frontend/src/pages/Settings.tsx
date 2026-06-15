@@ -119,6 +119,17 @@ export default function Settings() {
 	const [lockNewCode, setLockNewCode] = React.useState("");
 	const [lockConfirmCode, setLockConfirmCode] = React.useState("");
 	const [savingLock, setSavingLock] = React.useState(false);
+	const savedThreshold = Number(LocalStorageUtil.getItem<string>('alert_threshold') ?? '5') || 5;
+	const [draftThreshold, setDraftThreshold] = React.useState(savedThreshold);
+	const [savedThresholdVal, setSavedThresholdVal] = React.useState(savedThreshold);
+	const isThresholdDirty = draftThreshold !== savedThresholdVal;
+
+	const handleSaveThreshold = () => {
+		LocalStorageUtil.setItem('alert_threshold', String(draftThreshold));
+		setSavedThresholdVal(draftThreshold);
+		toast.success('Alert threshold saved');
+	};
+
 	const [exporting, setExporting] = React.useState(false);
 	const [importing, setImporting] = React.useState(false);
 	const [importConfirmOpen, setImportConfirmOpen] = React.useState(false);
@@ -493,15 +504,29 @@ export default function Settings() {
 					label="Price Alert Threshold"
 					description="Show 'Near Target' badge when price is within this % of target"
 				>
-					<Typography
-						sx={{
-							fontSize: "0.82rem",
-							color: "text.secondary",
-							fontWeight: 600,
-						}}
-					>
-						5%
-					</Typography>
+					<Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
+						<TextField
+							size="small"
+							type="number"
+							value={draftThreshold}
+							onChange={(e) => {
+								const val = Math.max(1, Math.min(50, Number(e.target.value)));
+								setDraftThreshold(val);
+							}}
+							slotProps={{ htmlInput: { min: 1, max: 50 } }}
+							sx={{ width: 80, '& input': { fontSize: '0.82rem' } }}
+						/>
+						<Typography sx={{ fontSize: '0.82rem', color: 'text.secondary' }}>%</Typography>
+						<Button
+							size="small"
+							variant="contained"
+							onClick={handleSaveThreshold}
+							disabled={!isThresholdDirty}
+							sx={{ fontSize: '0.78rem', textTransform: 'none' }}
+						>
+							Save
+						</Button>
+					</Stack>
 				</SettingRow>
 				<SettingRow
 					label="Default Rows Per Page"

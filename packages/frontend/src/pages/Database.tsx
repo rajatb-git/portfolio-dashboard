@@ -32,6 +32,7 @@ import apis from '@/api';
 import CashDialog from '@/components/CashDialog';
 import GenericGrid from '@/components/DataGrid';
 import ImportDialog from '@/components/DataGrid/DBImportDialog';
+import BrokerImportDialog from '@/components/DataGrid/BrokerImportDialog';
 import TransactionImportDialog from '@/components/DataGrid/TransactionImportDialog';
 import { Iconify } from '@/components/Iconify';
 import type { IAccount } from '@/models/AccountsModel';
@@ -445,6 +446,7 @@ export default function Database() {
   const [records, setRecords] = React.useState<Array<IAccount | IHoldings | ITransaction>>([]);
   const [importDialogOpen, setImportDialogOpen] = React.useState(false);
   const [txnImportDialogOpen, setTxnImportDialogOpen] = React.useState(false);
+  const [brokerImportDialogOpen, setBrokerImportDialogOpen] = React.useState(false);
   const [accountsData, setAccountsData] = React.useState<Array<IAccount>>([]);
 
   const deleteRecord = async (recordId: string) => {
@@ -466,6 +468,7 @@ export default function Database() {
   const closeImportDialog = () => {
     setImportDialogOpen(false);
     setTxnImportDialogOpen(false);
+    setBrokerImportDialogOpen(false);
     setAccountsData([]);
   };
 
@@ -532,6 +535,19 @@ export default function Database() {
               {activeCollection === 'transactions' ? 'Import transactions' : 'Import holdings data'}
             </Button>
           )}
+          {activeCollection === 'transactions' && (
+            <Button
+              color="secondary"
+              startIcon={<Iconify icon="mdi:bank-outline" />}
+              onClick={async () => {
+                await apis.accounts.getAll().then((response) => setAccountsData(response));
+                setBrokerImportDialogOpen(true);
+              }}
+            >
+              Broker Import
+            </Button>
+          )}
+
 
           <Select
             value={activeCollection}
@@ -575,6 +591,14 @@ export default function Database() {
 
       <TransactionImportDialog
         open={txnImportDialogOpen}
+        handleDialogClose={closeImportDialog}
+        importTransactions={importTransactions}
+        accountsData={accountsData}
+        refreshPage={loadData}
+      />
+
+      <BrokerImportDialog
+        open={brokerImportDialogOpen}
         handleDialogClose={closeImportDialog}
         importTransactions={importTransactions}
         accountsData={accountsData}
