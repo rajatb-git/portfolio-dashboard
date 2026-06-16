@@ -12,7 +12,6 @@ import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 import { useIdleLock } from '@/hooks/useIdleLock';
 import { DRAWER_WIDTH, DRAWER_COLLAPSED_WIDTH } from '@/config';
 
-const AiAssistant = React.lazy(() => import('@/pages/AiAssistant'));
 const Dashboard = React.lazy(() => import('@/pages/Dashboard'));
 const Analytics = React.lazy(() => import('@/pages/Analytics'));
 const Database = React.lazy(() => import('@/pages/Database'));
@@ -74,7 +73,6 @@ function AppShell() {
         <React.Suspense fallback={<div>Loading...</div>}>
           <Routes>
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
-            <Route path="/ai-assistant" element={<AiAssistant />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/analytics" element={<Analytics />} />
             <Route path="/database" element={<Database />} />

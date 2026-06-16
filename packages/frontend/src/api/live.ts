@@ -107,16 +107,7 @@ export default class LiveAPI {
       .then((r) => r.data)
       .catch(catchCustomError);
 
-  portfolioChat = async (
-    message: string,
-    history: { role: string; content: string }[]
-  ): Promise<{ reply: string }> =>
-    axios
-      .post(DB_HOST + '/live/portfolio-chat', { message, history })
-      .then((r) => r.data)
-      .catch(catchCustomError);
-
-  getPortfolioSentiment = async (): Promise<any> =>
+getPortfolioSentiment = async (): Promise<any> =>
     axios(DB_HOST + '/live/portfolio-sentiment')
       .then((r) => r.data)
       .catch(catchCustomError);

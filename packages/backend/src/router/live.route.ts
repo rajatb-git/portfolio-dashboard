@@ -6,7 +6,6 @@ import { IPOController } from '../controller/IPOController';
 import { LiveQuoteController } from '../controller/LiveQuoteController';
 import { LiveRecommendationController } from '../controller/LiveRecommendationController';
 import { NewsSentimentController } from '../controller/NewsSentimentController';
-import { PortfolioChatController } from '../controller/PortfolioChatController';
 import { PortfolioInsightsController } from '../controller/PortfolioInsightsController';
 import {
   getCompanyNews,
@@ -199,25 +198,7 @@ export const LiveRouter = () => {
     }
   });
 
-  router.post('/live/portfolio-chat', async (ctx) => {
-    try {
-      const { message, history } = ctx.request.body as any;
-      if (!message) {
-        ctx.body = errorBody('Missing field', 'message is required');
-        ctx.status = 400;
-        return;
-      }
-      const reply = await new PortfolioChatController().chat(message, history ?? []);
-      ctx.body = { reply };
-      ctx.status = 200;
-    } catch (err: any) {
-      logger.log({ level: 'error', message: err.message, label: 'Portfolio chat' });
-      ctx.body = errorBody('Chat failed', err.message);
-      ctx.status = 400;
-    }
-  });
-
-  router.get('/live/portfolio-sentiment', async (ctx) => {
+router.get('/live/portfolio-sentiment', async (ctx) => {
     try {
       const result = await new NewsSentimentController().getSentiment();
       ctx.body = result;
