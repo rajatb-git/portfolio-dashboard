@@ -6,7 +6,6 @@ import { IPOController } from '../controller/IPOController';
 import { LiveQuoteController } from '../controller/LiveQuoteController';
 import { LiveRecommendationController } from '../controller/LiveRecommendationController';
 import { NewsSentimentController } from '../controller/NewsSentimentController';
-import { PortfolioInsightsController } from '../controller/PortfolioInsightsController';
 import {
   getCompanyNews,
   getEarningsCalendar,
@@ -186,17 +185,6 @@ export const LiveRouter = () => {
     }
   });
 
-  router.get('/live/portfolio-insights', async (ctx) => {
-    try {
-      const result = await new PortfolioInsightsController().getInsights();
-      ctx.body = result;
-      ctx.status = 200;
-    } catch (err: any) {
-      logger.log({ level: 'error', message: err.message, label: 'Get portfolio insights' });
-      ctx.body = errorBody('Failed to get portfolio insights', err.message);
-      ctx.status = 400;
-    }
-  });
 
 router.get('/live/portfolio-sentiment', async (ctx) => {
     try {

@@ -8,6 +8,18 @@ Portfolio Dashboard: a self-hosted web app for tracking stock and crypto holding
 
 Single user, runs locally. No auth.
 
+## AI data-privacy rule (HARD REQUIREMENT — never violate this)
+
+**Never send personal financial data to an external AI provider (Claude API, Gemini API, or any non-local service).**
+
+Personal financial data includes: holding quantities, cost basis, purchase prices, average prices, gain/loss amounts or percentages, portfolio dollar values, account IDs, account names, transaction history, and target prices.
+
+The only AI feature permitted to call `getActiveProvider()` is `AgentInsightsController`, which sends **only publicly available market data** for a single ticker (company profile, price, analyst ratings, earnings, news headlines — all data that is public via Finnhub/NASDAQ). This is acceptable because it contains nothing about the user's personal position.
+
+If Ollama is configured as the provider, data stays local. Even so, do not build features that send personal portfolio data to AI unless explicitly instructed by the user and accompanied by a prominent in-app disclosure.
+
+**Before implementing any feature that calls `getActiveProvider()` or any AI SDK directly, ask: does the prompt contain the user's personal holdings, quantities, values, or P&L? If yes, do not build it.**
+
 ## Stack
 
 | Layer | Tech |
