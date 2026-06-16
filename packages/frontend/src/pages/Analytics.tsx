@@ -9,7 +9,6 @@ import type { RiskMetrics, SectorAllocation } from '@/api/analytics';
 import AllocationCharts from '@/components/Analytics/AllocationCharts';
 import NewsSentimentCard from '@/components/Analytics/NewsSentimentCard';
 import PerformanceAttributionCard from '@/components/Analytics/PerformanceAttributionCard';
-import PortfolioInsightsCard from '@/components/Analytics/PortfolioInsightsCard';
 import PortfolioPerformanceChart from '@/components/Analytics/PortfolioPerformanceChart';
 import RiskMetricsCard from '@/components/Analytics/RiskMetricsCard';
 import SectorAllocationChart from '@/components/Analytics/SectorAllocationChart';
@@ -27,11 +26,6 @@ export default function Analytics() {
 
   const [sentiment, setSentiment] = React.useState<any>(null);
   const [isSentimentLoading, setIsSentimentLoading] = React.useState(true);
-
-  const [portfolioInsight, setPortfolioInsight] = React.useState<any>(null);
-  const [isInsightLoading, setIsInsightLoading] = React.useState(false);
-  const [insightError, setInsightError] = React.useState<string | null>(null);
-  const [aiEnabled, setAiEnabled] = React.useState(false);
 
   React.useEffect(() => {
     setIsLoading(true);
@@ -82,24 +76,7 @@ export default function Analytics() {
       .catch((err) => toast.error(err.message || 'Failed to load news sentiment'))
       .finally(() => setIsSentimentLoading(false));
 
-    apis.live
-      .getAiConfig()
-      .then((cfg) => setAiEnabled(cfg.enabled))
-      .catch(() => {});
   }, []);
-
-  const fetchPortfolioInsight = () => {
-    setIsInsightLoading(true);
-    setInsightError(null);
-    apis.live
-      .getPortfolioInsights()
-      .then((data) => setPortfolioInsight(data))
-      .catch((err) => {
-        setInsightError(err.message || 'Failed to generate portfolio analysis');
-        toast.error(err.message || 'Failed to generate portfolio analysis');
-      })
-      .finally(() => setIsInsightLoading(false));
-  };
 
   return (
     <Stack spacing={2}>
@@ -121,14 +98,6 @@ export default function Analytics() {
           <SectorAllocationChart sectors={sectors} isLoading={isRiskLoading} />
         </Grid>
       </Grid>
-
-      <PortfolioInsightsCard
-        insight={portfolioInsight}
-        isLoading={isInsightLoading}
-        error={insightError}
-        onGenerate={fetchPortfolioInsight}
-        aiEnabled={aiEnabled}
-      />
 
       <AllocationCharts dashboardData={dashboardData} isLoading={isLoading} />
     </Stack>
