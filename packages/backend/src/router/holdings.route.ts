@@ -1,6 +1,7 @@
 import moment from 'moment';
 import Router from '@koa/router';
 import { buy } from '../controller/BuyController';
+import { adjustCash } from '../controller/CashController';
 import { sell } from '../controller/SellController';
 import { LiveQuoteController } from '../controller/LiveQuoteController';
 import { HoldingsModel } from '../models/HoldingsModel';
@@ -201,20 +202,38 @@ export const HoldingsRouter = () => {
   });
 
   // file import
-  router.post('/holdings/import', (ctx) => {
+  router.post('/holdings/import', async (ctx) => {
     try {
       const incomingArr = ctx.request.body as Array<any>;
 
-      const arrHolding = incomingArr.map((x) => ({
-        symbol: x['symbol'],
-        name: x['name'],
-        qty: parseFloat(x['qty']),
-        averagePrice: parseFloat(x['averagePrice'].replaceAll('$', '')),
-        accountId: x.accountId,
-        type: x.type,
-      }));
+      const isCashRow = (x: any) => String(x['symbol'] ?? '').trim().toUpperCase() === 'CASH';
+      const parseMoney = (value: any) => parseFloat(String(value ?? '').replace(/\$/g, ''));
 
-      holdingsModel.insertMany(arrHolding);
+      const arrHolding = incomingArr
+        .filter((x) => !isCashRow(x))
+        .map((x) => ({
+          symbol: x['symbol'],
+          name: x['name'],
+          qty: parseFloat(x['qty']),
+          averagePrice: parseMoney(x['averagePrice']),
+          accountId: x.accountId,
+          type: x.type,
+        }));
+
+      if (arrHolding.length > 0) {
+        holdingsModel.insertMany(arrHolding);
+      }
+
+      // A row with symbol CASH sets an opening cash balance rather than a position.
+      for (const row of incomingArr.filter(isCashRow)) {
+        const qty = parseFloat(row['qty']);
+        const price = parseMoney(row['averagePrice']);
+        const amount = (Number.isFinite(qty) ? qty : 0) * (Number.isFinite(price) ? price : 1);
+        if (amount !== 0) {
+          await adjustCash(row.accountId, amount);
+        }
+      }
+
       ctx.status = 200;
     } catch (error: any) {
       ctx.status = 500;

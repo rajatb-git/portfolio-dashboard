@@ -8,6 +8,20 @@ accountsModel.initialize();
 const transactionModel = TransactionModel();
 transactionModel.initialize();
 
+export const transactionCashImpact = (tx: { action?: string; qty?: number; price?: number }): number => {
+  const gross = (tx.qty ?? 0) * (tx.price ?? 0);
+  switch (tx.action) {
+    case 'sell':
+    case 'deposit':
+      return gross;
+    case 'buy':
+    case 'withdraw':
+      return -gross;
+    default:
+      return 0;
+  }
+};
+
 export const adjustCash = async (accountId: string, delta: number): Promise<number> => {
   const account = accountsModel.findById(accountId);
   if (!account) {
