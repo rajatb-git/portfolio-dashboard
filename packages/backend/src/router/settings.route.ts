@@ -7,6 +7,8 @@ import unzipper from 'unzipper';
 
 import { getAiConfig, IAiConfig, maskAiConfig, saveAiConfig } from '../models/AiConfigModel';
 import { getLockStatus, setLockConfig } from '../models/LockConfigModel';
+import { getValueCalcConfig, IValueCalcConfig, saveValueCalcConfig } from '../models/ValueCalcConfigModel';
+import { portfolioValueCalcService } from '../controller/PortfolioValueCalcService';
 import { errorBody } from '../utils/error';
 import { STORAGE_DIR } from '../utils/storage';
 import { logger } from '../utils/winston';
@@ -202,6 +204,49 @@ export const SettingsRouter = () => {
       logger.log({ level: 'error', message: error.message, label: 'lock save' });
       ctx.status = 500;
       ctx.body = errorBody('Failed to save lock settings', error.message);
+    }
+  });
+
+  router.get('/settings/value-calc', async (ctx) => {
+    try {
+      const config = await getValueCalcConfig();
+      ctx.body = config;
+      ctx.status = 200;
+    } catch (error: any) {
+      logger.log({ level: 'error', message: error.message, label: 'value-calc config get' });
+      ctx.status = 500;
+      ctx.body = errorBody('Failed to get value calc config', error.message);
+    }
+  });
+
+  router.post('/settings/value-calc', async (ctx) => {
+    try {
+      const body = ctx.request.body as Partial<IValueCalcConfig>;
+
+      if (typeof body.enabled !== 'boolean') {
+        ctx.status = 400;
+        ctx.body = errorBody('Invalid request', '"enabled" boolean is required');
+        return;
+      }
+
+      const intervalMinutes = typeof body.intervalMinutes === 'number' ? body.intervalMinutes : 15;
+      const VALID_INTERVALS = [5, 10, 15, 30, 60];
+      if (!VALID_INTERVALS.includes(intervalMinutes)) {
+        ctx.status = 400;
+        ctx.body = errorBody('Invalid interval', `intervalMinutes must be one of: ${VALID_INTERVALS.join(', ')}`);
+        return;
+      }
+
+      const config: IValueCalcConfig = { enabled: body.enabled, intervalMinutes };
+      await saveValueCalcConfig(config);
+      portfolioValueCalcService.reconfigure(config);
+
+      ctx.body = config;
+      ctx.status = 200;
+    } catch (error: any) {
+      logger.log({ level: 'error', message: error.message, label: 'value-calc config save' });
+      ctx.status = 500;
+      ctx.body = errorBody('Failed to save value calc config', error.message);
     }
   });
 
