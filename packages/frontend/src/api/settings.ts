@@ -12,6 +12,11 @@ export type LockSavePayload = {
   idleTimeoutMinutes?: number;
 };
 
+export type ValueCalcConfig = {
+  enabled: boolean;
+  intervalMinutes: number;
+};
+
 export default class SettingsAPI {
   getLock = async (): Promise<LockStatus> =>
     axios
@@ -22,6 +27,18 @@ export default class SettingsAPI {
   saveLock = async (payload: LockSavePayload): Promise<LockStatus> =>
     axios
       .post(DB_HOST + '/settings/lock', payload)
+      .then((response) => response.data)
+      .catch(catchCustomError);
+
+  getValueCalcConfig = async (): Promise<ValueCalcConfig> =>
+    axios
+      .get(DB_HOST + '/settings/value-calc')
+      .then((response) => response.data)
+      .catch(catchCustomError);
+
+  saveValueCalcConfig = async (payload: ValueCalcConfig): Promise<ValueCalcConfig> =>
+    axios
+      .post(DB_HOST + '/settings/value-calc', payload)
       .then((response) => response.data)
       .catch(catchCustomError);
 }

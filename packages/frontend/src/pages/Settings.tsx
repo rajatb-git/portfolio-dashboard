@@ -23,7 +23,7 @@ import * as React from "react";
 import { toast } from "react-toastify";
 import apis from "@/api";
 import type { AiConfig } from "@/api/live";
-import type { LockStatus } from "@/api/settings";
+import type { LockStatus, ValueCalcConfig } from "@/api/settings";
 import { Iconify } from "@/components/Iconify";
 import { useThemeMode } from "@/components/ThemeRegistry/ThemeModeContext";
 import { DB_HOST } from "@/config";
@@ -130,6 +130,12 @@ export default function Settings() {
 		toast.success('Alert threshold saved');
 	};
 
+	const DEFAULT_VALUE_CALC: ValueCalcConfig = { enabled: false, intervalMinutes: 15 };
+	const [savedValueCalc, setSavedValueCalc] = React.useState<ValueCalcConfig>(DEFAULT_VALUE_CALC);
+	const [draftValueCalc, setDraftValueCalc] = React.useState<ValueCalcConfig>(DEFAULT_VALUE_CALC);
+	const [savingValueCalc, setSavingValueCalc] = React.useState(false);
+	const isValueCalcDirty = JSON.stringify(savedValueCalc) !== JSON.stringify(draftValueCalc);
+
 	const [exporting, setExporting] = React.useState(false);
 	const [importing, setImporting] = React.useState(false);
 	const [importConfirmOpen, setImportConfirmOpen] = React.useState(false);
@@ -175,6 +181,14 @@ export default function Settings() {
 			.catch((err) =>
 				toast.error(err.message || "Failed to load security settings"),
 			);
+
+		apis.settings
+			.getValueCalcConfig()
+			.then((cfg) => {
+				setSavedValueCalc(cfg);
+				setDraftValueCalc(cfg);
+			})
+			.catch((err) => toast.error(err.message || "Failed to load portfolio tracker settings"));
 	}, []);
 
 	const isLockDirty =
@@ -314,6 +328,22 @@ export default function Settings() {
 	const handleResetAiConfig = () => {
 		setDraftAiConfig(aiConfig);
 	};
+
+	const handleSaveValueCalc = async () => {
+		setSavingValueCalc(true);
+		try {
+			const saved = await apis.settings.saveValueCalcConfig(draftValueCalc);
+			setSavedValueCalc(saved);
+			setDraftValueCalc(saved);
+			toast.success("Portfolio tracker settings saved");
+		} catch (err: any) {
+			toast.error(err.message || "Failed to save portfolio tracker settings");
+		} finally {
+			setSavingValueCalc(false);
+		}
+	};
+
+	const handleResetValueCalc = () => setDraftValueCalc(savedValueCalc);
 
 	const handleAddAccount = async () => {
 		const name = newAccountName.trim();
@@ -542,6 +572,75 @@ export default function Settings() {
 						50
 					</Typography>
 				</SettingRow>
+			</SettingsSection>
+
+			<SettingsSection title="Portfolio Value Tracker">
+				<SettingRow
+					label="Enable Auto-Tracking"
+					description="Automatically record portfolio value during market hours (Mon–Fri 9:30 AM – 4:00 PM ET)"
+				>
+					<Switch
+						checked={draftValueCalc.enabled}
+						onChange={(_, checked) =>
+							setDraftValueCalc((prev) => ({ ...prev, enabled: checked }))
+						}
+					/>
+				</SettingRow>
+				{draftValueCalc.enabled && (
+					<SettingRow
+						label="Update Interval"
+						description="How often to recalculate and save the portfolio value"
+					>
+						<Select
+							size="small"
+							value={draftValueCalc.intervalMinutes}
+							onChange={(e) =>
+								setDraftValueCalc((prev) => ({
+									...prev,
+									intervalMinutes: Number(e.target.value),
+								}))
+							}
+							sx={{ minWidth: { xs: "100%", sm: 200 }, fontSize: "0.82rem" }}
+						>
+							<MenuItem value={5}>Every 5 minutes</MenuItem>
+							<MenuItem value={10}>Every 10 minutes</MenuItem>
+							<MenuItem value={15}>Every 15 minutes</MenuItem>
+							<MenuItem value={30}>Every 30 minutes</MenuItem>
+							<MenuItem value={60}>Every 60 minutes</MenuItem>
+						</Select>
+					</SettingRow>
+				)}
+				<Stack
+					direction="row"
+					spacing={1}
+					sx={{ justifyContent: "flex-end", alignItems: "center", px: 2, py: 1.5 }}
+				>
+					{isValueCalcDirty && (
+						<Typography
+							sx={{ fontSize: "0.72rem", color: "warning.main", mr: "auto" }}
+						>
+							Unsaved changes
+						</Typography>
+					)}
+					<Button
+						size="small"
+						variant="outlined"
+						onClick={handleResetValueCalc}
+						disabled={!isValueCalcDirty || savingValueCalc}
+						sx={{ fontSize: "0.78rem", textTransform: "none" }}
+					>
+						Reset
+					</Button>
+					<Button
+						size="small"
+						variant="contained"
+						onClick={handleSaveValueCalc}
+						disabled={!isValueCalcDirty || savingValueCalc}
+						sx={{ fontSize: "0.78rem", textTransform: "none" }}
+					>
+						{savingValueCalc ? "Saving..." : "Save"}
+					</Button>
+				</Stack>
 			</SettingsSection>
 
 			<SettingsSection title="API">

@@ -13,6 +13,8 @@ import KoaBodyParser from 'koa-bodyparser';
 import KoaHelmet from 'koa-helmet';
 
 import { authMiddleware } from './middleware/auth';
+import { portfolioValueCalcService } from './controller/PortfolioValueCalcService';
+import { getValueCalcConfig } from './models/ValueCalcConfigModel';
 import { AccountsRouter } from './router/accounts.route';
 import { AnalyticsRouter } from './router/analytics.route';
 import { AuthRouter } from './router/auth.route';
@@ -66,4 +68,5 @@ app.use(SettingsRouter().routes()).use(SettingsRouter().allowedMethods());
 
 app.listen(port, () => {
   console.log('server started on port ' + port);
+  getValueCalcConfig().then((config) => portfolioValueCalcService.start(config));
 });
