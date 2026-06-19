@@ -5,6 +5,8 @@ import {
   Card,
   Chip,
   ChipProps,
+  InputAdornment,
+  OutlinedInput,
   Skeleton,
   Table,
   TableBody,
@@ -18,6 +20,7 @@ import {
 import moment from 'moment';
 
 import { getComparator, visuallyHidden } from '@/components/DashboardTable/dashTableUtils';
+import { Iconify } from '@/components/Iconify';
 import { IIPO } from '@/models/IPOModel';
 import { fnShortenCurrency, fnShortenNumber } from '@/utils/formatNumber';
 
@@ -48,6 +51,7 @@ const capitalize = (s: string) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : 
 export default function IPOList({ ipos, isLoading }: Props) {
   const [order, setOrder] = React.useState<'asc' | 'desc'>('desc');
   const [orderBy, setOrderBy] = React.useState<keyof IIPO>('date');
+  const [search, setSearch] = React.useState('');
 
   const handleSort = (id: keyof IIPO) => {
     const isAsc = orderBy === id && order === 'asc';
@@ -55,7 +59,15 @@ export default function IPOList({ ipos, isLoading }: Props) {
     setOrderBy(id);
   };
 
-  const sorted = React.useMemo(() => [...ipos].sort(getComparator(order, orderBy)), [ipos, order, orderBy]);
+  const sorted = React.useMemo(() => {
+    const query = search.trim().toLowerCase();
+    const filtered = query
+      ? ipos.filter(
+          (x) => x.name.toLowerCase().includes(query) || x.symbol.toLowerCase().includes(query)
+        )
+      : ipos;
+    return [...filtered].sort(getComparator(order, orderBy));
+  }, [ipos, order, orderBy, search]);
 
   if (isLoading) {
     return (
@@ -67,6 +79,21 @@ export default function IPOList({ ipos, isLoading }: Props) {
 
   return (
     <Card variant="outlined">
+      <Box sx={{ p: 1.5 }}>
+        <OutlinedInput
+          fullWidth
+          size="small"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search company or symbol..."
+          startAdornment={
+            <InputAdornment position="start">
+              <Iconify icon="eva:search-fill" sx={{ color: 'text.disabled', width: 18, height: 18 }} />
+            </InputAdornment>
+          }
+        />
+      </Box>
+
       <TableContainer>
         <Table size="small">
           <TableHead>
@@ -91,7 +118,7 @@ export default function IPOList({ ipos, isLoading }: Props) {
             {sorted.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={HEAD_CELLS.length} sx={{ textAlign: 'center', color: 'text.disabled', py: 4 }}>
-                  No IPOs found.
+                  {search.trim() ? 'No IPOs match your search.' : 'No IPOs found.'}
                 </TableCell>
               </TableRow>
             ) : (
