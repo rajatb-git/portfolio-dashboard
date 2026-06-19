@@ -63,7 +63,7 @@ export default function IPOList({ ipos, isLoading }: Props) {
     const query = search.trim().toLowerCase();
     const filtered = query
       ? ipos.filter(
-          (x) => x.name.toLowerCase().includes(query) || x.symbol.toLowerCase().includes(query)
+          (x) => x.name?.toLowerCase().includes(query) || x.symbol?.toLowerCase().includes(query)
         )
       : ipos;
     return [...filtered].sort(getComparator(order, orderBy));
