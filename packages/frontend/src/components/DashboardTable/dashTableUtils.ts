@@ -80,6 +80,69 @@ const calculateTotals = (inputData: any, accounts: Array<IAccount> = []): Array<
   return tempArray;
 };
 
+export type EnrichedHolding = HoldingAggregate & { accountPercent?: number };
+
+export type ConsolidatedHolding = EnrichedHolding & {
+  accountCount: number;
+  subRows: Array<EnrichedHolding>;
+};
+
+// Merge holdings that share a symbol across accounts into a single position.
+// Quantities, market value, cost basis and gain/loss sum; average price becomes
+// cost-basis-weighted. accountPercent is intentionally left undefined on the
+// merged row — it only makes sense per account, so it surfaces on the sub-rows.
+export function consolidateBySymbol(rows: Array<EnrichedHolding>): Array<ConsolidatedHolding> {
+  const groups = new Map<string, Array<EnrichedHolding>>();
+  rows.forEach((r) => {
+    const list = groups.get(r.symbol) ?? [];
+    list.push(r);
+    groups.set(r.symbol, list);
+  });
+
+  const result: Array<ConsolidatedHolding> = [];
+  groups.forEach((holdings) => {
+    const totalQty = holdings.reduce((s, h) => s + (h.qty || 0), 0);
+    const totalCost = holdings.reduce((s, h) => s + (h.averagePrice || 0) * (h.qty || 0), 0);
+    const totalGL = holdings.reduce((s, h) => s + (h.totalGL || 0), 0);
+    const marketValue = holdings.reduce((s, h) => s + (h.marketValue || 0), 0);
+    const originalValue = holdings.reduce((s, h) => s + (h.originalValue || 0), 0);
+
+    result.push({
+      ...holdings[0],
+      qty: totalQty,
+      averagePrice: totalQty > 0 ? totalCost / totalQty : 0,
+      totalGL,
+      totalGLPercent: totalCost > 0 ? (totalGL / totalCost) * 100 : 0,
+      marketValue,
+      originalValue,
+      accountPercent: undefined,
+      accountCount: holdings.length,
+      subRows: holdings,
+    });
+  });
+
+  return result;
+}
+
+// Group holdings by account, ordering accounts by total market value (largest
+// first) and preserving the incoming sort order within each account.
+export function groupByAccount(rows: Array<EnrichedHolding>): Array<{ accountId: string; rows: Array<EnrichedHolding> }> {
+  const groups = new Map<string, Array<EnrichedHolding>>();
+  rows.forEach((r) => {
+    const list = groups.get(r.accountId) ?? [];
+    list.push(r);
+    groups.set(r.accountId, list);
+  });
+
+  return Array.from(groups.entries())
+    .map(([accountId, accountRows]) => ({ accountId, rows: accountRows }))
+    .sort(
+      (a, b) =>
+        b.rows.reduce((s, r) => s + (r.marketValue || 0), 0) -
+        a.rows.reduce((s, r) => s + (r.marketValue || 0), 0)
+    );
+}
+
 export function applyFilter({
   inputData,
   comparator,
