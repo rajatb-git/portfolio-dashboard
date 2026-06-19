@@ -33,8 +33,8 @@ type TableProps<T> = {
 export default function Table<T>({ rows, columns, accounts, refreshData, isLoading }: TableProps<T>) {
   const navigate = useNavigate();
   const [page, setPage] = useState(0);
-  const [order, setOrder] = useState<'asc' | 'desc'>('asc');
-  const [orderBy, setOrderBy] = useState('totalGLPercent');
+  const [order, setOrder] = useState<'asc' | 'desc'>('desc');
+  const [orderBy, setOrderBy] = useState('accountPercent');
   const [filterName, setFilterName] = useState('');
   const [rowsPerPage, setRowsPerPage] = useState(50);
   const [filterType, setFilterType] = useState<string>('all');
