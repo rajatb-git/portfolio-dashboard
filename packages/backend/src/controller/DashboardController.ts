@@ -73,33 +73,36 @@ export const createDashboard = async (): Promise<Array<HoldingAggregate>> => {
     const livePrice = quoteMap.get(holding.symbol);
     const recommendation = recMap.get(holding.symbol);
 
-    if (livePrice instanceof Error || recommendation instanceof Error) {
-      // skip holdings where live data could not be fetched
-    } else if (livePrice) {
-      const currentValue = holding.qty * livePrice.price;
-      const originalValue = holding.qty * holding.averagePrice;
-      const totalGL = +(currentValue - originalValue).toFixed(2);
-
-      result.push({
-        ...holding,
-        currentPrice: +livePrice.price.toFixed(2),
-        priceDate: moment(livePrice.priceDate).format('lll'),
-        percentChange: +livePrice.percentChange.toFixed(2),
-        dayHigh: livePrice.dayHigh,
-        dayLow: livePrice.dayLow,
-        originalValue,
-        totalGL,
-        totalGLPercent: +((totalGL / originalValue) * 100).toFixed(2),
-        marketValue: +(holding.qty * livePrice.price).toFixed(2),
-        ...(recommendation && {
-          buy: recommendation.buy,
-          hold: recommendation.hold,
-          sell: recommendation.sell,
-          strongBuy: recommendation.strongBuy,
-          strongSell: recommendation.strongSell,
-        }),
-      } as any);
+    // Only a missing price drops a holding from the total. A failed recommendation
+    // (optional analyst metadata) must never remove the holding from the value.
+    if (!livePrice || livePrice instanceof Error) {
+      continue;
     }
+
+    const validRec = recommendation && !(recommendation instanceof Error) ? recommendation : undefined;
+    const currentValue = holding.qty * livePrice.price;
+    const originalValue = holding.qty * holding.averagePrice;
+    const totalGL = +(currentValue - originalValue).toFixed(2);
+
+    result.push({
+      ...holding,
+      currentPrice: +livePrice.price.toFixed(2),
+      priceDate: moment(livePrice.priceDate).format('lll'),
+      percentChange: +livePrice.percentChange.toFixed(2),
+      dayHigh: livePrice.dayHigh,
+      dayLow: livePrice.dayLow,
+      originalValue,
+      totalGL,
+      totalGLPercent: +((totalGL / originalValue) * 100).toFixed(2),
+      marketValue: +(holding.qty * livePrice.price).toFixed(2),
+      ...(validRec && {
+        buy: validRec.buy,
+        hold: validRec.hold,
+        sell: validRec.sell,
+        strongBuy: validRec.strongBuy,
+        strongSell: validRec.strongSell,
+      }),
+    } as any);
   }
 
   // Save today's portfolio snapshot (idempotent — skips if already recorded).
