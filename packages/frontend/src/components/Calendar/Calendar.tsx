@@ -7,21 +7,18 @@ import dayGridPlugin from '@fullcalendar/daygrid';
 import interactionPlugin from '@fullcalendar/interaction';
 import listPlugin from '@fullcalendar/list';
 import FullCalendar from '@fullcalendar/react';
-import { Box, Button, Popover } from '@mui/material';
+import { Box, Popover } from '@mui/material';
 import Card from '@mui/material/Card';
 import Stack from '@mui/material/Stack';
-import Typography from '@mui/material/Typography';
 
-import { useOpenClose } from '@/hooks/useOpenClose';
 import { fnCurrency, fnShortenCurrency, fnShortenNumber } from '@/utils/formatNumber';
 
 import { StyledCalendar } from './styles';
 import { ICalendarEvent } from './types';
-import { Iconify } from '../Iconify';
 
-type Props = { events: Array<ICalendarEvent>; refreshData: () => void; isLoading: boolean };
+type Props = { events: Array<ICalendarEvent> };
 
-export default function CalendarView({ events, refreshData, isLoading }: Props) {
+export default function CalendarView({ events }: Props) {
   const calendarRef = React.useRef<FullCalendar>(null);
   const [popoverOpen, setPopoverOpen] = React.useState(false);
   const [anchorEl, setAnchorEl] = React.useState<HTMLElement | null>(null);
@@ -39,32 +36,7 @@ export default function CalendarView({ events, refreshData, isLoading }: Props) 
   };
 
   return (
-    <>
-      <Stack
-        direction="row"
-        sx={{
-          alignItems: 'center',
-          justifyContent: 'flex-start',
-          mb: 2,
-        }}
-      >
-        <Typography variant="h6" sx={{ flexGrow: 1 }}>
-          Calendar
-        </Typography>
-
-        <Button
-          variant="contained"
-          startIcon={<Iconify icon="mynaui:refresh" />}
-          onClick={refreshData}
-          size="small"
-          color="secondary"
-          disabled={isLoading}
-        >
-          Refresh
-        </Button>
-      </Stack>
-
-      <Card variant="outlined">
+    <Card variant="outlined">
         <StyledCalendar>
           <FullCalendar
             weekends
@@ -140,7 +112,6 @@ export default function CalendarView({ events, refreshData, isLoading }: Props) 
             </Stack>
           </Box>
         </Popover>
-      </Card>
-    </>
+    </Card>
   );
 }
