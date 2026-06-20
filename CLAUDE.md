@@ -165,10 +165,22 @@ Use `react-toastify`'s `toast.error(...)` for failures and `toast.success(...)` 
 
 ### Version bumping (required on every commit)
 
-**Before every commit, bump the patch version in all three `package.json` files:**
+**Before every commit, bump the version in all three `package.json` files, keeping them in lockstep (same version in each):**
 
 - `package.json` (root)
 - `packages/frontend/package.json`
 - `packages/backend/package.json`
 
-Increment the patch segment (`z` in `x.y.z`) by 1 in each file. Do this as part of the same commit — do not make a separate version-bump commit.
+Pick the segment of `x.y.z` to bump using [semver](https://semver.org), based on what the *whole branch / PR* delivers (not the individual commit):
+
+- **Major (`x`)** — a breaking change: an incompatible API/route/schema change, a removed or renamed feature, or anything that forces users to change how they use the app. Reset `y` and `z` to `0` (`2.4.1` → `3.0.0`).
+- **Minor (`y`)** — a new, backward-compatible feature or capability (e.g. a new page, route, import flow, or setting). Reset `z` to `0` (`2.4.1` → `2.5.0`).
+- **Patch (`z`)** — a backward-compatible bug fix, refactor, perf tweak, copy/style change, or docs-only change with no new feature (`2.4.1` → `2.4.2`).
+
+Rules of thumb:
+- If the branch adds anything a user can newly *do*, it's at least a **minor** — do not ship a feature as a patch.
+- A mixed branch takes the **highest** applicable bump (a feature + bug fixes → one minor bump, not a minor and a patch).
+- Bump only **once per branch relative to the base**: compute the new version from the base branch's current version, and on later commits to the same branch keep that target (don't increment again each commit). When merging the base back in, take the higher of the two versions and re-apply your intended bump on top if the base moved.
+- When unsure between two segments, pick the higher one.
+
+Do the bump as part of the same commit — do not make a separate version-bump commit.
