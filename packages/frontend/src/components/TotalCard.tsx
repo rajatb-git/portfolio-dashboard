@@ -1,5 +1,6 @@
-import Button from '@mui/material/Button';
+import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
+import IconButton from '@mui/material/IconButton';
 import Stack from '@mui/material/Stack';
 import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
@@ -53,122 +54,105 @@ export default function TotalCard({ total, onManageCash }: TotalCardProps) {
       ? 'rgba(220,38,38,0.08)'
       : 'rgba(248,113,113,0.10)';
 
+  const negativeCash = (total.cashBalance ?? 0) < 0;
+
   return (
     <Card
       sx={{
-        p: 1.5,
+        px: 1.25,
+        py: 1,
         background,
         border: `1px solid ${borderColor}`,
-        boxShadow: `0 4px 20px ${glowColor}, 0 1px 3px ${isLight ? 'rgba(0,0,0,0.08)' : 'rgba(0,0,0,0.4)'}`,
+        boxShadow: `0 2px 10px ${glowColor}, 0 1px 2px ${isLight ? 'rgba(0,0,0,0.06)' : 'rgba(0,0,0,0.35)'}`,
       }}
     >
-      <Stack direction="column" spacing={1}>
-        <Stack direction="row" sx={{ justifyContent: 'space-between', alignItems: 'flex-start' }}>
-          <Stack direction="column" spacing={0}>
-            <Typography
-              sx={{
-                fontSize: '0.62rem',
-                fontWeight: 600,
-                letterSpacing: '0.06em',
-                textTransform: 'uppercase',
-                color: dimAccent,
-                opacity: 0.8,
-              }}
-            >
-              {total.accountName ?? total.accountId}
-            </Typography>
-            <Typography
-              sx={{
-                fontSize: '1.1rem',
-                fontWeight: 700,
-                color: accentColor,
-                lineHeight: 1.2,
-                mt: 0.25,
-              }}
-            >
-              {total.totalGL > 0 ? '+' : ''}
-              {fnCurrency(total.totalGL)}
-            </Typography>
-          </Stack>
+      <Stack direction="column" spacing={0.5}>
+        {/* Header: account name + G/L% pill */}
+        <Stack direction="row" sx={{ justifyContent: 'space-between', alignItems: 'center' }}>
+          <Typography
+            noWrap
+            sx={{
+              fontSize: '0.62rem',
+              fontWeight: 700,
+              letterSpacing: '0.06em',
+              textTransform: 'uppercase',
+              color: dimAccent,
+              opacity: 0.85,
+              minWidth: 0,
+            }}
+          >
+            {total.accountName ?? total.accountId}
+          </Typography>
 
           <Stack
             direction="row"
-            spacing={0.5}
+            spacing={0.25}
             sx={{
               alignItems: 'center',
               bgcolor: pillBg,
               border: `1px solid ${borderColor}`,
               borderRadius: '6px',
-              px: 0.75,
-              py: 0.4,
+              px: 0.6,
+              py: 0.2,
+              flexShrink: 0,
             }}
           >
             <Iconify
               icon={isPositive ? 'eva:trending-up-fill' : 'eva:trending-down-fill'}
-              width={13}
+              width={12}
               sx={{ color: accentColor }}
             />
-            <Typography sx={{ fontSize: '0.72rem', fontWeight: 600, color: accentColor }}>
+            <Typography sx={{ fontSize: '0.7rem', fontWeight: 700, color: accentColor }}>
               {total.percentGL > 0 ? '+' : ''}
               {fnPercent(total.percentGL)}
             </Typography>
           </Stack>
         </Stack>
 
-        <Stack direction="row" sx={{ justifyContent: 'space-between', borderTop: `1px solid ${borderColor}`, pt: 1 }}>
-          <Stack direction="column" spacing={0}>
-            <Typography sx={{ fontSize: '0.62rem', color: dimAccent, opacity: 0.7, fontWeight: 500 }}>
-              Invested
-            </Typography>
-            <Typography sx={{ fontSize: '0.8rem', fontWeight: 600, color: 'text.primary' }}>
-              {fnCurrency(total.totalInvestment)}
-            </Typography>
-          </Stack>
-
-          <Stack direction="column" spacing={0} sx={{ alignItems: 'flex-end' }}>
-            <Typography sx={{ fontSize: '0.62rem', color: dimAccent, opacity: 0.7, fontWeight: 500 }}>Value</Typography>
-            <Typography sx={{ fontSize: '0.8rem', fontWeight: 600, color: 'text.primary' }}>
-              {fnCurrency(total.totalValue)}
-            </Typography>
-          </Stack>
+        {/* Hero: market value + G/L amount */}
+        <Stack direction="row" sx={{ justifyContent: 'space-between', alignItems: 'baseline' }}>
+          <Typography sx={{ fontSize: '1.15rem', fontWeight: 700, color: 'text.primary', lineHeight: 1.1 }}>
+            {fnCurrency(total.totalValue)}
+          </Typography>
+          <Typography sx={{ fontSize: '0.78rem', fontWeight: 600, color: accentColor }}>
+            {total.totalGL > 0 ? '+' : ''}
+            {fnCurrency(total.totalGL)}
+          </Typography>
         </Stack>
 
+        {/* Footer: invested · cash, with manage action */}
         <Stack
           direction="row"
-          sx={{ justifyContent: 'space-between', alignItems: 'center', borderTop: `1px solid ${borderColor}`, pt: 1 }}
+          sx={{
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            borderTop: `1px solid ${borderColor}`,
+            pt: 0.5,
+          }}
         >
-          <Stack direction="column" spacing={0}>
-            <Typography sx={{ fontSize: '0.62rem', color: dimAccent, opacity: 0.7, fontWeight: 500 }}>Cash</Typography>
-            <Typography
-              sx={{
-                fontSize: '0.8rem',
-                fontWeight: 600,
-                color: (total.cashBalance ?? 0) < 0 ? (isLight ? '#dc2626' : '#f87171') : 'text.primary',
-              }}
+          <Typography noWrap sx={{ fontSize: '0.66rem', color: dimAccent, opacity: 0.8, fontWeight: 500, minWidth: 0 }}>
+            Inv {fnCurrency(total.totalInvestment)}
+            <Box component="span" sx={{ opacity: 0.5, mx: 0.5 }}>
+              ·
+            </Box>
+            Cash{' '}
+            <Box
+              component="span"
+              sx={{ fontWeight: 600, color: negativeCash ? (isLight ? '#dc2626' : '#f87171') : 'inherit' }}
             >
               {fnCurrency(total.cashBalance ?? 0)}
-            </Typography>
-          </Stack>
+            </Box>
+          </Typography>
 
           {onManageCash && (
             <Tooltip title="Deposit / Withdraw cash">
-              <Button
+              <IconButton
                 size="small"
-                variant="text"
                 onClick={() => onManageCash(total.accountId)}
-                startIcon={<Iconify icon="mdi:cash-plus" width={14} />}
-                sx={{
-                  fontSize: '0.68rem',
-                  textTransform: 'none',
-                  color: dimAccent,
-                  minWidth: 0,
-                  px: 1,
-                  py: 0.25,
-                  '&:hover': { bgcolor: pillBg },
-                }}
+                sx={{ color: dimAccent, p: 0.25, flexShrink: 0, '&:hover': { bgcolor: pillBg } }}
               >
-                Manage
-              </Button>
+                <Iconify icon="mdi:cash-plus" width={16} />
+              </IconButton>
             </Tooltip>
           )}
         </Stack>
