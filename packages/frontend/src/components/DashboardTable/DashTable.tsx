@@ -73,6 +73,21 @@ export default function Table<T>({ rows, columns, accounts, refreshData, isLoadi
     }
   };
 
+  const tableContainerRef = React.useRef<HTMLDivElement | null>(null);
+  const [headerHeight, setHeaderHeight] = useState(0);
+
+  // Measure the sticky column header so account group headers can stick flush
+  // beneath it; remeasure on resize since the header height is content-driven.
+  React.useEffect(() => {
+    const thead = tableContainerRef.current?.querySelector('thead');
+    if (!thead) return;
+    const update = () => setHeaderHeight(thead.getBoundingClientRect().height);
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(thead);
+    return () => observer.disconnect();
+  }, []);
+
   const goToResearchPage = (symbol: string) => {
     navigate(`/research?searchText=${symbol}`);
   };
@@ -267,7 +282,7 @@ export default function Table<T>({ rows, columns, accounts, refreshData, isLoadi
         <Divider />
 
         <Box sx={{ overflowX: 'auto' }}>
-          <TableContainer sx={{ maxHeight: '60vh' }}>
+          <TableContainer ref={tableContainerRef} sx={{ maxHeight: '60vh' }}>
             <MuiTable stickyHeader sx={{ minWidth: 820 }}>
               <TableHead
                 order={order}
@@ -284,7 +299,12 @@ export default function Table<T>({ rows, columns, accounts, refreshData, isLoadi
                   pageItems.map((item) => {
                     if (item.kind === 'accountHeader') {
                       return (
-                        <DashTableAccountHeader key={item.key} total={item.total} colSpan={columns.length} />
+                        <DashTableAccountHeader
+                          key={item.key}
+                          total={item.total}
+                          colSpan={columns.length}
+                          stickyTop={headerHeight}
+                        />
                       );
                     }
                     if (item.kind === 'consolidated') {
