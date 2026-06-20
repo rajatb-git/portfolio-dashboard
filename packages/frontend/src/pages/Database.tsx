@@ -104,6 +104,17 @@ const columns: { [collection: string]: Array<GridColDef> } = {
       headerAlign: 'right',
     },
     {
+      field: 'targetPrice',
+      headerName: 'Target / Alert',
+      flex: 1,
+      minWidth: 110,
+      type: 'number',
+      editable: true,
+      align: 'right',
+      headerAlign: 'right',
+      valueFormatter: (value: number | undefined) => (value ? fnCurrency(value) : '—'),
+    },
+    {
       field: 'type',
       headerName: 'Type',
       flex: 1,

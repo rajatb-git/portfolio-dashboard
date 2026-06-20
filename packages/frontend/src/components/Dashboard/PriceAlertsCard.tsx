@@ -1,6 +1,7 @@
 import * as React from 'react';
 import {
   Box,
+  Button,
   Card,
   Chip,
   Collapse,
@@ -13,6 +14,7 @@ import {
   TableRow,
   Typography,
 } from '@mui/material';
+import { useNavigate } from 'react-router-dom';
 
 import type { HoldingAggregate } from '@/api/dashboard';
 import { Iconify } from '@/components/Iconify';
@@ -59,8 +61,38 @@ export default function PriceAlertsCard({ holdings, threshold = 5 }: Props) {
 
   const activeAlerts = alerts.filter((a) => a.level !== 'below');
   const [open, setOpen] = React.useState(activeAlerts.length > 0);
+  const navigate = useNavigate();
 
-  if (alerts.length === 0) return null;
+  // Nothing to track at all — stay out of the way until there are holdings.
+  if (holdings.length === 0) return null;
+
+  // Holdings exist but no targets set yet: show how to create an alert.
+  if (alerts.length === 0) {
+    return (
+      <Card variant="outlined">
+        <Stack
+          direction="row"
+          spacing={1.5}
+          sx={{ alignItems: 'center', justifyContent: 'space-between', px: 2, py: 1.25 }}
+        >
+          <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
+            <Iconify icon="tabler:bell-plus" width={16} sx={{ color: 'text.disabled' }} />
+            <Typography sx={{ fontSize: '0.82rem', color: 'text.secondary' }}>
+              No price alerts yet. Set a <strong>Target Price</strong> on a holding to get alerted when it's reached.
+            </Typography>
+          </Stack>
+          <Button
+            size="small"
+            variant="outlined"
+            onClick={() => navigate('/database')}
+            sx={{ fontSize: '0.75rem', textTransform: 'none', flexShrink: 0 }}
+          >
+            Set alerts
+          </Button>
+        </Stack>
+      </Card>
+    );
+  }
 
   return (
     <Card variant="outlined">
@@ -108,11 +140,7 @@ export default function PriceAlertsCard({ holdings, threshold = 5 }: Props) {
             />
           )}
         </Stack>
-        <Iconify
-          icon={open ? 'tabler:chevron-up' : 'tabler:chevron-down'}
-          width={16}
-          sx={{ color: 'text.disabled' }}
-        />
+        <Iconify icon={open ? 'tabler:chevron-up' : 'tabler:chevron-down'} width={16} sx={{ color: 'text.disabled' }} />
       </Stack>
 
       <Collapse in={open}>
@@ -122,10 +150,7 @@ export default function PriceAlertsCard({ holdings, threshold = 5 }: Props) {
             <TableHead>
               <TableRow>
                 {['Symbol', 'Current', 'Target', 'Gap', 'Status'].map((h) => (
-                  <TableCell
-                    key={h}
-                    sx={{ fontSize: '0.68rem', color: 'text.disabled', fontWeight: 700, py: 0.75 }}
-                  >
+                  <TableCell key={h} sx={{ fontSize: '0.68rem', color: 'text.disabled', fontWeight: 700, py: 0.75 }}>
                     {h}
                   </TableCell>
                 ))}
@@ -139,9 +164,7 @@ export default function PriceAlertsCard({ holdings, threshold = 5 }: Props) {
                     <TableCell sx={{ fontSize: '0.8rem', fontWeight: 600 }}>{a.symbol}</TableCell>
                     <TableCell sx={{ fontSize: '0.8rem' }}>{fnCurrency(a.currentPrice)}</TableCell>
                     <TableCell sx={{ fontSize: '0.8rem' }}>{fnCurrency(a.targetPrice)}</TableCell>
-                    <TableCell
-                      sx={{ fontSize: '0.8rem', color: a.gapPercent >= 0 ? '#22c55e' : 'text.secondary' }}
-                    >
+                    <TableCell sx={{ fontSize: '0.8rem', color: a.gapPercent >= 0 ? '#22c55e' : 'text.secondary' }}>
                       {a.gapPercent >= 0 ? '+' : ''}
                       {a.gapPercent.toFixed(1)}%
                     </TableCell>
