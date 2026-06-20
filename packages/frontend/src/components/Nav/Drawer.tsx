@@ -74,7 +74,9 @@ export default function Drawer({ collapsed, onToggle, isMobile, mobileOpen, onMo
   };
 
   const handleKeyDown = (event: KeyboardEvent) => {
-    if (event.metaKey && event.key === 'k') {
+    if ((event.metaKey || event.ctrlKey) && event.key === 'k') {
+      event.preventDefault();
+      refreshSearchHistory();
       setShowSearch(true);
     }
   };

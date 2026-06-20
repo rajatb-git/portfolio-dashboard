@@ -23,6 +23,7 @@ import { HealthRouter } from './router/health.route';
 import { HoldingsRouter } from './router/holdings.route';
 import { LiveRouter } from './router/live.route';
 import { LogsRouter } from './router/logs.route';
+import { NotesRouter } from './router/notes.route';
 import { SettingsRouter } from './router/settings.route';
 import { TransactionsRouter } from './router/transactions.route';
 import { WatchlistRouter } from './router/watchlist.route';
@@ -65,6 +66,7 @@ app.use(LogsRouter().routes()).use(LogsRouter().allowedMethods());
 app.use(WatchlistRouter().routes()).use(WatchlistRouter().allowedMethods());
 app.use(AnalyticsRouter().routes()).use(AnalyticsRouter().allowedMethods());
 app.use(SettingsRouter().routes()).use(SettingsRouter().allowedMethods());
+app.use(NotesRouter().routes()).use(NotesRouter().allowedMethods());
 
 app.listen(port, () => {
   console.log('server started on port ' + port);

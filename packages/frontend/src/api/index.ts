@@ -7,6 +7,7 @@ import AccountsAPI from './account';
 import WatchlistAPI from './watchlist';
 import AnalyticsAPI from './analytics';
 import AuthAPI from './auth';
+import NotesAPI from './notes';
 import SettingsAPI from './settings';
 
 const apis = {
@@ -20,6 +21,7 @@ const apis = {
   analytics: new AnalyticsAPI(),
   auth: new AuthAPI(),
   settings: new SettingsAPI(),
+  notes: new NotesAPI(),
 };
 
 export default apis;

@@ -29,6 +29,7 @@ import ResearchPeersCard from '@/components/Research/ResearchPeersCard';
 import ResearchEarningsHistoryCard from '@/components/Research/ResearchEarningsHistoryCard';
 import ResearchInsiderCard from '@/components/Research/ResearchInsiderCard';
 import AgentInsightsCard from '@/components/Research/AgentInsightsCard';
+import ResearchNotesCard from '@/components/Research/ResearchNotesCard';
 import ResearchPositionDetailsCard from '@/components/Research/ResearchPositionDetailsCard';
 import ResearchTransactionsCard from '@/components/Research/ResearchTransactionsCard';
 import { AgentInsight, AiConfig } from '@/api/live';
@@ -432,6 +433,9 @@ function Research() {
           isLoading={isTransactionsLoading}
         />
       )}
+
+      {/* ── Notes & Thesis ── */}
+      {searchText && <ResearchNotesCard symbol={searchText} />}
 
       {/* ── AI Agent Insights ── */}
       {agentEnabled && searchText && (

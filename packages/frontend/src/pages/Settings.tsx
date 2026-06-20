@@ -30,6 +30,11 @@ import { DB_HOST } from "@/config";
 import { useAuth } from "@/contexts/AuthContext";
 import type { IAccount } from "@/models/AccountsModel";
 import LocalStorageUtil from "@/utils/localStorage";
+import {
+	NOTIFICATIONS_ENABLED_KEY,
+	notificationsSupported,
+	requestNotificationPermission,
+} from "@/utils/priceAlertNotifications";
 
 function SettingsSection({
 	title,
@@ -128,6 +133,23 @@ export default function Settings() {
 		LocalStorageUtil.setItem('alert_threshold', String(draftThreshold));
 		setSavedThresholdVal(draftThreshold);
 		toast.success('Alert threshold saved');
+	};
+
+	const [notificationsOn, setNotificationsOn] = React.useState(
+		LocalStorageUtil.getItem<boolean>(NOTIFICATIONS_ENABLED_KEY) === true,
+	);
+
+	const handleToggleNotifications = async (checked: boolean) => {
+		if (checked) {
+			const granted = await requestNotificationPermission();
+			if (!granted) {
+				toast.error('Browser notification permission was denied');
+				return;
+			}
+			toast.success('Price alert notifications enabled');
+		}
+		LocalStorageUtil.setItem(NOTIFICATIONS_ENABLED_KEY, checked);
+		setNotificationsOn(checked);
 	};
 
 	const DEFAULT_VALUE_CALC: ValueCalcConfig = { enabled: false, intervalMinutes: 15 };
@@ -558,6 +580,17 @@ export default function Settings() {
 						</Button>
 					</Stack>
 				</SettingRow>
+				{notificationsSupported() && (
+					<SettingRow
+						label="Browser Price Alerts"
+						description="Send a desktop notification when a holding reaches or nears its target price (stays on this device)"
+					>
+						<Switch
+							checked={notificationsOn}
+							onChange={(_, checked) => handleToggleNotifications(checked)}
+						/>
+					</SettingRow>
+				)}
 				<SettingRow
 					label="Default Rows Per Page"
 					description="Number of holdings shown per page"
