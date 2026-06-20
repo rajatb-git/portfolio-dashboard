@@ -1,9 +1,12 @@
-import { Alert, Box, Divider, Grid, ToggleButton, ToggleButtonGroup } from '@mui/material';
+import { Alert, Box, Collapse, Divider, Grid, ToggleButton, ToggleButtonGroup } from '@mui/material';
 import Card from '@mui/material/Card';
+import IconButton from '@mui/material/IconButton';
+import Stack from '@mui/material/Stack';
 import { default as MuiTable } from '@mui/material/Table';
 import TableBody from '@mui/material/TableBody';
 import TableContainer from '@mui/material/TableContainer';
 import TablePagination from '@mui/material/TablePagination';
+import Typography from '@mui/material/Typography';
 import Case from 'case';
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -11,9 +14,12 @@ import { useNavigate } from 'react-router-dom';
 import type { HoldingAggregate } from '@/api/dashboard';
 import BuySellDialog from '@/components/BuySellDialog';
 import CashDialog from '@/components/CashDialog';
+import { Iconify } from '@/components/Iconify';
 import { HoldingTypesEnum } from '@/lib/enums';
 import type { IAccount } from '@/models/AccountsModel';
 import type { Column } from '@/types';
+import LocalStorageUtil from '@/utils/localStorage';
+import { fnCurrency, fnPercent } from '@/utils/formatNumber';
 import TableNoData from '../Table/TableNoData';
 import { TableSkeleton } from '../Table/TableSkeleton';
 import TotalCard from '../TotalCard';
@@ -43,6 +49,17 @@ export default function Table<T>({ rows, columns, accounts, refreshData, isLoadi
   const [tradeOpen, setTradeOpen] = useState(false);
   const [cashTarget, setCashTarget] = useState<IAccount | null>(null);
   const [cashOpen, setCashOpen] = useState(false);
+  const [summaryCollapsed, setSummaryCollapsed] = useState<boolean>(
+    () => LocalStorageUtil.getItem<boolean>('dash_summary_collapsed') ?? false
+  );
+
+  const toggleSummary = () => {
+    setSummaryCollapsed((prev) => {
+      const next = !prev;
+      LocalStorageUtil.setItem('dash_summary_collapsed', next);
+      return next;
+    });
+  };
 
   const handleSort = (_event: any, id: string) => {
     const isAsc = orderBy === id && order === 'asc';
@@ -113,15 +130,63 @@ export default function Table<T>({ rows, columns, accounts, refreshData, isLoadi
 
   const notFound = !dataFiltered.length;
 
+  const grandValue = totals.reduce((s, t) => s + t.totalValue, 0);
+  const grandInvested = totals.reduce((s, t) => s + t.totalInvestment, 0);
+  const grandGL = totals.reduce((s, t) => s + t.totalGL, 0);
+  const grandGLPercent = grandInvested > 0 ? grandGL / grandInvested : 0;
+
   return (
     <>
-      <Grid container spacing={1}>
-        {totals.map((total) => (
-          <Grid key={total.accountId} size={{ xs: 12, sm: 6, md: 4, lg: 2.5 }}>
-            <TotalCard total={total} onManageCash={handleManageCash} />
+      <Box>
+        <Stack
+          direction="row"
+          onClick={toggleSummary}
+          sx={{ alignItems: 'center', gap: 0.75, cursor: 'pointer', py: 0.25, userSelect: 'none' }}
+        >
+          <IconButton size="small" sx={{ p: 0.25 }} aria-label="toggle account summary">
+            <Iconify
+              icon={summaryCollapsed ? 'eva:arrow-ios-forward-fill' : 'eva:arrow-ios-downward-fill'}
+              width={18}
+            />
+          </IconButton>
+          <Typography
+            sx={{
+              fontSize: '0.7rem',
+              fontWeight: 700,
+              textTransform: 'uppercase',
+              letterSpacing: '0.06em',
+              color: 'text.secondary',
+            }}
+          >
+            Account Summary
+          </Typography>
+          <Typography sx={{ fontSize: '0.68rem', color: 'text.disabled' }}>
+            ({totals.length} account{totals.length === 1 ? '' : 's'})
+          </Typography>
+
+          <Box sx={{ flexGrow: 1 }} />
+
+          <Typography sx={{ fontSize: '0.9rem', fontWeight: 700, color: 'text.primary' }}>
+            {fnCurrency(grandValue)}
+          </Typography>
+          <Typography
+            sx={{ fontSize: '0.78rem', fontWeight: 600, color: grandGL >= 0 ? 'success.main' : 'error.main' }}
+          >
+            {grandGL > 0 ? '+' : ''}
+            {fnPercent(grandGLPercent)}
+          </Typography>
+        </Stack>
+
+        <Collapse in={!summaryCollapsed}>
+          <Grid container spacing={1} sx={{ pt: 0.5 }}>
+            {totals.map((total) => (
+              <Grid key={total.accountId} size={{ xs: 6, sm: 4, md: 3, lg: 2 }}>
+                <TotalCard total={total} onManageCash={handleManageCash} />
+              </Grid>
+            ))}
           </Grid>
-        ))}
-      </Grid>
+        </Collapse>
+      </Box>
 
       {nearTargetCount > 0 && (
         <Alert
