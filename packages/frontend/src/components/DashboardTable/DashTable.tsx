@@ -1,7 +1,6 @@
-import { Alert, Box, Collapse, Divider, Grid, ToggleButton, ToggleButtonGroup } from '@mui/material';
+import { Alert, Box, Collapse, Divider, Grid, Stack, ToggleButton, ToggleButtonGroup } from '@mui/material';
 import Card from '@mui/material/Card';
 import IconButton from '@mui/material/IconButton';
-import Stack from '@mui/material/Stack';
 import { default as MuiTable } from '@mui/material/Table';
 import TableBody from '@mui/material/TableBody';
 import TableContainer from '@mui/material/TableContainer';
@@ -23,10 +22,27 @@ import { fnCurrency, fnPercent } from '@/utils/formatNumber';
 import TableNoData from '../Table/TableNoData';
 import { TableSkeleton } from '../Table/TableSkeleton';
 import TotalCard from '../TotalCard';
+import DashTableAccountHeader from './DashTableAccountHeader';
+import DashTableConsolidatedRow from './DashTableConsolidatedRow';
 import TableHead from './DashTableHead';
 import DashTableRow from './DashTableRow';
 import TableToolbar from './DashTableToolbar';
-import { applyFilter, getComparator } from './dashTableUtils';
+import {
+  applyFilter,
+  consolidateBySymbol,
+  type EnrichedHolding,
+  getComparator,
+  groupByAccount,
+  type Total,
+} from './dashTableUtils';
+
+type ViewMode = 'consolidated' | 'account';
+const VIEW_MODE_KEY = 'dashboard_view_mode';
+
+type DisplayItem =
+  | { kind: 'accountHeader'; key: string; total: Total }
+  | { kind: 'holding'; key: string; row: EnrichedHolding }
+  | { kind: 'consolidated'; key: string; row: ReturnType<typeof consolidateBySymbol>[number] };
 
 type TableProps<T> = {
   rows: Array<T>;
@@ -38,9 +54,11 @@ type TableProps<T> = {
 
 export default function Table<T>({ rows, columns, accounts, refreshData, isLoading }: TableProps<T>) {
   const navigate = useNavigate();
+  const initialViewMode = (LocalStorageUtil.getItem<ViewMode>(VIEW_MODE_KEY) ?? 'consolidated') as ViewMode;
+  const [viewMode, setViewMode] = useState<ViewMode>(initialViewMode);
   const [page, setPage] = useState(0);
-  const [order, setOrder] = useState<'asc' | 'desc'>('asc');
-  const [orderBy, setOrderBy] = useState('totalGLPercent');
+  const [order, setOrder] = useState<'asc' | 'desc'>('desc');
+  const [orderBy, setOrderBy] = useState(initialViewMode === 'consolidated' ? 'marketValue' : 'accountPercent');
   const [filterName, setFilterName] = useState('');
   const [rowsPerPage, setRowsPerPage] = useState(50);
   const [filterType, setFilterType] = useState<string>('all');
@@ -97,6 +115,17 @@ export default function Table<T>({ rows, columns, accounts, refreshData, isLoadi
     setFilterAccount(event.target.value);
   };
 
+  const handleViewModeChange = (_event: any, value: ViewMode | null) => {
+    if (!value) return;
+    setPage(0);
+    setViewMode(value);
+    LocalStorageUtil.setItem(VIEW_MODE_KEY, value);
+    // % of Account is blank on consolidated rows, so fall back to a column that
+    // actually has values; restore the account-relative default when grouping.
+    if (value === 'consolidated' && orderBy === 'accountPercent') setOrderBy('marketValue');
+    if (value === 'account' && orderBy === 'marketValue') setOrderBy('accountPercent');
+  };
+
   const enrichedRows = React.useMemo(() => {
     const accountTotals: Record<string, number> = {};
     (rows as unknown as HoldingAggregate[]).forEach((r) => {
@@ -109,14 +138,45 @@ export default function Table<T>({ rows, columns, accounts, refreshData, isLoadi
     }));
   }, [rows]);
 
+  const comparator = getComparator(order, orderBy);
+
   const { dataFiltered, totals } = applyFilter({
     inputData: enrichedRows,
-    comparator: getComparator(order, orderBy),
+    comparator,
     filterName,
     filterAccount,
     filterType,
     accounts,
   });
+
+  const displayItems = React.useMemo<Array<DisplayItem>>(() => {
+    const rowsFiltered = dataFiltered as Array<EnrichedHolding>;
+
+    if (viewMode === 'consolidated') {
+      const groups = consolidateBySymbol(rowsFiltered).sort(comparator);
+      return groups.map((group) =>
+        group.accountCount === 1
+          ? { kind: 'holding', key: `${group.subRows[0].accountId}-${group.symbol}`, row: group.subRows[0] }
+          : { kind: 'consolidated', key: group.symbol, row: group }
+      );
+    }
+
+    const totalsByAccount = new Map(totals.map((t) => [t.accountId, t]));
+    const items: Array<DisplayItem> = [];
+    groupByAccount(rowsFiltered).forEach(({ accountId, rows: accountRows }) => {
+      const total = totalsByAccount.get(accountId);
+      if (total) items.push({ kind: 'accountHeader', key: `header-${accountId}`, total });
+      accountRows.forEach((r) => items.push({ kind: 'holding', key: `${accountId}-${r.symbol}`, row: r }));
+    });
+    return items;
+  }, [dataFiltered, totals, viewMode, comparator]);
+
+  const pageItems = displayItems.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
+  // If pagination splits an account group, re-show its header at the top of the page.
+  if (viewMode === 'account' && pageItems[0]?.kind === 'holding') {
+    const total = totals.find((t) => t.accountId === (pageItems[0] as { row: EnrichedHolding }).row.accountId);
+    if (total) pageItems.unshift({ kind: 'accountHeader', key: `header-${total.accountId}-cont`, total });
+  }
 
   const handleManageCash = (accountId: string) => {
     const acc = accounts.find((a) => a.id === accountId) ?? null;
@@ -223,20 +283,39 @@ export default function Table<T>({ rows, columns, accounts, refreshData, isLoadi
           ))}
         </ToggleButtonGroup>
 
-        <ToggleButtonGroup
-          size="small"
-          value={filterAccount}
-          exclusive
-          onChange={handleAccountFilterChange}
-          aria-label="account-filter"
-        >
-          <ToggleButton value="all">All Accounts</ToggleButton>
-          {accounts.map((x) => (
-            <ToggleButton key={x.id} value={x.id}>
-              {x.name}
+        <Stack direction="row" sx={{ flexWrap: 'wrap', gap: 1 }}>
+          <ToggleButtonGroup
+            size="small"
+            value={viewMode}
+            exclusive
+            onChange={handleViewModeChange}
+            aria-label="view-mode"
+          >
+            <ToggleButton value="consolidated">
+              <Iconify icon="mdi:layers-outline" width={16} sx={{ mr: 0.5 }} />
+              Consolidated
             </ToggleButton>
-          ))}
-        </ToggleButtonGroup>
+            <ToggleButton value="account">
+              <Iconify icon="mdi:folder-account-outline" width={16} sx={{ mr: 0.5 }} />
+              By Account
+            </ToggleButton>
+          </ToggleButtonGroup>
+
+          <ToggleButtonGroup
+            size="small"
+            value={filterAccount}
+            exclusive
+            onChange={handleAccountFilterChange}
+            aria-label="account-filter"
+          >
+            <ToggleButton value="all">All Accounts</ToggleButton>
+            {accounts.map((x) => (
+              <ToggleButton key={x.id} value={x.id}>
+                {x.name}
+              </ToggleButton>
+            ))}
+          </ToggleButtonGroup>
+        </Stack>
       </Box>
 
       <Card elevation={0}>
@@ -264,9 +343,15 @@ export default function Table<T>({ rows, columns, accounts, refreshData, isLoadi
                 {isLoading ? (
                   <TableSkeleton />
                 ) : (
-                  dataFiltered
-                    .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-                    .map((row: any) => <DashTableRow key={row.id} row={row} onRowClick={goToResearchPage} />)
+                  pageItems.map((item) => {
+                    if (item.kind === 'accountHeader') {
+                      return <DashTableAccountHeader key={item.key} total={item.total} colSpan={columns.length} />;
+                    }
+                    if (item.kind === 'consolidated') {
+                      return <DashTableConsolidatedRow key={item.key} row={item.row} onRowClick={goToResearchPage} />;
+                    }
+                    return <DashTableRow key={item.key} row={item.row} onRowClick={goToResearchPage} />;
+                  })
                 )}
 
                 {notFound && !isLoading && <TableNoData query={filterName} />}
@@ -280,7 +365,7 @@ export default function Table<T>({ rows, columns, accounts, refreshData, isLoadi
         <TablePagination
           page={page}
           component="div"
-          count={dataFiltered.length}
+          count={displayItems.length}
           rowsPerPage={rowsPerPage}
           onPageChange={handleChangePage}
           rowsPerPageOptions={[50, 100, 200]}

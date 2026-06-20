@@ -1,10 +1,11 @@
-import { Avatar, Chip, Tooltip } from '@mui/material';
+import { Avatar, Chip, IconButton, Tooltip } from '@mui/material';
 import { blue, green, red } from '@mui/material/colors';
 import Stack from '@mui/material/Stack';
 import { default as MuiTableRow } from '@mui/material/TableRow';
 import Typography from '@mui/material/Typography';
 
 import { HoldingAggregate } from '@/api/dashboard';
+import { Iconify } from '@/components/Iconify';
 import Label from '@/components/Label';
 import { TableCell } from '@/components/Table/TableCell';
 import { fnCurrency } from '@/utils/formatNumber';
@@ -12,6 +13,9 @@ import { fnCurrency } from '@/utils/formatNumber';
 type TableRowProps = {
   row: HoldingAggregate & { accountPercent?: number };
   onRowClick: (symbol: string) => void;
+  accountLabel?: string;
+  subRow?: boolean;
+  expandControl?: { expanded: boolean; onToggle: () => void };
 };
 
 function isNearTarget(row: HoldingAggregate): boolean {
@@ -19,7 +23,7 @@ function isNearTarget(row: HoldingAggregate): boolean {
   return Math.abs(row.currentPrice - row.targetPrice) / row.targetPrice <= 0.05;
 }
 
-export default function DashTableRow({ row, onRowClick }: TableRowProps) {
+export default function DashTableRow({ row, onRowClick, accountLabel, subRow, expandControl }: TableRowProps) {
   const nearTarget = isNearTarget(row);
 
   return (
@@ -30,19 +34,37 @@ export default function DashTableRow({ row, onRowClick }: TableRowProps) {
       sx={{
         cursor: 'pointer',
         transition: 'background-color 0.1s ease',
+        ...(subRow && {
+          backgroundColor: 'action.hover',
+          '& th, & td': { borderBottom: 'none', py: 0.5 },
+        }),
         '&:hover': {
           backgroundColor: 'rgba(59,130,246,0.05) !important',
         },
         '&:last-child td': { borderBottom: 'none' },
       }}
     >
-      <TableCell component="th" scope="row">
-        <Stack direction="column" spacing={0}>
-          <Stack direction="row" spacing={0.75}>
-            <Typography variant="subtitle2" noWrap>
-              {row.symbol}
-            </Typography>
-            {nearTarget && (
+      <TableCell component="th" scope="row" sx={subRow ? { pl: 5 } : undefined}>
+        <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center' }}>
+          {expandControl && (
+            <IconButton
+              size="small"
+              aria-label="toggle accounts"
+              onClick={(e) => {
+                e.stopPropagation();
+                expandControl.onToggle();
+              }}
+              sx={{ p: 0.25 }}
+            >
+              <Iconify icon={expandControl.expanded ? 'mdi:chevron-down' : 'mdi:chevron-right'} width={18} />
+            </IconButton>
+          )}
+          <Stack direction="column" spacing={0}>
+            <Stack direction="row" spacing={0.75}>
+              <Typography variant="subtitle2" noWrap>
+                {row.symbol}
+              </Typography>
+              {nearTarget && (
               <Tooltip title={`Target: ${fnCurrency(row.targetPrice)}`}>
                 <Chip
                   label="Near Target"
@@ -60,9 +82,10 @@ export default function DashTableRow({ row, onRowClick }: TableRowProps) {
               </Tooltip>
             )}
           </Stack>
-          <Typography variant="caption" noWrap>
-            {row.qty} {row.type === 'crypto' ? 'coins' : 'shares'}
-          </Typography>
+            <Typography variant="caption" noWrap>
+              {row.qty} {row.type === 'crypto' ? 'coins' : 'shares'}
+            </Typography>
+          </Stack>
         </Stack>
       </TableCell>
 
@@ -123,7 +146,7 @@ export default function DashTableRow({ row, onRowClick }: TableRowProps) {
         </Typography>
       </TableCell>
 
-      <TableCell>{row.accountId}</TableCell>
+      <TableCell>{accountLabel ?? row.accountId}</TableCell>
 
       <TableCell>
         {row.strongBuy >= 0 && (
