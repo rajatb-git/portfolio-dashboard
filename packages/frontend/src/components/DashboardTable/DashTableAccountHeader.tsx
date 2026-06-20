@@ -13,21 +13,26 @@ import type { Total } from './dashTableUtils';
 type Props = {
   total: Total;
   colSpan: number;
+  stickyTop: number;
 };
 
-export default function DashTableAccountHeader({ total, colSpan }: Props) {
+export default function DashTableAccountHeader({ total, colSpan, stickyTop }: Props) {
   return (
     <MuiTableRow>
       <TableCell
         colSpan={colSpan}
         sx={(theme) => ({
           py: 1.25,
+          position: 'sticky',
+          top: stickyTop,
+          zIndex: 1,
           borderLeft: `4px solid ${theme.palette.primary.main}`,
           borderBottom: `2px solid ${alpha(theme.palette.primary.main, 0.35)}`,
-          background:
+          backgroundColor: theme.palette.background.paper,
+          backgroundImage:
             theme.palette.mode === 'light'
-              ? `linear-gradient(90deg, ${alpha(theme.palette.primary.main, 0.12)} 0%, ${alpha(theme.palette.primary.main, 0.03)} 100%)`
-              : `linear-gradient(90deg, ${alpha(theme.palette.primary.main, 0.28)} 0%, ${alpha(theme.palette.primary.main, 0.06)} 100%)`,
+              ? `linear-gradient(90deg, ${alpha(theme.palette.primary.main, 0.14)} 0%, ${alpha(theme.palette.primary.main, 0.05)} 100%)`
+              : `linear-gradient(90deg, ${alpha(theme.palette.primary.main, 0.3)} 0%, ${alpha(theme.palette.primary.main, 0.08)} 100%)`,
         })}
       >
         <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
