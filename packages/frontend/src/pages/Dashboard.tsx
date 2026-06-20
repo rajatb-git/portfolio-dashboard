@@ -51,8 +51,8 @@ export default function Dashboard() {
 
   const threshold = Number(LocalStorageUtil.getItem<string>('alert_threshold') ?? '5') || 5;
 
-  const loadData = async () => {
-    setIsLoading(true);
+  const fetchData = React.useCallback((silent: boolean) => {
+    if (!silent) setIsLoading(true);
 
     apis.dashboard
       .getDashboard()
@@ -61,10 +61,11 @@ export default function Dashboard() {
         notifyPriceAlerts(response, threshold);
       })
       .catch((err) => {
-        toast.error(err.message);
+        // Stay quiet on background polls so a transient blip doesn't spam toasts.
+        if (!silent) toast.error(err.message);
       })
       .finally(() => {
-        setIsLoading(false);
+        if (!silent) setIsLoading(false);
       });
 
     setIsEarningsLoading(true);
@@ -76,23 +77,39 @@ export default function Dashboard() {
 
     apis.accounts
       .getAll()
-      .then((response) => {
-        setAccounts(response);
-      })
+      .then((response) => setAccounts(response))
       .catch((err) => {
-        toast.error(err.message);
+        if (!silent) toast.error(err.message);
       });
-  };
+  }, []);
+
+  const refresh = React.useCallback(() => fetchData(false), [fetchData]);
 
   React.useEffect(() => {
-    loadData();
-  }, []);
+    fetchData(false);
+
+    // Auto-refresh so values track the market without a manual reload. The backend
+    // serves cached quotes instantly and revalidates in the background, so each poll
+    // both renders the latest cached prices and nudges the cache forward.
+    const REFRESH_MS = 30_000;
+    const tick = () => {
+      if (document.visibilityState === 'visible') fetchData(true);
+    };
+    const timer = window.setInterval(tick, REFRESH_MS);
+    // Refresh immediately when returning to the tab after it was hidden.
+    document.addEventListener('visibilitychange', tick);
+
+    return () => {
+      window.clearInterval(timer);
+      document.removeEventListener('visibilitychange', tick);
+    };
+  }, [fetchData]);
 
   return (
     <>
       <DashboardTable
         isLoading={isLoading}
-        refreshData={loadData}
+        refreshData={refresh}
         rows={dashboardData}
         accounts={accounts}
         columns={columns}
