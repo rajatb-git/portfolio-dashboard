@@ -1,4 +1,14 @@
-import { Card, CardContent, Skeleton, Stack, ToggleButton, ToggleButtonGroup, Typography } from '@mui/material';
+import {
+  Card,
+  CardContent,
+  MenuItem,
+  Select,
+  Skeleton,
+  Stack,
+  ToggleButton,
+  ToggleButtonGroup,
+  Typography,
+} from '@mui/material';
 
 import type { ApexOptions } from 'apexcharts';
 import moment from 'moment';
@@ -37,23 +47,36 @@ type Props = {
   snapshots: PortfolioSnapshot[];
 };
 
+const BENCHMARKS: Record<string, string> = {
+  SPY: 'S&P 500 (SPY)',
+  QQQ: 'Nasdaq 100 (QQQ)',
+  DIA: 'Dow Jones (DIA)',
+  None: 'None',
+};
+
 export default function PortfolioPerformanceChart({ snapshots }: Props) {
   const { resolvedMode: mode } = useThemeMode();
   const [range, setRange] = React.useState<RangeKey>('6M');
+  const [benchmark, setBenchmark] = React.useState<string>('SPY');
   const [spyRaw, setSpyRaw] = React.useState<any[]>([]);
   const [isSpyLoading, setIsSpyLoading] = React.useState(false);
 
   React.useEffect(() => {
+    if (benchmark === 'None') {
+      setSpyRaw([]);
+      setIsSpyLoading(false);
+      return;
+    }
     setIsSpyLoading(true);
     apis.live
-      .getPriceHistory('SPY', SPY_RANGE[range] as any)
+      .getPriceHistory(benchmark, SPY_RANGE[range] as any)
       .then((data) => setSpyRaw(data ?? []))
       .catch((err) => {
         setSpyRaw([]);
-        toast.error(err.message || 'Failed to load SPY benchmark data');
+        toast.error(err.message || `Failed to load ${benchmark} benchmark data`);
       })
       .finally(() => setIsSpyLoading(false));
-  }, [range]);
+  }, [range, benchmark]);
 
   // Filter snapshots to selected range
   const cutoffMs = range === 'All' ? 0 : moment().subtract(RANGE_DAYS[range], 'days').valueOf();
@@ -105,7 +128,7 @@ export default function PortfolioPerformanceChart({ snapshots }: Props) {
 
   const series = [
     { name: 'Portfolio', data: portfolioSeries, type: 'area' },
-    ...(spySeries.length ? [{ name: 'S&P 500 (SPY)', data: spySeries, type: 'area' }] : []),
+    ...(spySeries.length ? [{ name: BENCHMARKS[benchmark], data: spySeries, type: 'area' }] : []),
   ];
 
   const options: ApexOptions = {
@@ -166,13 +189,27 @@ export default function PortfolioPerformanceChart({ snapshots }: Props) {
         >
           Portfolio Performance
         </Typography>
-        <ToggleButtonGroup size="small" value={range} exclusive onChange={(_, v) => v && setRange(v)}>
-          {RANGE_OPTIONS.map((r) => (
-            <ToggleButton key={r} value={r} sx={{ px: 1.5, fontSize: '0.72rem' }}>
-              {r}
-            </ToggleButton>
-          ))}
-        </ToggleButtonGroup>
+        <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
+          <Select
+            size="small"
+            value={benchmark}
+            onChange={(e) => setBenchmark(e.target.value)}
+            sx={{ fontSize: '0.72rem', height: 30 }}
+          >
+            {Object.entries(BENCHMARKS).map(([value, label]) => (
+              <MenuItem key={value} value={value} sx={{ fontSize: '0.78rem' }}>
+                {label}
+              </MenuItem>
+            ))}
+          </Select>
+          <ToggleButtonGroup size="small" value={range} exclusive onChange={(_, v) => v && setRange(v)}>
+            {RANGE_OPTIONS.map((r) => (
+              <ToggleButton key={r} value={r} sx={{ px: 1.5, fontSize: '0.72rem' }}>
+                {r}
+              </ToggleButton>
+            ))}
+          </ToggleButtonGroup>
+        </Stack>
       </Stack>
 
       <CardContent sx={{ pt: 0 }}>

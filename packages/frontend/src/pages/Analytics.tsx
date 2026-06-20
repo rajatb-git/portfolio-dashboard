@@ -5,11 +5,13 @@ import { toast } from 'react-toastify';
 
 import apis from '@/api';
 import type { HoldingAggregate, PortfolioSnapshot } from '@/api/dashboard';
-import type { RiskMetrics, SectorAllocation } from '@/api/analytics';
+import type { RealizedGains, RiskMetrics, SectorAllocation } from '@/api/analytics';
 import AllocationCharts from '@/components/Analytics/AllocationCharts';
 import NewsSentimentCard from '@/components/Analytics/NewsSentimentCard';
 import PerformanceAttributionCard from '@/components/Analytics/PerformanceAttributionCard';
+import PortfolioInsightsCard from '@/components/Analytics/PortfolioInsightsCard';
 import PortfolioPerformanceChart from '@/components/Analytics/PortfolioPerformanceChart';
+import RealizedGainsCard from '@/components/Analytics/RealizedGainsCard';
 import RiskMetricsCard from '@/components/Analytics/RiskMetricsCard';
 import SectorAllocationChart from '@/components/Analytics/SectorAllocationChart';
 
@@ -26,6 +28,9 @@ export default function Analytics() {
 
   const [sentiment, setSentiment] = React.useState<any>(null);
   const [isSentimentLoading, setIsSentimentLoading] = React.useState(true);
+
+  const [realizedGains, setRealizedGains] = React.useState<RealizedGains | null>(null);
+  const [isRealizedLoading, setIsRealizedLoading] = React.useState(true);
 
   React.useEffect(() => {
     setIsLoading(true);
@@ -76,6 +81,12 @@ export default function Analytics() {
       .catch((err) => toast.error(err.message || 'Failed to load news sentiment'))
       .finally(() => setIsSentimentLoading(false));
 
+    setIsRealizedLoading(true);
+    apis.analytics
+      .getRealizedGains()
+      .then((data) => setRealizedGains(data))
+      .catch((err) => toast.error(err.message || 'Failed to load realized gains'))
+      .finally(() => setIsRealizedLoading(false));
   }, []);
 
   return (
@@ -89,6 +100,10 @@ export default function Analytics() {
       <RiskMetricsCard metrics={riskMetrics} isLoading={isRiskLoading} />
 
       <PerformanceAttributionCard attribution={attribution} isLoading={isAttributionLoading} />
+
+      <RealizedGainsCard data={realizedGains} isLoading={isRealizedLoading} />
+
+      <PortfolioInsightsCard />
 
       <Grid container spacing={2}>
         <Grid size={{ xs: 12, md: 6 }}>
