@@ -14,6 +14,7 @@ import KoaHelmet from 'koa-helmet';
 
 import { authMiddleware } from './middleware/auth';
 import { alertMonitorService } from './controller/AlertMonitorService';
+import { configureFromSaved } from './controller/NotificationDispatcher';
 import { portfolioValueCalcService } from './controller/PortfolioValueCalcService';
 import { getAlertMonitorConfig } from './models/AlertMonitorConfigModel';
 import { getValueCalcConfig } from './models/ValueCalcConfigModel';
@@ -74,4 +75,5 @@ app.listen(port, () => {
   console.log('server started on port ' + port);
   getValueCalcConfig().then((config) => portfolioValueCalcService.start(config));
   getAlertMonitorConfig().then((config) => alertMonitorService.start(config));
+  configureFromSaved();
 });
