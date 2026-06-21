@@ -12,7 +12,6 @@ type HoldingAggregate = {
   symbol: string;
   qty: number;
   averagePrice: number;
-  targetPrice: number;
   type: 'stock' | 'crypto';
   currentPrice: number;
   priceDate: string;
