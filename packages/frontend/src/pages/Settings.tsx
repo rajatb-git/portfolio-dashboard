@@ -23,7 +23,7 @@ import * as React from "react";
 import { toast } from "react-toastify";
 import apis from "@/api";
 import type { AiConfig } from "@/api/live";
-import type { LockStatus, ValueCalcConfig } from "@/api/settings";
+import type { AlertMonitorConfig, LockStatus, ValueCalcConfig } from "@/api/settings";
 import { Iconify } from "@/components/Iconify";
 import { useThemeMode } from "@/components/ThemeRegistry/ThemeModeContext";
 import { DB_HOST } from "@/config";
@@ -158,6 +158,12 @@ export default function Settings() {
 	const [savingValueCalc, setSavingValueCalc] = React.useState(false);
 	const isValueCalcDirty = JSON.stringify(savedValueCalc) !== JSON.stringify(draftValueCalc);
 
+	const DEFAULT_ALERT_MONITOR: AlertMonitorConfig = { enabled: true, intervalMinutes: 5 };
+	const [savedAlertMonitor, setSavedAlertMonitor] = React.useState<AlertMonitorConfig>(DEFAULT_ALERT_MONITOR);
+	const [draftAlertMonitor, setDraftAlertMonitor] = React.useState<AlertMonitorConfig>(DEFAULT_ALERT_MONITOR);
+	const [savingAlertMonitor, setSavingAlertMonitor] = React.useState(false);
+	const isAlertMonitorDirty = JSON.stringify(savedAlertMonitor) !== JSON.stringify(draftAlertMonitor);
+
 	const [exporting, setExporting] = React.useState(false);
 	const [importing, setImporting] = React.useState(false);
 	const [importConfirmOpen, setImportConfirmOpen] = React.useState(false);
@@ -211,6 +217,14 @@ export default function Settings() {
 				setDraftValueCalc(cfg);
 			})
 			.catch((err) => toast.error(err.message || "Failed to load portfolio tracker settings"));
+
+		apis.settings
+			.getAlertMonitorConfig()
+			.then((cfg) => {
+				setSavedAlertMonitor(cfg);
+				setDraftAlertMonitor(cfg);
+			})
+			.catch((err) => toast.error(err.message || "Failed to load alert monitor settings"));
 	}, []);
 
 	const isLockDirty =
@@ -366,6 +380,22 @@ export default function Settings() {
 	};
 
 	const handleResetValueCalc = () => setDraftValueCalc(savedValueCalc);
+
+	const handleSaveAlertMonitor = async () => {
+		setSavingAlertMonitor(true);
+		try {
+			const saved = await apis.settings.saveAlertMonitorConfig(draftAlertMonitor);
+			setSavedAlertMonitor(saved);
+			setDraftAlertMonitor(saved);
+			toast.success("Alert monitor settings saved");
+		} catch (err: any) {
+			toast.error(err.message || "Failed to save alert monitor settings");
+		} finally {
+			setSavingAlertMonitor(false);
+		}
+	};
+
+	const handleResetAlertMonitor = () => setDraftAlertMonitor(savedAlertMonitor);
 
 	const handleAddAccount = async () => {
 		const name = newAccountName.trim();
@@ -672,6 +702,74 @@ export default function Settings() {
 						sx={{ fontSize: "0.78rem", textTransform: "none" }}
 					>
 						{savingValueCalc ? "Saving..." : "Save"}
+					</Button>
+				</Stack>
+			</SettingsSection>
+
+			<SettingsSection title="Price Alert Monitor">
+				<SettingRow
+					label="Enable Background Monitoring"
+					description="Continuously check your alerts on the server. Stock alerts are evaluated only during US market hours (Mon–Fri 9:30 AM – 4:00 PM ET, excluding holidays); crypto alerts are checked 24/7."
+				>
+					<Switch
+						checked={draftAlertMonitor.enabled}
+						onChange={(_, checked) =>
+							setDraftAlertMonitor((prev) => ({ ...prev, enabled: checked }))
+						}
+					/>
+				</SettingRow>
+				{draftAlertMonitor.enabled && (
+					<SettingRow
+						label="Check Interval"
+						description="How often the server polls live prices to evaluate alerts"
+					>
+						<Select
+							size="small"
+							value={draftAlertMonitor.intervalMinutes}
+							onChange={(e) =>
+								setDraftAlertMonitor((prev) => ({
+									...prev,
+									intervalMinutes: Number(e.target.value),
+								}))
+							}
+							sx={{ minWidth: { xs: "100%", sm: 200 }, fontSize: "0.82rem" }}
+						>
+							<MenuItem value={1}>Every minute</MenuItem>
+							<MenuItem value={5}>Every 5 minutes</MenuItem>
+							<MenuItem value={10}>Every 10 minutes</MenuItem>
+							<MenuItem value={15}>Every 15 minutes</MenuItem>
+							<MenuItem value={30}>Every 30 minutes</MenuItem>
+							<MenuItem value={60}>Every 60 minutes</MenuItem>
+						</Select>
+					</SettingRow>
+				)}
+				<Stack
+					direction="row"
+					spacing={1}
+					sx={{ justifyContent: "flex-end", alignItems: "center", px: 2, py: 1.5 }}
+				>
+					{isAlertMonitorDirty && (
+						<Typography sx={{ fontSize: "0.72rem", color: "warning.main", mr: "auto" }}>
+							Unsaved changes
+						</Typography>
+					)}
+					<Button
+						size="small"
+						variant="outlined"
+						onClick={handleResetAlertMonitor}
+						disabled={!isAlertMonitorDirty || savingAlertMonitor}
+						sx={{ fontSize: "0.78rem", textTransform: "none" }}
+					>
+						Reset
+					</Button>
+					<Button
+						size="small"
+						variant="contained"
+						onClick={handleSaveAlertMonitor}
+						disabled={!isAlertMonitorDirty || savingAlertMonitor}
+						sx={{ fontSize: "0.78rem", textTransform: "none" }}
+					>
+						{savingAlertMonitor ? "Saving..." : "Save"}
 					</Button>
 				</Stack>
 			</SettingsSection>

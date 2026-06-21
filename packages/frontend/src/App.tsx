@@ -14,6 +14,7 @@ import { DRAWER_WIDTH, DRAWER_COLLAPSED_WIDTH } from '@/config';
 
 const Dashboard = React.lazy(() => import('@/pages/Dashboard'));
 const Analytics = React.lazy(() => import('@/pages/Analytics'));
+const Alerts = React.lazy(() => import('@/pages/Alerts'));
 const Database = React.lazy(() => import('@/pages/Database'));
 const IPOCalendar = React.lazy(() => import('@/pages/IPOCalendar'));
 const Logs = React.lazy(() => import('@/pages/Logs'));
@@ -30,9 +31,7 @@ function IdleLockBinder() {
 }
 
 function AppShell() {
-  const [collapsed, setCollapsed] = React.useState(
-    () => localStorage.getItem('nav_collapsed') === 'true'
-  );
+  const [collapsed, setCollapsed] = React.useState(() => localStorage.getItem('nav_collapsed') === 'true');
   const [mobileOpen, setMobileOpen] = React.useState(false);
   const isMobile = useMediaQuery('(max-width: 899.95px)');
 
@@ -75,6 +74,7 @@ function AppShell() {
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/analytics" element={<Analytics />} />
+            <Route path="/alerts" element={<Alerts />} />
             <Route path="/database" element={<Database />} />
             <Route path="/ipo-calendar" element={<IPOCalendar />} />
             <Route path="/logs" element={<Logs />} />

@@ -108,11 +108,7 @@ export default function PriceAlertsCard({ holdings, threshold = 5 }: Props) {
             />
           )}
         </Stack>
-        <Iconify
-          icon={open ? 'tabler:chevron-up' : 'tabler:chevron-down'}
-          width={16}
-          sx={{ color: 'text.disabled' }}
-        />
+        <Iconify icon={open ? 'tabler:chevron-up' : 'tabler:chevron-down'} width={16} sx={{ color: 'text.disabled' }} />
       </Stack>
 
       <Collapse in={open}>
@@ -122,10 +118,7 @@ export default function PriceAlertsCard({ holdings, threshold = 5 }: Props) {
             <TableHead>
               <TableRow>
                 {['Symbol', 'Current', 'Target', 'Gap', 'Status'].map((h) => (
-                  <TableCell
-                    key={h}
-                    sx={{ fontSize: '0.68rem', color: 'text.disabled', fontWeight: 700, py: 0.75 }}
-                  >
+                  <TableCell key={h} sx={{ fontSize: '0.68rem', color: 'text.disabled', fontWeight: 700, py: 0.75 }}>
                     {h}
                   </TableCell>
                 ))}
@@ -139,9 +132,7 @@ export default function PriceAlertsCard({ holdings, threshold = 5 }: Props) {
                     <TableCell sx={{ fontSize: '0.8rem', fontWeight: 600 }}>{a.symbol}</TableCell>
                     <TableCell sx={{ fontSize: '0.8rem' }}>{fnCurrency(a.currentPrice)}</TableCell>
                     <TableCell sx={{ fontSize: '0.8rem' }}>{fnCurrency(a.targetPrice)}</TableCell>
-                    <TableCell
-                      sx={{ fontSize: '0.8rem', color: a.gapPercent >= 0 ? '#22c55e' : 'text.secondary' }}
-                    >
+                    <TableCell sx={{ fontSize: '0.8rem', color: a.gapPercent >= 0 ? '#22c55e' : 'text.secondary' }}>
                       {a.gapPercent >= 0 ? '+' : ''}
                       {a.gapPercent.toFixed(1)}%
                     </TableCell>

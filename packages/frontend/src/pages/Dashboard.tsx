@@ -8,7 +8,7 @@ import type { HoldingEarning } from '@/api/analytics';
 import DashboardTable from '@/components/DashboardTable/DashTable';
 import PriceAlertsCard from '@/components/Dashboard/PriceAlertsCard';
 import UpcomingEarningsCard from '@/components/Dashboard/UpcomingEarningsCard';
-import { notifyPriceAlerts } from '@/utils/priceAlertNotifications';
+import { notifyTriggeredAlerts } from '@/utils/priceAlertNotifications';
 import WatchlistSection from '@/components/WatchlistSection';
 import type { IAccount } from '@/models/AccountsModel';
 import LocalStorageUtil from '@/utils/localStorage';
@@ -58,7 +58,6 @@ export default function Dashboard() {
       .getDashboard()
       .then((response) => {
         setDashboardData(response);
-        notifyPriceAlerts(response, threshold);
       })
       .catch((err) => {
         // Stay quiet on background polls so a transient blip doesn't spam toasts.
@@ -67,6 +66,12 @@ export default function Dashboard() {
       .finally(() => {
         if (!silent) setIsLoading(false);
       });
+
+    // Evaluate standalone price alerts in the background and notify on triggers.
+    apis.alerts
+      .getStatus()
+      .then(notifyTriggeredAlerts)
+      .catch(() => {});
 
     setIsEarningsLoading(true);
     apis.analytics

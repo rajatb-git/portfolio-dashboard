@@ -1,4 +1,4 @@
-import type { HoldingAggregate } from '@/api/dashboard';
+import type { IAlertStatus } from '@/models/AlertModel';
 import LocalStorageUtil from './localStorage';
 
 export const NOTIFICATIONS_ENABLED_KEY = 'price_alert_notifications';
@@ -16,49 +16,30 @@ export const requestNotificationPermission = async (): Promise<boolean> => {
   return result === 'granted';
 };
 
-// Fire a desktop notification the first time a holding reaches its target on a
-// given day. Dedupe per symbol+date so refreshes don't re-spam, and reset the
-// ledger each day. Entirely client-side — no data leaves the browser.
-export const notifyPriceAlerts = (holdings: HoldingAggregate[], threshold: number): void => {
+// Fire a desktop notification the first time each alert triggers on a given day.
+// Dedupe per alert id so refreshes don't re-spam, and reset the ledger daily.
+// Entirely client-side — no data leaves the browser.
+export const notifyTriggeredAlerts = (statuses: IAlertStatus[]): void => {
   if (!isEnabled() || !notificationsSupported() || Notification.permission !== 'granted') return;
 
   const today = new Date().toISOString().slice(0, 10);
-  const ledger = LocalStorageUtil.getItem<{ date: string; symbols: string[] }>(NOTIFIED_KEY);
-  const notified = ledger && ledger.date === today ? new Set(ledger.symbols) : new Set<string>();
+  const ledger = LocalStorageUtil.getItem<{ date: string; ids: string[] }>(NOTIFIED_KEY);
+  const notified = ledger && ledger.date === today ? new Set(ledger.ids) : new Set<string>();
 
-  const atTarget = holdings.filter((h) => h.targetPrice > 0 && h.currentPrice >= h.targetPrice);
-
-  for (const h of atTarget) {
-    if (notified.has(h.symbol)) continue;
-    notified.add(h.symbol);
+  for (const a of statuses) {
+    if (!a.triggered || a.currentPrice == null) continue;
+    if (notified.has(a.id)) continue;
+    notified.add(a.id);
+    const arrow = a.direction === 'above' ? '📈' : '📉';
     try {
-      new Notification(`🎯 ${h.symbol} hit your target`, {
-        body: `${h.symbol} is at ${h.currentPrice} (target ${h.targetPrice}).`,
-        tag: `price-alert-${h.symbol}`,
+      new Notification(`${arrow} ${a.symbol} alert triggered`, {
+        body: `${a.symbol} is at ${a.currentPrice} (target ${a.direction} ${a.targetPrice}).`,
+        tag: `price-alert-${a.id}`,
       });
     } catch {
       // Notification construction can throw on some platforms; ignore.
     }
   }
 
-  // Surface near-target crossings too, deduped under the same ledger.
-  const nearTarget = holdings.filter(
-    (h) =>
-      h.targetPrice > 0 && h.currentPrice < h.targetPrice && h.currentPrice >= h.targetPrice * (1 - threshold / 100)
-  );
-  for (const h of nearTarget) {
-    const key = `near:${h.symbol}`;
-    if (notified.has(key)) continue;
-    notified.add(key);
-    try {
-      new Notification(`📈 ${h.symbol} nearing target`, {
-        body: `${h.symbol} is at ${h.currentPrice}, within ${threshold}% of target ${h.targetPrice}.`,
-        tag: `price-alert-${h.symbol}`,
-      });
-    } catch {
-      // ignore
-    }
-  }
-
-  LocalStorageUtil.setItem(NOTIFIED_KEY, { date: today, symbols: [...notified] });
+  LocalStorageUtil.setItem(NOTIFIED_KEY, { date: today, ids: [...notified] });
 };
