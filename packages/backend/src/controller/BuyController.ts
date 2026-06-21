@@ -20,7 +20,6 @@ export const buy = async (newHolding: IHoldings): Promise<IHoldingsModel> => {
 
     result = await holdingsModel.updateById(existingHolding.id, {
       ...newAverageValues,
-      ...(newHolding.targetPrice && { targetPrice: newHolding.targetPrice }),
     });
   } else {
     result = await holdingsModel.insertOne(newHolding);

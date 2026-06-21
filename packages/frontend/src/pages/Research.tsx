@@ -86,7 +86,6 @@ function Research() {
   const [earnings, setEarnings] = React.useState<any>(null);
   const [earningsHistory, setEarningsHistory] = React.useState<any[]>([]);
   const [insiderTransactions, setInsiderTransactions] = React.useState<any[]>([]);
-  const [watchlist, setWatchlist] = React.useState<string[]>([]);
   const [positions, setPositions] = React.useState<HoldingAggregate[]>([]);
   const [accounts, setAccounts] = React.useState<IAccount[]>([]);
   const [isPositionsLoading, setIsPositionsLoading] = React.useState(false);
@@ -214,10 +213,6 @@ function Research() {
   }, [searchParams]);
 
   React.useEffect(() => {
-    apis.watchlist
-      .getAll()
-      .then((items) => setWatchlist((items ?? []).map((i: any) => i.symbol)))
-      .catch((err) => toast.error(err.message || 'Failed to load watchlist'));
     apis.live
       .getAiConfig()
       .then((config) => setAgentEnabled(config.enabled))
@@ -227,22 +222,6 @@ function Research() {
       .then((res) => setAccounts(res ?? []))
       .catch((err) => toast.error(err.message || 'Failed to load accounts'));
   }, []);
-
-  const isInWatchlist = watchlist.includes(searchText);
-
-  const handleWatchlistToggle = async () => {
-    try {
-      if (isInWatchlist) {
-        await apis.watchlist.remove(searchText);
-        setWatchlist((prev) => prev.filter((s) => s !== searchText));
-      } else {
-        await apis.watchlist.add(searchText);
-        setWatchlist((prev) => [...prev, searchText]);
-      }
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to update watchlist');
-    }
-  };
 
   const isPositive = (price?.percentChange ?? 0) >= 0;
 
@@ -376,18 +355,9 @@ function Research() {
             )}
           </Box>
 
-          {/* Refresh + watchlist + timestamp */}
+          {/* Refresh + timestamp */}
           <Stack spacing={0.5} sx={{ alignItems: 'flex-end', flexShrink: 0 }}>
             <Stack direction="row" spacing={0.5}>
-              <Tooltip title={isInWatchlist ? 'Remove from Watchlist' : 'Add to Watchlist'}>
-                <IconButton
-                  size="small"
-                  onClick={handleWatchlistToggle}
-                  sx={{ color: isInWatchlist ? '#fbbf24' : 'text.disabled', '&:hover': { color: '#fbbf24' } }}
-                >
-                  <Iconify icon={isInWatchlist ? 'mdi:eye' : 'mdi:eye-outline'} width={18} />
-                </IconButton>
-              </Tooltip>
               <Tooltip title="Refresh">
                 <IconButton size="small" onClick={() => getResearchData(searchText)} sx={{ color: 'primary.main' }}>
                   <Iconify icon="mingcute:refresh-3-fill" width={20} />

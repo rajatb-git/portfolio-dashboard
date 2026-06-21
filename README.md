@@ -2,7 +2,7 @@
 
 Self-hosted dashboard for tracking stock and crypto holdings across multiple
 accounts. Live quotes from Finnhub and NASDAQ, optional AI equity analysis
-(Claude / Gemini / Ollama), portfolio analytics, watchlist, IPO calendar, and
+(Claude / Gemini / Ollama), portfolio analytics, price alerts, IPO calendar, and
 import/export backups.
 
 See [`docs/`](docs/) for architecture, design system, UI conventions, and

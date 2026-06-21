@@ -29,7 +29,6 @@ import { LogsRouter } from './router/logs.route';
 import { NotesRouter } from './router/notes.route';
 import { SettingsRouter } from './router/settings.route';
 import { TransactionsRouter } from './router/transactions.route';
-import { WatchlistRouter } from './router/watchlist.route';
 
 const app = new Koa();
 app.use(cors());
@@ -66,7 +65,6 @@ app.use(LiveRouter().routes()).use(LiveRouter().allowedMethods());
 app.use(DashboardRouter().routes()).use(DashboardRouter().allowedMethods());
 app.use(TransactionsRouter().routes()).use(TransactionsRouter().allowedMethods());
 app.use(LogsRouter().routes()).use(LogsRouter().allowedMethods());
-app.use(WatchlistRouter().routes()).use(WatchlistRouter().allowedMethods());
 app.use(AnalyticsRouter().routes()).use(AnalyticsRouter().allowedMethods());
 app.use(SettingsRouter().routes()).use(SettingsRouter().allowedMethods());
 app.use(NotesRouter().routes()).use(NotesRouter().allowedMethods());

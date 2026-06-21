@@ -1,4 +1,4 @@
-import { Avatar, Chip, IconButton, Tooltip } from '@mui/material';
+import { Avatar, IconButton, Tooltip } from '@mui/material';
 import { blue, green, red } from '@mui/material/colors';
 import Stack from '@mui/material/Stack';
 import { default as MuiTableRow } from '@mui/material/TableRow';
@@ -18,14 +18,7 @@ type TableRowProps = {
   expandControl?: { expanded: boolean; onToggle: () => void };
 };
 
-function isNearTarget(row: HoldingAggregate): boolean {
-  if (!row.targetPrice || !row.currentPrice) return false;
-  return Math.abs(row.currentPrice - row.targetPrice) / row.targetPrice <= 0.05;
-}
-
 export default function DashTableRow({ row, onRowClick, accountLabel, subRow, expandControl }: TableRowProps) {
-  const nearTarget = isNearTarget(row);
-
   return (
     <MuiTableRow
       hover
@@ -64,24 +57,7 @@ export default function DashTableRow({ row, onRowClick, accountLabel, subRow, ex
               <Typography variant="subtitle2" noWrap>
                 {row.symbol}
               </Typography>
-              {nearTarget && (
-              <Tooltip title={`Target: ${fnCurrency(row.targetPrice)}`}>
-                <Chip
-                  label="Near Target"
-                  size="small"
-                  sx={{
-                    height: 18,
-                    fontSize: '0.6rem',
-                    fontWeight: 700,
-                    bgcolor: 'rgba(251,191,36,0.15)',
-                    color: '#fbbf24',
-                    border: '1px solid rgba(251,191,36,0.3)',
-                    '& .MuiChip-label': { px: 0.75 },
-                  }}
-                />
-              </Tooltip>
-            )}
-          </Stack>
+            </Stack>
             <Typography variant="caption" noWrap>
               {row.qty} {row.type === 'crypto' ? 'coins' : 'shares'}
             </Typography>

@@ -6,7 +6,6 @@ export interface IHoldings {
   symbol: string;
   qty: number;
   averagePrice: number;
-  targetPrice: number;
   type: 'stock' | 'crypto';
 }
 
@@ -16,7 +15,6 @@ export const HoldingsSchema: SchemaType = {
   symbol: { type: String, required: false },
   qty: { type: Number, required: true },
   averagePrice: { type: Number, required: false },
-  targetPrice: { type: Number, required: false },
   type: { type: String, enum: ['stock', 'crypto'], required: true },
 };
 

@@ -37,7 +37,7 @@ const TextField = styled(MuiTextField)(({ theme }: { theme: Theme }) => ({
 
 type Props = {
   open: boolean;
-  initialValues?: Pick<IHoldings, 'name' | 'symbol' | 'accountId' | 'type' | 'qty' | 'averagePrice' | 'targetPrice'>;
+  initialValues?: Pick<IHoldings, 'name' | 'symbol' | 'accountId' | 'type' | 'qty' | 'averagePrice'>;
   handleDialogClose: () => void;
   refreshData: () => void;
   accounts: Array<IAccount>;
@@ -84,11 +84,6 @@ export default function BuySellDialog({ open, handleDialogClose, initialValues, 
       validate: () => '',
       required: true,
     }),
-    targetPrice: useField({
-      initValue: initialValues?.targetPrice?.toString() || '',
-      validate: () => '',
-      required: false,
-    }),
   };
 
   const isFormValid = () => (Object.values(formFields).find((x) => x.isValid() === false) === undefined ? true : false);
@@ -104,7 +99,6 @@ export default function BuySellDialog({ open, handleDialogClose, initialValues, 
             symbol: formFields.symbol.value,
             qty: parseFloat(formFields.qty.value),
             averagePrice: parseFloat(formFields.averagePrice.value),
-            targetPrice: parseFloat(formFields.targetPrice.value),
             type: formFields.type.value,
           } as any);
 
@@ -123,7 +117,6 @@ export default function BuySellDialog({ open, handleDialogClose, initialValues, 
             symbol: formFields.symbol.value,
             qty: parseFloat(formFields.qty.value),
             averagePrice: parseFloat(formFields.averagePrice.value),
-            targetPrice: parseFloat(formFields.targetPrice.value),
             type: formFields.type.value,
           } as any);
 
@@ -293,23 +286,6 @@ export default function BuySellDialog({ open, handleDialogClose, initialValues, 
             />
           </Stack>
 
-          {formFields.buySell.value === 'buy' && (
-            <Stack direction="column" spacing={0.5} sx={{ flexGrow: 1 }}>
-              {/* <FormLabel>Target Price</FormLabel> */}
-              <TextField
-                placeholder="Price to watch for"
-                id="targetPrice"
-                name="targetPrice"
-                variant="outlined"
-                value={formFields.targetPrice.value}
-                onChange={formFields.targetPrice.onChange}
-                error={!!formFields.targetPrice.error}
-                helperText={formFields.targetPrice.error}
-                size="small"
-                disabled={isLoading}
-              />
-            </Stack>
-          )}
         </Box>
       </Box>
 

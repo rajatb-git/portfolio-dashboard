@@ -1,4 +1,4 @@
-import { Alert, Box, Collapse, Divider, Grid, Stack, ToggleButton, ToggleButtonGroup } from '@mui/material';
+import { Box, Collapse, Divider, Grid, Stack, ToggleButton, ToggleButtonGroup } from '@mui/material';
 import Card from '@mui/material/Card';
 import IconButton from '@mui/material/IconButton';
 import { default as MuiTable } from '@mui/material/Table';
@@ -199,10 +199,6 @@ export default function Table<T>({ rows, columns, accounts, refreshData, isLoadi
     setCashOpen(true);
   };
 
-  const nearTargetCount = (rows as HoldingAggregate[]).filter(
-    (r) => r.targetPrice && r.currentPrice && Math.abs(r.currentPrice - r.targetPrice) / r.targetPrice <= 0.05
-  ).length;
-
   const notFound = !dataFiltered.length;
 
   const grandValue = totals.reduce((s, t) => s + t.totalValue, 0);
@@ -262,15 +258,6 @@ export default function Table<T>({ rows, columns, accounts, refreshData, isLoadi
           </Grid>
         </Collapse>
       </Box>
-
-      {nearTargetCount > 0 && (
-        <Alert
-          severity="warning"
-          sx={{ mt: 2, fontSize: '0.8rem', py: 0.5, '& .MuiAlert-icon': { fontSize: '1.1rem' } }}
-        >
-          {nearTargetCount} holding{nearTargetCount > 1 ? 's are' : ' is'} within 5% of target price
-        </Alert>
-      )}
 
       <Box
         sx={{
