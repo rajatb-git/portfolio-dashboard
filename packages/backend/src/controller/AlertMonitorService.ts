@@ -3,6 +3,7 @@ import type { IAlertMonitorConfig } from '../models/AlertMonitorConfigModel';
 import { isStockMarketOpen } from '../utils/marketCalendar';
 import { logger } from '../utils/winston';
 import { LiveQuoteController } from './LiveQuoteController';
+import { dispatchAlertTriggered } from './NotificationDispatcher';
 
 const LABEL = 'AlertMonitorService';
 
@@ -48,8 +49,10 @@ class AlertMonitorService {
         const met = conditionMet(alert.direction, price, alert.targetPrice);
 
         const next: IAlertModel = { ...alert, lastPrice: price, lastCheckedAt: now };
+        let justTriggered = false;
         if (met && !alert.triggeredAt) {
           next.triggeredAt = now;
+          justTriggered = true;
           logger.log({
             level: 'info',
             label: LABEL,
@@ -65,6 +68,9 @@ class AlertMonitorService {
         } catch (err: any) {
           logger.log({ level: 'error', label: LABEL, message: `Failed to persist alert ${alert.id}: ${err.message}` });
         }
+
+        // Deliver to configured channels only on the untriggered -> triggered edge.
+        if (justTriggered) void dispatchAlertTriggered(next, price);
       }
     } catch (err: any) {
       logger.log({ level: 'error', label: LABEL, message: err.message });

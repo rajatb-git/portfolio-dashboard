@@ -22,6 +22,20 @@ export type AlertMonitorConfig = {
   intervalMinutes: number;
 };
 
+export type MqttConfig = {
+  enabled: boolean;
+  url: string;
+  username: string;
+  password: string;
+  topic: string;
+  qos: 0 | 1;
+  retain: boolean;
+};
+
+export type NotificationConfig = { mqtt: MqttConfig };
+
+export type NotificationTestResult = { mqtt: { enabled: boolean; ok: boolean; error?: string } };
+
 export default class SettingsAPI {
   getLock = async (): Promise<LockStatus> =>
     axios
@@ -56,6 +70,24 @@ export default class SettingsAPI {
   saveAlertMonitorConfig = async (payload: AlertMonitorConfig): Promise<AlertMonitorConfig> =>
     axios
       .post(DB_HOST + '/settings/alerts-monitor', payload)
+      .then((response) => response.data)
+      .catch(catchCustomError);
+
+  getNotificationConfig = async (): Promise<NotificationConfig> =>
+    axios
+      .get(DB_HOST + '/settings/notifications')
+      .then((response) => response.data)
+      .catch(catchCustomError);
+
+  saveNotificationConfig = async (payload: NotificationConfig): Promise<NotificationConfig> =>
+    axios
+      .post(DB_HOST + '/settings/notifications', payload)
+      .then((response) => response.data)
+      .catch(catchCustomError);
+
+  testNotification = async (): Promise<NotificationTestResult> =>
+    axios
+      .post(DB_HOST + '/settings/notifications/test')
       .then((response) => response.data)
       .catch(catchCustomError);
 }

@@ -8,8 +8,16 @@ import unzipper from 'unzipper';
 import { getAiConfig, IAiConfig, maskAiConfig, saveAiConfig } from '../models/AiConfigModel';
 import { getAlertMonitorConfig, IAlertMonitorConfig, saveAlertMonitorConfig } from '../models/AlertMonitorConfigModel';
 import { getLockStatus, setLockConfig } from '../models/LockConfigModel';
+import {
+  getNotificationConfig,
+  INotificationConfig,
+  isMaskedPassword,
+  maskNotificationConfig,
+  saveNotificationConfig,
+} from '../models/NotificationConfigModel';
 import { getValueCalcConfig, IValueCalcConfig, saveValueCalcConfig } from '../models/ValueCalcConfigModel';
 import { alertMonitorService } from '../controller/AlertMonitorService';
+import { configureFromSaved, sendTestNotification } from '../controller/NotificationDispatcher';
 import { portfolioValueCalcService } from '../controller/PortfolioValueCalcService';
 import { errorBody } from '../utils/error';
 import { STORAGE_DIR } from '../utils/storage';
@@ -291,6 +299,60 @@ export const SettingsRouter = () => {
       logger.log({ level: 'error', message: error.message, label: 'alerts-monitor config save' });
       ctx.status = 500;
       ctx.body = errorBody('Failed to save alert monitor config', error.message);
+    }
+  });
+
+  router.get('/settings/notifications', async (ctx) => {
+    try {
+      ctx.body = maskNotificationConfig(await getNotificationConfig());
+      ctx.status = 200;
+    } catch (error: any) {
+      logger.log({ level: 'error', message: error.message, label: 'notifications config get' });
+      ctx.status = 500;
+      ctx.body = errorBody('Failed to get notification config', error.message);
+    }
+  });
+
+  router.post('/settings/notifications', async (ctx) => {
+    try {
+      const body = ctx.request.body as Partial<INotificationConfig>;
+      const mqtt = body?.mqtt;
+      if (!mqtt || typeof mqtt.enabled !== 'boolean') {
+        ctx.status = 400;
+        ctx.body = errorBody('Invalid request', 'mqtt config with "enabled" boolean is required');
+        return;
+      }
+      if (mqtt.enabled && !String(mqtt.url ?? '').trim()) {
+        ctx.status = 400;
+        ctx.body = errorBody('Invalid request', 'Broker URL is required when MQTT is enabled');
+        return;
+      }
+
+      // Keep the stored password when the client sends back the masked value.
+      const current = await getNotificationConfig();
+      const password =
+        typeof mqtt.password === 'string' && !isMaskedPassword(mqtt.password) ? mqtt.password : current.mqtt.password;
+
+      const saved = await saveNotificationConfig({ mqtt: { ...mqtt, password } as INotificationConfig['mqtt'] });
+      await configureFromSaved();
+
+      ctx.body = maskNotificationConfig(saved);
+      ctx.status = 200;
+    } catch (error: any) {
+      logger.log({ level: 'error', message: error.message, label: 'notifications config save' });
+      ctx.status = 500;
+      ctx.body = errorBody('Failed to save notification config', error.message);
+    }
+  });
+
+  router.post('/settings/notifications/test', async (ctx) => {
+    try {
+      ctx.body = await sendTestNotification();
+      ctx.status = 200;
+    } catch (error: any) {
+      logger.log({ level: 'error', message: error.message, label: 'notifications test' });
+      ctx.status = 500;
+      ctx.body = errorBody('Failed to send test notification', error.message);
     }
   });
 

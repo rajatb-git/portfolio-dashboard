@@ -1,6 +1,6 @@
 {
   "name": "@portfolio/backend",
-  "version": "2.6.0",
+  "version": "2.7.0",
   "description": "",
   "main": "dist",
   "scripts": {
@@ -22,14 +22,15 @@
     "@anthropic-ai/sdk": "^0.100.1",
     "@google/genai": "^2.7.0",
     "@koa/cors": "^5.0.0",
+    "@koa/router": "^15.6.0",
     "archiver": "^8.0.0",
     "axios": "^1.16.1",
     "dotenv": "^17.4.2",
     "koa": "^3.2.1",
     "koa-bodyparser": "^4.4.1",
     "koa-helmet": "^9.0.0",
-    "@koa/router": "^15.6.0",
     "moment": "^2.30.1",
+    "mqtt": "^5.15.1",
     "skewer-db": "1.0.3",
     "unzipper": "^0.12.3",
     "winston": "^3.19.0"
