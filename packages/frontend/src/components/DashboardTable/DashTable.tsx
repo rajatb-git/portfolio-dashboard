@@ -78,7 +78,7 @@ export default function Table<T>({
   const [order, setOrder] = useState<'asc' | 'desc'>('desc');
   const [orderBy, setOrderBy] = useState(initialViewMode === 'consolidated' ? 'marketValue' : 'accountPercent');
   const [filterName, setFilterName] = useState('');
-  const [rowsPerPage, setRowsPerPage] = useState(50);
+  const [rowsPerPage, setRowsPerPage] = useState(100);
   const [filterType, setFilterType] = useState<string>('all');
   const [filterAccount, setFilterAccount] = useState('all');
   const [tradeHolding, _setTradeHolding] = useState<HoldingAggregate | null>(null);
@@ -426,7 +426,7 @@ export default function Table<T>({
           count={displayItems.length}
           rowsPerPage={rowsPerPage}
           onPageChange={handleChangePage}
-          rowsPerPageOptions={[50, 100, 200]}
+          rowsPerPageOptions={[50, 100, 200, 500]}
           onRowsPerPageChange={handleChangeRowsPerPage}
         />
       </Card>
