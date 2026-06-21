@@ -47,7 +47,7 @@ These are domain-specific and do not follow MUI's semantic tokens; use them exac
 | Bearish | `#ef4444` | `rgba(239,68,68,0.12)` | `rgba(239,68,68,0.25)` |
 | Neutral | `#f59e0b` | `rgba(245,158,11,0.12)` | `rgba(245,158,11,0.25)` |
 
-For price change chips, `#4ade80` (up) and `#f87171` (down) are used on the hero header in Research. Accent `#fbbf24` marks watchlist-starred items, `#8b5cf6` marks AI insights.
+For price change chips, `#4ade80` (up) and `#f87171` (down) are used on the hero header in Research. Accent `#8b5cf6` marks AI insights.
 
 ## Typography
 

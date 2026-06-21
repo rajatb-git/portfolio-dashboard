@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
+## [3.0.0] – 2026-06-21
+
+### Removed
+- **Watchlist** — Removed the watchlist feature (Dashboard section, Research page star toggle, and the `/watchlist` backend routes/model). The standalone price alerts feature covers tracking symbols of interest.
+- **Holding price targets** — Removed the `targetPrice` field from holdings, the Buy/Sell dialog input, the Database column, the "near target" row chips, and the target-based Price Alerts dashboard card. The standalone alerts feature (with its own per-symbol target price and direction) supersedes it.
+
+---
+
 ## [2.1.0] – 2026-06-16
 
 ### Added
