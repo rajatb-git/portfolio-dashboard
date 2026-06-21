@@ -1,6 +1,32 @@
 import { HoldingAggregate } from '@/api/dashboard';
 import { IAccount } from '@/models/AccountsModel';
+import { IAlertStatus } from '@/models/AlertModel';
 import { IHoldings } from '@/models/HoldingsModel';
+import { fnCurrency } from '@/utils/formatNumber';
+
+// Per-symbol alert state used to render the dashboard "near/at alert" glance,
+// derived from the standalone Alerts (not from a holding field).
+export type AlertState = { near: boolean; triggered: boolean; label: string };
+
+export function buildAlertStateMap(alerts: IAlertStatus[], nearPercent = 5): Map<string, AlertState> {
+  const nearThreshold = nearPercent / 100;
+  const map = new Map<string, AlertState>();
+  for (const a of alerts) {
+    const prev = map.get(a.symbol) ?? { near: false, triggered: false, label: '' };
+    const near =
+      prev.near ||
+      (!a.triggered &&
+        a.currentPrice != null &&
+        Math.abs(a.currentPrice - a.targetPrice) / a.targetPrice <= nearThreshold);
+    const piece = `${a.direction === 'above' ? '≥' : '≤'} ${fnCurrency(a.targetPrice)}`;
+    map.set(a.symbol, {
+      near,
+      triggered: prev.triggered || a.triggered,
+      label: prev.label ? `${prev.label}, ${piece}` : piece,
+    });
+  }
+  return map;
+}
 
 export const visuallyHidden = {
   border: 0,
@@ -126,7 +152,9 @@ export function consolidateBySymbol(rows: Array<EnrichedHolding>): Array<Consoli
 
 // Group holdings by account, ordering accounts by total market value (largest
 // first) and preserving the incoming sort order within each account.
-export function groupByAccount(rows: Array<EnrichedHolding>): Array<{ accountId: string; rows: Array<EnrichedHolding> }> {
+export function groupByAccount(
+  rows: Array<EnrichedHolding>
+): Array<{ accountId: string; rows: Array<EnrichedHolding> }> {
   const groups = new Map<string, Array<EnrichedHolding>>();
   rows.forEach((r) => {
     const list = groups.get(r.accountId) ?? [];
@@ -138,8 +166,7 @@ export function groupByAccount(rows: Array<EnrichedHolding>): Array<{ accountId:
     .map(([accountId, accountRows]) => ({ accountId, rows: accountRows }))
     .sort(
       (a, b) =>
-        b.rows.reduce((s, r) => s + (r.marketValue || 0), 0) -
-        a.rows.reduce((s, r) => s + (r.marketValue || 0), 0)
+        b.rows.reduce((s, r) => s + (r.marketValue || 0), 0) - a.rows.reduce((s, r) => s + (r.marketValue || 0), 0)
     );
 }
 

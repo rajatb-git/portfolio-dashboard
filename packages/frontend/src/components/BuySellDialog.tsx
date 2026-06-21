@@ -285,7 +285,6 @@ export default function BuySellDialog({ open, handleDialogClose, initialValues, 
               disabled={isLoading}
             />
           </Stack>
-
         </Box>
       </Box>
 

@@ -1,4 +1,4 @@
-import { Box, Collapse, Divider, Grid, Stack, ToggleButton, ToggleButtonGroup } from '@mui/material';
+import { Alert, Box, Collapse, Divider, Grid, Stack, ToggleButton, ToggleButtonGroup } from '@mui/material';
 import Card from '@mui/material/Card';
 import IconButton from '@mui/material/IconButton';
 import { default as MuiTable } from '@mui/material/Table';
@@ -16,6 +16,7 @@ import CashDialog from '@/components/CashDialog';
 import { Iconify } from '@/components/Iconify';
 import { HoldingTypesEnum } from '@/lib/enums';
 import type { IAccount } from '@/models/AccountsModel';
+import type { IAlertStatus } from '@/models/AlertModel';
 import type { Column } from '@/types';
 import LocalStorageUtil from '@/utils/localStorage';
 import { fnCurrency, fnPercent } from '@/utils/formatNumber';
@@ -29,6 +30,7 @@ import DashTableRow from './DashTableRow';
 import TableToolbar from './DashTableToolbar';
 import {
   applyFilter,
+  buildAlertStateMap,
   consolidateBySymbol,
   type EnrichedHolding,
   getComparator,
@@ -50,10 +52,26 @@ type TableProps<T> = {
   accounts: Array<IAccount>;
   refreshData: () => void;
   isLoading: boolean;
+  alertStatuses?: Array<IAlertStatus>;
+  onSetAlert?: (symbol: string, type: 'stock' | 'crypto', currentPrice?: number) => void;
 };
 
-export default function Table<T>({ rows, columns, accounts, refreshData, isLoading }: TableProps<T>) {
+export default function Table<T>({
+  rows,
+  columns,
+  accounts,
+  refreshData,
+  isLoading,
+  alertStatuses,
+  onSetAlert,
+}: TableProps<T>) {
   const navigate = useNavigate();
+  const nearPercent = Number(LocalStorageUtil.getItem<string>('alert_threshold') ?? '5') || 5;
+  const alertStateMap = React.useMemo(
+    () => buildAlertStateMap(alertStatuses ?? [], nearPercent),
+    [alertStatuses, nearPercent]
+  );
+  const getAlertState = React.useCallback((symbol: string) => alertStateMap.get(symbol), [alertStateMap]);
   const initialViewMode = (LocalStorageUtil.getItem<ViewMode>(VIEW_MODE_KEY) ?? 'consolidated') as ViewMode;
   const [viewMode, setViewMode] = useState<ViewMode>(initialViewMode);
   const [page, setPage] = useState(0);
@@ -199,6 +217,12 @@ export default function Table<T>({ rows, columns, accounts, refreshData, isLoadi
     setCashOpen(true);
   };
 
+  // Holdings whose symbol has an alert that's near or already triggered.
+  const nearTargetCount = (rows as HoldingAggregate[]).filter((r) => {
+    const state = alertStateMap.get(r.symbol);
+    return state?.near || state?.triggered;
+  }).length;
+
   const notFound = !dataFiltered.length;
 
   const grandValue = totals.reduce((s, t) => s + t.totalValue, 0);
@@ -258,6 +282,15 @@ export default function Table<T>({ rows, columns, accounts, refreshData, isLoadi
           </Grid>
         </Collapse>
       </Box>
+
+      {nearTargetCount > 0 && (
+        <Alert
+          severity="warning"
+          sx={{ mt: 2, fontSize: '0.8rem', py: 0.5, '& .MuiAlert-icon': { fontSize: '1.1rem' } }}
+        >
+          {nearTargetCount} holding{nearTargetCount > 1 ? 's have' : ' has'} a price alert near or triggered
+        </Alert>
+      )}
 
       <Box
         sx={{
@@ -357,9 +390,25 @@ export default function Table<T>({ rows, columns, accounts, refreshData, isLoadi
                       );
                     }
                     if (item.kind === 'consolidated') {
-                      return <DashTableConsolidatedRow key={item.key} row={item.row} onRowClick={goToResearchPage} />;
+                      return (
+                        <DashTableConsolidatedRow
+                          key={item.key}
+                          row={item.row}
+                          onRowClick={goToResearchPage}
+                          getAlertState={getAlertState}
+                          onSetAlert={onSetAlert}
+                        />
+                      );
                     }
-                    return <DashTableRow key={item.key} row={item.row} onRowClick={goToResearchPage} />;
+                    return (
+                      <DashTableRow
+                        key={item.key}
+                        row={item.row}
+                        onRowClick={goToResearchPage}
+                        alertState={getAlertState(item.row.symbol)}
+                        onSetAlert={onSetAlert}
+                      />
+                    );
                   })
                 )}
 

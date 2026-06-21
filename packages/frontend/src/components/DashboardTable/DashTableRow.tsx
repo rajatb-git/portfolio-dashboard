@@ -1,4 +1,4 @@
-import { Avatar, IconButton, Tooltip } from '@mui/material';
+import { Avatar, Chip, IconButton, Tooltip } from '@mui/material';
 import { blue, green, red } from '@mui/material/colors';
 import Stack from '@mui/material/Stack';
 import { default as MuiTableRow } from '@mui/material/TableRow';
@@ -9,6 +9,7 @@ import { Iconify } from '@/components/Iconify';
 import Label from '@/components/Label';
 import { TableCell } from '@/components/Table/TableCell';
 import { fnCurrency } from '@/utils/formatNumber';
+import type { AlertState } from './dashTableUtils';
 
 type TableRowProps = {
   row: HoldingAggregate & { accountPercent?: number };
@@ -16,9 +17,25 @@ type TableRowProps = {
   accountLabel?: string;
   subRow?: boolean;
   expandControl?: { expanded: boolean; onToggle: () => void };
+  alertState?: AlertState;
+  onSetAlert?: (symbol: string, type: 'stock' | 'crypto', currentPrice?: number) => void;
 };
 
-export default function DashTableRow({ row, onRowClick, accountLabel, subRow, expandControl }: TableRowProps) {
+export default function DashTableRow({
+  row,
+  onRowClick,
+  accountLabel,
+  subRow,
+  expandControl,
+  alertState,
+  onSetAlert,
+}: TableRowProps) {
+  const alertBadge = alertState?.triggered
+    ? { label: 'Alert hit', color: '#22c55e', bg: 'rgba(34,197,94,0.15)', border: 'rgba(34,197,94,0.3)' }
+    : alertState?.near
+      ? { label: 'Near Alert', color: '#fbbf24', bg: 'rgba(251,191,36,0.15)', border: 'rgba(251,191,36,0.3)' }
+      : null;
+
   return (
     <MuiTableRow
       hover
@@ -57,6 +74,38 @@ export default function DashTableRow({ row, onRowClick, accountLabel, subRow, ex
               <Typography variant="subtitle2" noWrap>
                 {row.symbol}
               </Typography>
+              {alertBadge && (
+                <Tooltip title={`Alert: ${alertState?.label ?? ''}`}>
+                  <Chip
+                    label={alertBadge.label}
+                    size="small"
+                    sx={{
+                      height: 18,
+                      fontSize: '0.6rem',
+                      fontWeight: 700,
+                      bgcolor: alertBadge.bg,
+                      color: alertBadge.color,
+                      border: `1px solid ${alertBadge.border}`,
+                      '& .MuiChip-label': { px: 0.75 },
+                    }}
+                  />
+                </Tooltip>
+              )}
+              {!subRow && onSetAlert && (
+                <Tooltip title={alertState ? 'Manage alerts' : 'Set price alert'}>
+                  <IconButton
+                    size="small"
+                    aria-label="set price alert"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onSetAlert(row.symbol, row.type, row.currentPrice);
+                    }}
+                    sx={{ p: 0.1, color: alertState ? '#fbbf24' : 'text.disabled', '&:hover': { color: '#fbbf24' } }}
+                  >
+                    <Iconify icon={alertState ? 'tabler:bell-filled' : 'tabler:bell-plus'} width={15} />
+                  </IconButton>
+                </Tooltip>
+              )}
             </Stack>
             <Typography variant="caption" noWrap>
               {row.qty} {row.type === 'crypto' ? 'coins' : 'shares'}
