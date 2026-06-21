@@ -4,7 +4,7 @@ Context for Claude (and other AI assistants) working on this repository. Read th
 
 ## Project overview
 
-Portfolio Dashboard: a self-hosted web app for tracking stock and crypto holdings across multiple accounts. Live market data from Finnhub and NASDAQ, optional AI-generated equity analysis via Claude / Gemini / Ollama, portfolio analytics (risk, sectors), watchlist, IPO calendar, and an import/export backup flow.
+Portfolio Dashboard: a self-hosted web app for tracking stock and crypto holdings across multiple accounts. Live market data from Finnhub and NASDAQ, optional AI-generated equity analysis via Claude / Gemini / Ollama, portfolio analytics (risk, sectors), price alerts, IPO calendar, and an import/export backup flow.
 
 Single user, runs locally. No auth.
 
@@ -76,7 +76,7 @@ The backend listens on `http://localhost:3001` by default; frontend reads `VITE_
 
 ## Domain types — know these
 
-- `IHoldings` (`frontend/src/models/HoldingsModel.ts`) — stored holding: `{ id, accountId, name, symbol, qty, averagePrice, targetPrice, type: 'stock' | 'crypto' }`
+- `IHoldings` (`frontend/src/models/HoldingsModel.ts`) — stored holding: `{ id, accountId, name, symbol, qty, averagePrice, type: 'stock' | 'crypto' }`
 - `HoldingAggregate` (`frontend/src/api/dashboard.ts`) — holding enriched with live data (`currentPrice`, `percentChange`, `totalGL`, `marketValue`, analyst counts, …). **Has no `id` field** — key by `symbol` instead.
 - `IAccount` — brokerage account.
 - `ITransaction` — buy/sell/deposit log entry.

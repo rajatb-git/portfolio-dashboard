@@ -26,7 +26,7 @@ router/        thin Koa routers — parse params, call controllers, catch errors
                return structured responses via errorBody()
 controller/    business logic — orchestrate models + external APIs + caches
 models/        SkewerDB wrappers — one file per collection (Accounts, Holdings,
-               Transactions, Watchlist, AiConfig, PortfolioSnapshot, Cache, etc.)
+               Transactions, Alerts, AiConfig, PortfolioSnapshot, Cache, etc.)
 externalApis/  adapters for Finnhub and NASDAQ; all log-and-rethrow on failure
 aiProviders/   adapters with a common interface over Claude SDK / Gemini SDK /
                Ollama HTTP; chosen at runtime by AiConfig.provider

@@ -9,7 +9,6 @@ import AlertDialog, { type DraftAlert, EMPTY_DRAFT } from '@/components/Alerts/A
 import DashboardTable from '@/components/DashboardTable/DashTable';
 import UpcomingEarningsCard from '@/components/Dashboard/UpcomingEarningsCard';
 import { notifyTriggeredAlerts } from '@/utils/priceAlertNotifications';
-import WatchlistSection from '@/components/WatchlistSection';
 import type { IAccount } from '@/models/AccountsModel';
 import type { IAlertStatus } from '@/models/AlertModel';
 import type { Column } from '@/types';
@@ -143,7 +142,6 @@ export default function Dashboard() {
         onSetAlert={handleSetAlert}
       />
       <UpcomingEarningsCard earnings={earnings} isLoading={isEarningsLoading} />
-      <WatchlistSection />
 
       <AlertDialog
         open={alertDialogOpen}
