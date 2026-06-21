@@ -65,11 +65,18 @@ export const AlertsRouter = () => {
 
       ctx.body = alerts.map((a) => {
         const quote = priceMap.get(a.symbol);
-        const currentPrice = quote ? +quote.price.toFixed(2) : null;
+        // Fall back to the monitor's last recorded price when a live quote isn't
+        // available (e.g. market closed), so the UI still shows the latest known state.
+        const currentPrice = quote ? +quote.price.toFixed(2) : (a.lastPrice ?? null);
         const triggered =
           currentPrice != null &&
           (a.direction === 'above' ? currentPrice >= a.targetPrice : currentPrice <= a.targetPrice);
-        return { ...a, currentPrice, percentChange: quote ? +quote.percentChange.toFixed(2) : null, triggered };
+        return {
+          ...a,
+          currentPrice,
+          percentChange: quote ? +quote.percentChange.toFixed(2) : null,
+          triggered,
+        };
       });
       ctx.status = 200;
     } catch (err: any) {

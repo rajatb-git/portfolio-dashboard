@@ -5,6 +5,9 @@ export interface IAlert {
   targetPrice: number;
   direction: 'above' | 'below';
   note?: string;
+  triggeredAt?: string | null;
+  lastPrice?: number;
+  lastCheckedAt?: string;
 }
 
 export interface IAlertStatus extends IAlert {

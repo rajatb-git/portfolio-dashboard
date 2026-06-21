@@ -17,6 +17,11 @@ export type ValueCalcConfig = {
   intervalMinutes: number;
 };
 
+export type AlertMonitorConfig = {
+  enabled: boolean;
+  intervalMinutes: number;
+};
+
 export default class SettingsAPI {
   getLock = async (): Promise<LockStatus> =>
     axios
@@ -39,6 +44,18 @@ export default class SettingsAPI {
   saveValueCalcConfig = async (payload: ValueCalcConfig): Promise<ValueCalcConfig> =>
     axios
       .post(DB_HOST + '/settings/value-calc', payload)
+      .then((response) => response.data)
+      .catch(catchCustomError);
+
+  getAlertMonitorConfig = async (): Promise<AlertMonitorConfig> =>
+    axios
+      .get(DB_HOST + '/settings/alerts-monitor')
+      .then((response) => response.data)
+      .catch(catchCustomError);
+
+  saveAlertMonitorConfig = async (payload: AlertMonitorConfig): Promise<AlertMonitorConfig> =>
+    axios
+      .post(DB_HOST + '/settings/alerts-monitor', payload)
       .then((response) => response.data)
       .catch(catchCustomError);
 }

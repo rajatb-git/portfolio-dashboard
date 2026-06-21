@@ -6,8 +6,10 @@ import Router from '@koa/router';
 import unzipper from 'unzipper';
 
 import { getAiConfig, IAiConfig, maskAiConfig, saveAiConfig } from '../models/AiConfigModel';
+import { getAlertMonitorConfig, IAlertMonitorConfig, saveAlertMonitorConfig } from '../models/AlertMonitorConfigModel';
 import { getLockStatus, setLockConfig } from '../models/LockConfigModel';
 import { getValueCalcConfig, IValueCalcConfig, saveValueCalcConfig } from '../models/ValueCalcConfigModel';
+import { alertMonitorService } from '../controller/AlertMonitorService';
 import { portfolioValueCalcService } from '../controller/PortfolioValueCalcService';
 import { errorBody } from '../utils/error';
 import { STORAGE_DIR } from '../utils/storage';
@@ -247,6 +249,48 @@ export const SettingsRouter = () => {
       logger.log({ level: 'error', message: error.message, label: 'value-calc config save' });
       ctx.status = 500;
       ctx.body = errorBody('Failed to save value calc config', error.message);
+    }
+  });
+
+  router.get('/settings/alerts-monitor', async (ctx) => {
+    try {
+      ctx.body = await getAlertMonitorConfig();
+      ctx.status = 200;
+    } catch (error: any) {
+      logger.log({ level: 'error', message: error.message, label: 'alerts-monitor config get' });
+      ctx.status = 500;
+      ctx.body = errorBody('Failed to get alert monitor config', error.message);
+    }
+  });
+
+  router.post('/settings/alerts-monitor', async (ctx) => {
+    try {
+      const body = ctx.request.body as Partial<IAlertMonitorConfig>;
+
+      if (typeof body.enabled !== 'boolean') {
+        ctx.status = 400;
+        ctx.body = errorBody('Invalid request', '"enabled" boolean is required');
+        return;
+      }
+
+      const intervalMinutes = typeof body.intervalMinutes === 'number' ? body.intervalMinutes : 5;
+      const VALID_INTERVALS = [1, 5, 10, 15, 30, 60];
+      if (!VALID_INTERVALS.includes(intervalMinutes)) {
+        ctx.status = 400;
+        ctx.body = errorBody('Invalid interval', `intervalMinutes must be one of: ${VALID_INTERVALS.join(', ')}`);
+        return;
+      }
+
+      const config: IAlertMonitorConfig = { enabled: body.enabled, intervalMinutes };
+      await saveAlertMonitorConfig(config);
+      alertMonitorService.reconfigure(config);
+
+      ctx.body = config;
+      ctx.status = 200;
+    } catch (error: any) {
+      logger.log({ level: 'error', message: error.message, label: 'alerts-monitor config save' });
+      ctx.status = 500;
+      ctx.body = errorBody('Failed to save alert monitor config', error.message);
     }
   });
 

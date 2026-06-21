@@ -21,6 +21,7 @@ import {
   Tooltip,
   Typography,
 } from '@mui/material';
+import moment from 'moment';
 import * as React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
@@ -367,6 +368,11 @@ export default function Alerts() {
                           border: `1px solid ${a.triggered ? 'rgba(34,197,94,0.3)' : 'rgba(100,116,139,0.2)'}`,
                         }}
                       />
+                      {a.triggeredAt && (
+                        <Typography sx={{ fontSize: '0.62rem', color: 'text.disabled', mt: 0.25 }}>
+                          {moment(a.triggeredAt).fromNow()}
+                        </Typography>
+                      )}
                     </TableCell>
                     <TableCell align="right">
                       <Tooltip title="Edit">
@@ -393,8 +399,10 @@ export default function Alerts() {
       </Card>
 
       <Typography sx={{ fontSize: '0.72rem', color: 'text.disabled', mt: 1.5 }}>
-        Alerts are evaluated against live prices while the app is open. Enable desktop notifications under Settings →
-        Dashboard to be alerted when a target is reached.
+        A background service checks these alerts on the server — stock alerts during US market hours (excluding
+        holidays), crypto 24/7 — so triggers are recorded even when this page is closed. Enable desktop notifications
+        under Settings → Dashboard to also be alerted in your browser, and tune the check frequency under Settings →
+        Price Alert Monitor.
       </Typography>
 
       <AlertDialog
