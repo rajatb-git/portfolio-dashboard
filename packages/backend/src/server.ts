@@ -16,6 +16,7 @@ import { authMiddleware } from './middleware/auth';
 import { portfolioValueCalcService } from './controller/PortfolioValueCalcService';
 import { getValueCalcConfig } from './models/ValueCalcConfigModel';
 import { AccountsRouter } from './router/accounts.route';
+import { AlertsRouter } from './router/alerts.route';
 import { AnalyticsRouter } from './router/analytics.route';
 import { AuthRouter } from './router/auth.route';
 import { DashboardRouter } from './router/dashboard.route';
@@ -67,6 +68,7 @@ app.use(WatchlistRouter().routes()).use(WatchlistRouter().allowedMethods());
 app.use(AnalyticsRouter().routes()).use(AnalyticsRouter().allowedMethods());
 app.use(SettingsRouter().routes()).use(SettingsRouter().allowedMethods());
 app.use(NotesRouter().routes()).use(NotesRouter().allowedMethods());
+app.use(AlertsRouter().routes()).use(AlertsRouter().allowedMethods());
 
 app.listen(port, () => {
   console.log('server started on port ' + port);

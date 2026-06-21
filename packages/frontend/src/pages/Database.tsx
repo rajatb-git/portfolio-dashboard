@@ -105,7 +105,7 @@ const columns: { [collection: string]: Array<GridColDef> } = {
     },
     {
       field: 'targetPrice',
-      headerName: 'Target / Alert',
+      headerName: 'Target Price',
       flex: 1,
       minWidth: 110,
       type: 'number',
