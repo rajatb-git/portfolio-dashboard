@@ -5,21 +5,24 @@ import { toast } from 'react-toastify';
 import apis from '@/api';
 import type { HoldingAggregate } from '@/api/dashboard';
 import type { HoldingEarning } from '@/api/analytics';
+import AlertDialog, { type DraftAlert, EMPTY_DRAFT } from '@/components/Alerts/AlertDialog';
 import DashboardTable from '@/components/DashboardTable/DashTable';
-import PriceAlertsCard from '@/components/Dashboard/PriceAlertsCard';
 import UpcomingEarningsCard from '@/components/Dashboard/UpcomingEarningsCard';
 import { notifyTriggeredAlerts } from '@/utils/priceAlertNotifications';
 import WatchlistSection from '@/components/WatchlistSection';
 import type { IAccount } from '@/models/AccountsModel';
-import LocalStorageUtil from '@/utils/localStorage';
+import type { IAlertStatus } from '@/models/AlertModel';
 import type { Column } from '@/types';
 
 export default function Dashboard() {
   const [isLoading, setIsLoading] = React.useState(true);
   const [accounts, setAccounts] = React.useState<Array<IAccount>>([]);
   const [dashboardData, setDashboardData] = React.useState<Array<HoldingAggregate>>([]);
+  const [alertStatuses, setAlertStatuses] = React.useState<Array<IAlertStatus>>([]);
   const [earnings, setEarnings] = React.useState<Array<HoldingEarning>>([]);
   const [isEarningsLoading, setIsEarningsLoading] = React.useState(true);
+  const [alertDialogOpen, setAlertDialogOpen] = React.useState(false);
+  const [alertDraft, setAlertDraft] = React.useState<DraftAlert>(EMPTY_DRAFT);
 
   const columns: Array<Column> = [
     {
@@ -49,44 +52,62 @@ export default function Dashboard() {
     { id: '', label: 'Recommendation' },
   ];
 
-  const threshold = Number(LocalStorageUtil.getItem<string>('alert_threshold') ?? '5') || 5;
-
-  const fetchData = React.useCallback((silent: boolean) => {
-    if (!silent) setIsLoading(true);
-
-    apis.dashboard
-      .getDashboard()
-      .then((response) => {
-        setDashboardData(response);
-      })
-      .catch((err) => {
-        // Stay quiet on background polls so a transient blip doesn't spam toasts.
-        if (!silent) toast.error(err.message);
-      })
-      .finally(() => {
-        if (!silent) setIsLoading(false);
-      });
-
-    // Evaluate standalone price alerts in the background and notify on triggers.
+  const loadAlerts = React.useCallback(() => {
     apis.alerts
       .getStatus()
-      .then(notifyTriggeredAlerts)
+      .then((data) => {
+        setAlertStatuses(data ?? []);
+        notifyTriggeredAlerts(data ?? []);
+      })
       .catch(() => {});
-
-    setIsEarningsLoading(true);
-    apis.analytics
-      .getEarningsCalendar()
-      .then((response) => setEarnings(response ?? []))
-      .catch((err) => toast.error(err.message || 'Failed to load earnings calendar'))
-      .finally(() => setIsEarningsLoading(false));
-
-    apis.accounts
-      .getAll()
-      .then((response) => setAccounts(response))
-      .catch((err) => {
-        if (!silent) toast.error(err.message);
-      });
   }, []);
+
+  const handleSetAlert = (symbol: string, type: 'stock' | 'crypto', currentPrice?: number) => {
+    setAlertDraft({
+      ...EMPTY_DRAFT,
+      symbol,
+      type,
+      targetPrice: currentPrice != null ? String(currentPrice) : '',
+    });
+    setAlertDialogOpen(true);
+  };
+
+  const fetchData = React.useCallback(
+    (silent: boolean) => {
+      if (!silent) setIsLoading(true);
+
+      apis.dashboard
+        .getDashboard()
+        .then((response) => {
+          setDashboardData(response);
+        })
+        .catch((err) => {
+          // Stay quiet on background polls so a transient blip doesn't spam toasts.
+          if (!silent) toast.error(err.message);
+        })
+        .finally(() => {
+          if (!silent) setIsLoading(false);
+        });
+
+      // Evaluate standalone price alerts in the background and notify on triggers.
+      loadAlerts();
+
+      setIsEarningsLoading(true);
+      apis.analytics
+        .getEarningsCalendar()
+        .then((response) => setEarnings(response ?? []))
+        .catch((err) => toast.error(err.message || 'Failed to load earnings calendar'))
+        .finally(() => setIsEarningsLoading(false));
+
+      apis.accounts
+        .getAll()
+        .then((response) => setAccounts(response))
+        .catch((err) => {
+          if (!silent) toast.error(err.message);
+        });
+    },
+    [loadAlerts]
+  );
 
   const refresh = React.useCallback(() => fetchData(false), [fetchData]);
 
@@ -118,10 +139,18 @@ export default function Dashboard() {
         rows={dashboardData}
         accounts={accounts}
         columns={columns}
+        alertStatuses={alertStatuses}
+        onSetAlert={handleSetAlert}
       />
-      <PriceAlertsCard holdings={dashboardData} threshold={threshold} />
       <UpcomingEarningsCard earnings={earnings} isLoading={isEarningsLoading} />
       <WatchlistSection />
+
+      <AlertDialog
+        open={alertDialogOpen}
+        initial={alertDraft}
+        onClose={() => setAlertDialogOpen(false)}
+        onSaved={loadAlerts}
+      />
     </>
   );
 }

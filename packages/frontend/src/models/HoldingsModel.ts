@@ -5,7 +5,6 @@ export interface IHoldings {
   symbol: string;
   qty: number;
   averagePrice: number;
-  targetPrice: number;
   type: 'stock' | 'crypto';
   createdAt?: string;
   updatedAt?: string;
