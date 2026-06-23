@@ -1,6 +1,12 @@
 import moment from 'moment';
 import { getActiveProvider, SYSTEM_PROMPT } from '../aiProviders';
-import { getCompanyNews, getEarningsHistory, getInsiderTransactions, getStockMetrics } from '../externalApis/finnHub';
+import {
+  getCompanyNews,
+  getEarningsHistory,
+  getInsiderTransactions,
+  getStockMetrics,
+  getStockPeers,
+} from '../externalApis/finnHub';
 import { CacheDBModel } from '../models/CacheModel';
 import { logger } from '../utils/winston';
 import { CompanyProfileController } from './CompanyProfileController';
@@ -21,7 +27,54 @@ export type AgentInsight = {
 const CACHE_PREFIX = 'agent_insight_';
 const CACHE_HOURS = 6;
 
+type PeerComparison = {
+  tickers: string[];
+  count: number;
+  avgPeRatio: number | null;
+  avgPriceToBook: number | null;
+  avgRoeTTM: number | null;
+  avgRevenueGrowthTTMYoy: number | null;
+};
+
+const avg = (values: Array<number | null | undefined>): number | null => {
+  const nums = values.filter((v): v is number => typeof v === 'number' && Number.isFinite(v));
+  if (nums.length === 0) {
+    return null;
+  }
+  return +(nums.reduce((sum, v) => sum + v, 0) / nums.length).toFixed(2);
+};
+
 export class AgentInsightsController {
+  private getPeerComparison = async (symbol: string): Promise<PeerComparison | null> => {
+    const peers = (await getStockPeers(symbol))
+      .filter((p) => p && p.toUpperCase() !== symbol.toUpperCase())
+      .slice(0, 5);
+
+    if (peers.length === 0) {
+      return null;
+    }
+
+    const peerMetrics = await Promise.all(
+      peers.map((p) =>
+        getStockMetrics(p).catch(() => null)
+      )
+    );
+
+    const valid = peerMetrics.filter((m): m is NonNullable<typeof m> => m !== null);
+    if (valid.length === 0) {
+      return null;
+    }
+
+    return {
+      tickers: peers,
+      count: valid.length,
+      avgPeRatio: avg(valid.map((m) => m.peRatio)),
+      avgPriceToBook: avg(valid.map((m) => m.priceToBook)),
+      avgRoeTTM: avg(valid.map((m) => m.roeTTM)),
+      avgRevenueGrowthTTMYoy: avg(valid.map((m) => m.revenueGrowthTTMYoy)),
+    };
+  };
+
   private getMarketContext = async (symbol: string) => {
     const results: Record<string, any> = {};
 
@@ -46,6 +99,7 @@ export class AgentInsightsController {
       },
       { key: 'earnings', fn: () => getEarningsHistory(symbol) },
       { key: 'insider', fn: () => getInsiderTransactions(symbol) },
+      { key: 'peers', fn: () => this.getPeerComparison(symbol) },
     ];
 
     await Promise.all(
@@ -82,6 +136,18 @@ export class AgentInsightsController {
       const m = data.metrics;
       sections.push(
         `\nKEY METRICS:\nP/E Ratio: ${m.peRatio ?? 'N/A'}\n52W High: $${m.week52High ?? 'N/A'}\n52W Low: $${m.week52Low ?? 'N/A'}\nBeta: ${m.beta ?? 'N/A'}\nROE TTM: ${m.roeTTM ?? 'N/A'}\nRevenue Growth YoY: ${m.revenueGrowthTTMYoy ?? 'N/A'}%`
+      );
+    }
+
+    if (data.peers && data.peers.count > 0) {
+      const p = data.peers as PeerComparison;
+      const fmt = (v: number | null) => (v === null ? 'N/A' : v);
+      sections.push(
+        `\nSECTOR / PEER COMPARISON (averages across ${p.count} peer(s): ${p.tickers.join(', ')}):\nPeer Avg P/E: ${fmt(
+          p.avgPeRatio
+        )}\nPeer Avg P/B: ${fmt(p.avgPriceToBook)}\nPeer Avg ROE TTM: ${fmt(
+          p.avgRoeTTM
+        )}\nPeer Avg Revenue Growth YoY: ${fmt(p.avgRevenueGrowthTTMYoy)}%\nCompare ${symbol}'s metrics above against these peer averages.`
       );
     }
 

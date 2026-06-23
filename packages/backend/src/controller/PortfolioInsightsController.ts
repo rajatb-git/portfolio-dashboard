@@ -14,34 +14,59 @@ export type PortfolioInsight = {
   generatedAt: string;
 };
 
-const SYSTEM_PROMPT = `You are a portfolio analyst reviewing a personal investment portfolio. Respond ONLY with valid JSON matching this exact schema (no markdown, no code fences):
+const SYSTEM_PROMPT = `You are a portfolio analyst reviewing a personal investment portfolio. Reason through these dimensions using only the data provided:
+
+1. CONCENTRATION — Assess single-position and top-3 concentration against the weights given. Flag any position above ~20% of the portfolio as a concentration risk and name it with its weight.
+2. ASSET-CLASS BALANCE — Comment on the stock vs crypto split and what it implies for volatility (crypto being the higher-volatility sleeve).
+3. DIVERSIFICATION — Consider the number of positions and how evenly weight is spread; a few large positions driving most of the value is less diversified than the count alone suggests.
+4. PERFORMANCE DISPERSION — Note which positions are the largest winners and losers by unrealized P/L % and whether gains/losses are concentrated.
+
+Be specific and quantitative — cite the actual weights, the asset split, and position names from the data. Frame everything as analysis observations, not personalized financial advice or a recommendation to buy or sell specific securities.
+
+Respond ONLY with valid JSON matching this exact schema (no markdown, no code fences):
 {
   "summary": "2-3 sentence overall assessment of the portfolio",
   "observations": ["observation 1", "observation 2", "observation 3"],
   "risks": ["risk 1", "risk 2"],
   "suggestions": ["suggestion 1", "suggestion 2"]
-}
-Focus on diversification, concentration, sector/asset balance, and risk. Be specific with the numbers provided. Frame everything as analysis observations, not personalized financial advice.`;
+}`;
 
 const buildPrompt = (holdings: Awaited<ReturnType<typeof createDashboard>>): string => {
   const totalValue = holdings.reduce((sum, h) => sum + h.marketValue, 0);
   const totalGL = holdings.reduce((sum, h) => sum + h.totalGL, 0);
 
-  const lines = holdings
-    .slice()
-    .sort((a, b) => b.marketValue - a.marketValue)
+  const byValue = holdings.slice().sort((a, b) => b.marketValue - a.marketValue);
+  const weightPct = (mv: number) => (totalValue > 0 ? (mv / totalValue) * 100 : 0);
+
+  const lines = byValue
     .map((h) => {
-      const weight = totalValue > 0 ? ((h.marketValue / totalValue) * 100).toFixed(1) : '0';
+      const weight = weightPct(h.marketValue).toFixed(1);
       return `  ${h.symbol} (${h.type}): ${weight}% of portfolio, market value $${h.marketValue.toFixed(
         0
       )}, unrealized P/L ${h.totalGLPercent}%`;
     })
     .join('\n');
 
+  const stockValue = holdings.filter((h) => h.type === 'stock').reduce((sum, h) => sum + h.marketValue, 0);
+  const cryptoValue = holdings.filter((h) => h.type === 'crypto').reduce((sum, h) => sum + h.marketValue, 0);
+  const top1Weight = byValue.length > 0 ? weightPct(byValue[0].marketValue) : 0;
+  const top3Weight = byValue.slice(0, 3).reduce((sum, h) => sum + weightPct(h.marketValue), 0);
+
+  const composition = [
+    `\nCOMPOSITION:`,
+    `Positions: ${holdings.length}`,
+    `Stock vs Crypto by value: ${weightPct(stockValue).toFixed(1)}% stock / ${weightPct(cryptoValue).toFixed(
+      1
+    )}% crypto`,
+    `Largest position: ${byValue[0]?.symbol ?? 'N/A'} at ${top1Weight.toFixed(1)}%`,
+    `Top 3 concentration: ${top3Weight.toFixed(1)}% of portfolio`,
+  ].join('\n');
+
   return [
     `Analyze this portfolio of ${holdings.length} position(s).`,
     `Total market value: $${totalValue.toFixed(0)}`,
     `Total unrealized P/L: $${totalGL.toFixed(0)}`,
+    composition,
     `\nHOLDINGS (by weight):\n${lines}`,
   ].join('\n');
 };
