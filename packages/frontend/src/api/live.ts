@@ -12,6 +12,8 @@ export type Range = '1d' | '5d' | '1M' | '3M' | '6M' | '1y' | '2y' | '3y';
 export type AgentInsight = {
   summary: string;
   sentiment: 'bullish' | 'bearish' | 'neutral';
+  rating: 'buy' | 'hold' | 'sell';
+  rationale: string;
   keyPoints: string[];
   risks: string[];
   catalysts: string[];
