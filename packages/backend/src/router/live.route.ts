@@ -3,6 +3,7 @@ import moment from 'moment';
 import { AgentInsightsController } from '../controller/AgentInsightsController';
 import { CompanyProfileController } from '../controller/CompanyProfileController';
 import { IPOController } from '../controller/IPOController';
+import { IPOInsightsController } from '../controller/IPOInsightsController';
 import { LiveQuoteController } from '../controller/LiveQuoteController';
 import { LiveRecommendationController } from '../controller/LiveRecommendationController';
 import { NewsSentimentController } from '../controller/NewsSentimentController';
@@ -91,6 +92,19 @@ export const LiveRouter = () => {
     } catch (err: any) {
       logger.log({ level: 'error', message: err.message, label: 'Get IPOs' });
       ctx.body = errorBody('Failed to get IPOs', err.message);
+      ctx.status = 400;
+    }
+  });
+
+  router.get('/live/ipo-insights/:id', async (ctx) => {
+    try {
+      const result = await new IPOInsightsController().getInsights(ctx.params.id);
+
+      ctx.body = result;
+      ctx.status = 200;
+    } catch (err: any) {
+      logger.log({ level: 'error', message: err.message, label: `Get IPO insights "${ctx.params.id}"` });
+      ctx.body = errorBody('Failed to get IPO insights', err.message);
       ctx.status = 400;
     }
   });
