@@ -96,14 +96,14 @@ export const LiveRouter = () => {
     }
   });
 
-  router.get('/live/ipo-insights/:id', async (ctx) => {
+  router.post('/live/ipo-insights', async (ctx) => {
     try {
-      const result = await new IPOInsightsController().getInsights(ctx.params.id);
+      const result = await new IPOInsightsController().getInsights(ctx.request.body as any);
 
       ctx.body = result;
       ctx.status = 200;
     } catch (err: any) {
-      logger.log({ level: 'error', message: err.message, label: `Get IPO insights "${ctx.params.id}"` });
+      logger.log({ level: 'error', message: err.message, label: 'Get IPO insights' });
       ctx.body = errorBody('Failed to get IPO insights', err.message);
       ctx.status = 400;
     }

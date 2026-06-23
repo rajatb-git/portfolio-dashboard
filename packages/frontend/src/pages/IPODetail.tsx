@@ -13,7 +13,7 @@ import {
   Typography,
 } from '@mui/material';
 import moment from 'moment';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'react-toastify';
 
 import apis from '@/api';
@@ -57,14 +57,15 @@ function Term({ label, value }: { label: string; value?: string }) {
 
 function IPODetail() {
   const { id } = useParams<{ id: string }>();
+  const location = useLocation();
   const navigate = useNavigate();
 
-  const [isIpoLoading, setIsIpoLoading] = React.useState(true);
-  const [ipo, setIpo] = React.useState<IIPO | undefined>();
+  const stateIpo = (location.state as { ipo?: IIPO } | null)?.ipo;
+
+  const [ipo, setIpo] = React.useState<IIPO | undefined>(stateIpo);
+  const [isIpoLoading, setIsIpoLoading] = React.useState(!stateIpo);
 
   const [companyProfile, setCompanyProfile] = React.useState<CompanyProfile | undefined>();
-  const [isCompanyProfileLoading, setIsCompanyProfileLoading] = React.useState(false);
-
   const [news, setNews] = React.useState<Array<IMarketNews>>([]);
   const [isNewsLoading, setIsNewsLoading] = React.useState(false);
 
@@ -73,12 +74,11 @@ function IPODetail() {
   const [isAgentLoading, setIsAgentLoading] = React.useState(false);
   const [agentError, setAgentError] = React.useState<string | null>(null);
 
-  const fetchInsights = React.useCallback(() => {
-    if (!id) return;
+  const fetchInsights = React.useCallback((target: IIPO) => {
     setIsAgentLoading(true);
     setAgentError(null);
     apis.live
-      .getIPOInsights(id)
+      .getIPOInsights(target)
       .then((res) => setAgentInsight(res))
       .catch((err) => {
         setAgentInsight(null);
@@ -86,41 +86,43 @@ function IPODetail() {
         toast.error(err.message || 'Failed to load AI insights');
       })
       .finally(() => setIsAgentLoading(false));
-  }, [id]);
+  }, []);
 
-  const loadCompanyData = React.useCallback((symbol: string) => {
-    setIsCompanyProfileLoading(true);
+  // Company profile and news come from Finnhub's listed-stock endpoints, which only
+  // return data once the company is actually trading. For pre-listing IPOs these come
+  // back empty, so we treat them as best-effort enrichment and only render when present.
+  const loadListedData = React.useCallback((symbol: string) => {
     apis.live
       .getCompanyProfile(symbol)
-      .then((res) => setCompanyProfile(res))
-      .catch((err) => toast.error(err.message || 'Failed to load company profile'))
-      .finally(() => setIsCompanyProfileLoading(false));
+      .then((res) => setCompanyProfile(res?.name ? res : undefined))
+      .catch(() => setCompanyProfile(undefined));
 
     setIsNewsLoading(true);
     apis.live
       .getLiveNews(symbol)
       .then((res) => setNews(res ?? []))
-      .catch((err) => {
-        setNews([]);
-        toast.error(err.message || 'Failed to load news');
-      })
+      .catch(() => setNews([]))
       .finally(() => setIsNewsLoading(false));
   }, []);
 
   React.useEffect(() => {
+    if (stateIpo) {
+      setIpo(stateIpo);
+      return;
+    }
     setIsIpoLoading(true);
     apis.live
       .getIPOs()
-      .then((list) => {
-        const match = list.find((x) => x.id === id);
-        setIpo(match);
-        if (match?.symbol) {
-          loadCompanyData(match.symbol);
-        }
-      })
+      .then((list) => setIpo(list.find((x) => x.id === id)))
       .catch((err) => toast.error(err.message || 'Failed to load IPO'))
       .finally(() => setIsIpoLoading(false));
-  }, [id, loadCompanyData]);
+  }, [id, stateIpo]);
+
+  React.useEffect(() => {
+    if (ipo?.symbol) {
+      loadListedData(ipo.symbol);
+    }
+  }, [ipo, loadListedData]);
 
   React.useEffect(() => {
     apis.live
@@ -131,11 +133,12 @@ function IPODetail() {
 
   React.useEffect(() => {
     if (agentEnabled && ipo) {
-      fetchInsights();
+      fetchInsights(ipo);
     }
   }, [agentEnabled, ipo, fetchInsights]);
 
   const statusColor = ipo ? STATUS_COLOR[ipo.status] ?? 'default' : 'default';
+  const hasListedData = !!companyProfile || news.length > 0 || isNewsLoading;
 
   return (
     <Stack spacing={2}>
@@ -230,40 +233,52 @@ function IPODetail() {
         )}
       </Card>
 
-      {ipo && !ipo.symbol && (
-        <Card variant="outlined" sx={{ p: 2 }}>
-          <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
-            <Iconify icon="mdi:information-outline" width={18} sx={{ color: 'text.disabled' }} />
-            <Typography sx={{ fontSize: '0.82rem', color: 'text.secondary' }}>
-              This offering does not have a trading symbol assigned yet, so company profile and news are not available.
-            </Typography>
-          </Stack>
-        </Card>
-      )}
+      {/* ── AI verdict: what the company does + invest-or-not ── */}
+      {ipo &&
+        (agentEnabled ? (
+          <AgentInsightsCard
+            insight={agentInsight}
+            isLoading={isAgentLoading}
+            error={agentError}
+            onRefresh={() => fetchInsights(ipo)}
+          />
+        ) : (
+          <Card variant="outlined" sx={{ p: 2 }}>
+            <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
+              <Iconify icon="fluent:brain-sparkle-20-regular" width={18} sx={{ color: 'text.disabled' }} />
+              <Typography sx={{ fontSize: '0.82rem', color: 'text.secondary' }}>
+                Enable the AI agent in Settings to get a company overview and an invest-or-avoid read on this IPO.
+              </Typography>
+            </Stack>
+          </Card>
+        ))}
 
-      {/* ── AI invest-or-not summary ── */}
-      {agentEnabled && ipo && (
-        <AgentInsightsCard
-          insight={agentInsight}
-          isLoading={isAgentLoading}
-          error={agentError}
-          onRefresh={fetchInsights}
-        />
-      )}
-
-      {/* ── Company details + News ── */}
-      {ipo?.symbol && (
-        <Grid container spacing={2} sx={{ alignItems: 'stretch' }}>
-          <Grid size={{ xs: 12, md: 4 }} sx={{ display: 'flex' }}>
-            <Box sx={{ width: '100%' }}>
-              <ResearchDetailsCard companyProfile={companyProfile} isCompanyProfileLoading={isCompanyProfileLoading} />
-            </Box>
+      {/* ── Company profile + news (only once the company is listed) ── */}
+      {ipo &&
+        (hasListedData ? (
+          <Grid container spacing={2} sx={{ alignItems: 'stretch' }}>
+            {companyProfile && (
+              <Grid size={{ xs: 12, md: 4 }} sx={{ display: 'flex' }}>
+                <Box sx={{ width: '100%' }}>
+                  <ResearchDetailsCard companyProfile={companyProfile} isCompanyProfileLoading={false} />
+                </Box>
+              </Grid>
+            )}
+            <Grid size={{ xs: 12, md: companyProfile ? 8 : 12 }} sx={{ display: 'flex' }}>
+              <ResearchNewsCard news={news} isNewsLoading={isNewsLoading} />
+            </Grid>
           </Grid>
-          <Grid size={{ xs: 12, md: 8 }} sx={{ display: 'flex' }}>
-            <ResearchNewsCard news={news} isNewsLoading={isNewsLoading} />
-          </Grid>
-        </Grid>
-      )}
+        ) : (
+          <Card variant="outlined" sx={{ p: 2 }}>
+            <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
+              <Iconify icon="mdi:information-outline" width={18} sx={{ color: 'text.disabled' }} />
+              <Typography sx={{ fontSize: '0.82rem', color: 'text.secondary' }}>
+                Company profile and news feeds become available once {ipo.name} begins trading. Until then, the AI
+                overview above is the best read on this offering.
+              </Typography>
+            </Stack>
+          </Card>
+        ))}
     </Stack>
   );
 }

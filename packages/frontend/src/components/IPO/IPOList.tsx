@@ -128,7 +128,7 @@ export default function IPOList({ ipos, isLoading }: Props) {
                 <TableRow
                   key={ipo.id}
                   hover
-                  onClick={() => navigate(`/ipo-calendar/${ipo.id}`)}
+                  onClick={() => navigate(`/ipo-calendar/${ipo.id}`, { state: { ipo } })}
                   sx={{ cursor: 'pointer' }}
                 >
                   <TableCell>

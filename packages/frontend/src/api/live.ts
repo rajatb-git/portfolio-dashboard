@@ -104,8 +104,9 @@ export default class LiveAPI {
       .then((response) => response.data)
       .catch(catchCustomError);
 
-  getIPOInsights = async (id: string): Promise<AgentInsight> =>
-    axios(DB_HOST + `/live/ipo-insights/${id}`)
+  getIPOInsights = async (ipo: IIPO): Promise<AgentInsight> =>
+    axios
+      .post(DB_HOST + '/live/ipo-insights', ipo)
       .then((response) => response.data)
       .catch(catchCustomError);
 
