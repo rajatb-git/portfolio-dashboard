@@ -102,6 +102,11 @@ export default class LiveAPI {
       .then((response) => response.data)
       .catch(catchCustomError);
 
+  getIPOInsights = async (id: string): Promise<AgentInsight> =>
+    axios(DB_HOST + `/live/ipo-insights/${id}`)
+      .then((response) => response.data)
+      .catch(catchCustomError);
+
 getPortfolioSentiment = async (): Promise<any> =>
     axios(DB_HOST + '/live/portfolio-sentiment')
       .then((r) => r.data)

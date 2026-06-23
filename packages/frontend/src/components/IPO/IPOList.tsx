@@ -18,6 +18,7 @@ import {
   Typography,
 } from '@mui/material';
 import moment from 'moment';
+import { useNavigate } from 'react-router-dom';
 
 import { getComparator, visuallyHidden } from '@/components/DashboardTable/dashTableUtils';
 import { Iconify } from '@/components/Iconify';
@@ -49,6 +50,7 @@ const STATUS_COLOR: Record<IIPO['status'], ChipProps['color']> = {
 const capitalize = (s: string) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s);
 
 export default function IPOList({ ipos, isLoading }: Props) {
+  const navigate = useNavigate();
   const [order, setOrder] = React.useState<'asc' | 'desc'>('desc');
   const [orderBy, setOrderBy] = React.useState<keyof IIPO>('date');
   const [search, setSearch] = React.useState('');
@@ -123,7 +125,12 @@ export default function IPOList({ ipos, isLoading }: Props) {
               </TableRow>
             ) : (
               sorted.map((ipo) => (
-                <TableRow key={ipo.id} hover>
+                <TableRow
+                  key={ipo.id}
+                  hover
+                  onClick={() => navigate(`/ipo-calendar/${ipo.id}`)}
+                  sx={{ cursor: 'pointer' }}
+                >
                   <TableCell>
                     <Typography sx={{ fontSize: '0.82rem' }}>{moment(ipo.date).format('MMM D, YYYY')}</Typography>
                     <Typography sx={{ fontSize: '0.68rem', color: 'text.secondary' }}>
