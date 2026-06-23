@@ -21,14 +21,14 @@ const SYSTEM_PROMPT = `You are a portfolio analyst reviewing a personal investme
 3. DIVERSIFICATION — Consider the number of positions and how evenly weight is spread; a few large positions driving most of the value is less diversified than the count alone suggests.
 4. PERFORMANCE DISPERSION — Note which positions are the largest winners and losers by unrealized P/L % and whether gains/losses are concentrated.
 
-Be specific and quantitative — cite the actual weights, the asset split, and position names from the data. Frame everything as analysis observations, not personalized financial advice or a recommendation to buy or sell specific securities.
+Be specific and quantitative — cite the actual weights, the asset split, and position names from the data. In "suggestions", give concrete, actionable rebalancing calls naming the position and a direction and magnitude (e.g. "Trim NVDA from 35% toward 15-20% to cut single-name risk", "Add a defensive position to offset the 60% crypto tilt"). Take a stance rather than hedging.
 
 Respond ONLY with valid JSON matching this exact schema (no markdown, no code fences):
 {
   "summary": "2-3 sentence overall assessment of the portfolio",
   "observations": ["observation 1", "observation 2", "observation 3"],
   "risks": ["risk 1", "risk 2"],
-  "suggestions": ["suggestion 1", "suggestion 2"]
+  "suggestions": ["actionable rebalancing call 1", "actionable rebalancing call 2"]
 }`;
 
 const buildPrompt = (holdings: Awaited<ReturnType<typeof createDashboard>>): string => {

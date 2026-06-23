@@ -16,6 +16,8 @@ import { LiveRecommendationController } from './LiveRecommendationController';
 export type AgentInsight = {
   summary: string;
   sentiment: 'bullish' | 'bearish' | 'neutral';
+  rating: 'buy' | 'hold' | 'sell';
+  rationale: string;
   keyPoints: string[];
   risks: string[];
   catalysts: string[];
@@ -222,6 +224,8 @@ export class AgentInsightsController {
       insight = {
         summary: parsed.summary,
         sentiment: parsed.sentiment,
+        rating: parsed.rating ?? 'hold',
+        rationale: parsed.rationale ?? '',
         keyPoints: parsed.keyPoints ?? [],
         risks: parsed.risks ?? [],
         catalysts: parsed.catalysts ?? [],

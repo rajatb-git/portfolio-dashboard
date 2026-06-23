@@ -42,6 +42,30 @@ const SENTIMENT_CONFIG = {
   },
 };
 
+const RATING_CONFIG = {
+  buy: {
+    color: '#22c55e',
+    bg: 'rgba(34,197,94,0.12)',
+    border: 'rgba(34,197,94,0.3)',
+    icon: 'mdi:cart-arrow-down',
+    label: 'Buy',
+  },
+  hold: {
+    color: '#f59e0b',
+    bg: 'rgba(245,158,11,0.12)',
+    border: 'rgba(245,158,11,0.3)',
+    icon: 'mdi:hand-back-right-outline',
+    label: 'Hold',
+  },
+  sell: {
+    color: '#ef4444',
+    bg: 'rgba(239,68,68,0.12)',
+    border: 'rgba(239,68,68,0.3)',
+    icon: 'mdi:cart-arrow-up',
+    label: 'Sell',
+  },
+};
+
 type SectionProps = {
   title: string;
   icon: string;
@@ -108,6 +132,7 @@ type Props = {
 
 export default function AgentInsightsCard({ insight, isLoading, error, onRefresh }: Props) {
   const sentimentStyle = insight ? SENTIMENT_CONFIG[insight.sentiment] : null;
+  const ratingStyle = insight ? RATING_CONFIG[insight.rating] : null;
 
   return (
     <Card
@@ -244,6 +269,40 @@ export default function AgentInsightsCard({ insight, isLoading, error, onRefresh
             {insight.summary}
           </Typography>
 
+          {/* Rating call */}
+          {ratingStyle && (
+            <Box
+              sx={{
+                mx: 2,
+                mb: 0.5,
+                p: 1.5,
+                borderRadius: 1.5,
+                bgcolor: ratingStyle.bg,
+                border: `1px solid ${ratingStyle.border}`,
+              }}
+            >
+              <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
+                <Iconify icon={ratingStyle.icon} width={20} sx={{ color: ratingStyle.color }} />
+                <Typography
+                  sx={{
+                    fontSize: '0.95rem',
+                    fontWeight: 800,
+                    letterSpacing: '0.04em',
+                    textTransform: 'uppercase',
+                    color: ratingStyle.color,
+                  }}
+                >
+                  {ratingStyle.label}
+                </Typography>
+              </Stack>
+              {insight.rationale && (
+                <Typography sx={{ mt: 0.75, fontSize: '0.78rem', color: 'text.secondary', lineHeight: 1.5 }}>
+                  {insight.rationale}
+                </Typography>
+              )}
+            </Box>
+          )}
+
           <InsightSection
             title="Key Points"
             icon="mdi:lightbulb-outline"
@@ -267,7 +326,7 @@ export default function AgentInsightsCard({ insight, isLoading, error, onRefresh
               fontStyle: 'italic',
             }}
           >
-            AI-generated analysis — not financial advice. Verify independently.
+            AI-generated opinion for informational purposes only — not a guarantee. Do your own research.
           </Typography>
         </Box>
       )}
