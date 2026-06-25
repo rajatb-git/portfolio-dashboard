@@ -22,6 +22,14 @@ export type AgentInsight = {
   generatedAt: string;
 };
 
+export type DocumentParseResult = {
+  target: 'transactions' | 'holdings';
+  rows: Array<Record<string, any>>;
+  skipped: string[];
+  provider: string;
+  model: string;
+};
+
 export type AiConfig = {
   enabled: boolean;
   provider: 'claude' | 'gemini' | 'ollama';
@@ -110,9 +118,15 @@ export default class LiveAPI {
       .then((response) => response.data)
       .catch(catchCustomError);
 
-getPortfolioSentiment = async (): Promise<any> =>
+  getPortfolioSentiment = async (): Promise<any> =>
     axios(DB_HOST + '/live/portfolio-sentiment')
       .then((r) => r.data)
+      .catch(catchCustomError);
+
+  parseImportDocument = async (target: 'transactions' | 'holdings', text: string): Promise<DocumentParseResult> =>
+    axios
+      .post(DB_HOST + '/ai-import/parse', { target, text })
+      .then((response) => response.data)
       .catch(catchCustomError);
 
   getAiConfig = async (): Promise<AiConfig> =>

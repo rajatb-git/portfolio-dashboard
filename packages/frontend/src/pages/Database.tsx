@@ -34,6 +34,7 @@ import GenericGrid from '@/components/DataGrid';
 import ImportDialog from '@/components/DataGrid/DBImportDialog';
 import BrokerImportDialog from '@/components/DataGrid/BrokerImportDialog';
 import BrokerHoldingsImportDialog from '@/components/DataGrid/BrokerHoldingsImportDialog';
+import AiImportDialog from '@/components/DataGrid/AiImportDialog';
 import TransactionImportDialog from '@/components/DataGrid/TransactionImportDialog';
 import { Iconify } from '@/components/Iconify';
 import type { IAccount } from '@/models/AccountsModel';
@@ -449,6 +450,7 @@ export default function Database() {
   const [txnImportDialogOpen, setTxnImportDialogOpen] = React.useState(false);
   const [brokerImportDialogOpen, setBrokerImportDialogOpen] = React.useState(false);
   const [brokerHoldingsImportDialogOpen, setBrokerHoldingsImportDialogOpen] = React.useState(false);
+  const [aiImportDialogOpen, setAiImportDialogOpen] = React.useState(false);
   const [accountsData, setAccountsData] = React.useState<Array<IAccount>>([]);
 
   const deleteRecord = async (recordId: string) => {
@@ -472,6 +474,7 @@ export default function Database() {
     setTxnImportDialogOpen(false);
     setBrokerImportDialogOpen(false);
     setBrokerHoldingsImportDialogOpen(false);
+    setAiImportDialogOpen(false);
     setAccountsData([]);
   };
 
@@ -562,6 +565,18 @@ export default function Database() {
               Broker Import
             </Button>
           )}
+          {activeCollection !== 'accounts' && (
+            <Button
+              color="secondary"
+              startIcon={<Iconify icon="mdi:robot-happy-outline" />}
+              onClick={async () => {
+                await apis.accounts.getAll().then((response) => setAccountsData(response));
+                setAiImportDialogOpen(true);
+              }}
+            >
+              AI Import
+            </Button>
+          )}
 
           <Select
             value={activeCollection}
@@ -626,6 +641,18 @@ export default function Database() {
         accountsData={accountsData}
         refreshPage={loadData}
       />
+
+      {activeCollection !== 'accounts' && (
+        <AiImportDialog
+          open={aiImportDialogOpen}
+          target={activeCollection}
+          handleDialogClose={closeImportDialog}
+          importTransactions={importTransactions}
+          insertHoldingsData={insertHoldingsData}
+          accountsData={accountsData}
+          refreshPage={loadData}
+        />
+      )}
     </>
   );
 }
