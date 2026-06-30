@@ -23,7 +23,13 @@ import * as React from 'react';
 import { toast } from 'react-toastify';
 import apis from '@/api';
 import type { AiConfig } from '@/api/live';
-import type { AlertMonitorConfig, LockStatus, NotificationConfig, ValueCalcConfig } from '@/api/settings';
+import type {
+  AlertMonitorConfig,
+  LockStatus,
+  NotificationConfig,
+  TradingSummaryConfig,
+  ValueCalcConfig,
+} from '@/api/settings';
 import { Iconify } from '@/components/Iconify';
 import { useThemeMode } from '@/components/ThemeRegistry/ThemeModeContext';
 import { DB_HOST } from '@/config';
@@ -175,6 +181,19 @@ export default function Settings() {
   const setMqtt = (partial: Partial<NotificationConfig['mqtt']>) =>
     setDraftNotif((prev) => ({ mqtt: { ...prev.mqtt, ...partial } }));
 
+  const DEFAULT_TRADING_SUMMARY: TradingSummaryConfig = {
+    enabled: false,
+    topHoldingsCount: 5,
+    topic: 'portfolio-dashboard/summary',
+  };
+  const [savedSummary, setSavedSummary] = React.useState<TradingSummaryConfig>(DEFAULT_TRADING_SUMMARY);
+  const [draftSummary, setDraftSummary] = React.useState<TradingSummaryConfig>(DEFAULT_TRADING_SUMMARY);
+  const [savingSummary, setSavingSummary] = React.useState(false);
+  const [testingSummary, setTestingSummary] = React.useState(false);
+  const isSummaryDirty = JSON.stringify(savedSummary) !== JSON.stringify(draftSummary);
+  const setSummary = (partial: Partial<TradingSummaryConfig>) =>
+    setDraftSummary((prev) => ({ ...prev, ...partial }));
+
   const [exporting, setExporting] = React.useState(false);
   const [importing, setImporting] = React.useState(false);
   const [importConfirmOpen, setImportConfirmOpen] = React.useState(false);
@@ -235,6 +254,14 @@ export default function Settings() {
         setDraftNotif(cfg);
       })
       .catch((err) => toast.error(err.message || 'Failed to load notification settings'));
+
+    apis.settings
+      .getTradingSummaryConfig()
+      .then((cfg) => {
+        setSavedSummary(cfg);
+        setDraftSummary(cfg);
+      })
+      .catch((err) => toast.error(err.message || 'Failed to load trading summary settings'));
   }, []);
 
   const isLockDirty =
@@ -432,6 +459,36 @@ export default function Settings() {
       toast.error(err.message || 'Failed to send test notification');
     } finally {
       setTestingNotif(false);
+    }
+  };
+
+  const handleSaveSummary = async () => {
+    setSavingSummary(true);
+    try {
+      const saved = await apis.settings.saveTradingSummaryConfig(draftSummary);
+      setSavedSummary(saved);
+      setDraftSummary(saved);
+      toast.success('Trading summary settings saved');
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to save trading summary settings');
+    } finally {
+      setSavingSummary(false);
+    }
+  };
+
+  const handleResetSummary = () => setDraftSummary(savedSummary);
+
+  const handleTestSummary = async () => {
+    setTestingSummary(true);
+    try {
+      const result = await apis.settings.testTradingSummary();
+      if (!result.mqttEnabled) toast.error('Enable MQTT publishing first to send summaries');
+      else if (result.published > 0) toast.success(`Published ${result.published} summary message(s) to MQTT`);
+      else toast.error('No summaries published — add holdings or check the broker connection');
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to send trading summary');
+    } finally {
+      setTestingSummary(false);
     }
   };
 
@@ -847,6 +904,74 @@ export default function Settings() {
             sx={{ fontSize: '0.78rem', textTransform: 'none' }}
           >
             {savingNotif ? 'Saving...' : 'Save'}
+          </Button>
+        </Stack>
+      </SettingsSection>
+
+      <SettingsSection title="Daily Trading Summary">
+        <SettingRow
+          label="Daily Summary Notifications"
+          description="Publish three daily summaries to MQTT on each trading day (morning ~9:35, midday 12:30, and at market close ET): how the market moved, today's profit/loss per account, and how your largest holdings moved. Personal P&L is sent only to your own broker configured under Alert Notifications."
+        >
+          <Switch checked={draftSummary.enabled} onChange={(_, checked) => setSummary({ enabled: checked })} />
+        </SettingRow>
+        {draftSummary.enabled && (
+          <>
+            <SettingRow
+              label="Majority Holdings"
+              description="How many of your largest holdings (by market value) to report movement for"
+            >
+              <Select
+                size="small"
+                value={draftSummary.topHoldingsCount}
+                onChange={(e) => setSummary({ topHoldingsCount: Number(e.target.value) })}
+                sx={{ minWidth: { xs: '100%', sm: 200 }, fontSize: '0.82rem' }}
+              >
+                <MenuItem value={3}>Top 3 holdings</MenuItem>
+                <MenuItem value={5}>Top 5 holdings</MenuItem>
+                <MenuItem value={10}>Top 10 holdings</MenuItem>
+              </Select>
+            </SettingRow>
+            <SettingRow label="Topic" description="MQTT topic the daily summaries are published to">
+              <TextField
+                size="small"
+                value={draftSummary.topic}
+                onChange={(e) => setSummary({ topic: e.target.value })}
+                sx={{ width: { xs: '100%', sm: 260 }, '& input': { fontSize: '0.78rem' } }}
+              />
+            </SettingRow>
+          </>
+        )}
+        <Stack direction="row" spacing={1} sx={{ justifyContent: 'flex-end', alignItems: 'center', px: 2, py: 1.5 }}>
+          {isSummaryDirty && (
+            <Typography sx={{ fontSize: '0.72rem', color: 'warning.main', mr: 'auto' }}>Unsaved changes</Typography>
+          )}
+          <Button
+            size="small"
+            variant="outlined"
+            onClick={handleTestSummary}
+            disabled={!savedNotif.mqtt.enabled || isSummaryDirty || testingSummary}
+            sx={{ fontSize: '0.78rem', textTransform: 'none' }}
+          >
+            {testingSummary ? 'Sending...' : 'Send now'}
+          </Button>
+          <Button
+            size="small"
+            variant="outlined"
+            onClick={handleResetSummary}
+            disabled={!isSummaryDirty || savingSummary}
+            sx={{ fontSize: '0.78rem', textTransform: 'none' }}
+          >
+            Reset
+          </Button>
+          <Button
+            size="small"
+            variant="contained"
+            onClick={handleSaveSummary}
+            disabled={!isSummaryDirty || savingSummary}
+            sx={{ fontSize: '0.78rem', textTransform: 'none' }}
+          >
+            {savingSummary ? 'Saving...' : 'Save'}
           </Button>
         </Stack>
       </SettingsSection>

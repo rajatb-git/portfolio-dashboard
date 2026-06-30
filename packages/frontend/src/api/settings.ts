@@ -36,6 +36,14 @@ export type NotificationConfig = { mqtt: MqttConfig };
 
 export type NotificationTestResult = { mqtt: { enabled: boolean; ok: boolean; error?: string } };
 
+export type TradingSummaryConfig = {
+  enabled: boolean;
+  topHoldingsCount: number;
+  topic: string;
+};
+
+export type TradingSummaryTestResult = { published: number; mqttEnabled: boolean };
+
 export default class SettingsAPI {
   getLock = async (): Promise<LockStatus> =>
     axios
@@ -88,6 +96,24 @@ export default class SettingsAPI {
   testNotification = async (): Promise<NotificationTestResult> =>
     axios
       .post(DB_HOST + '/settings/notifications/test')
+      .then((response) => response.data)
+      .catch(catchCustomError);
+
+  getTradingSummaryConfig = async (): Promise<TradingSummaryConfig> =>
+    axios
+      .get(DB_HOST + '/settings/trading-summary')
+      .then((response) => response.data)
+      .catch(catchCustomError);
+
+  saveTradingSummaryConfig = async (payload: TradingSummaryConfig): Promise<TradingSummaryConfig> =>
+    axios
+      .post(DB_HOST + '/settings/trading-summary', payload)
+      .then((response) => response.data)
+      .catch(catchCustomError);
+
+  testTradingSummary = async (): Promise<TradingSummaryTestResult> =>
+    axios
+      .post(DB_HOST + '/settings/trading-summary/test')
       .then((response) => response.data)
       .catch(catchCustomError);
 }

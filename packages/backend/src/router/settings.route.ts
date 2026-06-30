@@ -15,10 +15,17 @@ import {
   maskNotificationConfig,
   saveNotificationConfig,
 } from '../models/NotificationConfigModel';
+import {
+  getTradingSummaryConfig,
+  ITradingSummaryConfig,
+  saveTradingSummaryConfig,
+  VALID_TOP_HOLDINGS_COUNTS,
+} from '../models/TradingSummaryConfigModel';
 import { getValueCalcConfig, IValueCalcConfig, saveValueCalcConfig } from '../models/ValueCalcConfigModel';
 import { alertMonitorService } from '../controller/AlertMonitorService';
 import { configureFromSaved, sendTestNotification } from '../controller/NotificationDispatcher';
 import { portfolioValueCalcService } from '../controller/PortfolioValueCalcService';
+import { tradingSummaryService } from '../controller/TradingSummaryService';
 import { errorBody } from '../utils/error';
 import { STORAGE_DIR } from '../utils/storage';
 import { logger } from '../utils/winston';
@@ -342,6 +349,62 @@ export const SettingsRouter = () => {
       logger.log({ level: 'error', message: error.message, label: 'notifications config save' });
       ctx.status = 500;
       ctx.body = errorBody('Failed to save notification config', error.message);
+    }
+  });
+
+  router.get('/settings/trading-summary', async (ctx) => {
+    try {
+      ctx.body = await getTradingSummaryConfig();
+      ctx.status = 200;
+    } catch (error: any) {
+      logger.log({ level: 'error', message: error.message, label: 'trading-summary config get' });
+      ctx.status = 500;
+      ctx.body = errorBody('Failed to get trading summary config', error.message);
+    }
+  });
+
+  router.post('/settings/trading-summary', async (ctx) => {
+    try {
+      const body = ctx.request.body as Partial<ITradingSummaryConfig>;
+
+      if (typeof body.enabled !== 'boolean') {
+        ctx.status = 400;
+        ctx.body = errorBody('Invalid request', '"enabled" boolean is required');
+        return;
+      }
+
+      const topHoldingsCount = typeof body.topHoldingsCount === 'number' ? body.topHoldingsCount : 5;
+      if (!VALID_TOP_HOLDINGS_COUNTS.includes(topHoldingsCount)) {
+        ctx.status = 400;
+        ctx.body = errorBody('Invalid count', `topHoldingsCount must be one of: ${VALID_TOP_HOLDINGS_COUNTS.join(', ')}`);
+        return;
+      }
+
+      const config: ITradingSummaryConfig = {
+        enabled: body.enabled,
+        topHoldingsCount,
+        topic: String(body.topic ?? '').trim() || 'portfolio-dashboard/summary',
+      };
+      await saveTradingSummaryConfig(config);
+      tradingSummaryService.reconfigure(config);
+
+      ctx.body = config;
+      ctx.status = 200;
+    } catch (error: any) {
+      logger.log({ level: 'error', message: error.message, label: 'trading-summary config save' });
+      ctx.status = 500;
+      ctx.body = errorBody('Failed to save trading summary config', error.message);
+    }
+  });
+
+  router.post('/settings/trading-summary/test', async (ctx) => {
+    try {
+      ctx.body = await tradingSummaryService.sendTest();
+      ctx.status = 200;
+    } catch (error: any) {
+      logger.log({ level: 'error', message: error.message, label: 'trading-summary test' });
+      ctx.status = 500;
+      ctx.body = errorBody('Failed to send trading summary', error.message);
     }
   });
 

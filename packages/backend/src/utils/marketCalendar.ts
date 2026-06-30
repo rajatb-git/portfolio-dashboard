@@ -135,3 +135,26 @@ export function isStockMarketOpen(now: Date = new Date()): boolean {
   const close = halfDays(year).has(dateStr) ? EARLY_CLOSE_MIN : REGULAR_CLOSE_MIN;
   return minutes >= MARKET_OPEN_MIN && minutes < close;
 }
+
+// A real trading day in ET (weekday, not a full-close holiday). Unlike
+// isStockMarketOpen this ignores the time of day — true all day on a trading day.
+export function isTradingDay(now: Date = new Date()): boolean {
+  const { dateStr, day } = etParts(now);
+  if (day === 0 || day === 6) return false;
+  const year = Number(dateStr.slice(0, 4));
+  return !fullCloseHolidays(year).has(dateStr);
+}
+
+// Minutes-since-ET-midnight at which the market closes today (early on half days).
+// Only meaningful on a trading day — callers should gate with isTradingDay first.
+export function getMarketCloseMinutes(now: Date = new Date()): number {
+  const { dateStr } = etParts(now);
+  const year = Number(dateStr.slice(0, 4));
+  return halfDays(year).has(dateStr) ? EARLY_CLOSE_MIN : REGULAR_CLOSE_MIN;
+}
+
+// "now" as ET wall-clock date string and minutes-since-midnight, for schedulers.
+export function etDateAndMinutes(now: Date = new Date()): { dateStr: string; minutes: number } {
+  const { dateStr, minutes } = etParts(now);
+  return { dateStr, minutes };
+}
