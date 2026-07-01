@@ -1,6 +1,3 @@
-import { AccountModel } from '../models/AccountModel';
-import { HoldingsModel } from '../models/HoldingsModel';
-import type { IPriceStoreModel } from '../models/PriceStoreModel';
 import {
   DEFAULT_TRADING_SUMMARY_CONFIG,
   getTradingSummaryConfig,
@@ -8,18 +5,10 @@ import {
 } from '../models/TradingSummaryConfigModel';
 import { etDateAndMinutes, getMarketCloseMinutes, isTradingDay } from '../utils/marketCalendar';
 import { logger } from '../utils/winston';
-import { LiveQuoteController } from './LiveQuoteController';
+import { buildDailyRecap } from './DailyRecapController';
 import { mqttPublisher } from './MqttPublisher';
 
 const LABEL = 'TradingSummaryService';
-
-// Broad-market proxies. These are ETFs, so Finnhub's free tier returns c=0 and
-// LiveQuoteController transparently falls back to NASDAQ to price them.
-const MARKET_INDICES = [
-  { symbol: 'SPY', label: 'S&P 500' },
-  { symbol: 'QQQ', label: 'Nasdaq 100' },
-  { symbol: 'DIA', label: 'Dow Jones' },
-];
 
 type SlotName = 'morning' | 'midday' | 'close';
 export type SummarySlot = SlotName | 'test';
@@ -82,43 +71,16 @@ class TradingSummaryService {
     }
 
     try {
-      const holdingsModel = await HoldingsModel().initialize();
-      const holdings = holdingsModel.getAllRecords();
-      const accountModel = await AccountModel().initialize();
-      const accounts = accountModel.getAllRecords();
+      const recap = await buildDailyRecap();
 
-      const quoteController = new LiveQuoteController();
-      const isCrypto = new Map<string, boolean>();
-      for (const h of holdings) if (!isCrypto.has(h.symbol)) isCrypto.set(h.symbol, h.type === 'crypto');
-      for (const idx of MARKET_INDICES) if (!isCrypto.has(idx.symbol)) isCrypto.set(idx.symbol, false);
-      const symbols = [...isCrypto.keys()];
-
-      const quotes = await Promise.all(
-        symbols.map((s) => quoteController.getLiveQuote(s, isCrypto.get(s)).catch((): null => null))
-      );
-      const quoteMap = new Map<string, IPriceStoreModel | null>(symbols.map((s, i) => [s, quotes[i]]));
-
-      const generatedAt = new Date().toISOString();
-      const base = { slot, generatedAt };
+      const base = { slot, generatedAt: recap.generatedAt };
       let published = 0;
       const publish = async (payload: object): Promise<void> => {
         if (await mqttPublisher.publish(JSON.stringify(payload), config.topic)) published += 1;
       };
 
       // 1) Market summary — public index data.
-      const indices = MARKET_INDICES.map((idx) => {
-        const q = quoteMap.get(idx.symbol);
-        return q
-          ? {
-              symbol: idx.symbol,
-              label: idx.label,
-              price: +q.price.toFixed(2),
-              percentChange: +q.percentChange.toFixed(2),
-              change: +q.change.toFixed(2),
-            }
-          : null;
-      }).filter((x): x is NonNullable<typeof x> => x !== null);
-
+      const { indices } = recap;
       if (indices.length > 0) {
         await publish({
           ...base,
@@ -130,77 +92,25 @@ class TradingSummaryService {
       }
 
       // 2) Per-account day P&L — personal data, user's broker only.
-      const accountName = new Map(accounts.map((a) => [a.id, a.name]));
-      const byAccount = new Map<string, { account: string; dayGL: number; prevValue: number; marketValue: number }>();
-      for (const h of holdings) {
-        const q = quoteMap.get(h.symbol);
-        if (!q) continue;
-        const entry = byAccount.get(h.accountId) ?? {
-          account: accountName.get(h.accountId) ?? 'Unknown account',
-          dayGL: 0,
-          prevValue: 0,
-          marketValue: 0,
-        };
-        entry.dayGL += h.qty * q.change;
-        entry.prevValue += h.qty * q.prevClose;
-        entry.marketValue += h.qty * q.price;
-        byAccount.set(h.accountId, entry);
-      }
-      const accountsPnl = [...byAccount.values()]
-        .map((e) => ({
-          account: e.account,
-          dayGL: +e.dayGL.toFixed(2),
-          dayGLPercent: e.prevValue > 0 ? +((e.dayGL / e.prevValue) * 100).toFixed(2) : 0,
-          marketValue: +e.marketValue.toFixed(2),
-        }))
-        .sort((a, b) => b.marketValue - a.marketValue);
-
+      const accountsPnl = recap.accounts;
       if (accountsPnl.length > 0) {
-        const totalDayGL = +accountsPnl.reduce((s, a) => s + a.dayGL, 0).toFixed(2);
-        const totalPrev = [...byAccount.values()].reduce((s, e) => s + e.prevValue, 0);
-        const totalPct = totalPrev > 0 ? +((totalDayGL / totalPrev) * 100).toFixed(2) : 0;
         await publish({
           ...base,
           kind: 'accountPnl',
           title: `Today's P&L — ${SLOT_LABEL[slot]}`,
-          message: `Total ${usd(totalDayGL)} (${signedPct(totalPct)}) · ${accountsPnl
+          message: `Total ${usd(recap.totalDayGL)} (${signedPct(recap.totalDayGLPercent)}) · ${accountsPnl
             .map((a) => `${a.account} ${usd(a.dayGL)} (${signedPct(a.dayGLPercent)})`)
             .join(' · ')}`,
-          totalDayGL,
-          totalDayGLPercent: totalPct,
+          totalDayGL: recap.totalDayGL,
+          totalDayGLPercent: recap.totalDayGLPercent,
           accounts: accountsPnl,
         });
       }
 
       // 3) Movement of the largest holdings — personal data, user's broker only.
-      const bySymbol = new Map<
-        string,
-        { symbol: string; name: string; percentChange: number; dayGL: number; marketValue: number }
-      >();
-      for (const h of holdings) {
-        const q = quoteMap.get(h.symbol);
-        if (!q) continue;
-        const entry = bySymbol.get(h.symbol) ?? {
-          symbol: h.symbol,
-          name: h.name,
-          percentChange: +q.percentChange.toFixed(2),
-          dayGL: 0,
-          marketValue: 0,
-        };
-        entry.dayGL += h.qty * q.change;
-        entry.marketValue += h.qty * q.price;
-        bySymbol.set(h.symbol, entry);
-      }
-      const topHoldings = [...bySymbol.values()]
+      const topHoldings = [...recap.holdings]
         .sort((a, b) => b.marketValue - a.marketValue)
-        .slice(0, config.topHoldingsCount)
-        .map((e) => ({
-          symbol: e.symbol,
-          name: e.name,
-          percentChange: e.percentChange,
-          dayGL: +e.dayGL.toFixed(2),
-          marketValue: +e.marketValue.toFixed(2),
-        }));
+        .slice(0, config.topHoldingsCount);
 
       if (topHoldings.length > 0) {
         await publish({

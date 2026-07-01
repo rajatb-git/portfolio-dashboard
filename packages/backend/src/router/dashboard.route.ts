@@ -1,4 +1,5 @@
 import Router from '@koa/router';
+import { buildDailyRecap } from '../controller/DailyRecapController';
 import { createDashboard } from '../controller/DashboardController';
 import { PortfolioSnapshotDBModel } from '../models/PortfolioSnapshotModel';
 import { errorBody } from '../utils/error';
@@ -6,6 +7,17 @@ import { logger } from '../utils/winston';
 
 export const DashboardRouter = () => {
   const router = new Router();
+
+  router.get('/dashboard/daily-recap', async (ctx) => {
+    try {
+      ctx.body = await buildDailyRecap();
+      ctx.status = 200;
+    } catch (err: any) {
+      logger.log({ level: 'error', message: err.message, label: 'Daily recap route' });
+      ctx.body = errorBody('Failed to build daily recap', err.message);
+      ctx.status = 400;
+    }
+  });
 
   router.get('/dashboard', async (ctx) => {
     try {

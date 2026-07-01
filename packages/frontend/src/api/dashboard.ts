@@ -32,6 +32,38 @@ export type PortfolioSnapshot = {
   totalValue: number;
 };
 
+export type IndexMovement = {
+  symbol: string;
+  label: string;
+  price: number;
+  percentChange: number;
+  change: number;
+};
+
+export type HoldingMovement = {
+  symbol: string;
+  name: string;
+  percentChange: number;
+  dayGL: number;
+  marketValue: number;
+};
+
+export type AccountMovement = {
+  account: string;
+  dayGL: number;
+  dayGLPercent: number;
+  marketValue: number;
+};
+
+export type DailyRecap = {
+  indices: IndexMovement[];
+  holdings: HoldingMovement[];
+  accounts: AccountMovement[];
+  totalDayGL: number;
+  totalDayGLPercent: number;
+  generatedAt: string;
+};
+
 export class DashboardAPI {
   getDashboard = async (): Promise<Array<HoldingAggregate>> =>
     axios
@@ -44,6 +76,12 @@ export class DashboardAPI {
   getSnapshots = async (): Promise<Array<PortfolioSnapshot>> =>
     axios
       .get(DB_HOST + '/portfolio/snapshots')
+      .then((response) => response.data)
+      .catch(catchCustomError);
+
+  getDailyRecap = async (): Promise<DailyRecap> =>
+    axios
+      .get(DB_HOST + '/dashboard/daily-recap')
       .then((response) => response.data)
       .catch(catchCustomError);
 }

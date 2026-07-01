@@ -6,6 +6,7 @@ export const DB_HOST = import.meta.env.VITE_DB_HOST || 'http://localhost:3001';
 // ---------------------------------------------
 export const NAV_CONFIG = [
   { text: 'Dashboard', href: '/dashboard', icon: 'streamline:dashboard-3-solid' },
+  { text: 'Today', href: '/today', icon: 'tabler:sun' },
   { text: 'Analytics', href: '/analytics', icon: 'tabler:chart-line' },
   { text: 'Alerts', href: '/alerts', icon: 'tabler:bell' },
   { text: 'Database', href: '/database', icon: 'iconoir:database-search' },
