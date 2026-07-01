@@ -19,12 +19,14 @@ import { toast } from 'react-toastify';
 
 import apis from '@/api';
 import type { DailyRecap, HoldingMovement, IndexMovement } from '@/api/dashboard';
-import type { MarketNewsDigest } from '@/api/live';
+import type { MarketMover, MarketMovers, MarketNewsDigest } from '@/api/live';
 import { Iconify } from '@/components/Iconify';
 import { fnCurrency } from '@/utils/formatNumber';
 
 const fmtPct = (v: number) => `${v >= 0 ? '+' : ''}${v.toFixed(2)}%`;
 const fmtSignedCurrency = (v: number) => `${v < 0 ? '-' : '+'}${fnCurrency(Math.abs(v))}`;
+// Market movers are often sub-$1 penny names; keep precision instead of rounding to cents.
+const fmtMoverPrice = (v: number) => (v >= 1 ? fnCurrency(v) : `$${v.toPrecision(2)}`);
 
 function SectionCard({
   title,
@@ -107,6 +109,33 @@ function MoverRow({ h }: { h: HoldingMovement }) {
   );
 }
 
+function MarketMoverRow({ m, rank }: { m: MarketMover; rank: number }) {
+  const theme = useTheme();
+  const up = m.changePercent >= 0;
+  const color = up ? theme.palette.success.main : theme.palette.error.main;
+  return (
+    <Stack direction="row" spacing={1} sx={{ alignItems: 'center', justifyContent: 'space-between', px: 2, py: 1 }}>
+      <Stack direction="row" spacing={1} sx={{ alignItems: 'baseline', minWidth: 0, pr: 1 }}>
+        <Typography sx={{ fontSize: '0.72rem', fontWeight: 800, color: 'text.disabled', minWidth: 16 }}>
+          {rank}
+        </Typography>
+        <Box sx={{ minWidth: 0 }}>
+          <Typography sx={{ fontSize: '0.82rem', fontWeight: 700, color: 'text.primary' }}>{m.symbol}</Typography>
+          <Typography noWrap sx={{ fontSize: '0.68rem', color: 'text.disabled', maxWidth: 180 }}>
+            {m.name}
+          </Typography>
+        </Box>
+      </Stack>
+      <Stack sx={{ alignItems: 'flex-end' }}>
+        <Typography sx={{ fontSize: '0.8rem', fontWeight: 600, color: 'text.primary' }}>
+          {fmtMoverPrice(m.price)}
+        </Typography>
+        <Typography sx={{ fontSize: '0.75rem', fontWeight: 700, color }}>{fmtPct(m.changePercent)}</Typography>
+      </Stack>
+    </Stack>
+  );
+}
+
 function EmptyState({ icon, text }: { icon: string; text: string }) {
   return (
     <Stack sx={{ alignItems: 'center', justifyContent: 'center', p: 3, flexGrow: 1, minHeight: 120 }}>
@@ -136,6 +165,10 @@ export default function Today() {
   const [newsLoading, setNewsLoading] = React.useState(true);
   const [newsError, setNewsError] = React.useState<string | null>(null);
 
+  const [movers, setMovers] = React.useState<MarketMovers | null>(null);
+  const [moversLoading, setMoversLoading] = React.useState(true);
+  const [moversError, setMoversError] = React.useState<string | null>(null);
+
   const loadRecap = React.useCallback(() => {
     setRecapLoading(true);
     apis.dashboard
@@ -162,10 +195,25 @@ export default function Today() {
       .finally(() => setNewsLoading(false));
   }, []);
 
+  const loadMovers = React.useCallback((refresh = false) => {
+    setMoversLoading(true);
+    setMoversError(null);
+    apis.live
+      .getMarketMovers(refresh)
+      .then((data) => setMovers(data))
+      .catch((err) => {
+        setMovers(null);
+        setMoversError(err.message || 'Failed to load market movers');
+        toast.error(err.message || 'Failed to load market movers');
+      })
+      .finally(() => setMoversLoading(false));
+  }, []);
+
   React.useEffect(() => {
     loadRecap();
     loadNews(false);
-  }, [loadRecap, loadNews]);
+    loadMovers(false);
+  }, [loadRecap, loadNews, loadMovers]);
 
   const gainers = React.useMemo(
     () =>
@@ -233,10 +281,10 @@ export default function Today() {
         )}
       </SectionCard>
 
-      {/* Top movers */}
+      {/* Your holdings' movers */}
       <Grid container spacing={2}>
         <Grid size={{ xs: 12, md: 6 }}>
-          <SectionCard title="Top Gainers" icon="eva:trending-up-fill" iconColor={theme.palette.success.main}>
+          <SectionCard title="Your Top Gainers" icon="eva:trending-up-fill" iconColor={theme.palette.success.main}>
             {recapLoading ? (
               <ListSkeleton />
             ) : gainers.length > 0 ? (
@@ -251,7 +299,7 @@ export default function Today() {
           </SectionCard>
         </Grid>
         <Grid size={{ xs: 12, md: 6 }}>
-          <SectionCard title="Top Losers" icon="eva:trending-down-fill" iconColor={theme.palette.error.main}>
+          <SectionCard title="Your Top Losers" icon="eva:trending-down-fill" iconColor={theme.palette.error.main}>
             {recapLoading ? (
               <ListSkeleton />
             ) : losers.length > 0 ? (
@@ -262,6 +310,76 @@ export default function Today() {
               </Stack>
             ) : (
               <EmptyState icon="eva:trending-down-fill" text="No holdings are down today." />
+            )}
+          </SectionCard>
+        </Grid>
+      </Grid>
+
+      {/* Market-wide movers */}
+      <Stack direction="row" spacing={1} sx={{ alignItems: 'center', justifyContent: 'space-between', mt: 0.5 }}>
+        <Typography
+          sx={{
+            fontSize: '0.68rem',
+            fontWeight: 700,
+            color: 'text.disabled',
+            textTransform: 'uppercase',
+            letterSpacing: '0.06em',
+          }}
+        >
+          Market — Top 10 Movers
+        </Typography>
+        <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
+          {movers && (
+            <Typography sx={{ fontSize: '0.65rem', color: 'text.disabled' }}>
+              {moment(movers.generatedAt).fromNow()}
+            </Typography>
+          )}
+          <Tooltip title="Refresh market movers">
+            <span>
+              <IconButton
+                size="small"
+                onClick={() => loadMovers(true)}
+                disabled={moversLoading}
+                sx={{ color: 'text.disabled' }}
+              >
+                <Iconify icon="mingcute:refresh-3-fill" width={16} />
+              </IconButton>
+            </span>
+          </Tooltip>
+        </Stack>
+      </Stack>
+      <Grid container spacing={2}>
+        <Grid size={{ xs: 12, md: 6 }}>
+          <SectionCard title="Market Top Gainers" icon="eva:trending-up-fill" iconColor={theme.palette.success.main}>
+            {moversLoading ? (
+              <ListSkeleton rows={6} />
+            ) : moversError ? (
+              <EmptyState icon="mdi:alert-circle-outline" text={moversError} />
+            ) : movers && movers.gainers.length > 0 ? (
+              <Stack divider={<Divider />}>
+                {movers.gainers.map((m, i) => (
+                  <MarketMoverRow key={m.symbol} m={m} rank={i + 1} />
+                ))}
+              </Stack>
+            ) : (
+              <EmptyState icon="eva:trending-up-fill" text="No market gainers available right now." />
+            )}
+          </SectionCard>
+        </Grid>
+        <Grid size={{ xs: 12, md: 6 }}>
+          <SectionCard title="Market Top Losers" icon="eva:trending-down-fill" iconColor={theme.palette.error.main}>
+            {moversLoading ? (
+              <ListSkeleton rows={6} />
+            ) : moversError ? (
+              <EmptyState icon="mdi:alert-circle-outline" text={moversError} />
+            ) : movers && movers.losers.length > 0 ? (
+              <Stack divider={<Divider />}>
+                {movers.losers.map((m, i) => (
+                  <MarketMoverRow key={m.symbol} m={m} rank={i + 1} />
+                ))}
+              </Stack>
+            ) : (
+              <EmptyState icon="eva:trending-down-fill" text="No market losers available right now." />
             )}
           </SectionCard>
         </Grid>
