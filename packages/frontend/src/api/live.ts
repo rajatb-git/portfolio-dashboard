@@ -37,6 +37,20 @@ export type MarketNewsDigest = {
   generatedAt: string;
 };
 
+export type MarketMover = {
+  symbol: string;
+  name: string;
+  price: number;
+  change: number;
+  changePercent: number;
+};
+
+export type MarketMovers = {
+  gainers: MarketMover[];
+  losers: MarketMover[];
+  generatedAt: string;
+};
+
 export type DocumentParseResult = {
   target: 'transactions' | 'holdings';
   rows: Array<Record<string, any>>;
@@ -140,6 +154,11 @@ export default class LiveAPI {
 
   getMarketNews = async (refresh = false): Promise<MarketNewsDigest> =>
     axios(DB_HOST + `/live/market-news${refresh ? '?refresh=1' : ''}`)
+      .then((r) => r.data)
+      .catch(catchCustomError);
+
+  getMarketMovers = async (refresh = false): Promise<MarketMovers> =>
+    axios(DB_HOST + `/live/market-movers${refresh ? '?refresh=1' : ''}`)
       .then((r) => r.data)
       .catch(catchCustomError);
 

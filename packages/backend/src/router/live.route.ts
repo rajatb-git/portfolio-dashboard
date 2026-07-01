@@ -6,6 +6,7 @@ import { IPOController } from '../controller/IPOController';
 import { IPOInsightsController } from '../controller/IPOInsightsController';
 import { LiveQuoteController } from '../controller/LiveQuoteController';
 import { LiveRecommendationController } from '../controller/LiveRecommendationController';
+import { MarketMoversController } from '../controller/MarketMoversController';
 import { MarketNewsController } from '../controller/MarketNewsController';
 import { NewsSentimentController } from '../controller/NewsSentimentController';
 import {
@@ -210,6 +211,19 @@ export const LiveRouter = () => {
     } catch (err: any) {
       logger.log({ level: 'error', message: err.message, label: 'Get market news' });
       ctx.body = errorBody('Failed to get market news', err.message);
+      ctx.status = 400;
+    }
+  });
+
+  router.get('/live/market-movers', async (ctx) => {
+    try {
+      const forceRefresh = ctx.query.refresh === '1' || ctx.query.refresh === 'true';
+      const result = await new MarketMoversController().getMovers(forceRefresh);
+      ctx.body = result;
+      ctx.status = 200;
+    } catch (err: any) {
+      logger.log({ level: 'error', message: err.message, label: 'Get market movers' });
+      ctx.body = errorBody('Failed to get market movers', err.message);
       ctx.status = 400;
     }
   });

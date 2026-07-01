@@ -26,6 +26,22 @@ const parseDollarAmount = (raw: string | undefined | null): number => {
   return Number.isFinite(num) ? num : 0;
 };
 
+// Strips everything but digits, dot, and a leading minus — handles "+319.05%" and
+// "-91.51%" alike.
+const parsePercent = (raw: string | undefined | null): number => {
+  if (!raw) return 0;
+  const num = parseFloat(raw.replace(/[^0-9.-]/g, ''));
+  return Number.isFinite(num) ? num : 0;
+};
+
+export type NasdaqMover = {
+  symbol: string;
+  name: string;
+  price: number;
+  change: number;
+  changePercent: number;
+};
+
 const fetchNasdaqQuote = async (symbol: string, assetclass: 'etf' | 'stocks'): Promise<QuoteResponse | null> => {
   const base = `https://api.nasdaq.com/api/quote/${symbol}`;
   const opts = { httpsAgent: nasdaqAgent, headers: nasdaqHeaders };
@@ -81,6 +97,35 @@ export const getQuoteFromNasdaq = async (symbol: string): Promise<QuoteResponse>
     }
   }
   throw new Error(`NASDAQ has no quote for symbol ${symbol}`);
+};
+
+// Market-wide top gainers/losers. NASDAQ precomputes these into MostAdvanced /
+// MostDeclined (10 rows each, ranked by % change), so this is a single request that
+// feeds both lists — no client-side sorting of the full universe. These are the
+// whole market's movers (public data), unrelated to the user's holdings, and they
+// naturally include low-priced/penny names just like NASDAQ's own movers page.
+export const getMarketMovers = async (): Promise<{ gainers: NasdaqMover[]; losers: NasdaqMover[] }> => {
+  const mapRows = (section: any): NasdaqMover[] =>
+    (section?.table?.rows ?? [])
+      .map((r: any) => ({
+        symbol: r.symbol,
+        name: r.name,
+        price: parseDollarAmount(r.lastSalePrice),
+        change: parseDollarAmount(r.lastSaleChange),
+        changePercent: parsePercent(r.change),
+      }))
+      .filter((m: NasdaqMover) => m.symbol);
+
+  return axios
+    .get('https://api.nasdaq.com/api/marketmovers', { httpsAgent: nasdaqAgent, headers: nasdaqHeaders })
+    .then((response) => {
+      const stocks = response.data?.data?.STOCKS;
+      return { gainers: mapRows(stocks?.MostAdvanced), losers: mapRows(stocks?.MostDeclined) };
+    })
+    .catch((error: AxiosError) => {
+      logger.log({ level: 'error', label: error.status, message: `NASDAQ market movers failed: ${error.message}` });
+      throw error;
+    });
 };
 
 export const getPriceHistoryAreaChart = (symbol: string, range: Range): Promise<any> => {
