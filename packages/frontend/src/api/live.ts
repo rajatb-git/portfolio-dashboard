@@ -22,6 +22,21 @@ export type AgentInsight = {
   generatedAt: string;
 };
 
+export type MarketNewsArticle = {
+  headline: string;
+  summary: string;
+  category: string;
+  source: string;
+  url: string;
+};
+
+export type MarketNewsDigest = {
+  articles: MarketNewsArticle[];
+  provider: string;
+  model: string;
+  generatedAt: string;
+};
+
 export type DocumentParseResult = {
   target: 'transactions' | 'holdings';
   rows: Array<Record<string, any>>;
@@ -120,6 +135,11 @@ export default class LiveAPI {
 
   getPortfolioSentiment = async (): Promise<any> =>
     axios(DB_HOST + '/live/portfolio-sentiment')
+      .then((r) => r.data)
+      .catch(catchCustomError);
+
+  getMarketNews = async (refresh = false): Promise<MarketNewsDigest> =>
+    axios(DB_HOST + `/live/market-news${refresh ? '?refresh=1' : ''}`)
       .then((r) => r.data)
       .catch(catchCustomError);
 

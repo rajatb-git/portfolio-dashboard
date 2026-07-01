@@ -6,6 +6,7 @@ import { IPOController } from '../controller/IPOController';
 import { IPOInsightsController } from '../controller/IPOInsightsController';
 import { LiveQuoteController } from '../controller/LiveQuoteController';
 import { LiveRecommendationController } from '../controller/LiveRecommendationController';
+import { MarketNewsController } from '../controller/MarketNewsController';
 import { NewsSentimentController } from '../controller/NewsSentimentController';
 import {
   getCompanyNews,
@@ -200,7 +201,20 @@ export const LiveRouter = () => {
   });
 
 
-router.get('/live/portfolio-sentiment', async (ctx) => {
+  router.get('/live/market-news', async (ctx) => {
+    try {
+      const forceRefresh = ctx.query.refresh === '1' || ctx.query.refresh === 'true';
+      const result = await new MarketNewsController().getTopNews(forceRefresh);
+      ctx.body = result;
+      ctx.status = 200;
+    } catch (err: any) {
+      logger.log({ level: 'error', message: err.message, label: 'Get market news' });
+      ctx.body = errorBody('Failed to get market news', err.message);
+      ctx.status = 400;
+    }
+  });
+
+  router.get('/live/portfolio-sentiment', async (ctx) => {
     try {
       const result = await new NewsSentimentController().getSentiment();
       ctx.body = result;

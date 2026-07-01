@@ -13,6 +13,7 @@ import { useIdleLock } from '@/hooks/useIdleLock';
 import { DRAWER_WIDTH, DRAWER_COLLAPSED_WIDTH } from '@/config';
 
 const Dashboard = React.lazy(() => import('@/pages/Dashboard'));
+const Today = React.lazy(() => import('@/pages/Today'));
 const Analytics = React.lazy(() => import('@/pages/Analytics'));
 const Alerts = React.lazy(() => import('@/pages/Alerts'));
 const Database = React.lazy(() => import('@/pages/Database'));
@@ -74,6 +75,7 @@ function AppShell() {
           <Routes>
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
             <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/today" element={<Today />} />
             <Route path="/analytics" element={<Analytics />} />
             <Route path="/alerts" element={<Alerts />} />
             <Route path="/database" element={<Database />} />
