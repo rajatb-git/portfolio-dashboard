@@ -21,7 +21,7 @@ import apis from '@/api';
 import type { DailyRecap, HoldingMovement, IndexMovement } from '@/api/dashboard';
 import type { MarketMover, MarketMovers, MarketNewsDigest } from '@/api/live';
 import { Iconify } from '@/components/Iconify';
-import { fnCurrency } from '@/utils/formatNumber';
+import { fnCurrency, fnShortenCurrency } from '@/utils/formatNumber';
 
 const fmtPct = (v: number) => `${v >= 0 ? '+' : ''}${v.toFixed(2)}%`;
 const fmtSignedCurrency = (v: number) => `${v < 0 ? '-' : '+'}${fnCurrency(Math.abs(v))}`;
@@ -124,6 +124,11 @@ function MarketMoverRow({ m, rank }: { m: MarketMover; rank: number }) {
           <Typography noWrap sx={{ fontSize: '0.68rem', color: 'text.disabled', maxWidth: 180 }}>
             {m.name}
           </Typography>
+          {m.marketCap > 0 && (
+            <Typography sx={{ fontSize: '0.62rem', color: 'text.disabled' }}>
+              {fnShortenCurrency(m.marketCap)} cap
+            </Typography>
+          )}
         </Box>
       </Stack>
       <Stack sx={{ alignItems: 'flex-end' }}>

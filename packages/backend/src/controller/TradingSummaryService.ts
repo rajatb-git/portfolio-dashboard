@@ -72,19 +72,32 @@ class TradingSummaryService {
 
     try {
       const recap = await buildDailyRecap();
+      logger.log({
+        level: 'info',
+        label: LABEL,
+        message: `${slot} recap: ${recap.indices.length} indices, ${recap.accounts.length} accounts, ${recap.holdings.length} holdings`,
+      });
 
       const base = { slot, generatedAt: recap.generatedAt };
       let published = 0;
-      const publish = async (payload: object): Promise<void> => {
-        if (await mqttPublisher.publish(JSON.stringify(payload), config.topic)) published += 1;
+      // Each summary goes to its own subtopic (…/market, …/pnl, …/holdings). Publishing
+      // all three to one topic made consumers (Home Assistant, mobile push bridges)
+      // coalesce/retain them into a single notification — hence "only one arrived".
+      const publish = async (kind: string, payload: object): Promise<void> => {
+        const topic = `${config.topic}/${kind}`;
+        const ok = await mqttPublisher.publish(JSON.stringify({ ...base, kind, ...payload }), topic);
+        if (ok) published += 1;
+        logger.log({
+          level: ok ? 'info' : 'warn',
+          label: LABEL,
+          message: `${ok ? 'published' : 'FAILED to publish'} ${slot} ${kind} → ${topic}`,
+        });
       };
 
       // 1) Market summary — public index data.
       const { indices } = recap;
       if (indices.length > 0) {
-        await publish({
-          ...base,
-          kind: 'market',
+        await publish('market', {
           title: `Market summary — ${SLOT_LABEL[slot]}`,
           message: indices.map((i) => `${i.label} ${signedPct(i.percentChange)}`).join(' · '),
           indices,
@@ -94,9 +107,7 @@ class TradingSummaryService {
       // 2) Per-account day P&L — personal data, user's broker only.
       const accountsPnl = recap.accounts;
       if (accountsPnl.length > 0) {
-        await publish({
-          ...base,
-          kind: 'accountPnl',
+        await publish('pnl', {
           title: `Today's P&L — ${SLOT_LABEL[slot]}`,
           message: `Total ${usd(recap.totalDayGL)} (${signedPct(recap.totalDayGLPercent)}) · ${accountsPnl
             .map((a) => `${a.account} ${usd(a.dayGL)} (${signedPct(a.dayGLPercent)})`)
@@ -104,6 +115,12 @@ class TradingSummaryService {
           totalDayGL: recap.totalDayGL,
           totalDayGLPercent: recap.totalDayGLPercent,
           accounts: accountsPnl,
+        });
+      } else {
+        logger.log({
+          level: 'warn',
+          label: LABEL,
+          message: `${slot}: no priced holdings — P&L and holdings summaries skipped (check holdings/accounts and live quotes)`,
         });
       }
 
@@ -113,9 +130,7 @@ class TradingSummaryService {
         .slice(0, config.topHoldingsCount);
 
       if (topHoldings.length > 0) {
-        await publish({
-          ...base,
-          kind: 'holdings',
+        await publish('holdings', {
           title: `Top holdings — ${SLOT_LABEL[slot]}`,
           message: topHoldings.map((h) => `${h.symbol} ${signedPct(h.percentChange)}`).join(' · '),
           holdings: topHoldings,

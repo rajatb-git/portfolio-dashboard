@@ -43,6 +43,8 @@ export type MarketMover = {
   price: number;
   change: number;
   changePercent: number;
+  marketCap: number;
+  volume: number;
 };
 
 export type MarketMovers = {
