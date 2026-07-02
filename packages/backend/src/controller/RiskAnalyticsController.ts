@@ -21,7 +21,17 @@ const TRADING_DAYS_PER_YEAR = 252;
 export const calculateRiskMetrics = async (): Promise<RiskMetrics> => {
   const snapshotModel = await PortfolioSnapshotDBModel().initialize();
   const allSnapshots = snapshotModel.getAllRecords();
-  const sorted = [...allSnapshots].sort((a, b) => a.date.localeCompare(b.date));
+
+  // Snapshots are recorded intraday (every N minutes), but the risk math is
+  // daily — collapse to the last (closing) value of each calendar day.
+  const byDay = new Map<string, IPortfolioSnapshotModel>();
+  for (const s of allSnapshots) {
+    const existing = byDay.get(s.date);
+    if (!existing || (s.timestamp ?? s.date) > (existing.timestamp ?? existing.date)) {
+      byDay.set(s.date, s);
+    }
+  }
+  const sorted = [...byDay.values()].sort((a, b) => a.date.localeCompare(b.date));
 
   if (sorted.length < 2) {
     return {

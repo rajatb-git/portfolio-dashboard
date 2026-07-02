@@ -28,7 +28,8 @@ export type HoldingAggregate = {
 };
 
 export type PortfolioSnapshot = {
-  date: string; // YYYY-MM-DD
+  timestamp: string; // ISO 8601, unique per calculation
+  date: string; // YYYY-MM-DD calendar day
   totalValue: number;
 };
 
