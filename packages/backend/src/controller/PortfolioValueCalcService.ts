@@ -64,9 +64,15 @@ class PortfolioValueCalcService {
         return;
       }
 
-      const today = moment().format('YYYY-MM-DD');
+      const now = moment();
+      const timestamp = now.toISOString();
       const snapshotModel = await PortfolioSnapshotDBModel().initialize();
-      await snapshotModel.insertOrUpdate({ date: today, totalValue: +totalValue.toFixed(2) }, today);
+      // Each run is its own data point — keyed by timestamp so intraday
+      // snapshots accumulate instead of overwriting a single per-day record.
+      await snapshotModel.insertOne(
+        { timestamp, date: now.format('YYYY-MM-DD'), totalValue: +totalValue.toFixed(2) },
+        timestamp
+      );
 
       logger.log({ level: 'info', message: `Portfolio snapshot updated: $${totalValue.toFixed(2)}`, label: LABEL });
     } catch (err: any) {
