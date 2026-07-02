@@ -1,6 +1,6 @@
 {
   "name": "@portfolio/backend",
-  "version": "3.3.1",
+  "version": "3.4.0",
   "description": "",
   "main": "dist",
   "scripts": {
@@ -26,6 +26,7 @@
     "archiver": "^8.0.0",
     "axios": "^1.16.1",
     "dotenv": "^17.4.2",
+    "fast-xml-parser": "^5.9.3",
     "koa": "^3.2.1",
     "koa-bodyparser": "^4.4.1",
     "koa-helmet": "^9.0.0",

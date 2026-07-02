@@ -1,5 +1,3 @@
-import * as React from 'react';
-
 import {
   Box,
   Card,
@@ -14,6 +12,7 @@ import {
   useTheme,
 } from '@mui/material';
 import moment from 'moment';
+import * as React from 'react';
 import { toast } from 'react-toastify';
 
 import apis from '@/api';
@@ -236,8 +235,7 @@ export default function Today() {
     [recap]
   );
 
-  const totalColor =
-    recap && recap.totalDayGL >= 0 ? theme.palette.success.main : theme.palette.error.main;
+  const totalColor = recap && recap.totalDayGL >= 0 ? theme.palette.success.main : theme.palette.error.main;
 
   return (
     <Stack spacing={2}>
@@ -253,7 +251,12 @@ export default function Today() {
           {!recapLoading && recap && (
             <Stack sx={{ alignItems: 'flex-end' }}>
               <Typography
-                sx={{ fontSize: '0.62rem', color: 'text.disabled', textTransform: 'uppercase', letterSpacing: '0.06em' }}
+                sx={{
+                  fontSize: '0.62rem',
+                  color: 'text.disabled',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.06em',
+                }}
               >
                 Portfolio day P&L
               </Typography>
@@ -417,11 +420,13 @@ export default function Today() {
             <Typography sx={{ color: 'error.main', fontSize: '0.82rem', textAlign: 'center', fontWeight: 500 }}>
               Couldn&apos;t load market news
             </Typography>
-            <Typography sx={{ color: 'text.disabled', fontSize: '0.75rem', textAlign: 'center', mt: 0.5, maxWidth: 420 }}>
+            <Typography
+              sx={{ color: 'text.disabled', fontSize: '0.75rem', textAlign: 'center', mt: 0.5, maxWidth: 420 }}
+            >
               {newsError}
             </Typography>
             <Typography sx={{ color: 'text.disabled', fontSize: '0.7rem', textAlign: 'center', mt: 1 }}>
-              Top headlines come from NewsAPI — set NEWS_API_KEY in the backend environment to enable them.
+              Top headlines are aggregated from public financial-news RSS feeds (CNBC, Nasdaq).
             </Typography>
           </Stack>
         ) : news && news.articles.length > 0 ? (
@@ -472,7 +477,7 @@ export default function Today() {
               ))}
             </Stack>
             <Typography sx={{ px: 2, py: 1.5, fontSize: '0.62rem', color: 'text.disabled', fontStyle: 'italic' }}>
-              Top US business headlines via NewsAPI{news ? ` · ${moment(news.generatedAt).fromNow()}` : ''}.
+              Top US market headlines via CNBC &amp; Nasdaq RSS{news ? ` · ${moment(news.generatedAt).fromNow()}` : ''}.
             </Typography>
           </>
         ) : (

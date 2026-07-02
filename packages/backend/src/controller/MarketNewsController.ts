@@ -3,8 +3,8 @@ import { getTopBusinessHeadlines } from '../externalApis/newsApi';
 import { CacheDBModel } from '../models/CacheModel';
 import { logger } from '../utils/winston';
 
-// Top US business headlines, sourced directly from NewsAPI's editor-ranked
-// top-headlines feed. Public news data only — no AI provider and no personal
+// Top US market headlines, aggregated from public financial-news RSS feeds
+// (CNBC, Nasdaq). Public news data only — no AI provider and no personal
 // portfolio data involved.
 
 export type MarketNewsArticle = {
@@ -44,7 +44,7 @@ export class MarketNewsController {
       throw new Error('No market news available from the data source right now');
     }
 
-    const digest: MarketNewsDigest = { articles, source: 'NewsAPI', generatedAt: moment().toISOString() };
+    const digest: MarketNewsDigest = { articles, source: 'RSS', generatedAt: moment().toISOString() };
     await cacheModel.insertOrUpdate({ key: CACHE_KEY, value: JSON.stringify(digest) }, CACHE_KEY);
     logger.log({ level: 'info', label: LABEL, message: `Fetched ${articles.length} top business headlines` });
 
