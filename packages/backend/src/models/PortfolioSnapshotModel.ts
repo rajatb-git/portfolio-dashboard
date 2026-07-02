@@ -1,11 +1,13 @@
 import { ISkewerModel, SchemaType, SkewerModel } from 'skewer-db';
 
 export interface IPortfolioSnapshot {
-  date: string; // YYYY-MM-DD, used as record ID
+  timestamp: string; // ISO 8601, unique per calculation — used as record ID
+  date: string; // YYYY-MM-DD, calendar day this snapshot belongs to
   totalValue: number;
 }
 
 export const PortfolioSnapshotSchema: SchemaType = {
+  timestamp: { type: String, required: true },
   date: { type: String, required: true },
   totalValue: { type: Number, required: true },
 };

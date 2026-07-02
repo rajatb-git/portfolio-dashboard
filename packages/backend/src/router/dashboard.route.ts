@@ -37,7 +37,7 @@ export const DashboardRouter = () => {
     try {
       const snapshotModel = await PortfolioSnapshotDBModel().initialize();
       const all = snapshotModel.getAllRecords();
-      const sorted = [...all].sort((a, b) => a.date.localeCompare(b.date));
+      const sorted = [...all].sort((a, b) => (a.timestamp ?? a.date).localeCompare(b.timestamp ?? b.date));
       ctx.body = sorted;
       ctx.status = 200;
     } catch (err: any) {

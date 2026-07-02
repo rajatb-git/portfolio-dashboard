@@ -80,11 +80,11 @@ export default function PortfolioPerformanceChart({ snapshots }: Props) {
 
   // Filter snapshots to selected range
   const cutoffMs = range === 'All' ? 0 : moment().subtract(RANGE_DAYS[range], 'days').valueOf();
-  const filteredSnapshots = snapshots.filter((s) => moment(s.date).valueOf() >= cutoffMs);
+  const filteredSnapshots = snapshots.filter((s) => moment(s.timestamp ?? s.date).valueOf() >= cutoffMs);
 
   // Portfolio series: [{x: timestamp_ms, y: totalValue}]
   const portfolioSeries = filteredSnapshots.map((s) => ({
-    x: moment(s.date).valueOf(),
+    x: moment(s.timestamp ?? s.date).valueOf(),
     y: s.totalValue,
   }));
 
@@ -92,7 +92,7 @@ export default function PortfolioPerformanceChart({ snapshots }: Props) {
   const buildSpySeries = (): { x: number; y: number }[] => {
     if (!spyRaw.length || filteredSnapshots.length < 1) return [];
     const portfolioStartValue = filteredSnapshots[0].totalValue;
-    const portfolioStartTs = moment(filteredSnapshots[0].date).valueOf();
+    const portfolioStartTs = moment(filteredSnapshots[0].timestamp ?? filteredSnapshots[0].date).valueOf();
 
     // Parse OHLCV candlestick data — format can be [ts, o, h, l, c] arrays
     // or {x: ts, y: [o, h, l, c]} objects
@@ -163,7 +163,7 @@ export default function PortfolioPerformanceChart({ snapshots }: Props) {
       opposite: true,
     },
     tooltip: {
-      x: { format: 'MMM dd, yyyy' },
+      x: { format: 'MMM dd, yyyy HH:mm' },
       y: { formatter: (val) => fnCurrency(val) },
     },
     legend: { show: true, position: 'top', horizontalAlign: 'left' },

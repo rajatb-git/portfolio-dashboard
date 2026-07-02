@@ -110,12 +110,17 @@ export const createDashboard = async (): Promise<Array<HoldingAggregate>> => {
   // in as today's snapshot and corrupt the performance chart.
   try {
     if (result.length === allHoldings.length) {
-      const today = moment().format('YYYY-MM-DD');
+      const now = moment();
+      const today = now.format('YYYY-MM-DD');
       const totalValue = +result.reduce((sum, h) => sum + h.marketValue, 0).toFixed(2);
       const snapshotModel = await PortfolioSnapshotDBModel().initialize();
-      const existing = snapshotModel.findById(today);
-      if (!existing) {
-        await snapshotModel.insertOne({ date: today, totalValue }, today);
+      // Fallback daily point for when the 30-minute service isn't running.
+      // Skip if any snapshot already exists for today so we don't duplicate
+      // the intraday points the background service records.
+      const hasToday = snapshotModel.getAllRecords().some((s) => s.date === today);
+      if (!hasToday) {
+        const timestamp = now.toISOString();
+        await snapshotModel.insertOne({ timestamp, date: today, totalValue }, timestamp);
       }
     }
   } catch {
