@@ -40,7 +40,17 @@ export type NasdaqMover = {
   price: number;
   change: number;
   changePercent: number;
+  marketCap: number;
+  volume: number;
 };
+
+// Movers are drawn from the screener (not /marketmovers) so we can restrict to
+// real, liquid companies: mid-cap and up, priced above a floor. Without this the
+// "top movers" are dominated by sub-dollar penny names with triple-digit swings.
+const MOVER_MARKETCAP_TIERS = 'mega|large|mid'; // roughly ≥ $2B
+const MOVER_MIN_PRICE = 5;
+const MOVER_MIN_MARKETCAP = 2_000_000_000;
+const MOVER_LIMIT = 10;
 
 const fetchNasdaqQuote = async (symbol: string, assetclass: 'etf' | 'stocks'): Promise<QuoteResponse | null> => {
   const base = `https://api.nasdaq.com/api/quote/${symbol}`;
@@ -99,28 +109,39 @@ export const getQuoteFromNasdaq = async (symbol: string): Promise<QuoteResponse>
   throw new Error(`NASDAQ has no quote for symbol ${symbol}`);
 };
 
-// Market-wide top gainers/losers. NASDAQ precomputes these into MostAdvanced /
-// MostDeclined (10 rows each, ranked by % change), so this is a single request that
-// feeds both lists — no client-side sorting of the full universe. These are the
-// whole market's movers (public data), unrelated to the user's holdings, and they
-// naturally include low-priced/penny names just like NASDAQ's own movers page.
+// Market-wide top gainers/losers, restricted to liquid mid-cap-and-up names above
+// a price floor (see constants above) so the lists are actually useful rather than
+// penny-stock noise. Pulls the filtered screener universe once, then ranks by
+// % change to derive both lists. Public market data, unrelated to the user's holdings.
 export const getMarketMovers = async (): Promise<{ gainers: NasdaqMover[]; losers: NasdaqMover[] }> => {
-  const mapRows = (section: any): NasdaqMover[] =>
-    (section?.table?.rows ?? [])
-      .map((r: any) => ({
-        symbol: r.symbol,
-        name: r.name,
-        price: parseDollarAmount(r.lastSalePrice),
-        change: parseDollarAmount(r.lastSaleChange),
-        changePercent: parsePercent(r.change),
-      }))
-      .filter((m: NasdaqMover) => m.symbol);
+  const url = `https://api.nasdaq.com/api/screener/stocks?tableonly=false&limit=25&offset=0&marketcap=${MOVER_MARKETCAP_TIERS}&download=true`;
 
   return axios
-    .get('https://api.nasdaq.com/api/marketmovers', { httpsAgent: nasdaqAgent, headers: nasdaqHeaders })
+    .get(url, { httpsAgent: nasdaqAgent, headers: nasdaqHeaders })
     .then((response) => {
-      const stocks = response.data?.data?.STOCKS;
-      return { gainers: mapRows(stocks?.MostAdvanced), losers: mapRows(stocks?.MostDeclined) };
+      const rows = response.data?.data?.rows ?? response.data?.data?.table?.rows ?? [];
+      const parsed: NasdaqMover[] = rows
+        .map((r: any) => ({
+          symbol: r.symbol,
+          name: r.name,
+          price: parseDollarAmount(r.lastsale),
+          change: parseDollarAmount(r.netchange),
+          changePercent: parsePercent(r.pctchange),
+          marketCap: parseFloat(String(r.marketCap ?? '').replace(/[^0-9.]/g, '')) || 0,
+          volume: parseInt(String(r.volume ?? '').replace(/[^0-9]/g, ''), 10) || 0,
+        }))
+        .filter(
+          (m: NasdaqMover) =>
+            m.symbol &&
+            Number.isFinite(m.changePercent) &&
+            m.changePercent !== 0 &&
+            m.price >= MOVER_MIN_PRICE &&
+            m.marketCap >= MOVER_MIN_MARKETCAP
+        );
+
+      const gainers = [...parsed].sort((a, b) => b.changePercent - a.changePercent).slice(0, MOVER_LIMIT);
+      const losers = [...parsed].sort((a, b) => a.changePercent - b.changePercent).slice(0, MOVER_LIMIT);
+      return { gainers, losers };
     })
     .catch((error: AxiosError) => {
       logger.log({ level: 'error', label: error.status, message: `NASDAQ market movers failed: ${error.message}` });

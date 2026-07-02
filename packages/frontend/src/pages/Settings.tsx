@@ -932,7 +932,10 @@ export default function Settings() {
                 <MenuItem value={10}>Top 10 holdings</MenuItem>
               </Select>
             </SettingRow>
-            <SettingRow label="Topic" description="MQTT topic the daily summaries are published to">
+            <SettingRow
+              label="Topic"
+              description="Base MQTT topic. Each summary publishes to a subtopic — <topic>/market, <topic>/pnl, <topic>/holdings — so subscribe to <topic>/# to receive all three."
+            >
               <TextField
                 size="small"
                 value={draftSummary.topic}

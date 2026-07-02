@@ -25,15 +25,15 @@ export type AgentInsight = {
 export type MarketNewsArticle = {
   headline: string;
   summary: string;
-  category: string;
   source: string;
   url: string;
+  imageUrl: string;
+  publishedAt: string;
 };
 
 export type MarketNewsDigest = {
   articles: MarketNewsArticle[];
-  provider: string;
-  model: string;
+  source: string;
   generatedAt: string;
 };
 
@@ -43,6 +43,8 @@ export type MarketMover = {
   price: number;
   change: number;
   changePercent: number;
+  marketCap: number;
+  volume: number;
 };
 
 export type MarketMovers = {

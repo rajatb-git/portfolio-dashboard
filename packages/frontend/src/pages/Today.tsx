@@ -3,7 +3,6 @@ import * as React from 'react';
 import {
   Box,
   Card,
-  Chip,
   Divider,
   Grid,
   IconButton,
@@ -21,7 +20,7 @@ import apis from '@/api';
 import type { DailyRecap, HoldingMovement, IndexMovement } from '@/api/dashboard';
 import type { MarketMover, MarketMovers, MarketNewsDigest } from '@/api/live';
 import { Iconify } from '@/components/Iconify';
-import { fnCurrency } from '@/utils/formatNumber';
+import { fnCurrency, fnShortenCurrency } from '@/utils/formatNumber';
 
 const fmtPct = (v: number) => `${v >= 0 ? '+' : ''}${v.toFixed(2)}%`;
 const fmtSignedCurrency = (v: number) => `${v < 0 ? '-' : '+'}${fnCurrency(Math.abs(v))}`;
@@ -124,6 +123,11 @@ function MarketMoverRow({ m, rank }: { m: MarketMover; rank: number }) {
           <Typography noWrap sx={{ fontSize: '0.68rem', color: 'text.disabled', maxWidth: 180 }}>
             {m.name}
           </Typography>
+          {m.marketCap > 0 && (
+            <Typography sx={{ fontSize: '0.62rem', color: 'text.disabled' }}>
+              {fnShortenCurrency(m.marketCap)} cap
+            </Typography>
+          )}
         </Box>
       </Stack>
       <Stack sx={{ alignItems: 'flex-end' }}>
@@ -385,41 +389,24 @@ export default function Today() {
         </Grid>
       </Grid>
 
-      {/* AI market news */}
+      {/* Market news */}
       <SectionCard
-        title="AI Market News"
-        icon="fluent:brain-sparkle-20-filled"
-        iconColor="#8b5cf6"
+        title="Top Market News"
+        icon="mdi:newspaper-variant-outline"
+        iconColor="#3b82f6"
         action={
-          <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
-            {news?.provider && (
-              <Chip
-                label={`${news.provider} · ${news.model}`}
+          <Tooltip title="Refresh headlines">
+            <span>
+              <IconButton
                 size="small"
-                sx={{
-                  height: 20,
-                  fontSize: '0.62rem',
-                  fontWeight: 500,
-                  bgcolor: 'action.hover',
-                  color: 'text.disabled',
-                  border: '1px solid',
-                  borderColor: 'divider',
-                }}
-              />
-            )}
-            <Tooltip title="Regenerate">
-              <span>
-                <IconButton
-                  size="small"
-                  onClick={() => loadNews(true)}
-                  disabled={newsLoading}
-                  sx={{ color: 'text.disabled' }}
-                >
-                  <Iconify icon="mingcute:refresh-3-fill" width={16} />
-                </IconButton>
-              </span>
-            </Tooltip>
-          </Stack>
+                onClick={() => loadNews(true)}
+                disabled={newsLoading}
+                sx={{ color: 'text.disabled' }}
+              >
+                <Iconify icon="mingcute:refresh-3-fill" width={16} />
+              </IconButton>
+            </span>
+          </Tooltip>
         }
       >
         {newsLoading ? (
@@ -434,7 +421,7 @@ export default function Today() {
               {newsError}
             </Typography>
             <Typography sx={{ color: 'text.disabled', fontSize: '0.7rem', textAlign: 'center', mt: 1 }}>
-              This feature uses your configured AI provider — enable and set one up under Settings → AI Agent.
+              Top headlines come from NewsAPI — set NEWS_API_KEY in the backend environment to enable them.
             </Typography>
           </Stack>
         ) : news && news.articles.length > 0 ? (
@@ -468,15 +455,15 @@ export default function Today() {
                         </Typography>
                       )}
                       <Stack direction="row" spacing={1} sx={{ alignItems: 'center', mt: 0.5, flexWrap: 'wrap' }}>
-                        {a.category && (
-                          <Chip
-                            label={a.category}
-                            size="small"
-                            sx={{ height: 18, fontSize: '0.6rem', bgcolor: 'action.hover', color: 'text.disabled' }}
-                          />
-                        )}
                         {a.source && (
-                          <Typography sx={{ fontSize: '0.66rem', color: 'text.disabled' }}>{a.source}</Typography>
+                          <Typography sx={{ fontSize: '0.66rem', fontWeight: 600, color: 'text.disabled' }}>
+                            {a.source}
+                          </Typography>
+                        )}
+                        {a.publishedAt && (
+                          <Typography sx={{ fontSize: '0.66rem', color: 'text.disabled' }}>
+                            {moment(a.publishedAt).fromNow()}
+                          </Typography>
                         )}
                       </Stack>
                     </Box>
@@ -485,12 +472,11 @@ export default function Today() {
               ))}
             </Stack>
             <Typography sx={{ px: 2, py: 1.5, fontSize: '0.62rem', color: 'text.disabled', fontStyle: 'italic' }}>
-              AI-curated from public market news{news ? ` · ${moment(news.generatedAt).fromNow()}` : ''}. For
-              informational purposes only.
+              Top US business headlines via NewsAPI{news ? ` · ${moment(news.generatedAt).fromNow()}` : ''}.
             </Typography>
           </>
         ) : (
-          <EmptyState icon="fluent:brain-sparkle-20-regular" text="No market news available right now." />
+          <EmptyState icon="mdi:newspaper-variant-outline" text="No market news available right now." />
         )}
       </SectionCard>
     </Stack>
