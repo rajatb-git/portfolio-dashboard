@@ -86,6 +86,16 @@ const repairFile = (filePath: string): void => {
 export const repairStorage = (): void => {
   if (!fs.existsSync(STORAGE_DIR)) return;
   for (const file of fs.readdirSync(STORAGE_DIR)) {
+    // Temp files left behind by a crash mid-write — the data never replaced
+    // the real file, so they're safe to discard.
+    if (/\.json\.tmp-/.test(file)) {
+      try {
+        fs.unlinkSync(path.join(STORAGE_DIR, file));
+      } catch {
+        // best-effort cleanup
+      }
+      continue;
+    }
     if (!file.endsWith('.json')) continue;
     repairFile(path.join(STORAGE_DIR, file));
   }
@@ -98,8 +108,13 @@ export const repairStorage = (): void => {
 const patchAtomicWrites = (): void => {
   try {
     const { FileStorage } = require('skewer-db/dist/Storage');
+    // A pid + Date.now() suffix is not unique: on first boot several models
+    // initialize the same file concurrently, two writes can land in the same
+    // millisecond, collide on the temp name, and the second rename crashes the
+    // process with ENOENT. The counter makes every temp name unique.
+    let writeSeq = 0;
     FileStorage.write = async (filePath: string, data: string): Promise<void> => {
-      const tmp = `${filePath}.tmp-${process.pid}-${Date.now()}`;
+      const tmp = `${filePath}.tmp-${process.pid}-${writeSeq++}`;
       await fs.promises.writeFile(tmp, data);
       await fs.promises.rename(tmp, filePath);
     };
