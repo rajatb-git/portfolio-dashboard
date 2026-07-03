@@ -808,6 +808,8 @@ export default function Settings() {
               <MenuItem value={15}>Every 15 minutes</MenuItem>
               <MenuItem value={30}>Every 30 minutes</MenuItem>
               <MenuItem value={60}>Every 60 minutes</MenuItem>
+              <MenuItem value={120}>Every 2 hours</MenuItem>
+              <MenuItem value={240}>Every 4 hours</MenuItem>
             </Select>
           </SettingRow>
         )}
