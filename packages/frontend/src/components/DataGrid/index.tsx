@@ -31,11 +31,12 @@ declare module '@mui/x-data-grid' {
     setRows: (newRows: (oldRows: GridRowsProp) => GridRowsProp) => void;
     setRowModesModel: (newModel: (oldModel: GridRowModesModel) => GridRowModesModel) => void;
     refreshData: () => void;
+    readOnly: boolean;
   }
 }
 
 function EditToolbar(props: GridSlotProps['toolbar']) {
-  const { setRows, setRowModesModel, refreshData } = props;
+  const { setRows, setRowModesModel, refreshData, readOnly } = props;
 
   const handleAddRow = () => {
     setRows((oldRows) => [...oldRows, { id: 'temp', name: '', isNew: true }]);
@@ -47,9 +48,11 @@ function EditToolbar(props: GridSlotProps['toolbar']) {
 
   return (
     <GridToolbarContainer>
-      <Button color="primary" startIcon={<AddIcon />} onClick={handleAddRow}>
-        Add record
-      </Button>
+      {!readOnly && (
+        <Button color="primary" startIcon={<AddIcon />} onClick={handleAddRow}>
+          Add record
+        </Button>
+      )}
 
       <Box sx={{ flexGrow: 1 }} />
 
@@ -65,9 +68,10 @@ export default function GenericGrid(props: {
   deleteRecord: any;
   insertOrUpdateRecord: any;
   loadData: any;
-  activeCollection: 'accounts' | 'transactions' | 'holdings';
+  activeCollection: string;
   dynamicColumns: Array<GridColDef>;
   refreshPage: any;
+  readOnly?: boolean;
 }) {
   const [rows, setRows] = React.useState<Array<any>>(props.initialRows);
   const [rowModesModel, setRowModesModel] = React.useState<GridRowModesModel>({});
@@ -170,14 +174,18 @@ export default function GenericGrid(props: {
         }
 
         return [
-          <GridActionsCellItem
-            key={row.id}
-            icon={<EditIcon />}
-            label="Edit"
-            className="textPrimary"
-            onClick={handleEditClick(row.id)}
-            color="inherit"
-          />,
+          ...(props.readOnly
+            ? []
+            : [
+                <GridActionsCellItem
+                  key={row.id}
+                  icon={<EditIcon />}
+                  label="Edit"
+                  className="textPrimary"
+                  onClick={handleEditClick(row.id)}
+                  color="inherit"
+                />,
+              ]),
           <GridActionsCellItem
             key={row.id}
             icon={<DeleteIcon />}
@@ -216,7 +224,12 @@ export default function GenericGrid(props: {
             toolbar: EditToolbar,
           }}
           slotProps={{
-            toolbar: { setRows: setRows as any, setRowModesModel, refreshData: props.loadData },
+            toolbar: {
+              setRows: setRows as any,
+              setRowModesModel,
+              refreshData: props.loadData,
+              readOnly: !!props.readOnly,
+            },
           }}
         />
       </Card>

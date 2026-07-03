@@ -5,6 +5,7 @@ import LogsAPI from './logs';
 import TransactionsAPI from './transactions';
 import AccountsAPI from './account';
 import AnalyticsAPI from './analytics';
+import DatabaseAPI from './database';
 import AuthAPI from './auth';
 import AlertsAPI from './alerts';
 import NotesAPI from './notes';
@@ -18,6 +19,7 @@ const apis = {
   transactions: new TransactionsAPI(),
   logs: new LogsAPI(),
   analytics: new AnalyticsAPI(),
+  database: new DatabaseAPI(),
   auth: new AuthAPI(),
   settings: new SettingsAPI(),
   notes: new NotesAPI(),

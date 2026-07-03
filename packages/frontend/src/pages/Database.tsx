@@ -61,6 +61,20 @@ const timestampColumns: Array<GridColDef> = [
   },
 ];
 
+type CollectionName = 'accounts' | 'holdings' | 'transactions' | 'alerts' | 'notes' | 'portfolio_snapshots';
+
+const COLLECTIONS: Array<{ value: CollectionName; label: string }> = [
+  { value: 'accounts', label: 'accounts' },
+  { value: 'holdings', label: 'holdings' },
+  { value: 'transactions', label: 'transactions' },
+  { value: 'alerts', label: 'alerts' },
+  { value: 'notes', label: 'notes' },
+  { value: 'portfolio_snapshots', label: 'portfolio snapshots' },
+];
+
+// Collections without dedicated CRUD editors — shown read-only with per-record delete.
+const READ_ONLY_COLLECTIONS: Array<CollectionName> = ['alerts', 'notes', 'portfolio_snapshots'];
+
 const columns: { [collection: string]: Array<GridColDef> } = {
   holdings: [
     {
@@ -225,6 +239,102 @@ const columns: { [collection: string]: Array<GridColDef> } = {
       minWidth: 150,
       editable: false,
       valueFormatter: (value: string | undefined) => (value ? moment(value).format('MMM D, YYYY') : '—'),
+    },
+    ...timestampColumns,
+  ],
+  alerts: [
+    {
+      field: 'symbol',
+      headerName: 'SYM',
+      flex: 1,
+      minWidth: 70,
+    },
+    {
+      field: 'type',
+      headerName: 'Type',
+      flex: 1,
+      minWidth: 70,
+    },
+    {
+      field: 'direction',
+      headerName: 'Direction',
+      flex: 1,
+      minWidth: 80,
+    },
+    {
+      field: 'targetPrice',
+      headerName: 'Target',
+      flex: 1,
+      minWidth: 90,
+      type: 'number',
+      align: 'right',
+      headerAlign: 'right',
+      valueFormatter: (value: number | undefined) => (value != null ? fnCurrency(value) : '—'),
+    },
+    {
+      field: 'lastPrice',
+      headerName: 'Last Price',
+      flex: 1,
+      minWidth: 90,
+      type: 'number',
+      align: 'right',
+      headerAlign: 'right',
+      valueFormatter: (value: number | undefined) => (value != null ? fnCurrency(value) : '—'),
+    },
+    {
+      field: 'triggeredAt',
+      headerName: 'Triggered',
+      flex: 1,
+      minWidth: 150,
+      valueFormatter: (value: string | null | undefined) =>
+        value ? moment(value).format('MMM D, YYYY h:mm a') : '—',
+    },
+    {
+      field: 'note',
+      headerName: 'Note',
+      flex: 2,
+      minWidth: 120,
+    },
+    ...timestampColumns,
+  ],
+  notes: [
+    {
+      field: 'symbol',
+      headerName: 'SYM',
+      flex: 1,
+      minWidth: 70,
+    },
+    {
+      field: 'body',
+      headerName: 'Note',
+      flex: 4,
+      minWidth: 240,
+    },
+    ...timestampColumns,
+  ],
+  portfolio_snapshots: [
+    {
+      field: 'date',
+      headerName: 'Date',
+      flex: 1,
+      minWidth: 100,
+    },
+    {
+      field: 'timestamp',
+      headerName: 'Timestamp',
+      flex: 1,
+      minWidth: 160,
+      valueFormatter: (value: string | undefined) => (value ? moment(value).format('MMM D, YYYY h:mm a') : '—'),
+    },
+    {
+      field: 'totalValue',
+      headerName: 'Total Value',
+      flex: 1,
+      minWidth: 110,
+      type: 'number',
+      align: 'right',
+      headerAlign: 'right',
+      valueFormatter: (value: number | undefined) => fnCurrency(value ?? 0),
     },
     ...timestampColumns,
   ],
@@ -444,7 +554,7 @@ function AccountsManager({
 
 export default function Database() {
   const [isLoading, setIsLoading] = React.useState(true);
-  const [activeCollection, setActiveCollection] = React.useState<'accounts' | 'transactions' | 'holdings'>('holdings');
+  const [activeCollection, setActiveCollection] = React.useState<CollectionName>('holdings');
   const [records, setRecords] = React.useState<Array<IAccount | IHoldings | ITransaction>>([]);
   const [importDialogOpen, setImportDialogOpen] = React.useState(false);
   const [txnImportDialogOpen, setTxnImportDialogOpen] = React.useState(false);
@@ -452,9 +562,30 @@ export default function Database() {
   const [brokerHoldingsImportDialogOpen, setBrokerHoldingsImportDialogOpen] = React.useState(false);
   const [aiImportDialogOpen, setAiImportDialogOpen] = React.useState(false);
   const [accountsData, setAccountsData] = React.useState<Array<IAccount>>([]);
+  const [flushDialogOpen, setFlushDialogOpen] = React.useState(false);
+  const [flushing, setFlushing] = React.useState(false);
+
+  const isReadOnlyCollection = READ_ONLY_COLLECTIONS.includes(activeCollection);
 
   const deleteRecord = async (recordId: string) => {
-    return apis[activeCollection].deleteById(recordId);
+    if (isReadOnlyCollection) {
+      return apis.database.deleteById(activeCollection, recordId);
+    }
+    return apis[activeCollection as 'accounts' | 'holdings' | 'transactions'].deleteById(recordId);
+  };
+
+  const handleFlush = async () => {
+    setFlushing(true);
+    try {
+      const result = await apis.database.flush(activeCollection);
+      toast.success(`Flushed ${result.deletedCount} record(s) from ${activeCollection}`);
+      setFlushDialogOpen(false);
+      loadData();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to flush table');
+    } finally {
+      setFlushing(false);
+    }
   };
 
   const openImportDialog = async () => {
@@ -479,7 +610,7 @@ export default function Database() {
   };
 
   const insertOrUpdateRecord = async (record: IAccount | ITransaction | IHoldings) => {
-    return apis[activeCollection].insertOrUpdateById(record as any);
+    return apis[activeCollection as 'accounts' | 'holdings' | 'transactions'].insertOrUpdateById(record as any);
   };
 
   const insertHoldingsData = async (newData: Array<IHoldings>): Promise<void> => {
@@ -508,8 +639,11 @@ export default function Database() {
     setRecords([]);
     setIsLoading(true);
 
-    await apis[activeCollection]
-      .getAll()
+    const fetchAll = isReadOnlyCollection
+      ? apis.database.getAll(activeCollection)
+      : apis[activeCollection as 'accounts' | 'holdings' | 'transactions'].getAll();
+
+    await fetchAll
       .then((response) => {
         setRecords(response);
       })
@@ -536,7 +670,7 @@ export default function Database() {
         </Typography>
 
         <Stack direction="row" sx={{ gap: 1, flexWrap: 'wrap' }}>
-          {activeCollection !== 'accounts' && (
+          {(activeCollection === 'holdings' || activeCollection === 'transactions') && (
             <Button color="primary" startIcon={<Iconify icon="mage:file-upload-fill" />} onClick={openImportDialog}>
               {activeCollection === 'transactions' ? 'Import transactions' : 'Import holdings data'}
             </Button>
@@ -565,7 +699,7 @@ export default function Database() {
               Broker Import
             </Button>
           )}
-          {activeCollection !== 'accounts' && (
+          {(activeCollection === 'holdings' || activeCollection === 'transactions') && (
             <Button
               color="secondary"
               startIcon={<Iconify icon="mdi:robot-happy-outline" />}
@@ -577,17 +711,25 @@ export default function Database() {
               AI Import
             </Button>
           )}
+          <Button
+            color="error"
+            startIcon={<Iconify icon="mdi:delete-sweep-outline" />}
+            onClick={() => setFlushDialogOpen(true)}
+            disabled={isLoading || records.length === 0}
+          >
+            Flush table
+          </Button>
 
           <Select
             value={activeCollection}
             displayEmpty
-            onChange={(e) => setActiveCollection(e.target.value as any)}
+            onChange={(e) => setActiveCollection(e.target.value as CollectionName)}
             size="small"
             disabled={isLoading}
           >
-            {['accounts', 'holdings', 'transactions'].map((x) => (
-              <MenuItem key={x} value={x}>
-                {x}
+            {COLLECTIONS.map((x) => (
+              <MenuItem key={x.value} value={x.value}>
+                {x.label}
               </MenuItem>
             ))}
           </Select>
@@ -606,9 +748,28 @@ export default function Database() {
             activeCollection={activeCollection}
             dynamicColumns={columns[activeCollection]}
             refreshPage={loadData}
+            readOnly={isReadOnlyCollection}
           />
         )
       )}
+
+      <Dialog open={flushDialogOpen} onClose={() => !flushing && setFlushDialogOpen(false)}>
+        <DialogTitle>Flush Table</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Are you sure you want to delete all <strong>{records.length}</strong> record(s) from{' '}
+            <strong>{activeCollection}</strong>? This cannot be undone.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setFlushDialogOpen(false)} disabled={flushing}>
+            Cancel
+          </Button>
+          <Button onClick={handleFlush} color="error" variant="contained" disabled={flushing}>
+            {flushing ? 'Flushing...' : 'Flush table'}
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       <ImportDialog
         open={importDialogOpen}
@@ -642,7 +803,7 @@ export default function Database() {
         refreshPage={loadData}
       />
 
-      {activeCollection !== 'accounts' && (
+      {(activeCollection === 'holdings' || activeCollection === 'transactions') && (
         <AiImportDialog
           open={aiImportDialogOpen}
           target={activeCollection}
