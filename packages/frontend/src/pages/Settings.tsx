@@ -25,8 +25,10 @@ import apis from '@/api';
 import type { AiConfig } from '@/api/live';
 import type {
   AlertMonitorConfig,
+  BackupFile,
   LockStatus,
   NotificationConfig,
+  ScheduledBackupConfig,
   TradingSummaryConfig,
   ValueCalcConfig,
 } from '@/api/settings';
@@ -93,6 +95,13 @@ function SettingRow({
       <Box sx={{ mt: { xs: 1, sm: 0 }, width: { xs: '100%', sm: 'auto' } }}>{children}</Box>
     </Stack>
   );
+}
+
+function formatBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  const kb = bytes / 1024;
+  if (kb < 1024) return `${kb.toFixed(1)} KB`;
+  return `${(kb / 1024).toFixed(1)} MB`;
 }
 
 const IDLE_OPTIONS: Array<{ label: string; value: number }> = [
@@ -194,6 +203,16 @@ export default function Settings() {
   const setSummary = (partial: Partial<TradingSummaryConfig>) =>
     setDraftSummary((prev) => ({ ...prev, ...partial }));
 
+  const DEFAULT_SCHEDULED_BACKUP: ScheduledBackupConfig = { enabled: false, intervalHours: 24, retentionCount: 7 };
+  const [savedScheduledBackup, setSavedScheduledBackup] =
+    React.useState<ScheduledBackupConfig>(DEFAULT_SCHEDULED_BACKUP);
+  const [draftScheduledBackup, setDraftScheduledBackup] =
+    React.useState<ScheduledBackupConfig>(DEFAULT_SCHEDULED_BACKUP);
+  const [savingScheduledBackup, setSavingScheduledBackup] = React.useState(false);
+  const [backups, setBackups] = React.useState<BackupFile[]>([]);
+  const [backingUp, setBackingUp] = React.useState(false);
+  const isScheduledBackupDirty = JSON.stringify(savedScheduledBackup) !== JSON.stringify(draftScheduledBackup);
+
   const [exporting, setExporting] = React.useState(false);
   const [importing, setImporting] = React.useState(false);
   const [importConfirmOpen, setImportConfirmOpen] = React.useState(false);
@@ -262,6 +281,19 @@ export default function Settings() {
         setDraftSummary(cfg);
       })
       .catch((err) => toast.error(err.message || 'Failed to load trading summary settings'));
+
+    apis.settings
+      .getScheduledBackupConfig()
+      .then((cfg) => {
+        setSavedScheduledBackup(cfg);
+        setDraftScheduledBackup(cfg);
+      })
+      .catch((err) => toast.error(err.message || 'Failed to load scheduled backup settings'));
+
+    apis.settings
+      .listBackups()
+      .then((list) => setBackups(list))
+      .catch((err) => toast.error(err.message || 'Failed to load backups'));
   }, []);
 
   const isLockDirty =
@@ -416,6 +448,52 @@ export default function Settings() {
   };
 
   const handleResetValueCalc = () => setDraftValueCalc(savedValueCalc);
+
+  const handleSaveScheduledBackup = async () => {
+    setSavingScheduledBackup(true);
+    try {
+      const saved = await apis.settings.saveScheduledBackupConfig(draftScheduledBackup);
+      setSavedScheduledBackup(saved);
+      setDraftScheduledBackup(saved);
+      toast.success('Scheduled backup settings saved');
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to save scheduled backup settings');
+    } finally {
+      setSavingScheduledBackup(false);
+    }
+  };
+
+  const handleResetScheduledBackup = () => setDraftScheduledBackup(savedScheduledBackup);
+
+  const handleRunBackupNow = async () => {
+    setBackingUp(true);
+    try {
+      await apis.settings.runScheduledBackup();
+      const list = await apis.settings.listBackups();
+      setBackups(list);
+      toast.success('Backup created');
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to create backup');
+    } finally {
+      setBackingUp(false);
+    }
+  };
+
+  const handleDownloadBackup = async (file: string) => {
+    try {
+      const blob = await apis.settings.downloadBackup(file);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = file;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to download backup');
+    }
+  };
 
   const handleSaveAlertMonitor = async () => {
     setSavingAlertMonitor(true);
@@ -1036,6 +1114,112 @@ export default function Settings() {
             {importing ? 'Importing...' : 'Import'}
           </Button>
         </SettingRow>
+      </SettingsSection>
+
+      <SettingsSection title="Scheduled Backups">
+        <SettingRow
+          label="Enable Automatic Backups"
+          description="Periodically zip your data to the server's backups folder, keeping the most recent copies"
+        >
+          <Switch
+            checked={draftScheduledBackup.enabled}
+            onChange={(_, checked) => setDraftScheduledBackup((prev) => ({ ...prev, enabled: checked }))}
+          />
+        </SettingRow>
+        {draftScheduledBackup.enabled && (
+          <>
+            <SettingRow label="Backup Interval" description="How often a new backup is created">
+              <Select
+                size="small"
+                value={draftScheduledBackup.intervalHours}
+                onChange={(e) =>
+                  setDraftScheduledBackup((prev) => ({ ...prev, intervalHours: Number(e.target.value) }))
+                }
+                sx={{ minWidth: { xs: '100%', sm: 200 }, fontSize: '0.82rem' }}
+              >
+                <MenuItem value={6}>Every 6 hours</MenuItem>
+                <MenuItem value={12}>Every 12 hours</MenuItem>
+                <MenuItem value={24}>Daily</MenuItem>
+                <MenuItem value={48}>Every 2 days</MenuItem>
+                <MenuItem value={168}>Weekly</MenuItem>
+              </Select>
+            </SettingRow>
+            <SettingRow label="Keep" description="Older backups beyond this count are automatically deleted">
+              <Select
+                size="small"
+                value={draftScheduledBackup.retentionCount}
+                onChange={(e) =>
+                  setDraftScheduledBackup((prev) => ({ ...prev, retentionCount: Number(e.target.value) }))
+                }
+                sx={{ minWidth: { xs: '100%', sm: 200 }, fontSize: '0.82rem' }}
+              >
+                <MenuItem value={3}>Last 3 backups</MenuItem>
+                <MenuItem value={5}>Last 5 backups</MenuItem>
+                <MenuItem value={7}>Last 7 backups</MenuItem>
+                <MenuItem value={14}>Last 14 backups</MenuItem>
+                <MenuItem value={30}>Last 30 backups</MenuItem>
+              </Select>
+            </SettingRow>
+          </>
+        )}
+        <Stack direction="row" spacing={1} sx={{ justifyContent: 'flex-end', alignItems: 'center', px: 2, py: 1.5 }}>
+          {isScheduledBackupDirty && (
+            <Typography sx={{ fontSize: '0.72rem', color: 'warning.main', mr: 'auto' }}>Unsaved changes</Typography>
+          )}
+          <Button
+            size="small"
+            variant="outlined"
+            onClick={handleRunBackupNow}
+            disabled={backingUp}
+            sx={{ fontSize: '0.78rem', textTransform: 'none', mr: 'auto' }}
+          >
+            {backingUp ? 'Backing up...' : 'Back Up Now'}
+          </Button>
+          <Button
+            size="small"
+            variant="outlined"
+            onClick={handleResetScheduledBackup}
+            disabled={!isScheduledBackupDirty || savingScheduledBackup}
+            sx={{ fontSize: '0.78rem', textTransform: 'none' }}
+          >
+            Reset
+          </Button>
+          <Button
+            size="small"
+            variant="contained"
+            onClick={handleSaveScheduledBackup}
+            disabled={!isScheduledBackupDirty || savingScheduledBackup}
+            sx={{ fontSize: '0.78rem', textTransform: 'none' }}
+          >
+            {savingScheduledBackup ? 'Saving...' : 'Save'}
+          </Button>
+        </Stack>
+        <Divider />
+        {backups.length === 0 ? (
+          <Typography sx={{ px: 2, py: 1.5, fontSize: '0.78rem', color: 'text.disabled' }}>
+            No backups yet.
+          </Typography>
+        ) : (
+          backups.map((b) => (
+            <Stack
+              key={b.file}
+              direction="row"
+              sx={{ alignItems: 'center', justifyContent: 'space-between', px: 2, py: 1, borderTop: '1px solid', borderColor: 'divider' }}
+            >
+              <Box>
+                <Typography sx={{ fontSize: '0.82rem', color: 'text.primary' }}>{b.file}</Typography>
+                <Typography sx={{ fontSize: '0.72rem', color: 'text.disabled' }}>
+                  {new Date(b.createdAt).toLocaleString()} · {formatBytes(b.size)}
+                </Typography>
+              </Box>
+              <Tooltip title="Download">
+                <IconButton size="small" onClick={() => handleDownloadBackup(b.file)}>
+                  <Iconify icon="eva:download-outline" width={18} />
+                </IconButton>
+              </Tooltip>
+            </Stack>
+          ))
+        )}
       </SettingsSection>
 
       <Dialog open={importConfirmOpen} onClose={() => setImportConfirmOpen(false)}>

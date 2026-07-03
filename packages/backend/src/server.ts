@@ -16,8 +16,10 @@ import { authMiddleware } from './middleware/auth';
 import { alertMonitorService } from './controller/AlertMonitorService';
 import { configureFromSaved } from './controller/NotificationDispatcher';
 import { portfolioValueCalcService } from './controller/PortfolioValueCalcService';
+import { scheduledBackupService } from './controller/ScheduledBackupService';
 import { tradingSummaryService } from './controller/TradingSummaryService';
 import { getAlertMonitorConfig } from './models/AlertMonitorConfigModel';
+import { getScheduledBackupConfig } from './models/ScheduledBackupConfigModel';
 import { getTradingSummaryConfig } from './models/TradingSummaryConfigModel';
 import { getValueCalcConfig } from './models/ValueCalcConfigModel';
 import { AccountsRouter } from './router/accounts.route';
@@ -81,5 +83,6 @@ app.listen(port, () => {
   console.log('server started on port ' + port);
   getValueCalcConfig().then((config) => portfolioValueCalcService.start(config));
   getAlertMonitorConfig().then((config) => alertMonitorService.start(config));
+  getScheduledBackupConfig().then((config) => scheduledBackupService.start(config));
   configureFromSaved().then(() => getTradingSummaryConfig().then((config) => tradingSummaryService.start(config)));
 });

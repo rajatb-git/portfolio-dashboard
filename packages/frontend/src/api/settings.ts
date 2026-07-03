@@ -44,6 +44,14 @@ export type TradingSummaryConfig = {
 
 export type TradingSummaryTestResult = { published: number; mqttEnabled: boolean };
 
+export type ScheduledBackupConfig = {
+  enabled: boolean;
+  intervalHours: number;
+  retentionCount: number;
+};
+
+export type BackupFile = { file: string; size: number; createdAt: string };
+
 export default class SettingsAPI {
   getLock = async (): Promise<LockStatus> =>
     axios
@@ -114,6 +122,36 @@ export default class SettingsAPI {
   testTradingSummary = async (): Promise<TradingSummaryTestResult> =>
     axios
       .post(DB_HOST + '/settings/trading-summary/test')
+      .then((response) => response.data)
+      .catch(catchCustomError);
+
+  getScheduledBackupConfig = async (): Promise<ScheduledBackupConfig> =>
+    axios
+      .get(DB_HOST + '/settings/scheduled-backup')
+      .then((response) => response.data)
+      .catch(catchCustomError);
+
+  saveScheduledBackupConfig = async (payload: ScheduledBackupConfig): Promise<ScheduledBackupConfig> =>
+    axios
+      .post(DB_HOST + '/settings/scheduled-backup', payload)
+      .then((response) => response.data)
+      .catch(catchCustomError);
+
+  runScheduledBackup = async (): Promise<BackupFile> =>
+    axios
+      .post(DB_HOST + '/settings/scheduled-backup/run')
+      .then((response) => response.data)
+      .catch(catchCustomError);
+
+  listBackups = async (): Promise<BackupFile[]> =>
+    axios
+      .get(DB_HOST + '/settings/backups')
+      .then((response) => response.data)
+      .catch(catchCustomError);
+
+  downloadBackup = async (file: string): Promise<Blob> =>
+    axios
+      .get(DB_HOST + `/settings/backups/${encodeURIComponent(file)}`, { responseType: 'blob' })
       .then((response) => response.data)
       .catch(catchCustomError);
 }

@@ -1,9 +1,10 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { PassThrough } from 'node:stream';
-import archiver from 'archiver';
 import Router from '@koa/router';
 import unzipper from 'unzipper';
+
+import { createZipArchive } from '../utils/archive';
 
 import { getAiConfig, IAiConfig, maskAiConfig, saveAiConfig } from '../models/AiConfigModel';
 import { getAlertMonitorConfig, IAlertMonitorConfig, saveAlertMonitorConfig } from '../models/AlertMonitorConfigModel';
@@ -22,12 +23,20 @@ import {
   VALID_TOP_HOLDINGS_COUNTS,
 } from '../models/TradingSummaryConfigModel';
 import { getValueCalcConfig, IValueCalcConfig, saveValueCalcConfig } from '../models/ValueCalcConfigModel';
+import {
+  getScheduledBackupConfig,
+  IScheduledBackupConfig,
+  saveScheduledBackupConfig,
+  VALID_BACKUP_INTERVALS,
+  VALID_RETENTION_COUNTS,
+} from '../models/ScheduledBackupConfigModel';
 import { alertMonitorService } from '../controller/AlertMonitorService';
 import { configureFromSaved, sendTestNotification } from '../controller/NotificationDispatcher';
 import { portfolioValueCalcService } from '../controller/PortfolioValueCalcService';
+import { scheduledBackupService } from '../controller/ScheduledBackupService';
 import { tradingSummaryService } from '../controller/TradingSummaryService';
 import { errorBody } from '../utils/error';
-import { STORAGE_DIR } from '../utils/storage';
+import { BACKUPS_DIR, STORAGE_DIR } from '../utils/storage';
 import { logger } from '../utils/winston';
 
 export const SettingsRouter = () => {
@@ -41,7 +50,7 @@ export const SettingsRouter = () => {
         return;
       }
 
-      const archive = archiver('zip', { zlib: { level: 9 } });
+      const archive = createZipArchive();
       const passthrough = new PassThrough();
       archive.pipe(passthrough);
 
@@ -264,6 +273,99 @@ export const SettingsRouter = () => {
       logger.log({ level: 'error', message: error.message, label: 'value-calc config save' });
       ctx.status = 500;
       ctx.body = errorBody('Failed to save value calc config', error.message);
+    }
+  });
+
+  router.get('/settings/scheduled-backup', async (ctx) => {
+    try {
+      ctx.body = await getScheduledBackupConfig();
+      ctx.status = 200;
+    } catch (error: any) {
+      logger.log({ level: 'error', message: error.message, label: 'scheduled-backup config get' });
+      ctx.status = 500;
+      ctx.body = errorBody('Failed to get scheduled backup config', error.message);
+    }
+  });
+
+  router.post('/settings/scheduled-backup', async (ctx) => {
+    try {
+      const body = ctx.request.body as Partial<IScheduledBackupConfig>;
+
+      if (typeof body.enabled !== 'boolean') {
+        ctx.status = 400;
+        ctx.body = errorBody('Invalid request', '"enabled" boolean is required');
+        return;
+      }
+
+      const intervalHours = typeof body.intervalHours === 'number' ? body.intervalHours : 24;
+      if (!VALID_BACKUP_INTERVALS.includes(intervalHours)) {
+        ctx.status = 400;
+        ctx.body = errorBody('Invalid interval', `intervalHours must be one of: ${VALID_BACKUP_INTERVALS.join(', ')}`);
+        return;
+      }
+
+      const retentionCount = typeof body.retentionCount === 'number' ? body.retentionCount : 7;
+      if (!VALID_RETENTION_COUNTS.includes(retentionCount)) {
+        ctx.status = 400;
+        ctx.body = errorBody('Invalid retention', `retentionCount must be one of: ${VALID_RETENTION_COUNTS.join(', ')}`);
+        return;
+      }
+
+      const config: IScheduledBackupConfig = { enabled: body.enabled, intervalHours, retentionCount };
+      await saveScheduledBackupConfig(config);
+      scheduledBackupService.reconfigure(config);
+
+      ctx.body = config;
+      ctx.status = 200;
+    } catch (error: any) {
+      logger.log({ level: 'error', message: error.message, label: 'scheduled-backup config save' });
+      ctx.status = 500;
+      ctx.body = errorBody('Failed to save scheduled backup config', error.message);
+    }
+  });
+
+  router.post('/settings/scheduled-backup/run', async (ctx) => {
+    try {
+      ctx.body = await scheduledBackupService.runBackup();
+      ctx.status = 200;
+    } catch (error: any) {
+      logger.log({ level: 'error', message: error.message, label: 'scheduled-backup run' });
+      ctx.status = 500;
+      ctx.body = errorBody('Failed to create backup', error.message);
+    }
+  });
+
+  router.get('/settings/backups', async (ctx) => {
+    try {
+      ctx.body = scheduledBackupService.listBackups();
+      ctx.status = 200;
+    } catch (error: any) {
+      logger.log({ level: 'error', message: error.message, label: 'backups list' });
+      ctx.status = 500;
+      ctx.body = errorBody('Failed to list backups', error.message);
+    }
+  });
+
+  router.get('/settings/backups/:file', async (ctx) => {
+    try {
+      const requested = ctx.params.file;
+      // Allowlist: the name must match an actual backup file in the directory,
+      // which rules out path traversal without trusting the raw param.
+      const allowed = new Set(scheduledBackupService.listBackups().map((b) => b.file));
+      if (!allowed.has(requested)) {
+        ctx.status = 404;
+        ctx.body = errorBody('Not found', 'Backup file does not exist');
+        return;
+      }
+
+      ctx.set('Content-Disposition', `attachment; filename="${requested}"`);
+      ctx.set('Content-Type', 'application/zip');
+      ctx.body = fs.createReadStream(path.join(BACKUPS_DIR, requested));
+      ctx.status = 200;
+    } catch (error: any) {
+      logger.log({ level: 'error', message: error.message, label: 'backup download' });
+      ctx.status = 500;
+      ctx.body = errorBody('Failed to download backup', error.message);
     }
   });
 
