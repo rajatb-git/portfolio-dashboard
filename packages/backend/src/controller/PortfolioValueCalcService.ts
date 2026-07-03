@@ -48,20 +48,24 @@ class PortfolioValueCalcService {
       const quoteMap = new Map(uniqueSymbols.map((sym, i) => [sym, quotes[i]]));
 
       let totalValue = 0;
-      let allPriced = true;
+      let unpricedCount = 0;
 
       for (const holding of allHoldings) {
         const quote = quoteMap.get(holding.symbol);
-        if (!quote || quote instanceof Error) {
-          allPriced = false;
-          break;
-        }
-        totalValue += holding.qty * quote.price;
+        // A holding that can't be priced this cycle falls back to its cost basis
+        // rather than freezing the entire snapshot — one unpriceable symbol must
+        // not stall the whole performance history.
+        const price = quote && !(quote instanceof Error) ? quote.price : holding.averagePrice;
+        if (!quote || quote instanceof Error) unpricedCount++;
+        totalValue += holding.qty * price;
       }
 
-      if (!allPriced) {
-        logger.log({ level: 'warn', message: 'Skipped snapshot update — not all holdings priced', label: LABEL });
-        return;
+      if (unpricedCount > 0) {
+        logger.log({
+          level: 'warn',
+          message: `Snapshot recorded with ${unpricedCount} holding(s) fell back to cost basis (unpriceable)`,
+          label: LABEL,
+        });
       }
 
       const now = moment();

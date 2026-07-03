@@ -109,10 +109,19 @@ export const createDashboard = async (): Promise<Array<HoldingAggregate>> => {
   // (some holdings dropped due to a failed live fetch) would otherwise be frozen
   // in as today's snapshot and corrupt the performance chart.
   try {
-    if (result.length === allHoldings.length) {
+    if (allHoldings.length > 0) {
       const now = moment();
       const today = now.format('YYYY-MM-DD');
-      const totalValue = +result.reduce((sum, h) => sum + h.marketValue, 0).toFixed(2);
+      // Value every holding, not just the ones that priced cleanly. A holding
+      // that can't be priced falls back to its cost basis so a single
+      // unpriceable symbol doesn't freeze the whole performance history.
+      const totalValue = +allHoldings
+        .reduce((sum, h) => {
+          const quote = quoteMap.get(h.symbol);
+          const price = quote && !(quote instanceof Error) ? quote.price : h.averagePrice;
+          return sum + h.qty * price;
+        }, 0)
+        .toFixed(2);
       const snapshotModel = await PortfolioSnapshotDBModel().initialize();
       // Fallback daily point for when the 30-minute service isn't running.
       // Skip if any snapshot already exists for today so we don't duplicate
