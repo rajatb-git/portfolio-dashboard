@@ -26,6 +26,7 @@ import { AlertsRouter } from './router/alerts.route';
 import { AnalyticsRouter } from './router/analytics.route';
 import { AuthRouter } from './router/auth.route';
 import { DashboardRouter } from './router/dashboard.route';
+import { DatabaseRouter } from './router/database.route';
 import { HealthRouter } from './router/health.route';
 import { HoldingsRouter } from './router/holdings.route';
 import { LiveRouter } from './router/live.route';
@@ -74,6 +75,7 @@ app.use(SettingsRouter().routes()).use(SettingsRouter().allowedMethods());
 app.use(NotesRouter().routes()).use(NotesRouter().allowedMethods());
 app.use(AlertsRouter().routes()).use(AlertsRouter().allowedMethods());
 app.use(AiImportRouter().routes()).use(AiImportRouter().allowedMethods());
+app.use(DatabaseRouter().routes()).use(DatabaseRouter().allowedMethods());
 
 app.listen(port, () => {
   console.log('server started on port ' + port);
