@@ -36,6 +36,9 @@ yarn-error.log*
 # backend storage
 packages/backend/storage/
 
+# scheduled backups (generated at runtime)
+packages/backend/backups/
+
 # log files
 *.log
 
