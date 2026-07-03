@@ -2,6 +2,7 @@ import moment from 'moment';
 import { HoldingsModel } from '../models/HoldingsModel';
 import { PortfolioSnapshotDBModel } from '../models/PortfolioSnapshotModel';
 import type { IValueCalcConfig } from '../models/ValueCalcConfigModel';
+import { isStockMarketOpen } from '../utils/marketCalendar';
 import { LiveQuoteController } from './LiveQuoteController';
 import { logger } from '../utils/winston';
 
@@ -11,16 +12,10 @@ class PortfolioValueCalcService {
   private timer: NodeJS.Timeout | null = null;
   private config: IValueCalcConfig = { enabled: false, intervalMinutes: 15 };
 
-  isMarketOpen(): boolean {
-    const etNow = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/New_York' }));
-    const day = etNow.getDay();
-    const minutesSinceMidnight = etNow.getHours() * 60 + etNow.getMinutes();
-    const isWeekend = day === 0 || day === 6;
-    return !isWeekend && minutesSinceMidnight >= 9 * 60 + 30 && minutesSinceMidnight < 16 * 60;
-  }
-
   async runCalculation(): Promise<void> {
-    if (!this.isMarketOpen()) return;
+    // Only record during real US trading hours — skips weekends, market
+    // holidays, and early-close half days as well as after-hours ticks.
+    if (!isStockMarketOpen()) return;
 
     try {
       const holdingsModel = await HoldingsModel().initialize();
@@ -97,7 +92,7 @@ class PortfolioValueCalcService {
 
     logger.log({ level: 'info', message: `Started — interval: ${config.intervalMinutes} min`, label: LABEL });
 
-    if (this.isMarketOpen()) {
+    if (isStockMarketOpen()) {
       this.runCalculation();
     }
   }

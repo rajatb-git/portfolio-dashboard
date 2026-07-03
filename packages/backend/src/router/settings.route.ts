@@ -256,7 +256,7 @@ export const SettingsRouter = () => {
       }
 
       const intervalMinutes = typeof body.intervalMinutes === 'number' ? body.intervalMinutes : 15;
-      const VALID_INTERVALS = [5, 10, 15, 30, 60];
+      const VALID_INTERVALS = [5, 10, 15, 30, 60, 120, 240];
       if (!VALID_INTERVALS.includes(intervalMinutes)) {
         ctx.status = 400;
         ctx.body = errorBody('Invalid interval', `intervalMinutes must be one of: ${VALID_INTERVALS.join(', ')}`);
