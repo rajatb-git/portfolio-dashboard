@@ -9,6 +9,7 @@ import ThemeRegistry from '@/components/ThemeRegistry/ThemeRegistry';
 import AuthGate from '@/components/AuthGate';
 import PWAInstallPrompt from '@/components/PWAInstallPrompt';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
+import { DashboardDataProvider } from '@/contexts/DashboardDataContext';
 import { useIdleLock } from '@/hooks/useIdleLock';
 import { DRAWER_WIDTH, DRAWER_COLLAPSED_WIDTH } from '@/config';
 
@@ -97,7 +98,9 @@ export default function App() {
       <ThemeRegistry>
         <AuthProvider>
           <AuthGate>
-            <AppShell />
+            <DashboardDataProvider>
+              <AppShell />
+            </DashboardDataProvider>
           </AuthGate>
 
           <PWAInstallPrompt />
