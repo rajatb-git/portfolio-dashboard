@@ -22,6 +22,17 @@ export type AlertMonitorConfig = {
   intervalMinutes: number;
 };
 
+export type MoveAlertConfig = {
+  enabled: boolean;
+  intervalMinutes: number;
+  thresholdPercent: number;
+};
+
+export type IpoReminderConfig = {
+  enabled: boolean;
+  daysBefore: number;
+};
+
 export type MqttConfig = {
   enabled: boolean;
   url: string;
@@ -86,6 +97,30 @@ export default class SettingsAPI {
   saveAlertMonitorConfig = async (payload: AlertMonitorConfig): Promise<AlertMonitorConfig> =>
     axios
       .post(DB_HOST + '/settings/alerts-monitor', payload)
+      .then((response) => response.data)
+      .catch(catchCustomError);
+
+  getMoveAlertConfig = async (): Promise<MoveAlertConfig> =>
+    axios
+      .get(DB_HOST + '/settings/move-alert')
+      .then((response) => response.data)
+      .catch(catchCustomError);
+
+  saveMoveAlertConfig = async (payload: MoveAlertConfig): Promise<MoveAlertConfig> =>
+    axios
+      .post(DB_HOST + '/settings/move-alert', payload)
+      .then((response) => response.data)
+      .catch(catchCustomError);
+
+  getIpoReminderConfig = async (): Promise<IpoReminderConfig> =>
+    axios
+      .get(DB_HOST + '/settings/ipo-reminder')
+      .then((response) => response.data)
+      .catch(catchCustomError);
+
+  saveIpoReminderConfig = async (payload: IpoReminderConfig): Promise<IpoReminderConfig> =>
+    axios
+      .post(DB_HOST + '/settings/ipo-reminder', payload)
       .then((response) => response.data)
       .catch(catchCustomError);
 

@@ -1,6 +1,7 @@
 import { AlertModel, IAlertModel } from '../models/AlertModel';
 import type { IAlertMonitorConfig } from '../models/AlertMonitorConfigModel';
 import { isStockMarketOpen } from '../utils/marketCalendar';
+import { PersistentInterval } from '../utils/PersistentInterval';
 import { logger } from '../utils/winston';
 import { LiveQuoteController } from './LiveQuoteController';
 import { dispatchAlertTriggered } from './NotificationDispatcher';
@@ -11,7 +12,7 @@ const conditionMet = (direction: 'above' | 'below', price: number, target: numbe
   direction === 'above' ? price >= target : price <= target;
 
 class AlertMonitorService {
-  private timer: NodeJS.Timeout | null = null;
+  private readonly scheduler = new PersistentInterval('alert_monitor');
   private config: IAlertMonitorConfig = { enabled: false, intervalMinutes: 5 };
   private running = false;
 
@@ -88,21 +89,13 @@ class AlertMonitorService {
     }
 
     const intervalMs = Math.max(1, config.intervalMinutes) * 60 * 1000;
-    this.timer = setInterval(() => {
-      this.runCheck();
-    }, intervalMs);
+    void this.scheduler.start(intervalMs, () => this.runCheck());
     logger.log({ level: 'info', label: LABEL, message: `Started — interval: ${config.intervalMinutes} min` });
-
-    // Kick once on startup so freshly-met conditions surface immediately.
-    this.runCheck();
   }
 
   stop(): void {
-    if (this.timer) {
-      clearInterval(this.timer);
-      this.timer = null;
-      logger.log({ level: 'info', label: LABEL, message: 'Stopped' });
-    }
+    this.scheduler.stop();
+    logger.log({ level: 'info', label: LABEL, message: 'Stopped' });
   }
 
   reconfigure(config: IAlertMonitorConfig): void {

@@ -3,6 +3,7 @@ import path from 'node:path';
 import moment from 'moment';
 import type { IScheduledBackupConfig } from '../models/ScheduledBackupConfigModel';
 import { createZipArchive } from '../utils/archive';
+import { PersistentInterval } from '../utils/PersistentInterval';
 import { BACKUPS_DIR, STORAGE_DIR } from '../utils/storage';
 import { logger } from '../utils/winston';
 
@@ -12,7 +13,7 @@ const FILE_PREFIX = 'portfolio-backup-';
 export type BackupFile = { file: string; size: number; createdAt: string };
 
 class ScheduledBackupService {
-  private timer: NodeJS.Timeout | null = null;
+  private readonly scheduler = new PersistentInterval('scheduled_backup');
   private config: IScheduledBackupConfig = { enabled: false, intervalHours: 24, retentionCount: 7 };
   private running = false;
 
@@ -77,12 +78,6 @@ class ScheduledBackupService {
     }
   }
 
-  private newestBackupAgeMs(): number {
-    const newest = this.listBackups()[0];
-    if (!newest) return Number.POSITIVE_INFINITY;
-    return Date.now() - new Date(newest.createdAt).getTime();
-  }
-
   start(config: IScheduledBackupConfig): void {
     this.stop();
     this.config = config;
@@ -92,28 +87,17 @@ class ScheduledBackupService {
     }
 
     const intervalMs = Math.max(1, config.intervalHours) * 60 * 60 * 1000;
-    this.timer = setInterval(() => {
+    void this.scheduler.start(intervalMs, () =>
       this.runBackup().catch((err: any) => {
         logger.log({ level: 'error', label: LABEL, message: err.message });
-      });
-    }, intervalMs);
+      })
+    );
     logger.log({ level: 'info', label: LABEL, message: `Started — interval: ${config.intervalHours}h` });
-
-    // Catch up on boot if the most recent backup is already overdue, but skip
-    // when a fresh backup exists so a server restart doesn't spam the folder.
-    if (this.newestBackupAgeMs() >= intervalMs) {
-      this.runBackup().catch((err: any) => {
-        logger.log({ level: 'error', label: LABEL, message: err.message });
-      });
-    }
   }
 
   stop(): void {
-    if (this.timer) {
-      clearInterval(this.timer);
-      this.timer = null;
-      logger.log({ level: 'info', label: LABEL, message: 'Stopped' });
-    }
+    this.scheduler.stop();
+    logger.log({ level: 'info', label: LABEL, message: 'Stopped' });
   }
 
   reconfigure(config: IScheduledBackupConfig): void {

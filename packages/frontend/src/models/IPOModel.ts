@@ -8,4 +8,5 @@ export interface IIPO {
   status: 'expected' | 'priced' | 'withdrawn' | 'filed';
   symbol: string;
   totalSharesValue: number;
+  watched?: boolean;
 }

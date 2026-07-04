@@ -95,7 +95,19 @@ export default function IPOCalendar() {
 
       <IPOStats ipos={ipos} isLoading={isLoading} />
 
-      <Box>{view === 'list' ? <IPOList ipos={ipos} isLoading={isLoading} /> : <Calendar events={events} />}</Box>
+      <Box>
+        {view === 'list' ? (
+          <IPOList
+            ipos={ipos}
+            isLoading={isLoading}
+            onToggleWatch={(ipo, watched) =>
+              setIpos((prev) => prev.map((x) => (x.symbol === ipo.symbol ? { ...x, watched } : x)))
+            }
+          />
+        ) : (
+          <Calendar events={events} />
+        )}
+      </Box>
     </Stack>
   );
 }

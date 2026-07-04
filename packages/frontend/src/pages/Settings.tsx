@@ -30,7 +30,9 @@ import type { AiConfig } from '@/api/live';
 import type {
   AlertMonitorConfig,
   BackupFile,
+  IpoReminderConfig,
   LockStatus,
+  MoveAlertConfig,
   NotificationConfig,
   ScheduledBackupConfig,
   TradingSummaryConfig,
@@ -190,6 +192,18 @@ export default function Settings() {
   const [savingAlertMonitor, setSavingAlertMonitor] = React.useState(false);
   const isAlertMonitorDirty = JSON.stringify(savedAlertMonitor) !== JSON.stringify(draftAlertMonitor);
 
+  const DEFAULT_MOVE_ALERT: MoveAlertConfig = { enabled: false, intervalMinutes: 15, thresholdPercent: 5 };
+  const [savedMoveAlert, setSavedMoveAlert] = React.useState<MoveAlertConfig>(DEFAULT_MOVE_ALERT);
+  const [draftMoveAlert, setDraftMoveAlert] = React.useState<MoveAlertConfig>(DEFAULT_MOVE_ALERT);
+  const [savingMoveAlert, setSavingMoveAlert] = React.useState(false);
+  const isMoveAlertDirty = JSON.stringify(savedMoveAlert) !== JSON.stringify(draftMoveAlert);
+
+  const DEFAULT_IPO_REMINDER: IpoReminderConfig = { enabled: true, daysBefore: 1 };
+  const [savedIpoReminder, setSavedIpoReminder] = React.useState<IpoReminderConfig>(DEFAULT_IPO_REMINDER);
+  const [draftIpoReminder, setDraftIpoReminder] = React.useState<IpoReminderConfig>(DEFAULT_IPO_REMINDER);
+  const [savingIpoReminder, setSavingIpoReminder] = React.useState(false);
+  const isIpoReminderDirty = JSON.stringify(savedIpoReminder) !== JSON.stringify(draftIpoReminder);
+
   const DEFAULT_NOTIF: NotificationConfig = {
     mqtt: {
       enabled: false,
@@ -283,6 +297,22 @@ export default function Settings() {
         setDraftAlertMonitor(cfg);
       })
       .catch((err) => toast.error(err.message || 'Failed to load alert monitor settings'));
+
+    apis.settings
+      .getMoveAlertConfig()
+      .then((cfg) => {
+        setSavedMoveAlert(cfg);
+        setDraftMoveAlert(cfg);
+      })
+      .catch((err) => toast.error(err.message || 'Failed to load move alert settings'));
+
+    apis.settings
+      .getIpoReminderConfig()
+      .then((cfg) => {
+        setSavedIpoReminder(cfg);
+        setDraftIpoReminder(cfg);
+      })
+      .catch((err) => toast.error(err.message || 'Failed to load IPO reminder settings'));
 
     apis.settings
       .getNotificationConfig()
@@ -528,6 +558,38 @@ export default function Settings() {
   };
 
   const handleResetAlertMonitor = () => setDraftAlertMonitor(savedAlertMonitor);
+
+  const handleSaveMoveAlert = async () => {
+    setSavingMoveAlert(true);
+    try {
+      const saved = await apis.settings.saveMoveAlertConfig(draftMoveAlert);
+      setSavedMoveAlert(saved);
+      setDraftMoveAlert(saved);
+      toast.success('Move alert settings saved');
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to save move alert settings');
+    } finally {
+      setSavingMoveAlert(false);
+    }
+  };
+
+  const handleResetMoveAlert = () => setDraftMoveAlert(savedMoveAlert);
+
+  const handleSaveIpoReminder = async () => {
+    setSavingIpoReminder(true);
+    try {
+      const saved = await apis.settings.saveIpoReminderConfig(draftIpoReminder);
+      setSavedIpoReminder(saved);
+      setDraftIpoReminder(saved);
+      toast.success('IPO reminder settings saved');
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to save IPO reminder settings');
+    } finally {
+      setSavingIpoReminder(false);
+    }
+  };
+
+  const handleResetIpoReminder = () => setDraftIpoReminder(savedIpoReminder);
 
   const handleSaveNotif = async () => {
     setSavingNotif(true);
@@ -1002,6 +1064,86 @@ export default function Settings() {
                 </Stack>
               </SettingsSection>
 
+              <SettingsSection title="Move Alerts">
+                <SettingRow
+                  label="Enable Move Alerts"
+                  description="Notify when a holding or your total portfolio moves more than the threshold in a single day. Evaluated during US market hours only."
+                >
+                  <Switch
+                    checked={draftMoveAlert.enabled}
+                    onChange={(_, checked) => setDraftMoveAlert((prev) => ({ ...prev, enabled: checked }))}
+                  />
+                </SettingRow>
+                {draftMoveAlert.enabled && (
+                  <>
+                    <SettingRow
+                      label="Check Interval"
+                      description="How often the server checks holdings and portfolio total for a threshold-crossing move"
+                    >
+                      <Select
+                        size="small"
+                        value={draftMoveAlert.intervalMinutes}
+                        onChange={(e) =>
+                          setDraftMoveAlert((prev) => ({
+                            ...prev,
+                            intervalMinutes: Number(e.target.value),
+                          }))
+                        }
+                        sx={{ minWidth: { xs: '100%', sm: 200 }, fontSize: '0.82rem' }}
+                      >
+                        <MenuItem value={1}>Every minute</MenuItem>
+                        <MenuItem value={5}>Every 5 minutes</MenuItem>
+                        <MenuItem value={10}>Every 10 minutes</MenuItem>
+                        <MenuItem value={15}>Every 15 minutes</MenuItem>
+                        <MenuItem value={30}>Every 30 minutes</MenuItem>
+                        <MenuItem value={60}>Every 60 minutes</MenuItem>
+                      </Select>
+                    </SettingRow>
+                    <SettingRow label="Move Threshold (%)" description="Notify once a day when the move exceeds this percent">
+                      <TextField
+                        size="small"
+                        type="number"
+                        value={draftMoveAlert.thresholdPercent}
+                        onChange={(e) =>
+                          setDraftMoveAlert((prev) => ({ ...prev, thresholdPercent: Number(e.target.value) }))
+                        }
+                        slotProps={{ htmlInput: { min: 0.1, step: 0.1 } }}
+                        sx={{ width: { xs: '100%', sm: 160 }, '& input': { fontSize: '0.78rem' } }}
+                      />
+                    </SettingRow>
+                  </>
+                )}
+                <Stack
+                  direction="row"
+                  spacing={1}
+                  sx={{ justifyContent: 'flex-end', alignItems: 'center', px: 2, py: 1.5 }}
+                >
+                  {isMoveAlertDirty && (
+                    <Typography sx={{ fontSize: '0.72rem', color: 'warning.main', mr: 'auto' }}>
+                      Unsaved changes
+                    </Typography>
+                  )}
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    onClick={handleResetMoveAlert}
+                    disabled={!isMoveAlertDirty || savingMoveAlert}
+                    sx={{ fontSize: '0.78rem', textTransform: 'none' }}
+                  >
+                    Reset
+                  </Button>
+                  <Button
+                    size="small"
+                    variant="contained"
+                    onClick={handleSaveMoveAlert}
+                    disabled={!isMoveAlertDirty || savingMoveAlert}
+                    sx={{ fontSize: '0.78rem', textTransform: 'none' }}
+                  >
+                    {savingMoveAlert ? 'Saving...' : 'Save'}
+                  </Button>
+                </Stack>
+              </SettingsSection>
+
               <SettingsSection title="Alert Notifications">
                 <SettingRow
                   label="MQTT Publishing"
@@ -1177,6 +1319,65 @@ export default function Settings() {
                     sx={{ fontSize: '0.78rem', textTransform: 'none' }}
                   >
                     {savingSummary ? 'Saving...' : 'Save'}
+                  </Button>
+                </Stack>
+              </SettingsSection>
+
+              <SettingsSection title="IPO Reminders">
+                <SettingRow
+                  label="Enable IPO Reminders"
+                  description="Get an MQTT reminder as the listing date approaches for any IPO you mark as watched on the IPO Calendar page."
+                >
+                  <Switch
+                    checked={draftIpoReminder.enabled}
+                    onChange={(_, checked) => setDraftIpoReminder((prev) => ({ ...prev, enabled: checked }))}
+                  />
+                </SettingRow>
+                {draftIpoReminder.enabled && (
+                  <SettingRow label="Remind Me" description="How far ahead of the expected IPO date to send the reminder">
+                    <Select
+                      size="small"
+                      value={draftIpoReminder.daysBefore}
+                      onChange={(e) =>
+                        setDraftIpoReminder((prev) => ({ ...prev, daysBefore: Number(e.target.value) }))
+                      }
+                      sx={{ minWidth: { xs: '100%', sm: 200 }, fontSize: '0.82rem' }}
+                    >
+                      <MenuItem value={0}>On the day</MenuItem>
+                      <MenuItem value={1}>1 day before</MenuItem>
+                      <MenuItem value={2}>2 days before</MenuItem>
+                      <MenuItem value={3}>3 days before</MenuItem>
+                      <MenuItem value={7}>1 week before</MenuItem>
+                    </Select>
+                  </SettingRow>
+                )}
+                <Stack
+                  direction="row"
+                  spacing={1}
+                  sx={{ justifyContent: 'flex-end', alignItems: 'center', px: 2, py: 1.5 }}
+                >
+                  {isIpoReminderDirty && (
+                    <Typography sx={{ fontSize: '0.72rem', color: 'warning.main', mr: 'auto' }}>
+                      Unsaved changes
+                    </Typography>
+                  )}
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    onClick={handleResetIpoReminder}
+                    disabled={!isIpoReminderDirty || savingIpoReminder}
+                    sx={{ fontSize: '0.78rem', textTransform: 'none' }}
+                  >
+                    Reset
+                  </Button>
+                  <Button
+                    size="small"
+                    variant="contained"
+                    onClick={handleSaveIpoReminder}
+                    disabled={!isIpoReminderDirty || savingIpoReminder}
+                    sx={{ fontSize: '0.78rem', textTransform: 'none' }}
+                  >
+                    {savingIpoReminder ? 'Saving...' : 'Save'}
                   </Button>
                 </Stack>
               </SettingsSection>
