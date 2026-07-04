@@ -3,13 +3,14 @@ import { HoldingsModel } from '../models/HoldingsModel';
 import { PortfolioSnapshotDBModel } from '../models/PortfolioSnapshotModel';
 import type { IValueCalcConfig } from '../models/ValueCalcConfigModel';
 import { isStockMarketOpen } from '../utils/marketCalendar';
+import { PersistentInterval } from '../utils/PersistentInterval';
 import { LiveQuoteController } from './LiveQuoteController';
 import { logger } from '../utils/winston';
 
 const LABEL = 'PortfolioValueCalcService';
 
 class PortfolioValueCalcService {
-  private timer: NodeJS.Timeout | null = null;
+  private readonly scheduler = new PersistentInterval('portfolio_value_calc');
   private config: IValueCalcConfig = { enabled: false, intervalMinutes: 15 };
 
   async runCalculation(): Promise<void> {
@@ -86,23 +87,14 @@ class PortfolioValueCalcService {
     if (!config.enabled) return;
 
     const intervalMs = config.intervalMinutes * 60 * 1000;
-    this.timer = setInterval(() => {
-      this.runCalculation();
-    }, intervalMs);
+    void this.scheduler.start(intervalMs, () => this.runCalculation());
 
     logger.log({ level: 'info', message: `Started — interval: ${config.intervalMinutes} min`, label: LABEL });
-
-    if (isStockMarketOpen()) {
-      this.runCalculation();
-    }
   }
 
   stop(): void {
-    if (this.timer) {
-      clearInterval(this.timer);
-      this.timer = null;
-      logger.log({ level: 'info', message: 'Stopped', label: LABEL });
-    }
+    this.scheduler.stop();
+    logger.log({ level: 'info', message: 'Stopped', label: LABEL });
   }
 
   reconfigure(config: IValueCalcConfig): void {

@@ -5,6 +5,7 @@ import {
   Card,
   Chip,
   ChipProps,
+  IconButton,
   InputAdornment,
   OutlinedInput,
   Skeleton,
@@ -15,17 +16,20 @@ import {
   TableHead,
   TableRow,
   TableSortLabel,
+  Tooltip,
   Typography,
 } from '@mui/material';
 import moment from 'moment';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'react-toastify';
 
+import apis from '@/api';
 import { getComparator, visuallyHidden } from '@/components/DashboardTable/dashTableUtils';
 import { Iconify } from '@/components/Iconify';
 import { IIPO } from '@/models/IPOModel';
 import { fnShortenCurrency, fnShortenNumber } from '@/utils/formatNumber';
 
-type Props = { ipos: Array<IIPO>; isLoading: boolean };
+type Props = { ipos: Array<IIPO>; isLoading: boolean; onToggleWatch?: (ipo: IIPO, watched: boolean) => void };
 
 type HeadCell = { id: keyof IIPO; label: string; align: 'left' | 'right' };
 
@@ -49,7 +53,7 @@ const STATUS_COLOR: Record<IIPO['status'], ChipProps['color']> = {
 
 const capitalize = (s: string) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s);
 
-export default function IPOList({ ipos, isLoading }: Props) {
+export default function IPOList({ ipos, isLoading, onToggleWatch }: Props) {
   const navigate = useNavigate();
   const [order, setOrder] = React.useState<'asc' | 'desc'>('desc');
   const [orderBy, setOrderBy] = React.useState<keyof IIPO>('date');
@@ -59,6 +63,21 @@ export default function IPOList({ ipos, isLoading }: Props) {
     const isAsc = orderBy === id && order === 'asc';
     setOrder(isAsc ? 'desc' : 'asc');
     setOrderBy(id);
+  };
+
+  const handleToggleWatch = async (event: React.MouseEvent, ipo: IIPO) => {
+    event.stopPropagation();
+    try {
+      if (ipo.watched) {
+        await apis.live.unwatchIpo(ipo.symbol);
+        onToggleWatch?.(ipo, false);
+      } else {
+        await apis.live.watchIpo(ipo);
+        onToggleWatch?.(ipo, true);
+      }
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to update watch status');
+    }
   };
 
   const sorted = React.useMemo(() => {
@@ -100,6 +119,7 @@ export default function IPOList({ ipos, isLoading }: Props) {
         <Table size="small">
           <TableHead>
             <TableRow>
+              <TableCell sx={{ width: 40 }} />
               {HEAD_CELLS.map((cell) => (
                 <TableCell key={cell.id} align={cell.align} sortDirection={orderBy === cell.id ? order : false}>
                   <TableSortLabel
@@ -119,7 +139,7 @@ export default function IPOList({ ipos, isLoading }: Props) {
           <TableBody>
             {sorted.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={HEAD_CELLS.length} sx={{ textAlign: 'center', color: 'text.disabled', py: 4 }}>
+                <TableCell colSpan={HEAD_CELLS.length + 1} sx={{ textAlign: 'center', color: 'text.disabled', py: 4 }}>
                   {search.trim() ? 'No IPOs match your search.' : 'No IPOs found.'}
                 </TableCell>
               </TableRow>
@@ -131,6 +151,19 @@ export default function IPOList({ ipos, isLoading }: Props) {
                   onClick={() => navigate(`/ipo-calendar/${ipo.id}`, { state: { ipo } })}
                   sx={{ cursor: 'pointer' }}
                 >
+                  <TableCell align="center">
+                    {ipo.symbol && (
+                      <Tooltip title={ipo.watched ? 'Stop watching' : 'Watch for an IPO reminder'}>
+                        <IconButton size="small" onClick={(e) => handleToggleWatch(e, ipo)}>
+                          <Iconify
+                            icon={ipo.watched ? 'mdi:bell' : 'mdi:bell-outline'}
+                            width={18}
+                            sx={{ color: ipo.watched ? 'warning.main' : 'text.disabled' }}
+                          />
+                        </IconButton>
+                      </Tooltip>
+                    )}
+                  </TableCell>
                   <TableCell>
                     <Typography sx={{ fontSize: '0.82rem' }}>{moment(ipo.date).format('MMM D, YYYY')}</Typography>
                     <Typography sx={{ fontSize: '0.68rem', color: 'text.secondary' }}>

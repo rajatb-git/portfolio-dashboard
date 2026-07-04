@@ -1,3 +1,4 @@
+import { getJobState, setJobState } from '../models/JobRunStateModel';
 import {
   DEFAULT_TRADING_SUMMARY_CONFIG,
   getTradingSummaryConfig,
@@ -38,6 +39,20 @@ class TradingSummaryService {
   // Date string (ET) each slot last fired, to fire each slot at most once per day.
   private lastFired: Record<SlotName, string> = { morning: '', midday: '', close: '' };
 
+  private async hydrateLastFired(): Promise<void> {
+    const slots: SlotName[] = ['morning', 'midday', 'close'];
+    await Promise.all(
+      slots.map(async (slot) => {
+        try {
+          const value = await getJobState(`trading_summary_${slot}`);
+          if (value) this.lastFired[slot] = value;
+        } catch (err: any) {
+          logger.log({ level: 'error', label: LABEL, message: `Failed to read ${slot} fired state: ${err.message}` });
+        }
+      })
+    );
+  }
+
   private tick(): void {
     if (!this.config.enabled) return;
     const now = new Date();
@@ -53,8 +68,12 @@ class TradingSummaryService {
     for (const t of targets) {
       if (this.lastFired[t.name] === dateStr) continue;
       if (minutes >= t.min && minutes < t.min + GRACE_MIN) {
-        // Mark before awaiting so an overlapping tick can't double-fire the slot.
+        // Mark before awaiting so an overlapping tick (or a restart within the
+        // grace window) can't double-fire the slot — persisted so it survives restarts.
         this.lastFired[t.name] = dateStr;
+        void setJobState(`trading_summary_${t.name}`, dateStr).catch((err: any) => {
+          logger.log({ level: 'error', label: LABEL, message: `Failed to persist ${t.name} fired state: ${err.message}` });
+        });
         void this.publishSummaries(t.name, this.config);
       }
     }
@@ -166,7 +185,7 @@ class TradingSummaryService {
       label: LABEL,
       message: `Started — slots 9:35 / 12:30 / close ET, top ${config.topHoldingsCount} holdings`,
     });
-    this.tick();
+    void this.hydrateLastFired().then(() => this.tick());
   }
 
   stop(): void {

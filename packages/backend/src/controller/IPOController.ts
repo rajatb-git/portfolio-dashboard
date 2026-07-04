@@ -2,14 +2,19 @@ import moment from 'moment';
 import { getUpcomingIPOs } from '../externalApis/finnHub';
 import { IIPOModel, IPODBModel } from '../models/IPOModel';
 import { CacheDBModel } from '../models/CacheModel';
+import { WatchedIpoController } from './WatchedIpoController';
 
 const cacheKey = 'lastIPOFetchDate';
 
 const ipoModel = IPODBModel();
 ipoModel.initialize();
 
+const watchedIpoController = new WatchedIpoController();
+
+export type IIPOWithWatched = IIPOModel & { watched: boolean };
+
 export class IPOController {
-  getIPOs = async (): Promise<Array<IIPOModel> | Error> => {
+  getIPOs = async (): Promise<Array<IIPOWithWatched> | Error> => {
     if (this.isIPOFetchRequired()) {
       ipoModel.deleteAll();
 
@@ -20,7 +25,8 @@ export class IPOController {
       await CacheDBModel().insertOrUpdate({ key: cacheKey, value: moment().format() }, cacheKey);
     }
 
-    return ipoModel.getAllRecords();
+    const watchedSymbols = await watchedIpoController.getWatchedSymbols();
+    return ipoModel.getAllRecords().map((ipo) => ({ ...ipo, watched: watchedSymbols.has(ipo.symbol) }));
   };
 
   isIPOFetchRequired = (): boolean => {

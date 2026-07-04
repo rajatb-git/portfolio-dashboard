@@ -8,7 +8,9 @@ import { createZipArchive } from '../utils/archive';
 
 import { getAiConfig, IAiConfig, maskAiConfig, saveAiConfig } from '../models/AiConfigModel';
 import { getAlertMonitorConfig, IAlertMonitorConfig, saveAlertMonitorConfig } from '../models/AlertMonitorConfigModel';
+import { getIpoReminderConfig, IIpoReminderConfig, saveIpoReminderConfig, VALID_DAYS_BEFORE } from '../models/IpoReminderConfigModel';
 import { getLockStatus, setLockConfig } from '../models/LockConfigModel';
+import { getMoveAlertConfig, IMoveAlertConfig, saveMoveAlertConfig } from '../models/MoveAlertConfigModel';
 import {
   getNotificationConfig,
   INotificationConfig,
@@ -31,6 +33,8 @@ import {
   VALID_RETENTION_COUNTS,
 } from '../models/ScheduledBackupConfigModel';
 import { alertMonitorService } from '../controller/AlertMonitorService';
+import { ipoReminderService } from '../controller/IpoReminderService';
+import { moveAlertService } from '../controller/MoveAlertService';
 import { configureFromSaved, sendTestNotification } from '../controller/NotificationDispatcher';
 import { portfolioValueCalcService } from '../controller/PortfolioValueCalcService';
 import { scheduledBackupService } from '../controller/ScheduledBackupService';
@@ -408,6 +412,96 @@ export const SettingsRouter = () => {
       logger.log({ level: 'error', message: error.message, label: 'alerts-monitor config save' });
       ctx.status = 500;
       ctx.body = errorBody('Failed to save alert monitor config', error.message);
+    }
+  });
+
+  router.get('/settings/move-alert', async (ctx) => {
+    try {
+      ctx.body = await getMoveAlertConfig();
+      ctx.status = 200;
+    } catch (error: any) {
+      logger.log({ level: 'error', message: error.message, label: 'move-alert config get' });
+      ctx.status = 500;
+      ctx.body = errorBody('Failed to get move alert config', error.message);
+    }
+  });
+
+  router.post('/settings/move-alert', async (ctx) => {
+    try {
+      const body = ctx.request.body as Partial<IMoveAlertConfig>;
+
+      if (typeof body.enabled !== 'boolean') {
+        ctx.status = 400;
+        ctx.body = errorBody('Invalid request', '"enabled" boolean is required');
+        return;
+      }
+
+      const intervalMinutes = typeof body.intervalMinutes === 'number' ? body.intervalMinutes : 15;
+      const VALID_INTERVALS = [1, 5, 10, 15, 30, 60];
+      if (!VALID_INTERVALS.includes(intervalMinutes)) {
+        ctx.status = 400;
+        ctx.body = errorBody('Invalid interval', `intervalMinutes must be one of: ${VALID_INTERVALS.join(', ')}`);
+        return;
+      }
+
+      const thresholdPercent = Number(body.thresholdPercent);
+      if (!Number.isFinite(thresholdPercent) || thresholdPercent <= 0) {
+        ctx.status = 400;
+        ctx.body = errorBody('Invalid threshold', 'thresholdPercent must be a positive number');
+        return;
+      }
+
+      const config: IMoveAlertConfig = { enabled: body.enabled, intervalMinutes, thresholdPercent };
+      await saveMoveAlertConfig(config);
+      moveAlertService.reconfigure(config);
+
+      ctx.body = config;
+      ctx.status = 200;
+    } catch (error: any) {
+      logger.log({ level: 'error', message: error.message, label: 'move-alert config save' });
+      ctx.status = 500;
+      ctx.body = errorBody('Failed to save move alert config', error.message);
+    }
+  });
+
+  router.get('/settings/ipo-reminder', async (ctx) => {
+    try {
+      ctx.body = await getIpoReminderConfig();
+      ctx.status = 200;
+    } catch (error: any) {
+      logger.log({ level: 'error', message: error.message, label: 'ipo-reminder config get' });
+      ctx.status = 500;
+      ctx.body = errorBody('Failed to get IPO reminder config', error.message);
+    }
+  });
+
+  router.post('/settings/ipo-reminder', async (ctx) => {
+    try {
+      const body = ctx.request.body as Partial<IIpoReminderConfig>;
+
+      if (typeof body.enabled !== 'boolean') {
+        ctx.status = 400;
+        ctx.body = errorBody('Invalid request', '"enabled" boolean is required');
+        return;
+      }
+
+      const daysBefore = typeof body.daysBefore === 'number' ? body.daysBefore : 1;
+      if (!VALID_DAYS_BEFORE.includes(daysBefore)) {
+        ctx.status = 400;
+        ctx.body = errorBody('Invalid daysBefore', `daysBefore must be one of: ${VALID_DAYS_BEFORE.join(', ')}`);
+        return;
+      }
+
+      const config: IIpoReminderConfig = { enabled: body.enabled, daysBefore };
+      await saveIpoReminderConfig(config);
+      ipoReminderService.reconfigure(config);
+
+      ctx.body = config;
+      ctx.status = 200;
+    } catch (error: any) {
+      logger.log({ level: 'error', message: error.message, label: 'ipo-reminder config save' });
+      ctx.status = 500;
+      ctx.body = errorBody('Failed to save IPO reminder config', error.message);
     }
   });
 

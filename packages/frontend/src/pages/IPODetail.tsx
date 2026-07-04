@@ -10,6 +10,7 @@ import {
   IconButton,
   Skeleton,
   Stack,
+  Tooltip,
   Typography,
 } from '@mui/material';
 import moment from 'moment';
@@ -131,6 +132,21 @@ function IPODetail() {
       .catch(() => {});
   }, []);
 
+  const handleToggleWatch = async () => {
+    if (!ipo) return;
+    try {
+      if (ipo.watched) {
+        await apis.live.unwatchIpo(ipo.symbol);
+        setIpo((prev) => (prev ? { ...prev, watched: false } : prev));
+      } else {
+        await apis.live.watchIpo(ipo);
+        setIpo((prev) => (prev ? { ...prev, watched: true } : prev));
+      }
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to update watch status');
+    }
+  };
+
   React.useEffect(() => {
     if (agentEnabled && ipo) {
       fetchInsights(ipo);
@@ -205,6 +221,17 @@ function IPODetail() {
                     borderColor: 'divider',
                   }}
                 />
+              )}
+              {ipo.symbol && (
+                <Tooltip title={ipo.watched ? 'Stop watching' : 'Watch for an IPO reminder'}>
+                  <IconButton size="small" onClick={handleToggleWatch}>
+                    <Iconify
+                      icon={ipo.watched ? 'mdi:bell' : 'mdi:bell-outline'}
+                      width={18}
+                      sx={{ color: ipo.watched ? 'warning.main' : 'text.disabled' }}
+                    />
+                  </IconButton>
+                </Tooltip>
               )}
             </Stack>
 

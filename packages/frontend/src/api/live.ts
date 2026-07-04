@@ -106,6 +106,18 @@ export default class LiveAPI {
       })
       .catch(catchCustomError);
 
+  watchIpo = async (ipo: IIPO): Promise<IIPO> =>
+    axios
+      .put(DB_HOST + `/live/ipos/${encodeURIComponent(ipo.symbol)}/watch`, { name: ipo.name, date: ipo.date })
+      .then((response) => response.data)
+      .catch(catchCustomError);
+
+  unwatchIpo = async (symbol: string): Promise<{ symbol: string; watched: boolean }> =>
+    axios
+      .delete(DB_HOST + `/live/ipos/${encodeURIComponent(symbol)}/watch`)
+      .then((response) => response.data)
+      .catch(catchCustomError);
+
   getCompanyProfile = async (symbol: string): Promise<any> =>
     axios(DB_HOST + `/live/company-profile/${symbol}`)
       .then((response) => {

@@ -9,6 +9,7 @@ import { LiveRecommendationController } from '../controller/LiveRecommendationCo
 import { MarketMoversController } from '../controller/MarketMoversController';
 import { MarketNewsController } from '../controller/MarketNewsController';
 import { NewsSentimentController } from '../controller/NewsSentimentController';
+import { WatchedIpoController } from '../controller/WatchedIpoController';
 import {
   getCompanyNews,
   getEarningsCalendar,
@@ -107,6 +108,51 @@ export const LiveRouter = () => {
     } catch (err: any) {
       logger.log({ level: 'error', message: err.message, label: 'Get IPO insights' });
       ctx.body = errorBody('Failed to get IPO insights', err.message);
+      ctx.status = 400;
+    }
+  });
+
+  const SYMBOL_RE = /^[A-Za-z0-9.\-^]{1,20}$/;
+
+  router.put('/live/ipos/:symbol/watch', async (ctx) => {
+    try {
+      const symbol = ctx.params.symbol.toUpperCase();
+      if (!SYMBOL_RE.test(symbol)) {
+        ctx.status = 400;
+        ctx.body = errorBody('Invalid symbol', 'Symbol must be 1-20 alphanumeric characters');
+        return;
+      }
+      const name = String((ctx.request.body as any)?.name ?? '').trim();
+      const date = String((ctx.request.body as any)?.date ?? '').trim();
+      if (!name || !date) {
+        ctx.status = 400;
+        ctx.body = errorBody('Invalid request', '"name" and "date" are required');
+        return;
+      }
+
+      ctx.body = await new WatchedIpoController().watch(symbol, name, date);
+      ctx.status = 200;
+    } catch (err: any) {
+      logger.log({ level: 'error', message: err.message, label: 'Watch IPO' });
+      ctx.body = errorBody('Failed to watch IPO', err.message);
+      ctx.status = 400;
+    }
+  });
+
+  router.delete('/live/ipos/:symbol/watch', async (ctx) => {
+    try {
+      const symbol = ctx.params.symbol.toUpperCase();
+      if (!SYMBOL_RE.test(symbol)) {
+        ctx.status = 400;
+        ctx.body = errorBody('Invalid symbol', 'Symbol must be 1-20 alphanumeric characters');
+        return;
+      }
+      await new WatchedIpoController().unwatch(symbol);
+      ctx.body = { symbol, watched: false };
+      ctx.status = 200;
+    } catch (err: any) {
+      logger.log({ level: 'error', message: err.message, label: 'Unwatch IPO' });
+      ctx.body = errorBody('Failed to unwatch IPO', err.message);
       ctx.status = 400;
     }
   });
