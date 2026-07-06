@@ -33,6 +33,13 @@ export type IpoReminderConfig = {
   daysBefore: number;
 };
 
+export type IpoAnnouncementConfig = {
+  enabled: boolean;
+  topic: string;
+};
+
+export type IpoAnnouncementTestResult = { ok: boolean; mqttEnabled: boolean };
+
 export type MqttConfig = {
   enabled: boolean;
   url: string;
@@ -121,6 +128,24 @@ export default class SettingsAPI {
   saveIpoReminderConfig = async (payload: IpoReminderConfig): Promise<IpoReminderConfig> =>
     axios
       .post(DB_HOST + '/settings/ipo-reminder', payload)
+      .then((response) => response.data)
+      .catch(catchCustomError);
+
+  getIpoAnnouncementConfig = async (): Promise<IpoAnnouncementConfig> =>
+    axios
+      .get(DB_HOST + '/settings/ipo-announcement')
+      .then((response) => response.data)
+      .catch(catchCustomError);
+
+  saveIpoAnnouncementConfig = async (payload: IpoAnnouncementConfig): Promise<IpoAnnouncementConfig> =>
+    axios
+      .post(DB_HOST + '/settings/ipo-announcement', payload)
+      .then((response) => response.data)
+      .catch(catchCustomError);
+
+  testIpoAnnouncement = async (): Promise<IpoAnnouncementTestResult> =>
+    axios
+      .post(DB_HOST + '/settings/ipo-announcement/test')
       .then((response) => response.data)
       .catch(catchCustomError);
 

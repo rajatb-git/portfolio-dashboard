@@ -1,5 +1,6 @@
 import moment from 'moment';
 import type { IAlert } from '../models/AlertModel';
+import type { IIPO } from '../models/IPOModel';
 import { getNotificationConfig } from '../models/NotificationConfigModel';
 import { logger } from '../utils/winston';
 import { mqttPublisher } from './MqttPublisher';
@@ -19,6 +20,19 @@ export type IpoReminderPayload = {
   symbol: string;
   name: string;
   date: string;
+  title: string;
+  message: string;
+};
+
+export type IpoAnnouncementPayload = {
+  symbol: string;
+  name: string;
+  date: string;
+  exchange: string;
+  numberOfShares: number;
+  price: string;
+  totalSharesValue: number;
+  status: string;
   title: string;
   message: string;
 };
@@ -81,6 +95,24 @@ export function buildIpoReminderPayload(symbol: string, name: string, date: stri
   };
 }
 
+// Pure public IPO calendar data — no personal position data involved.
+export function buildIpoAnnouncementPayload(ipo: IIPO): IpoAnnouncementPayload {
+  const dateLabel = moment(ipo.date).format('MMMM D, YYYY');
+  const priceLabel = ipo.price ? `at ${ipo.price}` : 'at an undisclosed price';
+  return {
+    symbol: ipo.symbol,
+    name: ipo.name,
+    date: ipo.date,
+    exchange: ipo.exchange,
+    numberOfShares: ipo.numberOfShares,
+    price: ipo.price,
+    totalSharesValue: ipo.totalSharesValue,
+    status: ipo.status,
+    title: `New IPO announced: ${ipo.name} (${ipo.symbol})`,
+    message: `${ipo.name} (${ipo.symbol}) is expected to list on ${ipo.exchange || 'an exchange'} on ${dateLabel} ${priceLabel}.`,
+  };
+}
+
 export async function configureFromSaved(): Promise<void> {
   try {
     const config = await getNotificationConfig();
@@ -130,6 +162,25 @@ export async function dispatchIpoReminder(payload: IpoReminderPayload): Promise<
       label: LABEL,
       message: `IPO reminder dispatch failed for ${payload.symbol}: ${err.message}`,
     });
+  }
+}
+
+// Fire-and-forget delivery from the IPO announcement service.
+export async function dispatchIpoAnnouncement(payload: IpoAnnouncementPayload, topic?: string): Promise<boolean> {
+  if (!mqttPublisher.isEnabled()) return false;
+  try {
+    const ok = await mqttPublisher.publish(JSON.stringify(payload), topic);
+    if (ok) {
+      logger.log({ level: 'info', label: LABEL, message: `Dispatched MQTT IPO announcement for ${payload.symbol}` });
+    }
+    return ok;
+  } catch (err: any) {
+    logger.log({
+      level: 'error',
+      label: LABEL,
+      message: `IPO announcement dispatch failed for ${payload.symbol}: ${err.message}`,
+    });
+    return false;
   }
 }
 
