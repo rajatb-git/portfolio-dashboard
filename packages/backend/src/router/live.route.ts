@@ -241,7 +241,7 @@ export const LiveRouter = () => {
       ctx.body = result;
       ctx.status = 200;
     } catch (err: any) {
-      logger.log({ level: 'error', message: JSON.stringify(err), label: `Get agent insights "${ctx.params.sym}"` });
+      logger.log({ level: 'error', message: err.message, label: `Get agent insights "${ctx.params.sym}"` });
       ctx.body = errorBody('Failed to get agent insights', err.message);
       ctx.status = 400;
     }
