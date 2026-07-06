@@ -95,7 +95,11 @@ export async function dispatchAlertTriggered(alert: IAlert, price: number): Prom
   if (!mqttPublisher.isEnabled()) return;
   try {
     const ok = await mqttPublisher.publish(JSON.stringify(buildAlertPayload(alert, price)));
-    if (ok) logger.log({ level: 'info', label: LABEL, message: `Dispatched MQTT alert for ${alert.symbol}` });
+    if (ok) {
+      logger.log({ level: 'info', label: LABEL, message: `Dispatched MQTT alert for ${alert.symbol}` });
+    } else {
+      logger.log({ level: 'warn', label: LABEL, message: `MQTT alert for ${alert.symbol} was not delivered` });
+    }
   } catch (err: any) {
     logger.log({ level: 'error', label: LABEL, message: `Dispatch failed for ${alert.symbol}: ${err.message}` });
   }
@@ -112,6 +116,12 @@ export async function dispatchMoveAlert(payload: MoveAlertPayload): Promise<void
         label: LABEL,
         message: `Dispatched MQTT move alert for ${payload.symbol ?? 'portfolio'}`,
       });
+    } else {
+      logger.log({
+        level: 'warn',
+        label: LABEL,
+        message: `MQTT move alert for ${payload.symbol ?? 'portfolio'} was not delivered`,
+      });
     }
   } catch (err: any) {
     logger.log({ level: 'error', label: LABEL, message: `Move alert dispatch failed: ${err.message}` });
@@ -123,7 +133,11 @@ export async function dispatchIpoReminder(payload: IpoReminderPayload): Promise<
   if (!mqttPublisher.isEnabled()) return;
   try {
     const ok = await mqttPublisher.publish(JSON.stringify(payload));
-    if (ok) logger.log({ level: 'info', label: LABEL, message: `Dispatched MQTT IPO reminder for ${payload.symbol}` });
+    if (ok) {
+      logger.log({ level: 'info', label: LABEL, message: `Dispatched MQTT IPO reminder for ${payload.symbol}` });
+    } else {
+      logger.log({ level: 'warn', label: LABEL, message: `MQTT IPO reminder for ${payload.symbol} was not delivered` });
+    }
   } catch (err: any) {
     logger.log({
       level: 'error',

@@ -49,8 +49,13 @@ export const getSectorAllocation = async (): Promise<SectorAllocation[]> => {
     try {
       const quote = await quoteController.getLiveQuote(sym, false);
       priceMap.set(sym, quote.price);
-    } catch {
+    } catch (err: any) {
       // Use average price as fallback
+      logger.log({
+        level: 'warn',
+        label: 'SectorController',
+        message: `Live quote for ${sym} failed, falling back to average price: ${err.message}`,
+      });
       const holding = stockHoldings.find((h) => h.symbol === sym);
       priceMap.set(sym, holding?.averagePrice ?? 0);
     }

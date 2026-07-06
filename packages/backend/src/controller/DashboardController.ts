@@ -5,6 +5,7 @@ import { HoldingsModel } from '../models/HoldingsModel';
 import { PortfolioSnapshotDBModel } from '../models/PortfolioSnapshotModel';
 import { IPriceStoreModel } from '../models/PriceStoreModel';
 import { IRecommendationModel } from '../models/RecommendationModel';
+import { logger } from '../utils/winston';
 
 type HoldingAggregate = {
   accountId: string;
@@ -132,8 +133,13 @@ export const createDashboard = async (): Promise<Array<HoldingAggregate>> => {
         await snapshotModel.insertOne({ timestamp, date: today, totalValue }, timestamp);
       }
     }
-  } catch {
+  } catch (err: any) {
     // snapshot errors must never break the dashboard response
+    logger.log({
+      level: 'error',
+      label: 'DashboardController',
+      message: `Failed to record daily portfolio snapshot: ${err.message}`,
+    });
   }
 
   return result;
