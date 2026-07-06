@@ -16,6 +16,7 @@ export const AccountsRouter = () => {
       ctx.body = await accountsModel.insertOne(body, body.id);
       ctx.status = 200;
     } catch (error: any) {
+      logger.log({ level: 'error', message: error.message, label: 'Insert account' });
       ctx.status = 500;
       ctx.body = errorBody('Failed to insert account', error.message);
     }
@@ -27,6 +28,7 @@ export const AccountsRouter = () => {
       ctx.body = accountsModel.getAllRecords();
       ctx.status = 200;
     } catch (error: any) {
+      logger.log({ level: 'error', message: error.message, label: 'Get accounts' });
       ctx.status = 500;
       ctx.body = errorBody('Failed to get accounts', error.message);
     }
@@ -42,6 +44,7 @@ export const AccountsRouter = () => {
       ctx.status = 400;
       ctx.body = errorBody('Account ID is required', 'Account ID is required');
     } catch (error: any) {
+      logger.log({ level: 'error', message: error.message, label: `Get account "${ctx.params.id}"` });
       ctx.status = 500;
       ctx.body = errorBody('Failed to get account', error.message);
     }
@@ -54,6 +57,7 @@ export const AccountsRouter = () => {
       ctx.body = await accountsModel.insertOrUpdate(body, body.id);
       ctx.status = 200;
     } catch (error: any) {
+      logger.log({ level: 'error', message: error.message, label: 'Update account' });
       ctx.status = 500;
       ctx.body = errorBody('Failed to update account', error.message);
     }
@@ -99,6 +103,7 @@ export const AccountsRouter = () => {
       ctx.status = 400;
       ctx.body = errorBody('Account ID is required', 'Account ID is required');
     } catch (error: any) {
+      logger.log({ level: 'error', message: error.message, label: `Delete account "${ctx.params.id}"` });
       ctx.status = 500;
       ctx.body = errorBody('Failed to delete account', error.message);
     }
