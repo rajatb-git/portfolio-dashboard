@@ -8,6 +8,11 @@ import { createZipArchive } from '../utils/archive';
 
 import { getAiConfig, IAiConfig, maskAiConfig, saveAiConfig } from '../models/AiConfigModel';
 import { getAlertMonitorConfig, IAlertMonitorConfig, saveAlertMonitorConfig } from '../models/AlertMonitorConfigModel';
+import {
+  getIpoAnnouncementConfig,
+  IIpoAnnouncementConfig,
+  saveIpoAnnouncementConfig,
+} from '../models/IpoAnnouncementConfigModel';
 import { getIpoReminderConfig, IIpoReminderConfig, saveIpoReminderConfig, VALID_DAYS_BEFORE } from '../models/IpoReminderConfigModel';
 import { getLockStatus, setLockConfig } from '../models/LockConfigModel';
 import { getMoveAlertConfig, IMoveAlertConfig, saveMoveAlertConfig } from '../models/MoveAlertConfigModel';
@@ -33,6 +38,7 @@ import {
   VALID_RETENTION_COUNTS,
 } from '../models/ScheduledBackupConfigModel';
 import { alertMonitorService } from '../controller/AlertMonitorService';
+import { ipoAnnouncementService } from '../controller/IpoAnnouncementService';
 import { ipoReminderService } from '../controller/IpoReminderService';
 import { moveAlertService } from '../controller/MoveAlertService';
 import { configureFromSaved, sendTestNotification } from '../controller/NotificationDispatcher';
@@ -502,6 +508,54 @@ export const SettingsRouter = () => {
       logger.log({ level: 'error', message: error.message, label: 'ipo-reminder config save' });
       ctx.status = 500;
       ctx.body = errorBody('Failed to save IPO reminder config', error.message);
+    }
+  });
+
+  router.get('/settings/ipo-announcement', async (ctx) => {
+    try {
+      ctx.body = await getIpoAnnouncementConfig();
+      ctx.status = 200;
+    } catch (error: any) {
+      logger.log({ level: 'error', message: error.message, label: 'ipo-announcement config get' });
+      ctx.status = 500;
+      ctx.body = errorBody('Failed to get IPO announcement config', error.message);
+    }
+  });
+
+  router.post('/settings/ipo-announcement', async (ctx) => {
+    try {
+      const body = ctx.request.body as Partial<IIpoAnnouncementConfig>;
+
+      if (typeof body.enabled !== 'boolean') {
+        ctx.status = 400;
+        ctx.body = errorBody('Invalid request', '"enabled" boolean is required');
+        return;
+      }
+
+      const config: IIpoAnnouncementConfig = {
+        enabled: body.enabled,
+        topic: String(body.topic ?? '').trim() || 'portfolio-dashboard/ipo-announcements',
+      };
+      await saveIpoAnnouncementConfig(config);
+      ipoAnnouncementService.reconfigure(config);
+
+      ctx.body = config;
+      ctx.status = 200;
+    } catch (error: any) {
+      logger.log({ level: 'error', message: error.message, label: 'ipo-announcement config save' });
+      ctx.status = 500;
+      ctx.body = errorBody('Failed to save IPO announcement config', error.message);
+    }
+  });
+
+  router.post('/settings/ipo-announcement/test', async (ctx) => {
+    try {
+      ctx.body = await ipoAnnouncementService.sendTest();
+      ctx.status = 200;
+    } catch (error: any) {
+      logger.log({ level: 'error', message: error.message, label: 'ipo-announcement test' });
+      ctx.status = 500;
+      ctx.body = errorBody('Failed to send IPO announcement test', error.message);
     }
   });
 

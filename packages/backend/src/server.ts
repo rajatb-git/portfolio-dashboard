@@ -14,6 +14,7 @@ import KoaHelmet from 'koa-helmet';
 
 import { authMiddleware } from './middleware/auth';
 import { alertMonitorService } from './controller/AlertMonitorService';
+import { ipoAnnouncementService } from './controller/IpoAnnouncementService';
 import { ipoReminderService } from './controller/IpoReminderService';
 import { moveAlertService } from './controller/MoveAlertService';
 import { configureFromSaved } from './controller/NotificationDispatcher';
@@ -21,6 +22,7 @@ import { portfolioValueCalcService } from './controller/PortfolioValueCalcServic
 import { scheduledBackupService } from './controller/ScheduledBackupService';
 import { tradingSummaryService } from './controller/TradingSummaryService';
 import { getAlertMonitorConfig } from './models/AlertMonitorConfigModel';
+import { getIpoAnnouncementConfig } from './models/IpoAnnouncementConfigModel';
 import { getIpoReminderConfig } from './models/IpoReminderConfigModel';
 import { getMoveAlertConfig } from './models/MoveAlertConfigModel';
 import { getScheduledBackupConfig } from './models/ScheduledBackupConfigModel';
@@ -90,5 +92,8 @@ app.listen(port, () => {
   getScheduledBackupConfig().then((config) => scheduledBackupService.start(config));
   getMoveAlertConfig().then((config) => moveAlertService.start(config));
   getIpoReminderConfig().then((config) => ipoReminderService.start(config));
-  configureFromSaved().then(() => getTradingSummaryConfig().then((config) => tradingSummaryService.start(config)));
+  configureFromSaved().then(() => {
+    getTradingSummaryConfig().then((config) => tradingSummaryService.start(config));
+    getIpoAnnouncementConfig().then((config) => ipoAnnouncementService.start(config));
+  });
 });
