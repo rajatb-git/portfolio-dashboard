@@ -1,23 +1,21 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
-
 # dependencies
-/node_modules
-/.pnp
+node_modules/
+.pnp
 .pnp.js
 
+# build output
+dist/
+build/
+
 # testing
-/coverage
-
-# next.js
-/.next/
-/out/
-
-# production
-/build
+coverage/
 
 # misc
 .DS_Store
 *.pem
+*.key
+certs/*
+!certs/.gitkeep
 
 # debug
 npm-debug.log*
@@ -26,6 +24,7 @@ yarn-error.log*
 .pnpm-debug.log*
 
 # local env files
+.env
 .env*.local
 
 # vercel
@@ -33,6 +32,18 @@ yarn-error.log*
 
 # typescript
 *.tsbuildinfo
-# next-env.d.ts
 
-HAapp
+# backend storage
+packages/backend/storage/
+
+# scheduled backups (generated at runtime)
+packages/backend/backups/
+
+# log files
+*.log
+
+# ignore files
+ignore*
+
+# Claude Code harness state (worktrees, local settings)
+.claude/

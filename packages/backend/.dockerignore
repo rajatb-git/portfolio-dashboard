@@ -1,0 +1,10 @@
+node_modules
+dist
+.next
+.vscode
+.eslintignore
+.eslintrc
+.gitignore
+.prettierignore
+.prettierrc
+HAapp

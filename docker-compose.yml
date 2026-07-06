@@ -1,0 +1,33 @@
+services:
+  backend:
+    image: ghcr.io/rajatb-git/portfolio-dashboard/backend:${TAG:-latest}
+    build:
+      context: ./packages/backend
+      dockerfile: Dockerfile
+    container_name: portfolio-backend
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    environment:
+      - FINN_HUB_API
+      - FINN_HUB_API_KEY
+      - NEWS_API_KEY
+    volumes:
+      - backend-storage:/app/storage
+
+  frontend:
+    image: ghcr.io/rajatb-git/portfolio-dashboard/frontend:${TAG:-latest}
+    build:
+      context: ./packages/frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_DB_HOST: /api
+    container_name: portfolio-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+
+volumes:
+  backend-storage:

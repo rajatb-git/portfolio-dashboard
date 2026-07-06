@@ -1,0 +1,50 @@
+{
+  "name": "@portfolio/backend",
+  "version": "3.8.3",
+  "description": "",
+  "main": "dist",
+  "scripts": {
+    "clean": "rm -rf dist",
+    "build": "tsc",
+    "lint": "biome lint .",
+    "lint:fix": "biome lint --write .",
+    "format": "pnpm biome format .",
+    "format:fix": "pnpm biome format --write .",
+    "fix:all": "pnpm run lint:fix && pnpm run format:fix",
+    "start": "node ./dist/server.js",
+    "do": "npm run clean && npm run build && npm start",
+    "dev": "nodemon --ignore '*.json' src/server.ts"
+  },
+  "author": "Rajat Bansal",
+  "license": "MIT",
+  "private": true,
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.100.1",
+    "@google/genai": "^2.7.0",
+    "@koa/cors": "^5.0.0",
+    "@koa/router": "^15.6.0",
+    "archiver": "^8.0.0",
+    "axios": "^1.16.1",
+    "dotenv": "^17.4.2",
+    "fast-xml-parser": "^5.9.3",
+    "koa": "^3.2.1",
+    "koa-bodyparser": "^4.4.1",
+    "koa-helmet": "^9.0.0",
+    "moment": "^2.30.1",
+    "mqtt": "^5.15.1",
+    "skewer-db": "1.0.3",
+    "unzipper": "^0.12.3",
+    "winston": "^3.19.0"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.4.16",
+    "@types/archiver": "^7.0.0",
+    "@types/koa": "^3.0.3",
+    "@types/koa-bodyparser": "^4.3.13",
+    "@types/koa__cors": "^5.0.1",
+    "@types/node": "^25.9.1",
+    "@types/unzipper": "^0.10.11",
+    "nodemon": "^3.1.14",
+    "typescript": "6.0.3"
+  }
+}

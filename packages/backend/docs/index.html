@@ -1,0 +1,563 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Portfolio Dashboard Backend API Documentation</title>
+    <style>
+      body {
+        font-family: sans-serif;
+        margin: 20px;
+      }
+
+      h1,
+      h2,
+      h3 {
+        color: #333;
+      }
+
+      h2 {
+        border-bottom: 1px solid #ccc;
+        padding-bottom: 5px;
+      }
+
+      h3 {
+        margin-top: 20px;
+      }
+
+      p {
+        line-height: 1.6;
+      }
+
+      pre {
+        background-color: #f4f4f4;
+        padding: 10px;
+        border-radius: 5px;
+        overflow-x: auto;
+      }
+
+      code {
+        font-family: monospace;
+      }
+
+      .endpoint {
+        margin-bottom: 20px;
+      }
+
+      .method {
+        display: inline-block;
+        padding: 5px 10px;
+        border-radius: 5px;
+        margin-right: 10px;
+        color: white;
+      }
+
+      .get {
+        background-color: #61affe;
+      }
+
+      .post {
+        background-color: #2ecc71;
+      }
+
+      .put {
+        background-color: #f39c12;
+      }
+
+      .delete {
+        background-color: #e74c3c;
+      }
+    </style>
+  </head>
+
+  <body>
+    <h1>Portfolio Dashboard Backend API Documentation</h1>
+
+    <p>
+      This document provides details about the API endpoints for the Portfolio Dashboard Backend application. The
+      backend is built using Node.js, Koa, and SkewerDB.
+    </p>
+
+    <h2>Dashboard</h2>
+
+    <div class="endpoint">
+      <h3><span class="method get">GET</span> /dashboard</h3>
+      <p>
+        <strong>Description:</strong> Retrieves an overview of user investments, including performance metrics and
+        visualizations. This endpoint aggregates holdings data with live market quotes and recommendations.
+      </p>
+      <p><strong>Request:</strong> None</p>
+      <p><strong>Response (Example):</strong></p>
+      <pre>
+        <code>
+[
+  {
+    "accountId": "john",
+    "name": "Apple Inc.",
+    "symbol": "AAPL",
+    "qty": 100,
+    "averagePrice": 150.25,
+    "type": "stock",
+    "currentPrice": 236.87,
+    "priceDate": "Feb 12, 2025 9:33 PM",
+    "percentChange": 1.83,
+    "dayHigh": 236.96,
+    "dayLow": 230.68,
+    "originalValue": 15025,
+    "totalGL": 8662,
+    "totalGLPercent": 57.65,
+    "marketValue": 23687,
+    "buy": 25,
+    "hold": 13,
+    "sell": 3,
+    "strongBuy": 12,
+    "strongSell": 1
+  },
+  ...
+]
+        </code>
+    </pre>
+    </div>
+
+    <h2>Holdings</h2>
+
+    <div class="endpoint">
+      <h3><span class="method put">PUT</span> /holdings</h3>
+      <p><strong>Description:</strong> Creates a new holding record.</p>
+      <p><strong>Request Body (Example):</strong></p>
+      <pre>
+        <code>
+{
+    "accountId": "john",
+    "name": "New Stock",
+    "symbol": "NEWSTOCK",
+    "qty": 10,
+    "averagePrice": 50,
+    "type": "stock"
+}
+        </code>
+    </pre>
+      <p><strong>Response:</strong> Returns the newly created holding object.</p>
+    </div>
+
+    <div class="endpoint">
+      <h3><span class="method get">GET</span> /holdings</h3>
+      <p><strong>Description:</strong> Retrieves all holding records.</p>
+      <p><strong>Request:</strong> None</p>
+      <p><strong>Response:</strong> Returns an array of holding objects.</p>
+    </div>
+
+    <div class="endpoint">
+      <h3><span class="method get">GET</span> /holdings/:id</h3>
+      <p><strong>Description:</strong> Retrieves a specific holding record by ID.</p>
+      <p><strong>Request Parameters:</strong></p>
+      <ul>
+        <li><code>id</code>: Holding ID (UUID)</li>
+      </ul>
+      <p><strong>Response:</strong> Returns a single holding object.</p>
+    </div>
+
+    <div class="endpoint">
+      <h3><span class="method post">POST</span> /holdings</h3>
+      <p><strong>Description:</strong> Updates an existing holding record.</p>
+      <p><strong>Request Body (Example):</strong></p>
+      <pre>
+        <code>
+{
+    "id": "existing-holding-id",
+    "accountId": "john",
+    "name": "Updated Stock Name",
+    "symbol": "UPDATEDSTOCK",
+    "qty": 15,
+    "averagePrice": 55,
+    "type": "stock"
+}
+        </code>
+    </pre>
+      <p><strong>Response:</strong> Returns the updated holding object.</p>
+    </div>
+
+    <div class="endpoint">
+      <h3><span class="method delete">DELETE</span> /holdings/:id</h3>
+      <p><strong>Description:</strong> Deletes a specific holding record by ID.</p>
+      <p><strong>Request Parameters:</strong></p>
+      <ul>
+        <li><code>id</code>: Holding ID (UUID)</li>
+      </ul>
+      <p><strong>Response:</strong> Returns a success message.</p>
+      <pre>
+        <code>
+{ message: 'Holding deleted successfully' }
+        </code>
+    </pre>
+    </div>
+
+    <div class="endpoint">
+      <h3><span class="method post">POST</span> /holdings/buy</h3>
+      <p>
+        <strong>Description:</strong> Completes a buy transaction, updating or creating a holding and logging the
+        transaction.
+      </p>
+      <p><strong>Request Body (Example):</strong></p>
+      <pre>
+        <code>
+{
+    "accountId": "john",
+    "symbol": "AAPL",
+    "qty": 5,
+    "averagePrice": 240,
+    "type": "stock"
+}
+        </code>
+    </pre>
+      <p><strong>Response:</strong> Returns the updated or created holding object.</p>
+    </div>
+
+    <div class="endpoint">
+      <h3><span class="method post">POST</span> /holdings/sell</h3>
+      <p>
+        <strong>Description:</strong> Completes a sell transaction, updating or deleting a holding and logging the
+        transaction.
+      </p>
+      <p><strong>Request Body (Example):</strong></p>
+      <pre>
+        <code>
+{
+    "accountId": "john",
+    "symbol": "AAPL",
+    "qty": 2,
+    "averagePrice": 245,
+    "type": "stock"
+}
+        </code>
+    </pre>
+      <p><strong>Response:</strong> Returns the updated or deleted holding object.</p>
+    </div>
+
+    <div class="endpoint">
+      <h3><span class="method post">POST</span> /holdings/import</h3>
+      <p><strong>Description:</strong> Imports multiple holdings from an array of holding objects.</p>
+      <p><strong>Request Body (Example):</strong></p>
+      <pre>
+        <code>
+[
+  {
+    "symbol": "AAPL",
+    "name": "Apple Inc.",
+    "qty": "100",
+    "averagePrice": "$150.25",
+    "accountId": "john",
+    "type": "stock"
+  },
+  ...
+]
+        </code>
+    </pre>
+      <p><strong>Response:</strong> Returns a success message.</p>
+    </div>
+
+    <h2>Users</h2>
+
+    <div class="endpoint">
+      <h3><span class="method put">PUT</span> /users</h3>
+      <p><strong>Description:</strong> Creates a new user record.</p>
+      <p><strong>Request Body (Example):</strong></p>
+      <pre>
+        <code>
+{
+    "name": "Alice Smith"
+}
+        </code>
+    </pre>
+      <p><strong>Response:</strong> Returns the newly created user object.</p>
+    </div>
+
+    <div class="endpoint">
+      <h3><span class="method get">GET</span> /users</h3>
+      <p><strong>Description:</strong> Retrieves all user records.</p>
+      <p><strong>Request:</strong> None</p>
+      <p><strong>Response:</strong> Returns an array of user objects.</p>
+    </div>
+
+    <div class="endpoint">
+      <h3><span class="method get">GET</span> /users/:id</h3>
+      <p><strong>Description:</strong> Retrieves a specific user record by ID.</p>
+      <p><strong>Request Parameters:</strong></p>
+      <ul>
+        <li><code>id</code>: User ID (UUID)</li>
+      </ul>
+      <p><strong>Response:</strong> Returns a single user object.</p>
+    </div>
+
+    <div class="endpoint">
+      <h3><span class="method post">POST</span> /users</h3>
+      <p><strong>Description:</strong> Updates an existing user record.</p>
+      <p><strong>Request Body (Example):</strong></p>
+      <pre>
+        <code>
+{
+    "id": "existing-user-id",
+    "name": "Alice Updated"
+}
+        </code>
+    </pre>
+      <p><strong>Response:</strong> Returns the updated user object.</p>
+    </div>
+
+    <div class="endpoint">
+      <h3><span class="method delete">DELETE</span> /users/:id</h3>
+      <p><strong>Description:</strong> Deletes a specific user record by ID.</p>
+      <p><strong>Request Parameters:</strong></p>
+      <ul>
+        <li><code>id</code>: User ID (UUID)</li>
+      </ul>
+      <p><strong>Response:</strong> Returns a success message.</p>
+      <pre>
+        <code>
+{ message: 'User deleted successfully' }
+        </code>
+    </pre>
+    </div>
+
+    <h2>Live Data</h2>
+
+    <div class="endpoint">
+      <h3><span class="method get">GET</span> /live/quote/:sym</h3>
+      <p><strong>Description:</strong> Retrieves live quote for a given stock or crypto symbol.</p>
+      <p><strong>Request Parameters:</strong></p>
+      <ul>
+        <li>
+          <code>sym</code>: Stock or Crypto symbol (e.g., AAPL, BTC). For Crypto use the base symbol (e.g., BTC for
+          BTC-USDT).
+        </li>
+      </ul>
+      <p><strong>Response (Example):</strong></p>
+      <pre>
+        <code>
+{
+    "price": 236.87,
+    "percentChange": 1.83,
+    "dayHigh": 236.96,
+    "dayLow": 230.68,
+    "priceDate": "Feb 12, 2025 9:33 PM",
+    "id": "AAPL",
+    "createdAt": "...",
+    "updatedAt": "..."
+}
+        </code>
+    </pre>
+    </div>
+
+    <div class="endpoint">
+      <h3><span class="method get">GET</span> /live/recommendation/:sym</h3>
+      <p><strong>Description:</strong> Retrieves analyst recommendations for a given stock symbol.</p>
+      <p><strong>Request Parameters:</strong></p>
+      <ul>
+        <li><code>sym</code>: Stock symbol (e.g., AAPL).</li>
+      </ul>
+      <p><strong>Response (Example):</strong></p>
+      <pre>
+        <code>
+{
+    "buy": 25,
+    "hold": 13,
+    "period": "2025-02-01",
+    "sell": 3,
+    "strongBuy": 12,
+    "strongSell": 1,
+    "id": "AAPL",
+    "createdAt": "...",
+    "updatedAt": "..."
+}
+        </code>
+    </pre>
+    </div>
+
+    <div class="endpoint">
+      <h3><span class="method get">GET</span> /live/news/:sym</h3>
+      <p><strong>Description:</strong> Retrieves company news for a given stock symbol.</p>
+      <p><strong>Request Parameters:</strong></p>
+      <ul>
+        <li><code>sym</code>: Stock symbol (e.g., AAPL).</li>
+      </ul>
+      <p><strong>Response:</strong> Returns an array of news articles.</p>
+      <pre>
+        <code>
+[
+  {
+    "category": "...",
+    "datetime": 1718222400,
+    "headline": "...",
+    "id": 12345,
+    "image": "...",
+    "related": "...",
+    "source": "...",
+    "summary": "...",
+    "url": "..."
+  },
+  ...
+]
+        </code>
+    </pre>
+    </div>
+
+    <div class="endpoint">
+      <h3><span class="method get">GET</span> /live/history/:sym</h3>
+      <p><strong>Description:</strong> Retrieves historical price data for a stock symbol, used for charting.</p>
+      <p><strong>Request Parameters:</strong></p>
+      <ul>
+        <li><code>sym</code>: Stock symbol (e.g., AAPL).</li>
+        <li><code>range</code>: Time range for historical data (e.g., 1d, 5d, 1M, 3M, 6M, 1y, 2y, 3y).</li>
+      </ul>
+      <p><strong>Response:</strong> Returns an array of price data points for candlestick charts.</p>
+      <pre>
+        <code>
+[
+  {
+    "x": "2025-02-12T00:00:00.000Z",
+    "y": [
+      231.2,
+      236.96,
+      230.68,
+      236.87
+    ]
+  },
+  ...
+]
+        </code>
+    </pre>
+    </div>
+
+    <div class="endpoint">
+      <h3><span class="method get">GET</span> /live/ipos</h3>
+      <p><strong>Description:</strong> Retrieves a list of upcoming and recent IPOs.</p>
+      <p><strong>Request:</strong> None</p>
+      <p><strong>Response:</strong> Returns an array of IPO events.</p>
+      <pre>
+        <code>
+[
+  {
+    "date": "2025-02-21",
+    "exchange": "NYSE MKT",
+    "name": "Apimeds Pharmaceuticals US, Inc.",
+    "numberOfShares": 4500000,
+    "price": "4.00-5.00",
+    "status": "expected",
+    "symbol": "APUS",
+    "totalSharesValue": 25875000,
+    "id": "...",
+    "createdAt": "...",
+    "updatedAt": "..."
+  },
+  ...
+]
+        </code>
+    </pre>
+    </div>
+
+    <h2>Transactions</h2>
+
+    <div class="endpoint">
+      <h3><span class="method put">PUT</span> /transactions</h3>
+      <p><strong>Description:</strong> Creates a new transaction record.</p>
+      <p><strong>Request Body (Example):</strong></p>
+      <pre>
+        <code>
+{
+    "accountId": "john",
+    "symbol": "AAPL",
+    "qty": 5,
+    "price": 240,
+    "type": "stock",
+    "action": "buy"
+}
+        </code>
+    </pre>
+      <p><strong>Response:</strong> Returns the newly created transaction object.</p>
+    </div>
+
+    <div class="endpoint">
+      <h3><span class="method get">GET</span> /transactions</h3>
+      <p><strong>Description:</strong> Retrieves all transaction records.</p>
+      <p><strong>Request:</strong> None</p>
+      <p><strong>Response:</strong> Returns an array of transaction objects.</p>
+    </div>
+
+    <div class="endpoint">
+      <h3><span class="method get">GET</span> /transactions/:id</h3>
+      <p><strong>Description:</strong> Retrieves a specific transaction record by ID.</p>
+      <p><strong>Request Parameters:</strong></p>
+      <ul>
+        <li><code>id</code>: Transaction ID (UUID)</li>
+      </ul>
+      <p><strong>Response:</strong> Returns a single transaction object.</p>
+    </div>
+
+    <div class="endpoint">
+      <h3><span class="method post">POST</span> /transactions</h3>
+      <p>
+        <strong>Description:</strong> Updates an existing transaction record. (Functionality may not be fully
+        implemented or necessary)
+      </p>
+      <p><strong>Request Body (Example):</strong></p>
+      <pre>
+        <code>
+{
+    "id": "existing-transaction-id",
+    "accountId": "john",
+    "symbol": "AAPL",
+    "qty": 6,
+    "price": 242,
+    "type": "stock",
+    "action": "buy"
+}
+        </code>
+    </pre>
+      <p><strong>Response:</strong> Returns the updated transaction object.</p>
+    </div>
+
+    <div class="endpoint">
+      <h3><span class="method delete">DELETE</span> /transactions/:id</h3>
+      <p><strong>Description:</strong> Deletes a specific transaction record by ID.</p>
+      <p><strong>Request Parameters:</strong></p>
+      <ul>
+        <li><code>id</code>: Transaction ID (UUID)</li>
+      </ul>
+      <p><strong>Response:</strong> Returns a success message.</p>
+    </div>
+
+    <h2>Logs</h2>
+
+    <div class="endpoint">
+      <h3><span class="method get">GET</span> /logs/:file</h3>
+      <p><strong>Description:</strong> Retrieves logs from a specified log file.</p>
+      <p><strong>Request Parameters:</strong></p>
+      <ul>
+        <li><code>file</code>: Log file name (e.g., combined, error).</li>
+      </ul>
+      <p><strong>Response:</strong> Returns the content of the log file as plain text.</p>
+    </div>
+
+    <div class="endpoint">
+      <h3><span class="method delete">DELETE</span> /logs/:file</h3>
+      <p><strong>Description:</strong> Clears the content of a specified log file.</p>
+      <p><strong>Request Parameters:</strong></p>
+      <ul>
+        <li><code>file</code>: Log file name (e.g., combined, error).</li>
+      </ul>
+      <p><strong>Response:</strong> Returns the (now empty) content of the log file as plain text.</p>
+    </div>
+
+    <h2>Health</h2>
+
+    <div class="endpoint">
+      <h3><span class="method get">GET</span> /health</h3>
+      <p><strong>Description:</strong> Health check endpoint to verify if the backend is running.</p>
+      <p><strong>Request:</strong> None</p>
+      <p><strong>Response:</strong> Returns a simple health message.</p>
+      <pre>
+        <code>
+"i'm here"
+        </code>
+    </pre>
+    </div>
+  </body>
+</html>

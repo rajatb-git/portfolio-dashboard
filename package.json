@@ -1,62 +1,33 @@
 {
-  "name": "portfolio-dashboard",
-  "version": "0.1.22",
+  "name": "portfolio-dashboard-monorepo",
+  "version": "3.8.3",
   "private": true,
-  "license": "ISC",
+  "license": "MIT",
   "author": "Rajat Bansal",
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "clean": "rimraf .next",
-    "lint": "next lint",
-    "lint-fix": "next lint --fix",
-    "do": "./scripts/do.sh"
+    "dev": "pnpm -r install && pnpm -r --parallel run dev",
+    "dev:frontend": "pnpm --filter @portfolio/frontend dev",
+    "dev:backend": "pnpm --filter @portfolio/backend dev",
+    "build": "pnpm -r run build",
+    "build:frontend": "pnpm --filter @portfolio/frontend build",
+    "build:backend": "pnpm --filter @portfolio/backend build",
+    "lint": "pnpm -r run lint",
+    "format": "pnpm -r run format",
+    "clean": "pnpm -r run clean",
+    "knip": "knip"
   },
-  "dependencies": {
-    "@emotion/react": "^11.14.0",
-    "@emotion/styled": "^11.14.0",
-    "@fullcalendar/core": "^6.1.15",
-    "@fullcalendar/daygrid": "^6.1.15",
-    "@fullcalendar/interaction": "^6.1.15",
-    "@fullcalendar/list": "^6.1.15",
-    "@fullcalendar/react": "^6.1.15",
-    "@iconify/react": "^5.2.0",
-    "@mui/icons-material": "^6.4.0",
-    "@mui/lab": "^6.0.0-beta.23",
-    "@mui/material": "^6.4.0",
-    "@mui/x-data-grid": "^7.24.0",
-    "apexcharts": "^4.3.0",
-    "axios": "^1.7.9",
-    "case": "^1.6.3",
-    "csvtojson": "^2.0.10",
-    "framer-motion": "^11.18.1",
-    "moment": "^2.30.1",
-    "next": "^15.1.5",
-    "numeral": "^2.0.6",
-    "react": "^19.0.0",
-    "react-apexcharts": "^1.7.0",
-    "react-dom": "^19.0.0",
-    "react-dropzone": "^14.3.5",
-    "react-toastify": "^11.0.3",
-    "typescript": "^5.7.3"
+  "engines": {
+    "node": ">=22"
+  },
+  "pnpm": {
+    "overrides": {
+      "workbox-build": "7.4.1",
+      "workbox-window": "7.4.1"
+    }
   },
   "devDependencies": {
-    "@types/node": "^22.10.7",
-    "@types/numeral": "^2.0.5",
-    "@types/react": "^19.0.7",
-    "@types/react-dom": "^19.0.3",
-    "@types/uuid": "^10.0.0",
-    "@typescript-eslint/parser": "^8.20.0",
-    "eslint": "^9.18.0",
-    "eslint-config-next": "^15.1.5",
-    "eslint-config-prettier": "^10.0.1",
-    "eslint-plugin-import": "^2.31.0",
-    "eslint-plugin-n": "^17.15.1",
-    "eslint-plugin-prettier": "^5.2.3",
-    "eslint-plugin-promise": "^7.2.1",
-    "eslint-plugin-react": "^7.37.4",
-    "eslint-plugin-react-hooks": "^5.1.0",
-    "prettier": "^3.4.2"
-  }
+    "@biomejs/biome": "^2.4.16",
+    "knip": "^6.14.2"
+  },
+  "packageManager": "pnpm@11.1.1+sha512.d1fdf5f73c617b64fa1a56a81c3c8dfe0e966e33a6010aa256b517ae77be21d93e05affc0de1a83b0e4f29d569f68b446ae8f068cd7247c0bb3df0fb4d7bdf9a"
 }
