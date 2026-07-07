@@ -6,11 +6,6 @@ import { logger } from '../utils/winston';
 
 const ALLOWED_LOG_FILES = ['combined', 'error'];
 
-// winston appends, so the file is oldest-first. Present it newest-first for the
-// viewer without rewriting the file (each entry is a single line).
-const newestFirst = (contents: string): string =>
-  contents.split('\n').filter((line) => line.length > 0).reverse().join('\n');
-
 export const LogsRouter = () => {
   const router = new Router();
 
@@ -22,7 +17,7 @@ export const LogsRouter = () => {
         ctx.status = 400;
         return;
       }
-      ctx.body = newestFirst(fs.readFileSync(path.resolve(`${file}.log`), 'utf8'));
+      ctx.body = fs.readFileSync(path.resolve(`${file}.log`), 'utf8');
       ctx.status = 200;
     } catch (err: any) {
       logger.log({ level: 'error', message: err.message, label: 'Get logs' });
