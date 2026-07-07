@@ -1,6 +1,7 @@
 import moment from 'moment';
 import { getQuoteForSymbol } from '../externalApis/finnHub';
 import { getQuoteFromNasdaq } from '../externalApis/nasdaq';
+import type { QuoteResponse } from '../externalApis/types';
 import { IPriceStoreModel, PriceStoreDBModel } from '../models/PriceStoreModel';
 
 const priceStoreModel = PriceStoreDBModel();
@@ -46,13 +47,28 @@ export class LiveQuoteController {
   };
 
   private fetchAndStore = async (symbol: string, isCrypto: boolean): Promise<IPriceStoreModel> => {
-    let apiFetch = await getQuoteForSymbol(symbol, isCrypto);
+    const etNow = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/New_York' }));
+    const inExtendedHours = !isCrypto && this.marketPhaseEt(etNow) === 'extended';
 
-    // Finnhub's free tier returns c=0 for symbols it doesn't cover (notably most US ETFs).
-    // Fall back to NASDAQ; if that also can't price the symbol it throws and the dashboard
-    // skips this holding rather than caching a zero.
-    if (!isCrypto && (!apiFetch.c || apiFetch.c <= 0)) {
-      apiFetch = await getQuoteFromNasdaq(symbol);
+    let apiFetch: QuoteResponse;
+    if (inExtendedHours) {
+      // Finnhub's REST /quote only reflects the regular session, so during pre-/post-market
+      // source from NASDAQ, whose lastSalePrice tracks extended-hours trades. Fall back to
+      // Finnhub if NASDAQ can't price the symbol.
+      try {
+        apiFetch = await getQuoteFromNasdaq(symbol);
+      } catch {
+        apiFetch = await getQuoteForSymbol(symbol, isCrypto);
+      }
+    } else {
+      apiFetch = await getQuoteForSymbol(symbol, isCrypto);
+
+      // Finnhub's free tier returns c=0 for symbols it doesn't cover (notably most US ETFs).
+      // Fall back to NASDAQ; if that also can't price the symbol it throws and the dashboard
+      // skips this holding rather than caching a zero.
+      if (!isCrypto && (!apiFetch.c || apiFetch.c <= 0)) {
+        apiFetch = await getQuoteFromNasdaq(symbol);
+      }
     }
 
     const record = {
@@ -70,24 +86,36 @@ export class LiveQuoteController {
     return existing ? priceStoreModel.updateById(symbol, record) : priceStoreModel.insertOne(record, symbol);
   };
 
+  // Classifies the ET wall-clock into a trading phase. Pre-market opens 4:00 ET,
+  // the regular session runs 9:30–16:00, and after-hours trades until 20:00 ET.
+  marketPhaseEt = (etNow: Date): 'regular' | 'extended' | 'closed' => {
+    const day = etNow.getDay();
+    if (day === 0 || day === 6) return 'closed';
+
+    const minutes = etNow.getHours() * 60 + etNow.getMinutes();
+    const preMarketOpen = 4 * 60;
+    const regularOpen = 9 * 60 + 30;
+    const regularClose = 16 * 60;
+    const afterHoursClose = 20 * 60;
+
+    if (minutes >= regularOpen && minutes < regularClose) return 'regular';
+    if (minutes >= preMarketOpen && minutes < afterHoursClose) return 'extended';
+    return 'closed';
+  };
+
   liveFetchRequiredQuote = (dbFetch: IPriceStoreModel | undefined): boolean => {
     if (!dbFetch) return true;
 
     // Derive current time in ET so market-hours checks are timezone-correct.
     const etNow = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/New_York' }));
-    const day = etNow.getDay();
-    const minutesSinceMidnight = etNow.getHours() * 60 + etNow.getMinutes();
-    const marketOpen = 9 * 60 + 30;
-    const marketClose = 16 * 60;
-    const isWeekend = day === 0 || day === 6;
-    const isMarketHours = !isWeekend && minutesSinceMidnight >= marketOpen && minutesSinceMidnight < marketClose;
 
-    if (isMarketHours) {
-      // Within market hours: refresh if cached quote is older than 120 seconds.
+    // Refresh on a 120s cadence through both the regular session and the pre-/post-market
+    // windows so extended-hours prices keep tracking live, not just 9:30–16:00.
+    if (this.marketPhaseEt(etNow) !== 'closed') {
       return moment().diff(moment(dbFetch.updatedAt), 'seconds') >= 120;
     }
 
-    // Outside market hours: refresh if cache was last updated before the most recent
+    // Outside all trading hours: refresh if cache was last updated before the most recent
     // market close, so a quote stored on a previous trading day doesn't persist indefinitely.
     const updatedAtEt = new Date(new Date(dbFetch.updatedAt).toLocaleString('en-US', { timeZone: 'America/New_York' }));
     return updatedAtEt < this.mostRecentMarketCloseEt(etNow);
