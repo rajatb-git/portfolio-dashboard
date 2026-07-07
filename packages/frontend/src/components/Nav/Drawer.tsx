@@ -12,6 +12,14 @@ import { Iconify } from '../Iconify';
 import { SearchTickerModal } from '../SearchTickerModal';
 import SideNavItem from './SideNavItem';
 
+type NavSection = { section: string; items: typeof NAV_CONFIG };
+const navSections: NavSection[] = NAV_CONFIG.reduce<NavSection[]>((acc, item) => {
+  const last = acc[acc.length - 1];
+  if (last && last.section === item.section) last.items.push(item);
+  else acc.push({ section: item.section, items: [item] });
+  return acc;
+}, []);
+
 const LogoIcon = ({ isLight }: { isLight: boolean }) => (
   <svg width="18" height="18" viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg">
     <title>icon</title>
@@ -59,6 +67,7 @@ export default function Drawer({ collapsed, onToggle, isMobile, mobileOpen, onMo
 
   const drawerWidth = collapsed ? DRAWER_COLLAPSED_WIDTH : DRAWER_WIDTH;
   const effectiveDrawerWidth = isMobile ? DRAWER_WIDTH : drawerWidth;
+  const isCollapsed = !isMobile && collapsed;
 
   const refreshSearchHistory = () => {
     setSearchHistory(LocalStorageArray.getAll('searchText'));
@@ -288,10 +297,34 @@ export default function Drawer({ collapsed, onToggle, isMobile, mobileOpen, onMo
 
         <Divider sx={{ mx: !isMobile && collapsed ? 0.75 : 1.5, mb: 1 }} />
 
-        {/* Main nav */}
+        {/* Main nav — grouped by section */}
         <List sx={{ p: 0, flexGrow: 1 }}>
-          {NAV_CONFIG.map(({ href, icon, text }) => (
-            <SideNavItem key={text} href={href} icon={icon} text={text} collapsed={!isMobile && collapsed} />
+          {navSections.map(({ section, items }, sectionIndex) => (
+            <Box key={section} component="li" sx={{ listStyle: 'none' }}>
+              {isCollapsed ? (
+                sectionIndex !== 0 && <Divider sx={{ mx: 1.25, my: 1 }} />
+              ) : (
+                <Typography
+                  sx={{
+                    px: 2.75,
+                    pt: sectionIndex === 0 ? 0.5 : 1.75,
+                    pb: 0.75,
+                    fontSize: '0.6875rem',
+                    fontWeight: 700,
+                    letterSpacing: '0.08em',
+                    textTransform: 'uppercase',
+                    color: 'text.disabled',
+                  }}
+                >
+                  {section}
+                </Typography>
+              )}
+              <Box component="ul" sx={{ p: 0, m: 0, listStyle: 'none' }}>
+                {items.map(({ href, icon, text }) => (
+                  <SideNavItem key={text} href={href} icon={icon} text={text} collapsed={isCollapsed} />
+                ))}
+              </Box>
+            </Box>
           ))}
         </List>
 
