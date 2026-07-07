@@ -30,6 +30,7 @@ import type { AiConfig } from '@/api/live';
 import type {
   AlertMonitorConfig,
   BackupFile,
+  IpoAnnouncementConfig,
   IpoReminderConfig,
   LockStatus,
   MoveAlertConfig,
@@ -204,6 +205,20 @@ export default function Settings() {
   const [savingIpoReminder, setSavingIpoReminder] = React.useState(false);
   const isIpoReminderDirty = JSON.stringify(savedIpoReminder) !== JSON.stringify(draftIpoReminder);
 
+  const DEFAULT_IPO_ANNOUNCEMENT: IpoAnnouncementConfig = {
+    enabled: false,
+    topic: 'portfolio-dashboard/ipo-announcements',
+  };
+  const [savedIpoAnnouncement, setSavedIpoAnnouncement] =
+    React.useState<IpoAnnouncementConfig>(DEFAULT_IPO_ANNOUNCEMENT);
+  const [draftIpoAnnouncement, setDraftIpoAnnouncement] =
+    React.useState<IpoAnnouncementConfig>(DEFAULT_IPO_ANNOUNCEMENT);
+  const [savingIpoAnnouncement, setSavingIpoAnnouncement] = React.useState(false);
+  const [testingIpoAnnouncement, setTestingIpoAnnouncement] = React.useState(false);
+  const isIpoAnnouncementDirty = JSON.stringify(savedIpoAnnouncement) !== JSON.stringify(draftIpoAnnouncement);
+  const setIpoAnnouncement = (partial: Partial<IpoAnnouncementConfig>) =>
+    setDraftIpoAnnouncement((prev) => ({ ...prev, ...partial }));
+
   const DEFAULT_NOTIF: NotificationConfig = {
     mqtt: {
       enabled: false,
@@ -313,6 +328,14 @@ export default function Settings() {
         setDraftIpoReminder(cfg);
       })
       .catch((err) => toast.error(err.message || 'Failed to load IPO reminder settings'));
+
+    apis.settings
+      .getIpoAnnouncementConfig()
+      .then((cfg) => {
+        setSavedIpoAnnouncement(cfg);
+        setDraftIpoAnnouncement(cfg);
+      })
+      .catch((err) => toast.error(err.message || 'Failed to load IPO announcement settings'));
 
     apis.settings
       .getNotificationConfig()
@@ -590,6 +613,36 @@ export default function Settings() {
   };
 
   const handleResetIpoReminder = () => setDraftIpoReminder(savedIpoReminder);
+
+  const handleSaveIpoAnnouncement = async () => {
+    setSavingIpoAnnouncement(true);
+    try {
+      const saved = await apis.settings.saveIpoAnnouncementConfig(draftIpoAnnouncement);
+      setSavedIpoAnnouncement(saved);
+      setDraftIpoAnnouncement(saved);
+      toast.success('IPO announcement settings saved');
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to save IPO announcement settings');
+    } finally {
+      setSavingIpoAnnouncement(false);
+    }
+  };
+
+  const handleResetIpoAnnouncement = () => setDraftIpoAnnouncement(savedIpoAnnouncement);
+
+  const handleTestIpoAnnouncement = async () => {
+    setTestingIpoAnnouncement(true);
+    try {
+      const result = await apis.settings.testIpoAnnouncement();
+      if (!result.mqttEnabled) toast.error('Enable MQTT publishing first to send announcements');
+      else if (result.ok) toast.success('Test IPO announcement published to MQTT');
+      else toast.error('Announcement failed — check the broker connection');
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to send IPO announcement');
+    } finally {
+      setTestingIpoAnnouncement(false);
+    }
+  };
 
   const handleSaveNotif = async () => {
     setSavingNotif(true);
@@ -1378,6 +1431,66 @@ export default function Settings() {
                     sx={{ fontSize: '0.78rem', textTransform: 'none' }}
                   >
                     {savingIpoReminder ? 'Saving...' : 'Save'}
+                  </Button>
+                </Stack>
+              </SettingsSection>
+
+              <SettingsSection title="IPO Announcements">
+                <SettingRow
+                  label="Announce New IPOs"
+                  description="Publish an MQTT message whenever a new company appears on the IPO calendar, with its symbol, name, expected listing date, exchange, and offering details. Public market data only."
+                >
+                  <Switch
+                    checked={draftIpoAnnouncement.enabled}
+                    onChange={(_, checked) => setIpoAnnouncement({ enabled: checked })}
+                  />
+                </SettingRow>
+                {draftIpoAnnouncement.enabled && (
+                  <SettingRow label="Topic" description="MQTT topic new-IPO announcements are published to">
+                    <TextField
+                      size="small"
+                      value={draftIpoAnnouncement.topic}
+                      onChange={(e) => setIpoAnnouncement({ topic: e.target.value })}
+                      sx={{ width: { xs: '100%', sm: 260 }, '& input': { fontSize: '0.78rem' } }}
+                    />
+                  </SettingRow>
+                )}
+                <Stack
+                  direction="row"
+                  spacing={1}
+                  sx={{ justifyContent: 'flex-end', alignItems: 'center', px: 2, py: 1.5 }}
+                >
+                  {isIpoAnnouncementDirty && (
+                    <Typography sx={{ fontSize: '0.72rem', color: 'warning.main', mr: 'auto' }}>
+                      Unsaved changes
+                    </Typography>
+                  )}
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    onClick={handleTestIpoAnnouncement}
+                    disabled={!savedNotif.mqtt.enabled || isIpoAnnouncementDirty || testingIpoAnnouncement}
+                    sx={{ fontSize: '0.78rem', textTransform: 'none' }}
+                  >
+                    {testingIpoAnnouncement ? 'Sending...' : 'Send now'}
+                  </Button>
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    onClick={handleResetIpoAnnouncement}
+                    disabled={!isIpoAnnouncementDirty || savingIpoAnnouncement}
+                    sx={{ fontSize: '0.78rem', textTransform: 'none' }}
+                  >
+                    Reset
+                  </Button>
+                  <Button
+                    size="small"
+                    variant="contained"
+                    onClick={handleSaveIpoAnnouncement}
+                    disabled={!isIpoAnnouncementDirty || savingIpoAnnouncement}
+                    sx={{ fontSize: '0.78rem', textTransform: 'none' }}
+                  >
+                    {savingIpoAnnouncement ? 'Saving...' : 'Save'}
                   </Button>
                 </Stack>
               </SettingsSection>

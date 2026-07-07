@@ -35,9 +35,8 @@ export const getQuoteForSymbol = (symbol: string, isCrypto = false): Promise<Quo
     .catch((error: AxiosError) => {
       logger.log({
         level: 'error',
-        label: error.status,
-        error: JSON.stringify(error),
-        message: error.message,
+        label: `Quote request "${symbol}"`,
+        message: `${error.message} (status ${error.response?.status ?? 'n/a'})`,
       });
 
       throw error;
@@ -65,8 +64,8 @@ export const getMarketNews = (category: 'general' | 'forex' | 'crypto' | 'merger
     .catch((error: AxiosError) => {
       logger.log({
         level: 'error',
-        label: error.status,
-        message: error.message,
+        label: `Market news request "${category}"`,
+        message: `${error.message} (status ${error.response?.status ?? 'n/a'})`,
       });
 
       throw error;
@@ -87,7 +86,7 @@ export const getCompanyNews = (symbol: string, fromDate: string, toDate: string)
         level: 'info',
         response: JSON.stringify(response.data),
         message: `${response.config.url}`,
-        label: 'market news request',
+        label: 'company news request',
       });
 
       return response.data;
@@ -95,8 +94,8 @@ export const getCompanyNews = (symbol: string, fromDate: string, toDate: string)
     .catch((error: AxiosError) => {
       logger.log({
         level: 'error',
-        label: error.status,
-        message: error.message,
+        label: `Company news request "${symbol}"`,
+        message: `${error.message} (status ${error.response?.status ?? 'n/a'})`,
       });
 
       throw error;
@@ -142,9 +141,8 @@ export const getRecommendation = async (symbol: string): Promise<IRecommendation
     .catch((error: AxiosError) => {
       logger.log({
         level: 'error',
-        label: error.status,
-        error: JSON.stringify(error),
-        message: error.message,
+        label: `Recommendation request "${symbol}"`,
+        message: `${error.message} (status ${error.response?.status ?? 'n/a'})`,
       });
 
       throw error;
@@ -171,8 +169,8 @@ export const getUpcomingIPOs = async (): Promise<UpcomingIPOsResponse> => {
     .catch((error: AxiosError) => {
       logger.log({
         level: 'error',
-        label: error.status,
-        message: error.message,
+        label: 'IPO calendar request',
+        message: `${error.message} (status ${error.response?.status ?? 'n/a'})`,
       });
 
       throw error;
@@ -189,7 +187,7 @@ export const getVisaApplications = async (symbol: string): Promise<UpcomingIPOsR
         level: 'info',
         response: JSON.stringify(response.data),
         message: `${response.config.url}`,
-        label: 'market news request',
+        label: 'visa applications request',
       });
 
       return response.data;
@@ -197,8 +195,8 @@ export const getVisaApplications = async (symbol: string): Promise<UpcomingIPOsR
     .catch((error: AxiosError) => {
       logger.log({
         level: 'error',
-        label: error.status,
-        message: error.message,
+        label: `Visa applications request "${symbol}"`,
+        message: `${error.message} (status ${error.response?.status ?? 'n/a'})`,
       });
 
       throw error;
@@ -227,7 +225,11 @@ export const getStockMetrics = (symbol: string): Promise<any> =>
       };
     })
     .catch((error: AxiosError) => {
-      logger.log({ level: 'error', label: error.status, message: error.message });
+      logger.log({
+        level: 'error',
+        label: `Stock metrics request "${symbol}"`,
+        message: `${error.message} (status ${error.response?.status ?? 'n/a'})`,
+      });
       throw error;
     });
 
@@ -238,7 +240,11 @@ export const getStockPeers = (symbol: string): Promise<string[]> =>
     })
     .then((response) => response.data as string[])
     .catch((error: AxiosError) => {
-      logger.log({ level: 'error', label: error.status, message: error.message });
+      logger.log({
+        level: 'error',
+        label: `Stock peers request "${symbol}"`,
+        message: `${error.message} (status ${error.response?.status ?? 'n/a'})`,
+      });
       throw error;
     });
 
@@ -251,7 +257,11 @@ export const getEarningsCalendar = (symbol: string): Promise<any> => {
     })
     .then((response) => response.data.earningsCalendar?.[0] ?? null)
     .catch((error: AxiosError) => {
-      logger.log({ level: 'error', label: error.status, message: error.message });
+      logger.log({
+        level: 'error',
+        label: `Earnings calendar request "${symbol}"`,
+        message: `${error.message} (status ${error.response?.status ?? 'n/a'})`,
+      });
       throw error;
     });
 };
@@ -263,7 +273,11 @@ export const getEarningsHistory = (symbol: string): Promise<any[]> =>
     })
     .then((response) => response.data ?? [])
     .catch((error: AxiosError) => {
-      logger.log({ level: 'error', label: error.status, message: error.message });
+      logger.log({
+        level: 'error',
+        label: `Earnings history request "${symbol}"`,
+        message: `${error.message} (status ${error.response?.status ?? 'n/a'})`,
+      });
       throw error;
     });
 
@@ -274,7 +288,11 @@ export const getInsiderTransactions = (symbol: string): Promise<any[]> =>
     })
     .then((response) => (response.data?.data ?? []).slice(0, 10))
     .catch((error: AxiosError) => {
-      logger.log({ level: 'error', label: error.status, message: error.message });
+      logger.log({
+        level: 'error',
+        label: `Insider transactions request "${symbol}"`,
+        message: `${error.message} (status ${error.response?.status ?? 'n/a'})`,
+      });
       throw error;
     });
 
@@ -325,8 +343,8 @@ export const getCompanyProfile = (symbol: string): Promise<CompanyProfile2Respon
     .catch((error: AxiosError) => {
       logger.log({
         level: 'error',
-        label: error.status,
-        message: error.message,
+        label: `Company profile request "${symbol}"`,
+        message: `${error.message} (status ${error.response?.status ?? 'n/a'})`,
       });
 
       throw error;

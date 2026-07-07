@@ -44,18 +44,36 @@ class MqttPublisher {
   publish(payload: string, topicOverride?: string): Promise<boolean> {
     return new Promise((resolve) => {
       if (!this.client || !this.config) {
+        logger.log({
+          level: 'warn',
+          label: LABEL,
+          message: `Dropped message (${payload.length} bytes) — MQTT client not connected/configured`,
+        });
         resolve(false);
         return;
       }
       const topic = topicOverride || this.config.topic;
-      const timer = setTimeout(() => resolve(false), 10000);
+      logger.log({
+        level: 'info',
+        label: LABEL,
+        message: `Publishing ${payload.length} bytes to "${topic}" (qos ${this.config.qos}, retain ${this.config.retain})`,
+      });
+      const timer = setTimeout(() => {
+        logger.log({
+          level: 'error',
+          label: LABEL,
+          message: `Publish to "${topic}" timed out after 10s — message dropped`,
+        });
+        resolve(false);
+      }, 10000);
       this.client.publish(topic, payload, { qos: this.config.qos, retain: this.config.retain }, (err) => {
         clearTimeout(timer);
         if (err) {
-          logger.log({ level: 'error', label: LABEL, message: `Publish failed: ${err.message}` });
+          logger.log({ level: 'error', label: LABEL, message: `Publish to "${topic}" failed: ${err.message}` });
           resolve(false);
           return;
         }
+        logger.log({ level: 'info', label: LABEL, message: `Published ${payload.length} bytes to "${topic}"` });
         resolve(true);
       });
     });
