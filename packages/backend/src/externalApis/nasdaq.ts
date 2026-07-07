@@ -60,7 +60,13 @@ const fetchNasdaqQuote = async (symbol: string, assetclass: 'etf' | 'stocks'): P
   try {
     const res = await axios.get(`${base}/info?assetclass=${assetclass}`, opts);
     info = res.data?.data;
-  } catch {
+  } catch (error: any) {
+    // Expected when the symbol isn't in this assetclass — caller retries the other.
+    logger.log({
+      level: 'warn',
+      label: `NASDAQ quote ${symbol}`,
+      message: `info fetch as ${assetclass} failed: ${error.message}`,
+    });
     return null;
   }
 
@@ -71,8 +77,13 @@ const fetchNasdaqQuote = async (symbol: string, assetclass: 'etf' | 'stocks'): P
   try {
     const res = await axios.get(`${base}/summary?assetclass=${assetclass}`, opts);
     summary = res.data?.data?.summaryData ?? {};
-  } catch {
+  } catch (error: any) {
     // summary is optional; the /info response alone is enough for the core fields.
+    logger.log({
+      level: 'warn',
+      label: `NASDAQ quote ${symbol}`,
+      message: `summary fetch as ${assetclass} failed (using info only): ${error.message}`,
+    });
   }
 
   const change = parseDollarAmount(info.primaryData.netChange);
@@ -144,7 +155,11 @@ export const getMarketMovers = async (): Promise<{ gainers: NasdaqMover[]; loser
       return { gainers, losers };
     })
     .catch((error: AxiosError) => {
-      logger.log({ level: 'error', label: error.status, message: `NASDAQ market movers failed: ${error.message}` });
+      logger.log({
+        level: 'error',
+        label: 'NASDAQ market movers',
+        message: `Request failed: ${error.message} (status ${error.response?.status ?? 'n/a'})`,
+      });
       throw error;
     });
 };
@@ -173,9 +188,8 @@ export const getPriceHistoryAreaChart = (symbol: string, range: Range): Promise<
     .catch((error: AxiosError) => {
       logger.log({
         level: 'error',
-        label: error.status,
-        error: JSON.stringify(error),
-        message: error.message,
+        label: `NASDAQ price history "${symbol}" (${range})`,
+        message: `${error.message} (status ${error.response?.status ?? 'n/a'})`,
       });
 
       throw error;
@@ -222,9 +236,8 @@ export const getPriceHistoryCandleStick = (symbol: string, range: Range): Promis
     .catch((error: AxiosError) => {
       logger.log({
         level: 'error',
-        label: error.status,
-        error: JSON.stringify(error),
-        message: error.message,
+        label: `NASDAQ price history "${symbol}" (${range})`,
+        message: `${error.message} (status ${error.response?.status ?? 'n/a'})`,
       });
 
       throw error;

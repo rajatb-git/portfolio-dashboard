@@ -20,6 +20,7 @@ export const HoldingsRouter = () => {
       ctx.body = holdingsModel.insertOne(ctx.request.body);
       ctx.status = 200;
     } catch (error: any) {
+      logger.log({ level: 'error', message: error.message, label: 'Insert holding' });
       ctx.status = 500;
       ctx.body = errorBody('Failed to insert holding', error.message);
     }
@@ -31,6 +32,7 @@ export const HoldingsRouter = () => {
       ctx.body = holdingsModel.getAllRecords();
       ctx.status = 200;
     } catch (error: any) {
+      logger.log({ level: 'error', message: error.message, label: 'Get holdings' });
       ctx.status = 500;
       ctx.body = errorBody('Failed to get holdings', error.message);
     }
@@ -55,7 +57,14 @@ export const HoldingsRouter = () => {
 
       const isCrypto = matching[0].type === 'crypto';
       const quoteController = new LiveQuoteController();
-      const livePrice = await quoteController.getLiveQuote(upperSymbol, isCrypto).catch(() => null);
+      const livePrice = await quoteController.getLiveQuote(upperSymbol, isCrypto).catch((err: any) => {
+        logger.log({
+          level: 'error',
+          label: `holdings by symbol "${upperSymbol}"`,
+          message: `Live quote fetch failed: ${err?.message ?? err}`,
+        });
+        return null;
+      });
 
       if (!livePrice) {
         ctx.body = [];
@@ -103,6 +112,7 @@ export const HoldingsRouter = () => {
       ctx.status = 400;
       ctx.body = errorBody('Holding ID is required', 'Holding ID is required');
     } catch (error: any) {
+      logger.log({ level: 'error', message: error.message, label: `Get holding "${ctx.params.id}"` });
       ctx.status = 500;
       ctx.body = errorBody('Failed to get holding', error.message);
     }
@@ -141,6 +151,7 @@ export const HoldingsRouter = () => {
       ctx.status = 400;
       ctx.body = errorBody('Holding ID is required', 'Holding ID is required');
     } catch (error: any) {
+      logger.log({ level: 'error', message: error.message, label: `Delete holding "${ctx.params.id}"` });
       ctx.status = 500;
       ctx.body = errorBody('Failed to delete Holding', error.message);
     }
@@ -236,6 +247,7 @@ export const HoldingsRouter = () => {
 
       ctx.status = 200;
     } catch (error: any) {
+      logger.log({ level: 'error', message: error.message, label: 'Import holdings' });
       ctx.status = 500;
       ctx.body = errorBody('Failed to import', error.message);
     }
