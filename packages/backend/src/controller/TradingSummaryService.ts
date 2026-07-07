@@ -68,14 +68,35 @@ class TradingSummaryService {
     for (const t of targets) {
       if (this.lastFired[t.name] === dateStr) continue;
       if (minutes >= t.min && minutes < t.min + GRACE_MIN) {
-        // Mark before awaiting so an overlapping tick (or a restart within the
-        // grace window) can't double-fire the slot — persisted so it survives restarts.
-        this.lastFired[t.name] = dateStr;
-        void setJobState(`trading_summary_${t.name}`, dateStr).catch((err: any) => {
-          logger.log({ level: 'error', label: LABEL, message: `Failed to persist ${t.name} fired state: ${err.message}` });
-        });
-        void this.publishSummaries(t.name, this.config);
+        void this.fireSlot(t.name, dateStr);
       }
+    }
+  }
+
+  private async fireSlot(slot: SlotName, dateStr: string): Promise<void> {
+    // Optimistically claim the slot in memory so an overlapping tick can't
+    // double-fire it while this publish is in flight. Only commit the DURABLE
+    // "fired today" watermark AFTER a successful publish; if it fails (broker
+    // down, empty recap), release the claim so a later tick — or a restart
+    // within the grace window — retries instead of going permanently silent.
+    if (this.lastFired[slot] === dateStr) return;
+    this.lastFired[slot] = dateStr;
+
+    let published = 0;
+    try {
+      published = await this.publishSummaries(slot, this.config);
+    } catch (err: any) {
+      logger.log({ level: 'error', label: LABEL, message: `Failed ${slot} summary: ${err.message}` });
+    }
+
+    if (published > 0) {
+      try {
+        await setJobState(`trading_summary_${slot}`, dateStr);
+      } catch (err: any) {
+        logger.log({ level: 'error', label: LABEL, message: `Failed to persist ${slot} fired state: ${err.message}` });
+      }
+    } else if (this.lastFired[slot] === dateStr) {
+      this.lastFired[slot] = '';
     }
   }
 
