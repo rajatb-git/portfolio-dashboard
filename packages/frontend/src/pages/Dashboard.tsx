@@ -1,8 +1,10 @@
+import { Stack } from '@mui/material';
 import * as React from 'react';
 
 import AlertDialog, { type DraftAlert, EMPTY_DRAFT } from '@/components/Alerts/AlertDialog';
 import DashboardTable from '@/components/DashboardTable/DashTable';
 import UpcomingEarningsCard from '@/components/Dashboard/UpcomingEarningsCard';
+import MarketStatusChip from '@/components/MarketStatusChip';
 import { useDashboardData } from '@/contexts/DashboardDataContext';
 import type { Column } from '@/types';
 
@@ -52,6 +54,9 @@ export default function Dashboard() {
 
   return (
     <>
+      <Stack direction="row" sx={{ justifyContent: 'flex-end', mb: 1 }}>
+        <MarketStatusChip />
+      </Stack>
       <DashboardTable
         isLoading={isLoading}
         refreshData={refresh}

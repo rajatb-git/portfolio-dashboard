@@ -53,6 +53,17 @@ export type MarketMovers = {
   generatedAt: string;
 };
 
+export type MarketSession = 'pre-market' | 'regular' | 'post-market' | 'closed';
+
+export type MarketStatus = {
+  isOpen: boolean;
+  session: MarketSession;
+  holiday: string | null;
+  exchange: string;
+  timezone: string;
+  generatedAt: string;
+};
+
 export type DocumentParseResult = {
   target: 'transactions' | 'holdings';
   rows: Array<Record<string, any>>;
@@ -173,6 +184,11 @@ export default class LiveAPI {
 
   getMarketMovers = async (refresh = false): Promise<MarketMovers> =>
     axios(DB_HOST + `/live/market-movers${refresh ? '?refresh=1' : ''}`)
+      .then((r) => r.data)
+      .catch(catchCustomError);
+
+  getMarketStatus = async (refresh = false): Promise<MarketStatus> =>
+    axios(DB_HOST + `/live/market-status${refresh ? '?refresh=1' : ''}`)
       .then((r) => r.data)
       .catch(catchCustomError);
 
