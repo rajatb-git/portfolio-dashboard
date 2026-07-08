@@ -25,10 +25,6 @@ const SLOT_LABEL: Record<SummarySlot, string> = {
 // lands on the early close on half days.
 const MORNING_MIN = 9 * 60 + 35;
 const MIDDAY_MIN = 12 * 60 + 30;
-// A slot fires once when the clock first enters [target, target + GRACE). The
-// window absorbs the 60s tick granularity and avoids retroactively firing slots
-// that already passed when the server starts mid-day.
-const GRACE_MIN = 30;
 
 const signedPct = (n: number): string => `${n >= 0 ? '+' : ''}${n.toFixed(2)}%`;
 const usd = (n: number): string => `${n < 0 ? '-' : ''}$${Math.abs(n).toFixed(2)}`;
@@ -65,12 +61,30 @@ class TradingSummaryService {
       { name: 'close', min: getMarketCloseMinutes(now) },
     ];
 
+    // A slot is due once its ET time has arrived (minutes >= target) — NOT only
+    // inside a narrow window. A window meant a backend that wasn't running at the
+    // exact slot time (a machine that isn't up 24/7, a restart or redeploy just
+    // after the slot) skipped that day's summary forever. Firing on "time has
+    // passed and not yet sent today" makes the day's summary arrive whenever the
+    // server is next up.
+    //
+    // Deliver only the LATEST due-but-unsent slot, and never one scheduled before
+    // a slot already sent today. So an always-on server still gets morning, then
+    // midday, then close in order, while a server first started in the evening
+    // gets a single current close summary instead of a burst of stale
+    // "Morning"/"Midday" ones built from after-hours numbers.
+    let latestSentMin = -Infinity;
+    for (const t of targets) {
+      if (this.lastFired[t.name] === dateStr) latestSentMin = Math.max(latestSentMin, t.min);
+    }
+
+    let due: { name: SlotName; min: number } | null = null;
     for (const t of targets) {
       if (this.lastFired[t.name] === dateStr) continue;
-      if (minutes >= t.min && minutes < t.min + GRACE_MIN) {
-        void this.fireSlot(t.name, dateStr);
-      }
+      if (t.min <= latestSentMin) continue;
+      if (minutes >= t.min && (!due || t.min > due.min)) due = t;
     }
+    if (due) void this.fireSlot(due.name, dateStr);
   }
 
   private async fireSlot(slot: SlotName, dateStr: string): Promise<void> {
