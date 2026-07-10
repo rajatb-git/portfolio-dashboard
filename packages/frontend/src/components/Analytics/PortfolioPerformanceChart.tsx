@@ -97,15 +97,18 @@ export default function PortfolioPerformanceChart({ snapshots }: Props) {
     // Parse OHLCV candlestick data — format can be [ts, o, h, l, c] arrays
     // or {x: ts, y: [o, h, l, c]} objects
     const spyPoints: { ts: number; close: number }[] = [];
+    // Backend serializes each point's `x` as an ISO date string (Date → JSON),
+    // so coerce to a numeric timestamp — downstream sort/filter do numeric math.
+    const toTs = (v: unknown): number => (typeof v === 'number' ? v : moment(v as string).valueOf());
     for (const d of spyRaw) {
       if (Array.isArray(d)) {
-        const ts = d[0];
+        const ts = toTs(d[0]);
         const close = d[4] ?? d[3] ?? d[1];
-        if (ts != null && close != null) spyPoints.push({ ts, close });
+        if (!Number.isNaN(ts) && close != null) spyPoints.push({ ts, close });
       } else if (d && typeof d === 'object') {
-        const ts = d.x;
+        const ts = toTs(d.x);
         const close = Array.isArray(d.y) ? d.y[3] : d.y;
-        if (ts != null && close != null) spyPoints.push({ ts, close });
+        if (!Number.isNaN(ts) && close != null) spyPoints.push({ ts, close });
       }
     }
     if (!spyPoints.length) return [];
