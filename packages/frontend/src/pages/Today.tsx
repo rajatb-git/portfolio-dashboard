@@ -19,6 +19,7 @@ import apis from '@/api';
 import type { DailyRecap, HoldingMovement, IndexMovement } from '@/api/dashboard';
 import type { MarketMover, MarketMovers, MarketNewsDigest } from '@/api/live';
 import { Iconify } from '@/components/Iconify';
+import MarketStatusChip from '@/components/MarketStatusChip';
 import { fnCurrency, fnShortenCurrency } from '@/utils/formatNumber';
 
 const fmtPct = (v: number) => `${v >= 0 ? '+' : ''}${v.toFixed(2)}%`;
@@ -248,6 +249,7 @@ export default function Today() {
           </Typography>
         </Box>
         <Stack direction="row" spacing={2} sx={{ alignItems: 'center' }}>
+          <MarketStatusChip />
           {!recapLoading && recap && (
             <Stack sx={{ alignItems: 'flex-end' }}>
               <Typography

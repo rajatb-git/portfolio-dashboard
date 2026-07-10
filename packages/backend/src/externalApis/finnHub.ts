@@ -296,6 +296,35 @@ export const getInsiderTransactions = (symbol: string): Promise<any[]> =>
       throw error;
     });
 
+export interface MarketStatusResponse {
+  exchange: string;
+  holiday: string | null;
+  isOpen: boolean;
+  session: string | null;
+  timezone: string;
+  t: number;
+}
+
+export const getMarketStatus = (exchange = 'US'): Promise<MarketStatusResponse> =>
+  axios
+    .get(process.env.FINN_HUB_API + `/stock/market-status?exchange=${exchange}`, {
+      headers: { 'X-Finnhub-Token': process.env.FINN_HUB_API_KEY, 'Content-Type': 'application/json' },
+    })
+    .then((response) => {
+      logger.log({
+        level: 'info',
+        response: JSON.stringify(response.data),
+        message: `${response.config.url}`,
+        label: 'market status request',
+      });
+
+      return response.data;
+    })
+    .catch((error: AxiosError) => {
+      logger.log({ level: 'error', label: error.status, message: error.message });
+      throw error;
+    });
+
 export const getCompanyProfile = (symbol: string): Promise<CompanyProfile2Response> =>
   axios
     .get(process.env.FINN_HUB_API + `/stock/profile2?symbol=${symbol}`, {

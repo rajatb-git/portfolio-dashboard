@@ -37,6 +37,7 @@ import { HoldingAggregate } from '@/api/dashboard';
 import { IAccount } from '@/models/AccountsModel';
 import { ITransaction } from '@/models/TransactionsModel';
 import { Iconify } from '@/components/Iconify';
+import MarketStatusChip from '@/components/MarketStatusChip';
 import RecommendationDonutGraphMui from '@/components/RecommendationDonutGraphMui';
 import { PriceHistoryGraph } from '@/components/PriceHistoryGraph';
 import LocalStorageArray from '@/utils/localStorageArray';
@@ -355,9 +356,10 @@ function Research() {
             )}
           </Box>
 
-          {/* Refresh + timestamp */}
+          {/* Market status + refresh + timestamp */}
           <Stack spacing={0.5} sx={{ alignItems: 'flex-end', flexShrink: 0 }}>
-            <Stack direction="row" spacing={0.5}>
+            <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center' }}>
+              <MarketStatusChip />
               <Tooltip title="Refresh">
                 <IconButton size="small" onClick={() => getResearchData(searchText)} sx={{ color: 'primary.main' }}>
                   <Iconify icon="mingcute:refresh-3-fill" width={20} />
