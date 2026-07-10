@@ -204,42 +204,50 @@ export const getPriceHistoryAreaChart = (symbol: string, range: Range): Promise<
 //     y: [6629.81, 6650.5, 6623.04, 6633.33]
 //   }
 // ]
-export const getPriceHistoryCandleStick = (symbol: string, range: Range): Promise<any> => {
+const fetchCandleStickRows = async (
+  symbol: string,
+  range: Range,
+  assetclass: 'etf' | 'stocks'
+): Promise<any[] | null> => {
   const toDate = moment().format('YYYY-MM-DD');
   const fromDate = moment()
     .subtract(parseInt(range.substring(0, 1)), range.substring(1) as any)
     .format('YYYY-MM-DD');
 
-  return axios
-    .get(
-      `https://api.nasdaq.com/api/quote/${symbol}/historical?assetclass=stocks&fromdate=${fromDate}&limit=1000&todate=${toDate}`,
-      {
-        httpsAgent: nasdaqAgent,
-        headers: { 'Content-Type': 'application/json', 'User-Agent': 'PostmanRuntime/7.26.8' },
-      }
-    )
-    .then((response) => {
-      const rows = response.data?.data?.tradesTable?.rows;
-      if (!rows) return [];
-      return rows.map((x: any) => {
-        return {
-          x: new Date(x.date),
-          y: [
-            parseFloat(x.open.replace(/\$|\,/g, '')),
-            parseFloat(x.high.replace(/\$|\,/g, '')),
-            parseFloat(x.low.replace(/\$|\,/g, '')),
-            parseFloat(x.close.replace(/\$|\,/g, '')),
-          ],
-        };
-      });
-    })
-    .catch((error: AxiosError) => {
-      logger.log({
-        level: 'error',
-        label: `NASDAQ price history "${symbol}" (${range})`,
-        message: `${error.message} (status ${error.response?.status ?? 'n/a'})`,
-      });
-
-      throw error;
+  try {
+    const response = await axios.get(
+      `https://api.nasdaq.com/api/quote/${symbol}/historical?assetclass=${assetclass}&fromdate=${fromDate}&limit=1000&todate=${toDate}`,
+      { httpsAgent: nasdaqAgent, headers: nasdaqHeaders }
+    );
+    const rows = response.data?.data?.tradesTable?.rows;
+    if (!rows?.length) return null;
+    return rows.map((x: any) => ({
+      x: new Date(x.date),
+      y: [
+        parseFloat(x.open.replace(/\$|\,/g, '')),
+        parseFloat(x.high.replace(/\$|\,/g, '')),
+        parseFloat(x.low.replace(/\$|\,/g, '')),
+        parseFloat(x.close.replace(/\$|\,/g, '')),
+      ],
+    }));
+  } catch (error: any) {
+    // Expected when the symbol isn't in this assetclass — caller retries the other.
+    logger.log({
+      level: 'warn',
+      label: `NASDAQ price history "${symbol}" (${range})`,
+      message: `fetch as ${assetclass} failed: ${error.message} (status ${error.response?.status ?? 'n/a'})`,
     });
+    return null;
+  }
+};
+
+// NASDAQ's historical endpoint 400s with "Symbol not exists." when the assetclass
+// is wrong, so try stocks first (individual holdings, the common case) and fall
+// through to etf — which is what the benchmark overlays (SPY/QQQ/DIA) need.
+export const getPriceHistoryCandleStick = async (symbol: string, range: Range): Promise<any> => {
+  for (const assetclass of ['stocks', 'etf'] as const) {
+    const rows = await fetchCandleStickRows(symbol, range, assetclass);
+    if (rows) return rows;
+  }
+  return [];
 };
