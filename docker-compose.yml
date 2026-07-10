@@ -1,6 +1,6 @@
 services:
   backend:
-    image: ghcr.io/rajatb-git/portfolio-dashboard/backend:${TAG:-latest}
+    # image: ghcr.io/rajatb-git/portfolio-dashboard/backend:${TAG:-latest}
     build:
       context: ./packages/backend
       dockerfile: Dockerfile
@@ -16,7 +16,7 @@ services:
       - backend-storage:/app/storage
 
   frontend:
-    image: ghcr.io/rajatb-git/portfolio-dashboard/frontend:${TAG:-latest}
+    # image: ghcr.io/rajatb-git/portfolio-dashboard/frontend:${TAG:-latest}
     build:
       context: ./packages/frontend
       dockerfile: Dockerfile
