@@ -1,17 +1,76 @@
-import axios, { AxiosError } from 'axios';
+import axios, { AxiosError, AxiosResponse } from 'axios';
 import { logger } from '../utils/winston';
 import moment from 'moment';
 import { CompanyProfile2Response, MarketNewsResponse, QuoteResponse, UpcomingIPOsResponse } from './types';
 import { IRecommendation } from '../models/RecommendationModel';
 
+// Finnhub rejects bursts with HTTP 429. Every controller fans out over its
+// holdings with Promise.all, so without a shared throttle a single dashboard or
+// sentiment refresh can fire 40+ requests in the same tick and trip the limit.
+// FINN_HUB_RATE_LIMIT is the sustained requests/second ceiling (free tier allows
+// ~30/s and 60/min; the conservative default leaves headroom for concurrent
+// features and can be raised for paid plans).
+const RATE_LIMIT_PER_SEC = Number(process.env.FINN_HUB_RATE_LIMIT) || 8;
+const MIN_INTERVAL_MS = Math.ceil(1000 / Math.max(1, RATE_LIMIT_PER_SEC));
+const MAX_RETRIES = 4;
+const MAX_BACKOFF_MS = 8000;
+
+const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
+
+// Serialize only the moment each request is dispatched so calls start at least
+// MIN_INTERVAL_MS apart. The HTTP requests themselves still run concurrently;
+// this just staggers their starts to cap the outbound rate.
+let scheduleChain: Promise<void> = Promise.resolve();
+let lastDispatch = 0;
+
+const acquireSlot = (): Promise<void> => {
+  const slot = scheduleChain.then(async () => {
+    const wait = lastDispatch + MIN_INTERVAL_MS - Date.now();
+    if (wait > 0) await sleep(wait);
+    lastDispatch = Date.now();
+  });
+  scheduleChain = slot.catch(() => undefined);
+  return slot;
+};
+
+const retryAfterMs = (error: AxiosError): number | null => {
+  const header = error.response?.headers?.['retry-after'];
+  if (header === undefined) return null;
+  const seconds = Number(header);
+  return Number.isFinite(seconds) ? seconds * 1000 : null;
+};
+
+// Shared Finnhub GET: throttled to stay under the rate limit and retried with
+// backoff on 429 so a transient burst is absorbed instead of surfacing as an error.
+const finnhubGet = async <T = any>(path: string): Promise<AxiosResponse<T>> => {
+  for (let attempt = 0; ; attempt++) {
+    await acquireSlot();
+    try {
+      return await axios.get<T>(process.env.FINN_HUB_API + path, {
+        headers: { 'X-Finnhub-Token': process.env.FINN_HUB_API_KEY, 'Content-Type': 'application/json' },
+      });
+    } catch (error) {
+      if (axios.isAxiosError(error) && error.response?.status === 429 && attempt < MAX_RETRIES) {
+        const backoff = retryAfterMs(error) ?? Math.min(MAX_BACKOFF_MS, 500 * 2 ** attempt);
+        const delay = backoff + Math.floor(Math.random() * 250);
+        logger.log({
+          level: 'warn',
+          label: 'Finnhub rate limit',
+          message: `429 on ${path}; retry ${attempt + 1}/${MAX_RETRIES} after ${delay}ms`,
+        });
+        await sleep(delay);
+        continue;
+      }
+      throw error;
+    }
+  }
+};
+
 export const getQuoteForSymbol = (symbol: string, isCrypto = false): Promise<QuoteResponse> => {
   const convertedSymbol = isCrypto ? `COINBASE:${symbol}-USDT` : symbol;
 
   // COINBASE:ETH-USDT
-  return axios
-    .get(process.env.FINN_HUB_API + `/quote?symbol=${convertedSymbol}`, {
-      headers: { 'X-Finnhub-Token': process.env.FINN_HUB_API_KEY, 'Content-Type': 'application/json' },
-    })
+  return finnhubGet(`/quote?symbol=${convertedSymbol}`)
     .then((response) => {
       logger.log({
         level: 'info',
@@ -47,10 +106,7 @@ export const getQuoteForSymbol = (symbol: string, isCrypto = false): Promise<Quo
  * @param  {'general'|'forex'|'crypto'|'merger'} category
  */
 export const getMarketNews = (category: 'general' | 'forex' | 'crypto' | 'merger'): Promise<MarketNewsResponse> =>
-  axios
-    .get(process.env.FINN_HUB_API + `/news?category=${category}`, {
-      headers: { 'X-Finnhub-Token': process.env.FINN_HUB_API_KEY, 'Content-Type': 'application/json' },
-    })
+  finnhubGet(`/news?category=${category}`)
     .then((response) => {
       logger.log({
         level: 'info',
@@ -77,10 +133,7 @@ export const getMarketNews = (category: 'general' | 'forex' | 'crypto' | 'merger
  * @param  {string} toDate - YYYY-MM-DD
  */
 export const getCompanyNews = (symbol: string, fromDate: string, toDate: string): Promise<MarketNewsResponse> =>
-  axios
-    .get(process.env.FINN_HUB_API + `/company-news?symbol=${symbol}&from=${fromDate}&to=${toDate}`, {
-      headers: { 'X-Finnhub-Token': process.env.FINN_HUB_API_KEY, 'Content-Type': 'application/json' },
-    })
+  finnhubGet(`/company-news?symbol=${symbol}&from=${fromDate}&to=${toDate}`)
     .then((response) => {
       logger.log({
         level: 'info',
@@ -102,10 +155,7 @@ export const getCompanyNews = (symbol: string, fromDate: string, toDate: string)
     });
 
 export const getRecommendation = async (symbol: string): Promise<IRecommendation | null> =>
-  axios
-    .get(process.env.FINN_HUB_API + `/stock/recommendation?symbol=${symbol}`, {
-      headers: { 'X-Finnhub-Token': process.env.FINN_HUB_API_KEY, 'Content-Type': 'application/json' },
-    })
+  finnhubGet(`/stock/recommendation?symbol=${symbol}`)
     .then((response) => {
       logger.log({
         level: 'info',
@@ -152,10 +202,7 @@ export const getUpcomingIPOs = async (): Promise<UpcomingIPOsResponse> => {
   const fromDate = moment().subtract(2, 'M').format('YYYY-MM-DD');
   const toDate = moment().add(2, 'M').format('YYYY-MM-DD');
 
-  return axios
-    .get(process.env.FINN_HUB_API + `/calendar/ipo?from=${fromDate}&to=${toDate}`, {
-      headers: { 'X-Finnhub-Token': process.env.FINN_HUB_API_KEY, 'Content-Type': 'application/json' },
-    })
+  return finnhubGet(`/calendar/ipo?from=${fromDate}&to=${toDate}`)
     .then((response) => {
       logger.log({
         level: 'info',
@@ -178,10 +225,7 @@ export const getUpcomingIPOs = async (): Promise<UpcomingIPOsResponse> => {
 };
 
 export const getVisaApplications = async (symbol: string): Promise<UpcomingIPOsResponse> =>
-  axios
-    .get(process.env.FINN_HUB_API + `/stock/visa-application?symbol=${symbol}&from=2021-01-01&to=2025-12-31`, {
-      headers: { 'X-Finnhub-Token': process.env.FINN_HUB_API_KEY, 'Content-Type': 'application/json' },
-    })
+  finnhubGet(`/stock/visa-application?symbol=${symbol}&from=2021-01-01&to=2025-12-31`)
     .then((response) => {
       logger.log({
         level: 'info',
@@ -203,10 +247,7 @@ export const getVisaApplications = async (symbol: string): Promise<UpcomingIPOsR
     });
 
 export const getStockMetrics = (symbol: string): Promise<any> =>
-  axios
-    .get(process.env.FINN_HUB_API + `/stock/metric?symbol=${symbol}&metric=all`, {
-      headers: { 'X-Finnhub-Token': process.env.FINN_HUB_API_KEY, 'Content-Type': 'application/json' },
-    })
+  finnhubGet(`/stock/metric?symbol=${symbol}&metric=all`)
     .then((response) => {
       const m = response.data.metric;
       return {
@@ -234,10 +275,7 @@ export const getStockMetrics = (symbol: string): Promise<any> =>
     });
 
 export const getStockPeers = (symbol: string): Promise<string[]> =>
-  axios
-    .get(process.env.FINN_HUB_API + `/stock/peers?symbol=${symbol}`, {
-      headers: { 'X-Finnhub-Token': process.env.FINN_HUB_API_KEY, 'Content-Type': 'application/json' },
-    })
+  finnhubGet(`/stock/peers?symbol=${symbol}`)
     .then((response) => response.data as string[])
     .catch((error: AxiosError) => {
       logger.log({
@@ -251,10 +289,7 @@ export const getStockPeers = (symbol: string): Promise<string[]> =>
 export const getEarningsCalendar = (symbol: string): Promise<any> => {
   const from = moment().format('YYYY-MM-DD');
   const to = moment().add(12, 'M').format('YYYY-MM-DD');
-  return axios
-    .get(process.env.FINN_HUB_API + `/calendar/earnings?symbol=${symbol}&from=${from}&to=${to}`, {
-      headers: { 'X-Finnhub-Token': process.env.FINN_HUB_API_KEY, 'Content-Type': 'application/json' },
-    })
+  return finnhubGet(`/calendar/earnings?symbol=${symbol}&from=${from}&to=${to}`)
     .then((response) => response.data.earningsCalendar?.[0] ?? null)
     .catch((error: AxiosError) => {
       logger.log({
@@ -267,10 +302,7 @@ export const getEarningsCalendar = (symbol: string): Promise<any> => {
 };
 
 export const getEarningsHistory = (symbol: string): Promise<any[]> =>
-  axios
-    .get(process.env.FINN_HUB_API + `/stock/earnings?symbol=${symbol}&limit=4`, {
-      headers: { 'X-Finnhub-Token': process.env.FINN_HUB_API_KEY, 'Content-Type': 'application/json' },
-    })
+  finnhubGet(`/stock/earnings?symbol=${symbol}&limit=4`)
     .then((response) => response.data ?? [])
     .catch((error: AxiosError) => {
       logger.log({
@@ -282,10 +314,7 @@ export const getEarningsHistory = (symbol: string): Promise<any[]> =>
     });
 
 export const getInsiderTransactions = (symbol: string): Promise<any[]> =>
-  axios
-    .get(process.env.FINN_HUB_API + `/stock/insider-transactions?symbol=${symbol}`, {
-      headers: { 'X-Finnhub-Token': process.env.FINN_HUB_API_KEY, 'Content-Type': 'application/json' },
-    })
+  finnhubGet(`/stock/insider-transactions?symbol=${symbol}`)
     .then((response) => (response.data?.data ?? []).slice(0, 10))
     .catch((error: AxiosError) => {
       logger.log({
@@ -306,10 +335,7 @@ export interface MarketStatusResponse {
 }
 
 export const getMarketStatus = (exchange = 'US'): Promise<MarketStatusResponse> =>
-  axios
-    .get(process.env.FINN_HUB_API + `/stock/market-status?exchange=${exchange}`, {
-      headers: { 'X-Finnhub-Token': process.env.FINN_HUB_API_KEY, 'Content-Type': 'application/json' },
-    })
+  finnhubGet(`/stock/market-status?exchange=${exchange}`)
     .then((response) => {
       logger.log({
         level: 'info',
@@ -326,10 +352,7 @@ export const getMarketStatus = (exchange = 'US'): Promise<MarketStatusResponse> 
     });
 
 export const getCompanyProfile = (symbol: string): Promise<CompanyProfile2Response> =>
-  axios
-    .get(process.env.FINN_HUB_API + `/stock/profile2?symbol=${symbol}`, {
-      headers: { 'X-Finnhub-Token': process.env.FINN_HUB_API_KEY, 'Content-Type': 'application/json' },
-    })
+  finnhubGet(`/stock/profile2?symbol=${symbol}`)
     .then((response) => {
       logger.log({
         level: 'info',
