@@ -62,6 +62,8 @@ export type DailyRecap = {
   accounts: AccountMovement[];
   totalDayGL: number;
   totalDayGLPercent: number;
+  marketDay: string;
+  marketDayIsToday: boolean;
   generatedAt: string;
 };
 

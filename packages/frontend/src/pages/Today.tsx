@@ -11,6 +11,7 @@ import {
   Typography,
   useTheme,
 } from '@mui/material';
+import { alpha } from '@mui/material/styles';
 import moment from 'moment';
 import * as React from 'react';
 import { toast } from 'react-toastify';
@@ -260,7 +261,9 @@ export default function Today() {
                   letterSpacing: '0.06em',
                 }}
               >
-                Portfolio day P&L
+                {recap.marketDayIsToday
+                  ? 'Portfolio day P&L'
+                  : `Portfolio P&L · ${moment(recap.marketDay).format('ddd')}`}
               </Typography>
               <Typography sx={{ fontSize: '1.05rem', fontWeight: 800, color: totalColor }}>
                 {fmtSignedCurrency(recap.totalDayGL)} ({fmtPct(recap.totalDayGLPercent)})
@@ -274,6 +277,33 @@ export default function Today() {
           </Tooltip>
         </Stack>
       </Stack>
+
+      {/* Session banner — when the market is closed, spell out which trading day
+          the figures below actually reflect (e.g. Friday when viewed on a Sunday). */}
+      {!recapLoading && recap && !recap.marketDayIsToday && (
+        <Stack
+          direction="row"
+          spacing={1}
+          sx={{
+            alignItems: 'center',
+            px: 2,
+            py: 1.25,
+            borderRadius: 1,
+            border: '1px solid',
+            borderColor: alpha(theme.palette.warning.main, 0.4),
+            bgcolor: alpha(theme.palette.warning.main, 0.12),
+          }}
+        >
+          <Iconify icon="mdi:calendar-clock" width={20} sx={{ color: theme.palette.warning.main, flexShrink: 0 }} />
+          <Typography sx={{ fontSize: '0.85rem', color: 'text.primary' }}>
+            Markets are closed. The figures below reflect the last trading session —{' '}
+            <Box component="span" sx={{ fontWeight: 700 }}>
+              {moment(recap.marketDay).format('dddd, MMMM D')}
+            </Box>
+            .
+          </Typography>
+        </Stack>
+      )}
 
       {/* Market movement */}
       <SectionCard title="Market Movement" icon="tabler:building-bank" iconColor="#3b82f6">

@@ -158,3 +158,26 @@ export function etDateAndMinutes(now: Date = new Date()): { dateStr: string; min
   const { dateStr, minutes } = etParts(now);
   return { dateStr, minutes };
 }
+
+function isTradingDayStr(dateStr: string): boolean {
+  const [y, m, d] = dateStr.split('-').map(Number);
+  const dow = new Date(Date.UTC(y, m - 1, d)).getUTCDay();
+  return dow !== 0 && dow !== 6 && !fullCloseHolidays(y).has(dateStr);
+}
+
+// The ET date of the trading session the latest quotes reflect: today once its
+// regular session has opened, otherwise the most recent prior trading day. Used to
+// label the Today page when the market is closed (e.g. showing Friday on a Sunday,
+// or the Friday before a Monday holiday). Walks back over weekends and holidays.
+export function mostRecentTradingDay(now: Date = new Date()): string {
+  const { dateStr, minutes } = etParts(now);
+  let cursor = isTradingDayStr(dateStr) && minutes >= MARKET_OPEN_MIN ? dateStr : addDays(dateStr, -1);
+  while (!isTradingDayStr(cursor)) cursor = addDays(cursor, -1);
+  return cursor;
+}
+
+// True when mostRecentTradingDay is the current ET calendar day — i.e. the figures
+// reflect a session that has begun today, not a stale prior close.
+export function isViewingLiveTradingDay(now: Date = new Date()): boolean {
+  return mostRecentTradingDay(now) === etParts(now).dateStr;
+}

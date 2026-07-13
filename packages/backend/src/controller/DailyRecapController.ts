@@ -1,6 +1,7 @@
 import { AccountModel } from '../models/AccountModel';
 import { HoldingsModel } from '../models/HoldingsModel';
 import type { IPriceStoreModel } from '../models/PriceStoreModel';
+import { isViewingLiveTradingDay, mostRecentTradingDay } from '../utils/marketCalendar';
 import { LiveQuoteController } from './LiveQuoteController';
 
 // Broad-market proxies. These are ETFs, so Finnhub's free tier returns c=0 and
@@ -22,6 +23,11 @@ export type DailyRecap = {
   accounts: AccountMovement[];
   totalDayGL: number;
   totalDayGLPercent: number;
+  // ET date (YYYY-MM-DD) of the trading session these figures reflect, and whether
+  // that session is the current day. On a weekend/holiday marketDay is the prior
+  // trading day (e.g. Friday) so the UI can say what "today" actually shows.
+  marketDay: string;
+  marketDayIsToday: boolean;
   generatedAt: string;
 };
 
@@ -120,6 +126,8 @@ export async function buildDailyRecap(): Promise<DailyRecap> {
     accounts: accountsOut,
     totalDayGL,
     totalDayGLPercent,
+    marketDay: mostRecentTradingDay(),
+    marketDayIsToday: isViewingLiveTradingDay(),
     generatedAt: new Date().toISOString(),
   };
 }
