@@ -301,6 +301,33 @@ export const getEarningsCalendar = (symbol: string): Promise<any> => {
     });
 };
 
+export interface EarningsCalendarEntry {
+  symbol: string;
+  date: string;
+  hour: string | null;
+  epsEstimate: number | null;
+  epsActual: number | null;
+  revenueEstimate: number | null;
+  revenueActual: number | null;
+  quarter: number;
+  year: number;
+}
+
+// Fetch the whole earnings calendar for a window in ONE request (no symbol
+// filter). Callers that need earnings for many holdings must use this and filter
+// locally rather than fanning out one request per symbol, which trips 429s.
+export const getBulkEarningsCalendar = (fromDate: string, toDate: string): Promise<EarningsCalendarEntry[]> =>
+  finnhubGet(`/calendar/earnings?from=${fromDate}&to=${toDate}`)
+    .then((response) => response.data.earningsCalendar ?? [])
+    .catch((error: AxiosError) => {
+      logger.log({
+        level: 'error',
+        label: 'Earnings calendar request',
+        message: `${error.message} (status ${error.response?.status ?? 'n/a'})`,
+      });
+      throw error;
+    });
+
 export const getEarningsHistory = (symbol: string): Promise<any[]> =>
   finnhubGet(`/stock/earnings?symbol=${symbol}&limit=4`)
     .then((response) => response.data ?? [])
