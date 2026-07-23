@@ -47,24 +47,3 @@ export const logBuyTransaction = async (transactionHolding: Partial<IHoldings>):
     });
   }
 };
-
-export const logDepositTransaction = async (transactionHolding: Partial<IHoldings>): Promise<void> => {
-  try {
-    await transactionModel.insertOne({
-      accountId: transactionHolding.accountId,
-      symbol: transactionHolding.symbol,
-      qty: transactionHolding.qty,
-      price: transactionHolding.averagePrice,
-      type: transactionHolding.type,
-      action: 'deposit',
-    });
-  } catch (error: any) {
-    logger.log({
-      level: 'error',
-      label: 'buy',
-      message: error.message,
-      name: error.name,
-      stack: error.stack,
-    });
-  }
-};

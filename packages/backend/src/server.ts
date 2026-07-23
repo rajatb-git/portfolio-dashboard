@@ -40,6 +40,7 @@ import { HoldingsRouter } from './router/holdings.route';
 import { LiveRouter } from './router/live.route';
 import { LogsRouter } from './router/logs.route';
 import { NotesRouter } from './router/notes.route';
+import { RebalanceRouter } from './router/rebalance.route';
 import { SettingsRouter } from './router/settings.route';
 import { TransactionsRouter } from './router/transactions.route';
 
@@ -79,6 +80,7 @@ app.use(DashboardRouter().routes()).use(DashboardRouter().allowedMethods());
 app.use(TransactionsRouter().routes()).use(TransactionsRouter().allowedMethods());
 app.use(LogsRouter().routes()).use(LogsRouter().allowedMethods());
 app.use(AnalyticsRouter().routes()).use(AnalyticsRouter().allowedMethods());
+app.use(RebalanceRouter().routes()).use(RebalanceRouter().allowedMethods());
 app.use(SettingsRouter().routes()).use(SettingsRouter().allowedMethods());
 app.use(NotesRouter().routes()).use(NotesRouter().allowedMethods());
 app.use(AlertsRouter().routes()).use(AlertsRouter().allowedMethods());

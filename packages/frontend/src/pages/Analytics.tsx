@@ -5,15 +5,26 @@ import { toast } from 'react-toastify';
 
 import apis from '@/api';
 import type { HoldingAggregate, PortfolioSnapshot } from '@/api/dashboard';
-import type { RealizedGains, RiskMetrics, SectorAllocation } from '@/api/analytics';
+import type {
+  CorrelationMatrix,
+  MonthlyReturns,
+  RealizedGains,
+  RiskMetrics,
+  SectorAllocation,
+  TaxLossHarvesting,
+} from '@/api/analytics';
 import AllocationCharts from '@/components/Analytics/AllocationCharts';
+import CorrelationMatrixCard from '@/components/Analytics/CorrelationMatrixCard';
+import MonthlyReturnsCard from '@/components/Analytics/MonthlyReturnsCard';
 import NewsSentimentCard from '@/components/Analytics/NewsSentimentCard';
 import PerformanceAttributionCard from '@/components/Analytics/PerformanceAttributionCard';
+import PortfolioGoalCard from '@/components/Analytics/PortfolioGoalCard';
 import PortfolioInsightsCard from '@/components/Analytics/PortfolioInsightsCard';
 import PortfolioPerformanceChart from '@/components/Analytics/PortfolioPerformanceChart';
 import RealizedGainsCard from '@/components/Analytics/RealizedGainsCard';
 import RiskMetricsCard from '@/components/Analytics/RiskMetricsCard';
 import SectorAllocationChart from '@/components/Analytics/SectorAllocationChart';
+import TaxLossHarvestingCard from '@/components/Analytics/TaxLossHarvestingCard';
 
 export default function Analytics() {
   const [snapshots, setSnapshots] = React.useState<PortfolioSnapshot[]>([]);
@@ -31,6 +42,15 @@ export default function Analytics() {
 
   const [realizedGains, setRealizedGains] = React.useState<RealizedGains | null>(null);
   const [isRealizedLoading, setIsRealizedLoading] = React.useState(true);
+
+  const [taxLoss, setTaxLoss] = React.useState<TaxLossHarvesting | null>(null);
+  const [isTaxLossLoading, setIsTaxLossLoading] = React.useState(true);
+
+  const [monthlyReturns, setMonthlyReturns] = React.useState<MonthlyReturns | null>(null);
+  const [isMonthlyLoading, setIsMonthlyLoading] = React.useState(true);
+
+  const [correlation, setCorrelation] = React.useState<CorrelationMatrix | null>(null);
+  const [isCorrelationLoading, setIsCorrelationLoading] = React.useState(true);
 
   React.useEffect(() => {
     setIsLoading(true);
@@ -87,6 +107,27 @@ export default function Analytics() {
       .then((data) => setRealizedGains(data))
       .catch((err) => toast.error(err.message || 'Failed to load realized gains'))
       .finally(() => setIsRealizedLoading(false));
+
+    setIsTaxLossLoading(true);
+    apis.analytics
+      .getTaxLossHarvesting()
+      .then((data) => setTaxLoss(data))
+      .catch((err) => toast.error(err.message || 'Failed to load tax-loss harvesting'))
+      .finally(() => setIsTaxLossLoading(false));
+
+    setIsMonthlyLoading(true);
+    apis.analytics
+      .getMonthlyReturns()
+      .then((data) => setMonthlyReturns(data))
+      .catch((err) => toast.error(err.message || 'Failed to load monthly returns'))
+      .finally(() => setIsMonthlyLoading(false));
+
+    setIsCorrelationLoading(true);
+    apis.analytics
+      .getCorrelation()
+      .then((data) => setCorrelation(data))
+      .catch((err) => toast.error(err.message || 'Failed to load correlation matrix'))
+      .finally(() => setIsCorrelationLoading(false));
   }, []);
 
   return (
@@ -97,11 +138,19 @@ export default function Analytics() {
 
       <PortfolioPerformanceChart snapshots={snapshots} />
 
+      <PortfolioGoalCard />
+
       <RiskMetricsCard metrics={riskMetrics} isLoading={isRiskLoading} />
+
+      <MonthlyReturnsCard data={monthlyReturns} isLoading={isMonthlyLoading} />
 
       <PerformanceAttributionCard attribution={attribution} isLoading={isAttributionLoading} />
 
+      <CorrelationMatrixCard data={correlation} isLoading={isCorrelationLoading} />
+
       <RealizedGainsCard data={realizedGains} isLoading={isRealizedLoading} />
+
+      <TaxLossHarvestingCard data={taxLoss} isLoading={isTaxLossLoading} />
 
       <PortfolioInsightsCard />
 
