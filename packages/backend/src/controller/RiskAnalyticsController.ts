@@ -18,6 +18,18 @@ export type RiskMetrics = {
 const RISK_FREE_RATE = 0.05; // 5% annual risk-free rate
 const TRADING_DAYS_PER_YEAR = 252;
 
+const emptyMetrics = (totalDataDays: number): RiskMetrics => ({
+  annualizedReturn: 0,
+  volatility: 0,
+  sharpeRatio: 0,
+  maxDrawdown: 0,
+  maxDrawdownPeriod: { from: '', to: '' },
+  beta: 0,
+  bestDay: { date: '', return: 0 },
+  worstDay: { date: '', return: 0 },
+  totalDataDays,
+});
+
 export const calculateRiskMetrics = async (): Promise<RiskMetrics> => {
   const snapshotModel = await PortfolioSnapshotDBModel().initialize();
   const allSnapshots = snapshotModel.getAllRecords();
@@ -34,17 +46,7 @@ export const calculateRiskMetrics = async (): Promise<RiskMetrics> => {
   const sorted = [...byDay.values()].sort((a, b) => a.date.localeCompare(b.date));
 
   if (sorted.length < 2) {
-    return {
-      annualizedReturn: 0,
-      volatility: 0,
-      sharpeRatio: 0,
-      maxDrawdown: 0,
-      maxDrawdownPeriod: { from: '', to: '' },
-      beta: 0,
-      bestDay: { date: '', return: 0 },
-      worstDay: { date: '', return: 0 },
-      totalDataDays: sorted.length,
-    };
+    return emptyMetrics(sorted.length);
   }
 
   // Calculate daily returns
@@ -61,17 +63,7 @@ export const calculateRiskMetrics = async (): Promise<RiskMetrics> => {
   }
 
   if (dailyReturns.length === 0) {
-    return {
-      annualizedReturn: 0,
-      volatility: 0,
-      sharpeRatio: 0,
-      maxDrawdown: 0,
-      maxDrawdownPeriod: { from: '', to: '' },
-      beta: 0,
-      bestDay: { date: '', return: 0 },
-      worstDay: { date: '', return: 0 },
-      totalDataDays: sorted.length,
-    };
+    return emptyMetrics(sorted.length);
   }
 
   // Annualized return
@@ -91,7 +83,6 @@ export const calculateRiskMetrics = async (): Promise<RiskMetrics> => {
   // Max Drawdown
   let peak = sorted[0].totalValue;
   let maxDrawdown = 0;
-  // const drawdownFrom = sorted[0].date;
   let maxDrawdownPeriod = { from: sorted[0].date, to: sorted[0].date };
   let currentDrawdownStart = sorted[0].date;
 

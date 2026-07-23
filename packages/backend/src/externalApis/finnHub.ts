@@ -103,31 +103,6 @@ export const getQuoteForSymbol = (symbol: string, isCrypto = false): Promise<Quo
 };
 
 /**
- * @param  {'general'|'forex'|'crypto'|'merger'} category
- */
-export const getMarketNews = (category: 'general' | 'forex' | 'crypto' | 'merger'): Promise<MarketNewsResponse> =>
-  finnhubGet(`/news?category=${category}`)
-    .then((response) => {
-      logger.log({
-        level: 'info',
-        response: JSON.stringify(response.data),
-        message: `${response.config.url}`,
-        label: 'market news request',
-      });
-
-      return response.data;
-    })
-    .catch((error: AxiosError) => {
-      logger.log({
-        level: 'error',
-        label: `Market news request "${category}"`,
-        message: `${error.message} (status ${error.response?.status ?? 'n/a'})`,
-      });
-
-      throw error;
-    });
-
-/**
  * @param  {string} symbol - stock ticker
  * @param  {string} fromDate - YYYY-MM-DD
  * @param  {string} toDate - YYYY-MM-DD
@@ -223,28 +198,6 @@ export const getUpcomingIPOs = async (): Promise<UpcomingIPOsResponse> => {
       throw error;
     });
 };
-
-export const getVisaApplications = async (symbol: string): Promise<UpcomingIPOsResponse> =>
-  finnhubGet(`/stock/visa-application?symbol=${symbol}&from=2021-01-01&to=2025-12-31`)
-    .then((response) => {
-      logger.log({
-        level: 'info',
-        response: JSON.stringify(response.data),
-        message: `${response.config.url}`,
-        label: 'visa applications request',
-      });
-
-      return response.data;
-    })
-    .catch((error: AxiosError) => {
-      logger.log({
-        level: 'error',
-        label: `Visa applications request "${symbol}"`,
-        message: `${error.message} (status ${error.response?.status ?? 'n/a'})`,
-      });
-
-      throw error;
-    });
 
 export const getStockMetrics = (symbol: string): Promise<any> =>
   finnhubGet(`/stock/metric?symbol=${symbol}&metric=all`)

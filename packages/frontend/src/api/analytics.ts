@@ -70,6 +70,75 @@ export type PortfolioInsight = {
   generatedAt: string;
 };
 
+export type HarvestCandidate = {
+  symbol: string;
+  name: string;
+  accountId: string;
+  type: 'stock' | 'crypto';
+  qty: number;
+  averagePrice: number;
+  currentPrice: number;
+  marketValue: number;
+  unrealizedLoss: number;
+  lossPercent: number;
+  term: 'short' | 'long';
+  washSaleRisk: boolean;
+  washSaleClearDate: string | null;
+};
+
+export type TaxLossHarvesting = {
+  candidates: HarvestCandidate[];
+  totalUnrealizedLoss: number;
+  harvestableNow: number;
+  shortTermLoss: number;
+  longTermLoss: number;
+};
+
+export type MonthlyReturn = {
+  year: number;
+  month: number;
+  return: number | null;
+};
+
+export type MonthlyReturns = {
+  months: MonthlyReturn[];
+  yearlyReturns: Array<{ year: number; return: number }>;
+  bestMonth: { year: number; month: number; return: number } | null;
+  worstMonth: { year: number; month: number; return: number } | null;
+  firstYear: number | null;
+  lastYear: number | null;
+};
+
+export type CorrelationMatrix = {
+  symbols: string[];
+  matrix: number[][];
+  avgCorrelation: number;
+  diversificationScore: number;
+  mostCorrelated: { a: string; b: string; value: number } | null;
+  leastCorrelated: { a: string; b: string; value: number } | null;
+  skipped: string[];
+};
+
+export type GoalProgress = {
+  label: string;
+  targetValue: number;
+  targetDate: string | null;
+  currentValue: number;
+  progressPercent: number;
+  remaining: number;
+  monthlyGrowthRate: number | null;
+  projectedDate: string | null;
+  monthsToProjected: number | null;
+  onTrack: boolean | null;
+  requiredMonthlyReturn: number | null;
+};
+
+export type GoalConfig = {
+  label: string;
+  targetValue: number;
+  targetDate: string | null;
+};
+
 export default class AnalyticsAPI {
   getRiskMetrics = async (): Promise<RiskMetrics> =>
     axios
@@ -104,6 +173,42 @@ export default class AnalyticsAPI {
   getPortfolioInsights = async (): Promise<PortfolioInsight> =>
     axios
       .post(DB_HOST + '/analytics/portfolio-insights')
+      .then((response) => response.data)
+      .catch(catchCustomError);
+
+  getTaxLossHarvesting = async (): Promise<TaxLossHarvesting> =>
+    axios
+      .get(DB_HOST + '/analytics/tax-loss-harvesting')
+      .then((response) => response.data)
+      .catch(catchCustomError);
+
+  getMonthlyReturns = async (): Promise<MonthlyReturns> =>
+    axios
+      .get(DB_HOST + '/analytics/monthly-returns')
+      .then((response) => response.data)
+      .catch(catchCustomError);
+
+  getCorrelation = async (): Promise<CorrelationMatrix> =>
+    axios
+      .get(DB_HOST + '/analytics/correlation')
+      .then((response) => response.data)
+      .catch(catchCustomError);
+
+  getGoalProgress = async (): Promise<GoalProgress> =>
+    axios
+      .get(DB_HOST + '/analytics/goal')
+      .then((response) => response.data)
+      .catch(catchCustomError);
+
+  getGoalConfig = async (): Promise<GoalConfig> =>
+    axios
+      .get(DB_HOST + '/analytics/goal/config')
+      .then((response) => response.data)
+      .catch(catchCustomError);
+
+  saveGoalConfig = async (config: GoalConfig): Promise<GoalConfig> =>
+    axios
+      .post(DB_HOST + '/analytics/goal/config', config)
       .then((response) => response.data)
       .catch(catchCustomError);
 }

@@ -120,12 +120,6 @@ function etParts(now: Date): { dateStr: string; minutes: number; day: number } {
   };
 }
 
-export function isMarketHoliday(now: Date = new Date()): boolean {
-  const { dateStr } = etParts(now);
-  const year = Number(dateStr.slice(0, 4));
-  return fullCloseHolidays(year).has(dateStr);
-}
-
 // True only during regular US equity trading hours on a real trading day.
 export function isStockMarketOpen(now: Date = new Date()): boolean {
   const { dateStr, minutes, day } = etParts(now);

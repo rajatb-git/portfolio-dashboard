@@ -8,6 +8,7 @@ export const NAV_CONFIG = [
   { text: 'Dashboard', href: '/dashboard', icon: 'streamline:dashboard-3-solid', section: 'Overview' },
   { text: 'Today', href: '/today', icon: 'tabler:sun', section: 'Overview' },
   { text: 'Analytics', href: '/analytics', icon: 'tabler:chart-line', section: 'Overview' },
+  { text: 'Rebalance', href: '/rebalance', icon: 'tabler:scale', section: 'Overview' },
   { text: 'Alerts', href: '/alerts', icon: 'tabler:bell', section: 'Markets' },
   { text: 'Database', href: '/database', icon: 'iconoir:database-search', section: 'Markets' },
   { text: 'IPO Calendar', href: '/ipo-calendar', icon: 'tabler:calendar-dollar', section: 'Markets' },
