@@ -48,12 +48,14 @@ function MetricRow({ label, value, tooltip }: { label: string; value: string; to
 }
 
 export default function ResearchMetricsCard({ metrics, currentPrice, isLoading }: Props) {
+  const hasData = !!metrics && Object.values(metrics).some((v) => v != null);
+  const low = metrics?.week52Low;
+  const high = metrics?.week52High;
+  const hasRange = low != null && high != null;
+
   const rangePercent =
-    metrics && currentPrice
-      ? Math.max(
-          0,
-          Math.min(100, ((currentPrice - metrics.week52Low) / (metrics.week52High - metrics.week52Low)) * 100)
-        )
+    low != null && high != null && currentPrice
+      ? Math.max(0, Math.min(100, ((currentPrice - low) / (high - low)) * 100))
       : 0;
 
   return (
@@ -74,33 +76,37 @@ export default function ResearchMetricsCard({ metrics, currentPrice, isLoading }
 
       {isLoading ? (
         <Skeleton variant="rectangular" height={220} sx={{ m: 2, borderRadius: 1 }} />
-      ) : metrics ? (
+      ) : hasData ? (
         <Box>
           {/* 52-week range bar */}
-          <Box sx={{ px: 2, pt: 1.5, pb: 1 }}>
-            <Stack direction="row" sx={{ justifyContent: 'space-between', mb: 0.5 }}>
-              <Typography sx={{ fontSize: '0.7rem', color: 'text.disabled' }}>
-                52W Low ${metrics.week52Low.toFixed(2)}
-              </Typography>
-              <Typography sx={{ fontSize: '0.7rem', fontWeight: 600, color: 'text.secondary' }}>
-                52-Week Range
-              </Typography>
-              <Typography sx={{ fontSize: '0.7rem', color: 'text.disabled' }}>
-                52W High ${metrics.week52High.toFixed(2)}
-              </Typography>
-            </Stack>
-            <LinearProgress
-              variant="determinate"
-              value={rangePercent}
-              sx={{
-                height: 5,
-                borderRadius: 3,
-                bgcolor: 'action.hover',
-                '& .MuiLinearProgress-bar': { bgcolor: '#3b82f6', borderRadius: 3 },
-              }}
-            />
-          </Box>
-          <Divider sx={{ opacity: 0.5 }} />
+          {hasRange && (
+            <>
+              <Box sx={{ px: 2, pt: 1.5, pb: 1 }}>
+                <Stack direction="row" sx={{ justifyContent: 'space-between', mb: 0.5 }}>
+                  <Typography sx={{ fontSize: '0.7rem', color: 'text.disabled' }}>
+                    52W Low ${low?.toFixed(2)}
+                  </Typography>
+                  <Typography sx={{ fontSize: '0.7rem', fontWeight: 600, color: 'text.secondary' }}>
+                    52-Week Range
+                  </Typography>
+                  <Typography sx={{ fontSize: '0.7rem', color: 'text.disabled' }}>
+                    52W High ${high?.toFixed(2)}
+                  </Typography>
+                </Stack>
+                <LinearProgress
+                  variant="determinate"
+                  value={rangePercent}
+                  sx={{
+                    height: 5,
+                    borderRadius: 3,
+                    bgcolor: 'action.hover',
+                    '& .MuiLinearProgress-bar': { bgcolor: '#3b82f6', borderRadius: 3 },
+                  }}
+                />
+              </Box>
+              <Divider sx={{ opacity: 0.5 }} />
+            </>
+          )}
 
           <MetricRow
             label="P/E Ratio (TTM)"
@@ -143,7 +149,11 @@ export default function ResearchMetricsCard({ metrics, currentPrice, isLoading }
             tooltip="Days to cover short interest at average daily volume"
           />
         </Box>
-      ) : null}
+      ) : (
+        <Typography sx={{ p: 2, fontSize: '0.78rem', color: 'text.disabled' }}>
+          No key statistics available.
+        </Typography>
+      )}
     </Card>
   );
 }

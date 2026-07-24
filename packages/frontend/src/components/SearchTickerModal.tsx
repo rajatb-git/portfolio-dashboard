@@ -11,11 +11,15 @@ import {
   ListItemButton,
   ListItemIcon,
   ListItemText,
+  Skeleton,
   Typography,
 } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
 import * as React from 'react';
+import { toast } from 'react-toastify';
 import { useNavigate } from 'react-router-dom';
+import apis from '@/api';
+import { SymbolSearchResult } from '@/api/live';
 import { NAV_CONFIG, NAV_SETTINGS_CONFIG } from '@/config';
 import LocalStorageArray from '@/utils/localStorageArray';
 import { Iconify } from './Iconify';
@@ -40,10 +44,33 @@ export function SearchTickerModal({ refreshSearchHistory, searchHistory, isOpen,
   const theme = useTheme();
   const isLight = theme.palette.mode === 'light';
   const [query, setQuery] = React.useState('');
+  const [symbolResults, setSymbolResults] = React.useState<SymbolSearchResult[]>([]);
+  const [isSearching, setIsSearching] = React.useState(false);
 
   React.useEffect(() => {
     if (isOpen) setQuery('');
   }, [isOpen]);
+
+  React.useEffect(() => {
+    const q = query.trim();
+    if (q.length < 2) {
+      setSymbolResults([]);
+      setIsSearching(false);
+      return;
+    }
+    setIsSearching(true);
+    const handle = setTimeout(() => {
+      apis.live
+        .searchSymbols(q)
+        .then((res) => setSymbolResults(res ?? []))
+        .catch((err) => {
+          setSymbolResults([]);
+          toast.error(err.message || 'Failed to search symbols');
+        })
+        .finally(() => setIsSearching(false));
+    }, 300);
+    return () => clearTimeout(handle);
+  }, [query]);
 
   const onSearchEnter = (searchText: string) => {
     const text = searchText.trim();
@@ -116,7 +143,7 @@ export function SearchTickerModal({ refreshSearchHistory, searchHistory, isOpen,
               },
             },
           }}
-          placeholder="Search ticker or jump to a page…"
+          placeholder="Search company or ticker, or jump to a page…"
           inputProps={{ 'aria-label': 'search' }}
           autoFocus
           inputRef={(input) => input && input.focus()}
@@ -124,7 +151,7 @@ export function SearchTickerModal({ refreshSearchHistory, searchHistory, isOpen,
           onChange={(e) => setQuery(e.target.value)}
           onKeyUp={(e) => {
             e.stopPropagation();
-            if (e.key === 'Enter') onSearchEnter(query);
+            if (e.key === 'Enter') onSearchEnter(symbolResults.length > 0 ? symbolResults[0].symbol : query);
           }}
         />
 
@@ -156,6 +183,43 @@ export function SearchTickerModal({ refreshSearchHistory, searchHistory, isOpen,
                 </ListItemButton>
               </ListItem>
             </List>
+          </>
+        )}
+
+        {query.trim().length >= 2 && (
+          <>
+            <Typography sx={sectionLabelSx}>Companies</Typography>
+            {isSearching ? (
+              <Box sx={{ px: 1, py: 0.5 }}>
+                <Skeleton height={34} sx={{ mb: 0.5 }} />
+                <Skeleton height={34} sx={{ mb: 0.5 }} />
+                <Skeleton height={34} />
+              </Box>
+            ) : symbolResults.length > 0 ? (
+              <List dense sx={{ pt: 0 }}>
+                {symbolResults.map((r) => (
+                  <ListItem key={r.symbol} sx={{ p: 0, mb: 0.5 }}>
+                    <ListItemButton onClick={() => onSearchEnter(r.symbol)} sx={hoverItemSx}>
+                      <ListItemIcon sx={{ minWidth: 'auto', mr: 2 }}>
+                        <Iconify icon="mdi:office-building-outline" />
+                      </ListItemIcon>
+                      <ListItemText
+                        primary={r.symbol}
+                        secondary={r.description}
+                        slotProps={{
+                          primary: { sx: { fontWeight: 600 } },
+                          secondary: { sx: { fontSize: '0.72rem' } },
+                        }}
+                      />
+                    </ListItemButton>
+                  </ListItem>
+                ))}
+              </List>
+            ) : (
+              <Typography sx={{ px: 1, py: 0.5, fontSize: '0.78rem', color: 'text.disabled' }}>
+                No matching companies.
+              </Typography>
+            )}
           </>
         )}
 

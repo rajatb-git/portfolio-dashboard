@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import Box from '@mui/material/Box';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import { ToastContainer } from 'react-toastify';
@@ -7,6 +7,7 @@ import { ToastContainer } from 'react-toastify';
 import Drawer from '@/components/Nav/Drawer';
 import ThemeRegistry from '@/components/ThemeRegistry/ThemeRegistry';
 import AuthGate from '@/components/AuthGate';
+import ErrorBoundary from '@/components/ErrorBoundary';
 import PWAInstallPrompt from '@/components/PWAInstallPrompt';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 import { DashboardDataProvider } from '@/contexts/DashboardDataContext';
@@ -38,6 +39,7 @@ function AppShell() {
   const [collapsed, setCollapsed] = React.useState(() => localStorage.getItem('nav_collapsed') === 'true');
   const [mobileOpen, setMobileOpen] = React.useState(false);
   const isMobile = useMediaQuery('(max-width: 899.95px)');
+  const location = useLocation();
 
   const handleToggle = () => {
     setCollapsed((prev) => {
@@ -73,22 +75,24 @@ function AppShell() {
           transition: 'margin-left 0.2s ease',
         }}
       >
-        <React.Suspense fallback={<div>Loading...</div>}>
-          <Routes>
-            <Route path="/" element={<Navigate to="/dashboard" replace />} />
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/today" element={<Today />} />
-            <Route path="/analytics" element={<Analytics />} />
-            <Route path="/rebalance" element={<Rebalance />} />
-            <Route path="/alerts" element={<Alerts />} />
-            <Route path="/database" element={<Database />} />
-            <Route path="/ipo-calendar" element={<IPOCalendar />} />
-            <Route path="/ipo-calendar/:id" element={<IPODetail />} />
-            <Route path="/logs" element={<Logs />} />
-            <Route path="/research" element={<Research />} />
-            <Route path="/settings" element={<Settings />} />
-          </Routes>
-        </React.Suspense>
+        <ErrorBoundary key={location.pathname + location.search}>
+          <React.Suspense fallback={<div>Loading...</div>}>
+            <Routes>
+              <Route path="/" element={<Navigate to="/dashboard" replace />} />
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/today" element={<Today />} />
+              <Route path="/analytics" element={<Analytics />} />
+              <Route path="/rebalance" element={<Rebalance />} />
+              <Route path="/alerts" element={<Alerts />} />
+              <Route path="/database" element={<Database />} />
+              <Route path="/ipo-calendar" element={<IPOCalendar />} />
+              <Route path="/ipo-calendar/:id" element={<IPODetail />} />
+              <Route path="/logs" element={<Logs />} />
+              <Route path="/research" element={<Research />} />
+              <Route path="/settings" element={<Settings />} />
+            </Routes>
+          </React.Suspense>
+        </ErrorBoundary>
       </Box>
     </>
   );

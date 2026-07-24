@@ -225,6 +225,25 @@ function Research() {
   }, []);
 
   const isPositive = (price?.percentChange ?? 0) >= 0;
+  const notFound = !!searchText && !isCompanyProfileLoading && !companyProfile?.name;
+
+  if (notFound) {
+    return (
+      <Stack spacing={2}>
+        <Card sx={{ p: 4, textAlign: 'center' }}>
+          <Stack spacing={1.5} sx={{ alignItems: 'center' }}>
+            <Iconify icon="eva:search-fill" width={40} sx={{ color: 'text.disabled' }} />
+            <Typography variant="h6" sx={{ fontWeight: 700 }}>
+              No data found for &quot;{searchText}&quot;
+            </Typography>
+            <Typography sx={{ fontSize: '0.85rem', color: 'text.secondary' }}>
+              Double-check the ticker symbol and try again.
+            </Typography>
+          </Stack>
+        </Card>
+      </Stack>
+    );
+  }
 
   return (
     <Stack spacing={2}>
