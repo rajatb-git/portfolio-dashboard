@@ -72,6 +72,12 @@ export type DocumentParseResult = {
   model: string;
 };
 
+export type SymbolSearchResult = {
+  symbol: string;
+  description: string;
+  type: string;
+};
+
 export type AiConfig = {
   enabled: boolean;
   provider: 'claude' | 'gemini' | 'ollama';
@@ -143,6 +149,11 @@ export default class LiveAPI {
 
   getStockPeers = async (symbol: string): Promise<string[]> =>
     axios(DB_HOST + `/live/peers/${symbol}`)
+      .then((response) => response.data)
+      .catch(catchCustomError);
+
+  searchSymbols = async (query: string): Promise<SymbolSearchResult[]> =>
+    axios(DB_HOST + `/live/search?q=${encodeURIComponent(query)}`)
       .then((response) => response.data)
       .catch(catchCustomError);
 

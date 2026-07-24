@@ -239,6 +239,34 @@ export const getStockPeers = (symbol: string): Promise<string[]> =>
       throw error;
     });
 
+export type SymbolSearchResult = {
+  symbol: string;
+  description: string;
+  type: string;
+};
+
+// Finnhub Symbol Lookup: resolves a company name or partial ticker to matching
+// symbols. Results span every exchange and instrument type, so keep only
+// US-listed symbols (foreign listings carry a `.XX` exchange suffix) and cap the
+// list so the search palette stays scannable.
+export const searchSymbols = (query: string): Promise<SymbolSearchResult[]> =>
+  finnhubGet(`/search?q=${encodeURIComponent(query)}`)
+    .then((response) => {
+      const results = (response.data?.result ?? []) as Array<{ symbol: string; description: string; type: string }>;
+      return results
+        .filter((r) => r.symbol && !r.symbol.includes('.') && r.description)
+        .slice(0, 8)
+        .map((r) => ({ symbol: r.symbol, description: r.description, type: r.type }));
+    })
+    .catch((error: AxiosError) => {
+      logger.log({
+        level: 'error',
+        label: `Symbol search "${query}"`,
+        message: `${error.message} (status ${error.response?.status ?? 'n/a'})`,
+      });
+      throw error;
+    });
+
 export const getEarningsCalendar = (symbol: string): Promise<any> => {
   const from = moment().format('YYYY-MM-DD');
   const to = moment().add(12, 'M').format('YYYY-MM-DD');

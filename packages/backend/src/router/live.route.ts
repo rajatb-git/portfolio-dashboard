@@ -18,6 +18,7 @@ import {
   getInsiderTransactions,
   getStockMetrics,
   getStockPeers,
+  searchSymbols,
 } from '../externalApis/finnHub';
 import { getPriceHistoryCandleStick } from '../externalApis/nasdaq';
 import { errorBody } from '../utils/error';
@@ -173,6 +174,24 @@ export const LiveRouter = () => {
       logger.log({ level: 'error', message: err.message, label: `Get company profile "${ctx.params.sym}"` });
       ctx.status = 500;
       ctx.body = errorBody('Failed to get company profile', err.message);
+    }
+  });
+
+  router.get('/live/search', async (ctx) => {
+    const q = Array.isArray(ctx.query.q) ? ctx.query.q[0] : ctx.query.q;
+    try {
+      if (!q || q.trim().length < 2) {
+        ctx.body = [];
+        ctx.status = 200;
+        return;
+      }
+      const result = await searchSymbols(q.trim());
+      ctx.body = result;
+      ctx.status = 200;
+    } catch (err: any) {
+      logger.log({ level: 'error', message: err.message, label: `Symbol search "${q}"` });
+      ctx.body = errorBody('Failed to search symbols', err.message);
+      ctx.status = 400;
     }
   });
 
