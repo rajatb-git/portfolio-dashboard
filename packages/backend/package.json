@@ -39,7 +39,7 @@
   },
   "devDependencies": {
     "@biomejs/biome": "^2.4.16",
-    "@types/archiver": "^7.0.0",
+    "@types/archiver": "^8.0.0",
     "@types/koa": "^3.0.3",
     "@types/koa-bodyparser": "^4.3.13",
     "@types/koa__cors": "^5.0.1",
