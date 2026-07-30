@@ -19,7 +19,7 @@
   "license": "MIT",
   "private": true,
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.100.1",
+    "@anthropic-ai/sdk": "^0.115.0",
     "@google/genai": "^2.7.0",
     "@koa/cors": "^5.0.0",
     "@koa/router": "^15.7.0",
