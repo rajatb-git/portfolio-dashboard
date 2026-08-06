@@ -35,7 +35,8 @@ export const adjustCash = async (accountId: string, delta: number): Promise<numb
 export const recordCashMovement = async (
   accountId: string,
   amount: number,
-  action: 'deposit' | 'withdraw'
+  action: 'deposit' | 'withdraw',
+  date?: string
 ): Promise<{ cashBalance: number }> => {
   if (!Number.isFinite(amount) || amount <= 0) {
     throw new Error('Amount must be a positive number');
@@ -52,6 +53,7 @@ export const recordCashMovement = async (
       price: 1,
       type: 'cash',
       action,
+      ...(date && { date }),
     });
   } catch (error: any) {
     logger.log({

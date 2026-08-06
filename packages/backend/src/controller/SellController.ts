@@ -5,7 +5,7 @@ import { logSellTransaction } from './TransactionController';
 const holdingsModel = HoldingsModel();
 holdingsModel.initialize();
 
-export const sell = async (soldHolding: IHoldings): Promise<IHoldingsModel> => {
+export const sell = async (soldHolding: IHoldings, date?: string): Promise<IHoldingsModel> => {
   const existingHolding = holdingsModel.find({ symbol: soldHolding.symbol, accountId: soldHolding.accountId })[0];
 
   if (!existingHolding) {
@@ -24,7 +24,7 @@ export const sell = async (soldHolding: IHoldings): Promise<IHoldingsModel> => {
 
   const pnl = (soldHolding.averagePrice - existingHolding.averagePrice) * soldHolding.qty;
 
-  await logSellTransaction(soldHolding, pnl);
+  await logSellTransaction(soldHolding, pnl, date);
   await adjustCash(soldHolding.accountId, soldHolding.qty * soldHolding.averagePrice);
 
   return result;

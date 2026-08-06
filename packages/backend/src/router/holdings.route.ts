@@ -5,6 +5,7 @@ import { adjustCash } from '../controller/CashController';
 import { sell } from '../controller/SellController';
 import { LiveQuoteController } from '../controller/LiveQuoteController';
 import { HoldingsModel } from '../models/HoldingsModel';
+import { normalizeTradeDate } from '../utils';
 import { errorBody } from '../utils/error';
 import { logger } from '../utils/winston';
 
@@ -162,7 +163,8 @@ export const HoldingsRouter = () => {
     const body: any = ctx.request.body;
     if (body) {
       try {
-        ctx.body = await buy(body);
+        const { date, ...holding } = body;
+        ctx.body = await buy(holding, normalizeTradeDate(date));
         ctx.status = 200;
         return;
       } catch (error: any) {
@@ -190,7 +192,8 @@ export const HoldingsRouter = () => {
 
     if (body) {
       try {
-        ctx.body = await sell(body);
+        const { date, ...holding } = body;
+        ctx.body = await sell(holding, normalizeTradeDate(date));
         ctx.status = 200;
         return;
       } catch (error: any) {
