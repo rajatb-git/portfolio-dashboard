@@ -9,6 +9,7 @@ import { styled, Theme, useTheme } from '@mui/material/styles';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import { default as MuiTextField } from '@mui/material/TextField';
 import Case from 'case';
+import moment from 'moment';
 import { toast } from 'react-toastify';
 
 import apis from '@/api';
@@ -34,6 +35,8 @@ const TextField = styled(MuiTextField)(({ theme }: { theme: Theme }) => ({
     backgroundColor: theme.palette.mode === 'light' ? '#F3F6F9' : theme.palette.background.default,
   },
 }));
+
+const today = () => moment().format('YYYY-MM-DD');
 
 type Props = {
   open: boolean;
@@ -84,6 +87,15 @@ export default function BuySellDialog({ open, handleDialogClose, initialValues, 
       validate: () => '',
       required: true,
     }),
+    date: useField({
+      initValue: today(),
+      validate: (value: string) => {
+        if (!moment(value, 'YYYY-MM-DD', true).isValid()) return 'Enter a valid date';
+        if (moment(value, 'YYYY-MM-DD').isAfter(moment(), 'day')) return 'Date cannot be in the future';
+        return '';
+      },
+      required: true,
+    }),
   };
 
   const isFormValid = () => (Object.values(formFields).find((x) => x.isValid() === false) === undefined ? true : false);
@@ -99,8 +111,9 @@ export default function BuySellDialog({ open, handleDialogClose, initialValues, 
             symbol: formFields.symbol.value,
             qty: parseFloat(formFields.qty.value),
             averagePrice: parseFloat(formFields.averagePrice.value),
-            type: formFields.type.value,
-          } as any);
+            type: formFields.type.value as IHoldings['type'],
+            date: formFields.date.value,
+          });
 
           toast('Sold!', {
             autoClose: 5000,
@@ -117,8 +130,9 @@ export default function BuySellDialog({ open, handleDialogClose, initialValues, 
             symbol: formFields.symbol.value,
             qty: parseFloat(formFields.qty.value),
             averagePrice: parseFloat(formFields.averagePrice.value),
-            type: formFields.type.value,
-          } as any);
+            type: formFields.type.value as IHoldings['type'],
+            date: formFields.date.value,
+          });
 
           toast('Bought!', {
             autoClose: 5000,
@@ -131,11 +145,7 @@ export default function BuySellDialog({ open, handleDialogClose, initialValues, 
         }
       }
     } catch (err: any) {
-      toast(`${err.response.status} - ${err.response.data}`, {
-        autoClose: 5000,
-        pauseOnHover: true,
-        type: 'error',
-      });
+      toast.error(err.message || 'Failed to record the trade');
     } finally {
       setIsLoading(false);
     }
@@ -283,6 +293,23 @@ export default function BuySellDialog({ open, handleDialogClose, initialValues, 
               helperText={formFields.averagePrice.error}
               size="small"
               disabled={isLoading}
+            />
+          </Stack>
+
+          <Stack direction="column" spacing={0.5} sx={{ flexGrow: 1 }}>
+            <TextField
+              label="Trade date"
+              type="date"
+              id="date"
+              name="date"
+              variant="outlined"
+              value={formFields.date.value}
+              onChange={formFields.date.onChange}
+              error={!!formFields.date.error}
+              helperText={formFields.date.error || 'When the trade actually happened'}
+              size="small"
+              disabled={isLoading}
+              slotProps={{ inputLabel: { shrink: true }, htmlInput: { max: today() } }}
             />
           </Stack>
         </Box>

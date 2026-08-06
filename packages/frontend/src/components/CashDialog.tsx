@@ -12,6 +12,7 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
+import moment from 'moment';
 import { toast } from 'react-toastify';
 
 import apis from '@/api';
@@ -26,10 +27,13 @@ type Props = {
   onSaved: () => void;
 };
 
+const today = () => moment().format('YYYY-MM-DD');
+
 export default function CashDialog({ open, account, accounts, onClose, onSaved }: Props) {
   const [accountId, setAccountId] = React.useState(account?.id ?? '');
   const [action, setAction] = React.useState<'deposit' | 'withdraw'>('deposit');
   const [amount, setAmount] = React.useState('');
+  const [date, setDate] = React.useState(today());
   const [saving, setSaving] = React.useState(false);
 
   React.useEffect(() => {
@@ -37,6 +41,7 @@ export default function CashDialog({ open, account, accounts, onClose, onSaved }
       setAccountId(account?.id ?? accounts?.[0]?.id ?? '');
       setAction('deposit');
       setAmount('');
+      setDate(today());
     }
   }, [open, account, accounts]);
 
@@ -52,13 +57,21 @@ export default function CashDialog({ open, account, accounts, onClose, onSaved }
       toast.error('Enter a positive amount');
       return;
     }
+    if (!date || !moment(date, 'YYYY-MM-DD', true).isValid()) {
+      toast.error('Enter a valid date');
+      return;
+    }
+    if (moment(date, 'YYYY-MM-DD').isAfter(moment(), 'day')) {
+      toast.error('Date cannot be in the future');
+      return;
+    }
     setSaving(true);
     try {
-      await apis.accounts.moveCash(accountId, action, value);
+      await apis.accounts.moveCash(accountId, action, value, date);
       toast.success(
         `${action === 'deposit' ? 'Deposited' : 'Withdrew'} ${fnCurrency(value)} ${
           action === 'deposit' ? 'into' : 'from'
-        } ${selected?.name ?? accountId}`
+        } ${selected?.name ?? accountId} on ${moment(date, 'YYYY-MM-DD').format('MMM D, YYYY')}`
       );
       onSaved();
       onClose();
@@ -132,13 +145,23 @@ export default function CashDialog({ open, account, accounts, onClose, onSaved }
             disabled={saving}
             slotProps={{ htmlInput: { min: 0, step: '0.01' } }}
           />
+          <TextField
+            size="small"
+            label="Date"
+            type="date"
+            value={date}
+            onChange={(e) => setDate(e.target.value)}
+            disabled={saving}
+            helperText="When the money actually moved"
+            slotProps={{ inputLabel: { shrink: true }, htmlInput: { max: today() } }}
+          />
         </Stack>
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose} disabled={saving}>
           Cancel
         </Button>
-        <Button onClick={handleSave} variant="contained" disabled={saving || !amount}>
+        <Button onClick={handleSave} variant="contained" disabled={saving || !amount || !date}>
           {saving ? 'Saving...' : action === 'deposit' ? 'Deposit' : 'Withdraw'}
         </Button>
       </DialogActions>

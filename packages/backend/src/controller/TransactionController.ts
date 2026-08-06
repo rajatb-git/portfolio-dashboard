@@ -5,7 +5,11 @@ import { logger } from '../utils/winston';
 const transactionModel = TransactionModel();
 transactionModel.initialize();
 
-export const logSellTransaction = async (transactionHolding: Partial<IHoldings>, pnl?: number): Promise<void> => {
+export const logSellTransaction = async (
+  transactionHolding: Partial<IHoldings>,
+  pnl?: number,
+  date?: string
+): Promise<void> => {
   try {
     await transactionModel.insertOne({
       accountId: transactionHolding.accountId,
@@ -15,6 +19,7 @@ export const logSellTransaction = async (transactionHolding: Partial<IHoldings>,
       type: transactionHolding.type,
       action: 'sell',
       ...(pnl !== undefined && { pnl: +pnl.toFixed(2) }),
+      ...(date && { date }),
     });
   } catch (error: any) {
     logger.log({
@@ -27,7 +32,7 @@ export const logSellTransaction = async (transactionHolding: Partial<IHoldings>,
   }
 };
 
-export const logBuyTransaction = async (transactionHolding: Partial<IHoldings>): Promise<void> => {
+export const logBuyTransaction = async (transactionHolding: Partial<IHoldings>, date?: string): Promise<void> => {
   try {
     await transactionModel.insertOne({
       accountId: transactionHolding.accountId,
@@ -36,6 +41,7 @@ export const logBuyTransaction = async (transactionHolding: Partial<IHoldings>):
       price: transactionHolding.averagePrice,
       type: transactionHolding.type,
       action: 'buy',
+      ...(date && { date }),
     });
   } catch (error: any) {
     logger.log({

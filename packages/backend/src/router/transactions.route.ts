@@ -2,6 +2,7 @@ import Router from '@koa/router';
 import moment from 'moment';
 import { adjustCash, transactionCashImpact } from '../controller/CashController';
 import { TransactionModel } from '../models/TransactionModel';
+import { normalizeTradeDate } from '../utils';
 import { errorBody } from '../utils/error';
 import { logger } from '../utils/winston';
 
@@ -15,6 +16,14 @@ const parseMoney = (value: unknown): number | undefined => {
   if (value === undefined || value === null || value === '') return undefined;
   const parsed = parseFloat(String(value).replace(/[$,\s]/g, ''));
   return Number.isNaN(parsed) ? undefined : parsed;
+};
+
+// A cleared date in the grid comes back as null/'' — drop the key entirely so the
+// row falls back to createdAt rather than storing an empty string.
+const withNormalizedDate = (body: any) => {
+  const { date, ...rest } = body ?? {};
+  const normalized = normalizeTradeDate(date);
+  return { ...rest, ...(normalized && { date: normalized }) };
 };
 
 export const TransactionsRouter = () => {
@@ -81,7 +90,7 @@ export const TransactionsRouter = () => {
   // create
   router.put('/transactions', (ctx) => {
     try {
-      ctx.body = transactionModel.insertOne(ctx.request.body);
+      ctx.body = transactionModel.insertOne(withNormalizedDate(ctx.request.body));
       ctx.status = 200;
     } catch (err: any) {
       logger.log({ level: 'error', message: err.message, label: 'Create transaction' });
@@ -142,7 +151,7 @@ export const TransactionsRouter = () => {
       const body: any = ctx.request.body;
       const previous = body.id ? transactionModel.findById(body.id) : null;
 
-      const saved = await transactionModel.insertOrUpdate(body, body.id);
+      const saved = await transactionModel.insertOrUpdate(withNormalizedDate(body), body.id);
 
       // Keep account cash in sync with manual edits to the transaction log:
       // undo the previous row's cash effect, then apply the saved row's effect.

@@ -1,6 +1,7 @@
 import Router from '@koa/router';
 import { recordCashMovement } from '../controller/CashController';
 import { AccountModel } from '../models/AccountModel';
+import { normalizeTradeDate } from '../utils';
 import { errorBody } from '../utils/error';
 import { logger } from '../utils/winston';
 
@@ -81,7 +82,7 @@ export const AccountsRouter = () => {
         return;
       }
 
-      const result = await recordCashMovement(ctx.params.id, amount, action);
+      const result = await recordCashMovement(ctx.params.id, amount, action, normalizeTradeDate(body?.date));
       ctx.body = result;
       ctx.status = 200;
     } catch (error: any) {

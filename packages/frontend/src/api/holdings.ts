@@ -5,6 +5,11 @@ import { IHoldings } from '@/models/HoldingsModel';
 import { HoldingAggregate } from './dashboard';
 import { catchCustomError } from './apiUtil';
 
+// `date` is the day the trade actually happened, which can predate the entry.
+export type TradePayload = Pick<IHoldings, 'accountId' | 'name' | 'symbol' | 'qty' | 'averagePrice' | 'type'> & {
+  date?: string;
+};
+
 export default class HoldingsAPI {
   // create
   create = async (holding: IHoldings): Promise<IHoldings> =>
@@ -41,7 +46,7 @@ export default class HoldingsAPI {
       .catch(catchCustomError);
 
   // complete buy transaction
-  buyHolding = async (holding: IHoldings): Promise<IHoldings> =>
+  buyHolding = async (holding: TradePayload): Promise<IHoldings> =>
     axios
       .post(DB_HOST + '/holdings/buy', holding)
       .then((response) => {
@@ -50,7 +55,7 @@ export default class HoldingsAPI {
       .catch(catchCustomError);
 
   // complete sell transaction
-  sellHolding = async (holding: IHoldings): Promise<IHoldings> =>
+  sellHolding = async (holding: TradePayload): Promise<IHoldings> =>
     axios
       .post(DB_HOST + '/holdings/sell', holding)
       .then((response) => {
