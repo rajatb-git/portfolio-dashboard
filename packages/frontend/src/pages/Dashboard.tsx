@@ -4,7 +4,8 @@ import * as React from 'react';
 import AlertDialog, { type DraftAlert, EMPTY_DRAFT } from '@/components/Alerts/AlertDialog';
 import DashboardTable from '@/components/DashboardTable/DashTable';
 import UpcomingEarningsCard from '@/components/Dashboard/UpcomingEarningsCard';
-import MarketStatusChip from '@/components/MarketStatusChip';
+import PageHeader from '@/components/ui/PageHeader';
+import ToolbarButton from '@/components/ui/ToolbarButton';
 import { useDashboardData } from '@/contexts/DashboardDataContext';
 import type { Column } from '@/types';
 
@@ -54,9 +55,20 @@ export default function Dashboard() {
 
   return (
     <>
-      <Stack direction="row" sx={{ justifyContent: 'flex-end', mb: 1 }}>
-        <MarketStatusChip />
-      </Stack>
+      <PageHeader
+        title="Dashboard"
+        subtitle="Every holding across every account, with live prices"
+        actions={
+          <ToolbarButton
+            icon="tabler:refresh"
+            label="Refresh holdings and prices"
+            onClick={refresh}
+            busy={isLoading}
+            color="primary.main"
+          />
+        }
+      />
+
       <DashboardTable
         isLoading={isLoading}
         refreshData={refresh}

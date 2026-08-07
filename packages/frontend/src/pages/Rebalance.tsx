@@ -3,7 +3,7 @@ import {
   Button,
   Card,
   Chip,
-  Divider,
+  Grid,
   InputAdornment,
   Skeleton,
   Stack,
@@ -21,6 +21,9 @@ import { toast } from 'react-toastify';
 import apis from '@/api';
 import type { RebalancePlan } from '@/api/rebalance';
 import { Iconify } from '@/components/Iconify';
+import PageHeader from '@/components/ui/PageHeader';
+import StateView from '@/components/ui/StateView';
+import StatTile from '@/components/ui/StatTile';
 import { fnCurrency } from '@/utils/formatNumber';
 
 type DraftTargets = Record<string, number>;
@@ -118,82 +121,87 @@ export default function Rebalance() {
     }
   };
 
-  const actionColor = (a: string) => (a === 'buy' ? '#22c55e' : a === 'sell' ? '#ef4444' : '#94a3b8');
+  const actionColor = (a: string) => (a === 'buy' ? 'var(--pd-up)' : a === 'sell' ? 'var(--pd-down)' : '#94a3b8');
 
   return (
     <Stack spacing={2}>
-      <Stack direction="row" sx={{ alignItems: 'center', gap: 1 }}>
-        <Typography variant="h6" sx={{ fontWeight: 700 }}>
-          Rebalance
-        </Typography>
-        <Box sx={{ flexGrow: 1 }} />
-        {isDirty && (
-          <Typography sx={{ fontSize: '0.72rem', color: '#f59e0b', fontWeight: 600 }}>Unsaved changes</Typography>
-        )}
-        <Button variant="outlined" size="small" onClick={handleEqualWeight} sx={{ textTransform: 'none' }}>
-          Equal weight
-        </Button>
-        <Button variant="outlined" size="small" onClick={handleUseCurrent} sx={{ textTransform: 'none' }}>
-          Use current
-        </Button>
-        <Button
-          variant="contained"
-          size="small"
-          onClick={handleSave}
-          disabled={!isDirty || saving}
-          sx={{ textTransform: 'none' }}
-        >
-          Save targets
-        </Button>
-      </Stack>
+      <PageHeader
+        title="Rebalance"
+        subtitle="Set a target weight per holding and see the trades that close the gap"
+        actions={
+          <>
+            {isDirty && (
+              <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center', mr: 0.5 }}>
+                <Iconify icon="tabler:point-filled" width={14} sx={{ color: 'warning.main' }} aria-hidden />
+                <Typography sx={{ fontSize: '0.75rem', color: 'warning.main', fontWeight: 600 }}>
+                  Unsaved changes
+                </Typography>
+              </Stack>
+            )}
+            <Button variant="outlined" size="small" onClick={handleEqualWeight}>
+              Equal weight
+            </Button>
+            <Button variant="outlined" size="small" onClick={handleUseCurrent}>
+              Use current
+            </Button>
+            <Button variant="contained" size="small" onClick={handleSave} disabled={!isDirty || saving}>
+              Save targets
+            </Button>
+          </>
+        }
+      />
+
+      <Grid container spacing={1.5}>
+        <Grid size={{ xs: 12, sm: 4 }}>
+          <StatTile label="Portfolio value" value={fnCurrency(totalValue)} icon="tabler:wallet" loading={loading} />
+        </Grid>
+        <Grid size={{ xs: 6, sm: 4 }}>
+          <StatTile
+            label="Targets total"
+            value={
+              <Box component="span" sx={{ color: totalOff ? 'warning.main' : 'success.main' }}>
+                {totalTarget.toFixed(2)}%
+              </Box>
+            }
+            icon="tabler:target"
+            loading={loading}
+            hint="Target weights should sum to 100%."
+            footer={
+              totalOff ? (
+                <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center' }}>
+                  <Iconify icon="tabler:alert-triangle" width={12} sx={{ color: 'warning.main' }} aria-hidden />
+                  <Typography sx={{ fontSize: '0.6875rem', color: 'warning.main' }}>
+                    Does not sum to 100%
+                  </Typography>
+                </Stack>
+              ) : undefined
+            }
+          />
+        </Grid>
+        <Grid size={{ xs: 6, sm: 4 }}>
+          <StatTile
+            label="Total drift"
+            value={`${rows.reduce((s, r) => s + Math.abs(r.driftPercent), 0).toFixed(2)}%`}
+            icon="tabler:arrows-diff"
+            loading={loading}
+            hint="Sum of the absolute gap between each holding's current and target weight."
+          />
+        </Grid>
+      </Grid>
 
       <Card variant="outlined">
-        <Stack direction="row" spacing={3} useFlexGap sx={{ flexWrap: 'wrap', px: 2, py: 1.5, alignItems: 'center' }}>
-          <Box>
-            <Typography sx={{ fontSize: '0.65rem', color: 'text.disabled', textTransform: 'uppercase' }}>
-              Portfolio Value
-            </Typography>
-            <Typography sx={{ fontSize: '1.1rem', fontWeight: 700 }}>{fnCurrency(totalValue)}</Typography>
-          </Box>
-          <Box>
-            <Typography sx={{ fontSize: '0.65rem', color: 'text.disabled', textTransform: 'uppercase' }}>
-              Targets Total
-            </Typography>
-            <Typography sx={{ fontSize: '1.1rem', fontWeight: 700, color: totalOff ? '#f59e0b' : '#22c55e' }}>
-              {totalTarget.toFixed(2)}%
-            </Typography>
-          </Box>
-          <Box>
-            <Typography sx={{ fontSize: '0.65rem', color: 'text.disabled', textTransform: 'uppercase' }}>
-              Total Drift
-            </Typography>
-            <Typography sx={{ fontSize: '1.1rem', fontWeight: 700 }}>
-              {rows.reduce((s, r) => s + Math.abs(r.driftPercent), 0).toFixed(2)}%
-            </Typography>
-          </Box>
-          {totalOff && (
-            <Chip
-              icon={<Iconify icon="mdi:information" width={14} />}
-              label="Targets don't sum to 100%"
-              size="small"
-              sx={{ height: 22, fontSize: '0.68rem', bgcolor: 'rgba(245,158,11,0.12)', color: '#f59e0b' }}
-            />
-          )}
-        </Stack>
-        <Divider />
-
         {loading ? (
           <Box sx={{ p: 2 }}>
             <Skeleton variant="rounded" height={240} />
           </Box>
         ) : rows.length === 0 ? (
-          <Stack sx={{ alignItems: 'center', justifyContent: 'center', py: 6, px: 2 }}>
-            <Iconify icon="mdi:scale-balance" width={28} sx={{ color: 'text.disabled', mb: 1 }} />
-            <Typography sx={{ fontSize: '0.82rem', color: 'text.disabled', textAlign: 'center' }}>
-              No holdings to rebalance yet. Add holdings and their live values will appear here with target-allocation
-              controls.
-            </Typography>
-          </Stack>
+          <StateView
+            state="empty"
+            title="Nothing to rebalance"
+            icon="tabler:scale"
+            message="Add holdings and their live values will appear here with target-allocation controls."
+            minHeight={240}
+          />
         ) : (
           <Box sx={{ overflowX: 'auto' }}>
             <Table size="small">

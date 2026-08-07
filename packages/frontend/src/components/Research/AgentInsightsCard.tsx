@@ -20,22 +20,22 @@ import { Iconify } from '@/components/Iconify';
 
 const SENTIMENT_CONFIG = {
   bullish: {
-    color: '#22c55e',
-    bg: 'rgba(34,197,94,0.12)',
-    border: 'rgba(34,197,94,0.25)',
+    color: 'var(--pd-up)',
+    bg: 'var(--pd-up-bg)',
+    border: 'var(--pd-up-border)',
     icon: 'eva:trending-up-fill',
     label: 'Bullish',
   },
   bearish: {
-    color: '#ef4444',
-    bg: 'rgba(239,68,68,0.12)',
-    border: 'rgba(239,68,68,0.25)',
+    color: 'var(--pd-down)',
+    bg: 'var(--pd-down-bg)',
+    border: 'var(--pd-down-border)',
     icon: 'eva:trending-down-fill',
     label: 'Bearish',
   },
   neutral: {
-    color: '#f59e0b',
-    bg: 'rgba(245,158,11,0.12)',
+    color: 'var(--pd-warn)',
+    bg: 'var(--pd-warn-bg)',
     border: 'rgba(245,158,11,0.25)',
     icon: 'pepicons-pop:line-x',
     label: 'Neutral',
@@ -44,22 +44,22 @@ const SENTIMENT_CONFIG = {
 
 const RATING_CONFIG = {
   buy: {
-    color: '#22c55e',
-    bg: 'rgba(34,197,94,0.12)',
+    color: 'var(--pd-up)',
+    bg: 'var(--pd-up-bg)',
     border: 'rgba(34,197,94,0.3)',
     icon: 'mdi:cart-arrow-down',
     label: 'Buy',
   },
   hold: {
-    color: '#f59e0b',
-    bg: 'rgba(245,158,11,0.12)',
+    color: 'var(--pd-warn)',
+    bg: 'var(--pd-warn-bg)',
     border: 'rgba(245,158,11,0.3)',
     icon: 'mdi:hand-back-right-outline',
     label: 'Hold',
   },
   sell: {
-    color: '#ef4444',
-    bg: 'rgba(239,68,68,0.12)',
+    color: 'var(--pd-down)',
+    bg: 'var(--pd-down-bg)',
     border: 'rgba(239,68,68,0.3)',
     icon: 'mdi:cart-arrow-up',
     label: 'Sell',
@@ -146,7 +146,7 @@ export default function AgentInsightsCard({ insight, isLoading, error, onRefresh
     >
       <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', pr: 1 }}>
         <Stack direction="row" spacing={1} sx={{ alignItems: 'center', p: '10px 16px' }}>
-          <Iconify icon="fluent:brain-sparkle-20-filled" width={16} sx={{ color: '#8b5cf6' }} />
+          <Iconify icon="fluent:brain-sparkle-20-filled" width={16} sx={{ color: 'var(--pd-ai)' }} />
           <Typography
             sx={{
               color: 'text.secondary',
@@ -312,10 +312,10 @@ export default function AgentInsightsCard({ insight, isLoading, error, onRefresh
           <InsightSection
             title="Catalysts"
             icon="mdi:rocket-launch-outline"
-            iconColor="#22c55e"
+            iconColor="var(--pd-up)"
             items={insight.catalysts}
           />
-          <InsightSection title="Risks" icon="mdi:alert-outline" iconColor="#ef4444" items={insight.risks} />
+          <InsightSection title="Risks" icon="mdi:alert-outline" iconColor="var(--pd-down)" items={insight.risks} />
 
           <Typography
             sx={{

@@ -1,7 +1,11 @@
 import * as React from 'react';
 
-import { Grid, Stack, Typography } from '@mui/material';
+import { Box, Grid, Stack, Tab, Tabs } from '@mui/material';
 import { toast } from 'react-toastify';
+
+import { Iconify } from '@/components/Iconify';
+import PageHeader from '@/components/ui/PageHeader';
+import LocalStorageUtil from '@/utils/localStorage';
 
 import apis from '@/api';
 import type { HoldingAggregate, PortfolioSnapshot } from '@/api/dashboard';
@@ -26,7 +30,29 @@ import RiskMetricsCard from '@/components/Analytics/RiskMetricsCard';
 import SectorAllocationChart from '@/components/Analytics/SectorAllocationChart';
 import TaxLossHarvestingCard from '@/components/Analytics/TaxLossHarvestingCard';
 
+// Ten stacked cards is a scroll, not a structure. Grouping them by the question
+// the user is asking keeps each view to a single screen.
+const TABS = [
+  { value: 'performance', label: 'Performance', icon: 'tabler:chart-line' },
+  { value: 'risk', label: 'Risk', icon: 'tabler:shield-half' },
+  { value: 'allocation', label: 'Allocation', icon: 'tabler:chart-donut' },
+  { value: 'tax', label: 'Realized & Tax', icon: 'tabler:receipt-tax' },
+] as const;
+
+type AnalyticsTab = (typeof TABS)[number]['value'];
+
+const TAB_KEY = 'analytics_tab';
+
 export default function Analytics() {
+  const [tab, setTab] = React.useState<AnalyticsTab>(
+    () => LocalStorageUtil.getItem<AnalyticsTab>(TAB_KEY) ?? 'performance'
+  );
+
+  const handleTabChange = (_event: React.SyntheticEvent, value: AnalyticsTab) => {
+    setTab(value);
+    LocalStorageUtil.setItem(TAB_KEY, value);
+  };
+
   const [snapshots, setSnapshots] = React.useState<PortfolioSnapshot[]>([]);
   const [dashboardData, setDashboardData] = React.useState<HoldingAggregate[]>([]);
   const [riskMetrics, setRiskMetrics] = React.useState<RiskMetrics | null>(null);
@@ -131,39 +157,74 @@ export default function Analytics() {
   }, []);
 
   return (
-    <Stack spacing={2}>
-      <Typography variant="h6" sx={{ fontWeight: 700 }}>
-        Analytics
-      </Typography>
+    <>
+      <PageHeader
+        title="Analytics"
+        subtitle="Performance, risk, allocation and tax across the whole portfolio"
+      >
+        <Tabs
+          value={tab}
+          onChange={handleTabChange}
+          variant="scrollable"
+          scrollButtons="auto"
+          allowScrollButtonsMobile
+          aria-label="Analytics sections"
+          sx={{ borderBottom: 1, borderColor: 'divider', minHeight: 42 }}
+        >
+          {TABS.map(({ value, label, icon }) => (
+            <Tab
+              key={value}
+              value={value}
+              label={label}
+              icon={<Iconify icon={icon} width={16} aria-hidden />}
+              iconPosition="start"
+              id={`analytics-tab-${value}`}
+              aria-controls={`analytics-panel-${value}`}
+              sx={{ minHeight: 42 }}
+            />
+          ))}
+        </Tabs>
+      </PageHeader>
 
-      <PortfolioPerformanceChart snapshots={snapshots} />
+      <Box role="tabpanel" id={`analytics-panel-${tab}`} aria-labelledby={`analytics-tab-${tab}`}>
+        {tab === 'performance' && (
+          <Stack spacing={2}>
+            <PortfolioPerformanceChart snapshots={snapshots} />
+            <PortfolioGoalCard />
+            <MonthlyReturnsCard data={monthlyReturns} isLoading={isMonthlyLoading} />
+            <PerformanceAttributionCard attribution={attribution} isLoading={isAttributionLoading} />
+          </Stack>
+        )}
 
-      <PortfolioGoalCard />
+        {tab === 'risk' && (
+          <Stack spacing={2}>
+            <RiskMetricsCard metrics={riskMetrics} isLoading={isRiskLoading} />
+            <CorrelationMatrixCard data={correlation} isLoading={isCorrelationLoading} />
+            <NewsSentimentCard sentiment={sentiment} isLoading={isSentimentLoading} />
+          </Stack>
+        )}
 
-      <RiskMetricsCard metrics={riskMetrics} isLoading={isRiskLoading} />
+        {tab === 'allocation' && (
+          <Stack spacing={2}>
+            <Grid container spacing={2}>
+              <Grid size={{ xs: 12, lg: 6 }}>
+                <SectorAllocationChart sectors={sectors} isLoading={isRiskLoading} />
+              </Grid>
+              <Grid size={{ xs: 12, lg: 6 }}>
+                <PortfolioInsightsCard />
+              </Grid>
+            </Grid>
+            <AllocationCharts dashboardData={dashboardData} isLoading={isLoading} />
+          </Stack>
+        )}
 
-      <MonthlyReturnsCard data={monthlyReturns} isLoading={isMonthlyLoading} />
-
-      <PerformanceAttributionCard attribution={attribution} isLoading={isAttributionLoading} />
-
-      <CorrelationMatrixCard data={correlation} isLoading={isCorrelationLoading} />
-
-      <RealizedGainsCard data={realizedGains} isLoading={isRealizedLoading} />
-
-      <TaxLossHarvestingCard data={taxLoss} isLoading={isTaxLossLoading} />
-
-      <PortfolioInsightsCard />
-
-      <Grid container spacing={2}>
-        <Grid size={{ xs: 12, md: 6 }}>
-          <NewsSentimentCard sentiment={sentiment} isLoading={isSentimentLoading} />
-        </Grid>
-        <Grid size={{ xs: 12, md: 6 }}>
-          <SectorAllocationChart sectors={sectors} isLoading={isRiskLoading} />
-        </Grid>
-      </Grid>
-
-      <AllocationCharts dashboardData={dashboardData} isLoading={isLoading} />
-    </Stack>
+        {tab === 'tax' && (
+          <Stack spacing={2}>
+            <RealizedGainsCard data={realizedGains} isLoading={isRealizedLoading} />
+            <TaxLossHarvestingCard data={taxLoss} isLoading={isTaxLossLoading} />
+          </Stack>
+        )}
+      </Box>
+    </>
   );
 }

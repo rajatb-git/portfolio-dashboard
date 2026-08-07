@@ -5,19 +5,11 @@ import { Box, Card, Divider, Grid, Skeleton, Stack, Typography } from '@mui/mate
 
 import { HoldingAggregate } from '@/api/dashboard';
 import { fnCurrency } from '@/utils/formatNumber';
+import { SERIES } from '@/components/ThemeRegistry/tokens';
 
-const COLORS = [
-  '#3b82f6',
-  '#22c55e',
-  '#f59e0b',
-  '#ef4444',
-  '#8b5cf6',
-  '#06b6d4',
-  '#f97316',
-  '#ec4899',
-  '#84cc16',
-  '#14b8a6',
-];
+// Sector/category hues deliberately exclude green and red: those two
+// colours already mean gain and loss everywhere else in the app.
+const COLORS = SERIES;
 
 type DonutData = { label: string; value: number };
 

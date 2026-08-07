@@ -29,8 +29,8 @@ type Props = {
 };
 
 const actionColors: Record<string, { fg: string; bg: string; border: string }> = {
-  buy: { fg: '#4ade80', bg: 'rgba(74,222,128,0.12)', border: 'rgba(74,222,128,0.25)' },
-  sell: { fg: '#f87171', bg: 'rgba(248,113,113,0.12)', border: 'rgba(248,113,113,0.25)' },
+  buy: { fg: 'var(--pd-up)', bg: 'var(--pd-up-bg)', border: 'rgba(74,222,128,0.25)' },
+  sell: { fg: 'var(--pd-down)', bg: 'var(--pd-down-bg)', border: 'rgba(248,113,113,0.25)' },
 };
 
 export default function ResearchTransactionsCard({ transactions, accounts, isLoading }: Props) {
@@ -101,7 +101,7 @@ export default function ResearchTransactionsCard({ transactions, accounts, isLoa
               sx={{
                 fontSize: '0.82rem',
                 fontWeight: 700,
-                color: realizedPnl >= 0 ? '#4ade80' : '#f87171',
+                color: realizedPnl >= 0 ? 'var(--pd-up)' : 'var(--pd-down)',
                 fontVariantNumeric: 'tabular-nums',
               }}
             >
@@ -231,7 +231,7 @@ export default function ResearchTransactionsCard({ transactions, accounts, isLoa
                         sx={{
                           fontSize: '0.78rem',
                           fontWeight: 600,
-                          color: t.pnl === undefined ? 'text.disabled' : t.pnl >= 0 ? '#4ade80' : '#f87171',
+                          color: t.pnl === undefined ? 'text.disabled' : t.pnl >= 0 ? 'var(--pd-up)' : 'var(--pd-down)',
                           borderBottom: '1px solid',
                           borderColor: 'divider',
                           fontVariantNumeric: 'tabular-nums',

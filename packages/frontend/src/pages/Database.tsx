@@ -37,6 +37,7 @@ import BrokerHoldingsImportDialog from '@/components/DataGrid/BrokerHoldingsImpo
 import AiImportDialog from '@/components/DataGrid/AiImportDialog';
 import TransactionImportDialog from '@/components/DataGrid/TransactionImportDialog';
 import { Iconify } from '@/components/Iconify';
+import { FONT_SIZE } from '@/components/ThemeRegistry/tokens';
 import type { IAccount } from '@/models/AccountsModel';
 import type { IHoldings } from '@/models/HoldingsModel';
 import type { ITransaction } from '@/models/TransactionsModel';
@@ -215,7 +216,7 @@ const columns: { [collection: string]: Array<GridColDef> } = {
             component="span"
             sx={{
               fontWeight: 600,
-              color: isGain ? '#4ade80' : '#f87171',
+              color: isGain ? 'var(--pd-up)' : 'var(--pd-down)',
               fontVariantNumeric: 'tabular-nums',
             }}
           >
@@ -492,7 +493,7 @@ function AccountsManager({
                         sx={{
                           fontSize: '0.82rem',
                           fontWeight: 600,
-                          color: isNegative ? '#f87171' : 'text.primary',
+                          color: isNegative ? 'var(--pd-down)' : 'text.primary',
                           fontVariantNumeric: 'tabular-nums',
                         }}
                       >
@@ -667,9 +668,17 @@ export default function Database() {
         direction={{ xs: 'column', sm: 'row' }}
         sx={{ alignItems: { xs: 'flex-start', sm: 'center' }, gap: 1, mb: 2 }}
       >
-        <Typography variant="h6" sx={{ flexGrow: 1 }}>
-          Database
-        </Typography>
+        <Box sx={{ flexGrow: 1, minWidth: 0 }}>
+          <Typography
+            component="h1"
+            sx={{ fontSize: FONT_SIZE.xl, fontWeight: 680, letterSpacing: '-0.02em', lineHeight: 1.25 }}
+          >
+            Database
+          </Typography>
+          <Typography sx={{ fontSize: FONT_SIZE.xs, color: 'text.secondary', mt: 0.25 }}>
+            Accounts, holdings and transactions — the app's source of truth
+          </Typography>
+        </Box>
 
         <Stack direction="row" sx={{ gap: 1, flexWrap: 'wrap' }}>
           {(activeCollection === 'holdings' || activeCollection === 'transactions') && (

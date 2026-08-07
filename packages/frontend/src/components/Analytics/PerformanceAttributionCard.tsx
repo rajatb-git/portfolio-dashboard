@@ -99,11 +99,11 @@ export default function PerformanceAttributionCard({ attribution, isLoading }: P
                 color:
                   view === 'total'
                     ? attribution.totalGL >= 0
-                      ? '#22c55e'
-                      : '#ef4444'
+                      ? 'var(--pd-up)'
+                      : 'var(--pd-down)'
                     : attribution.dayGL >= 0
-                      ? '#22c55e'
-                      : '#ef4444',
+                      ? 'var(--pd-up)'
+                      : 'var(--pd-down)',
               }}
             >
               {fnCurrency(view === 'total' ? attribution.totalGL : attribution.dayGL)}
@@ -118,11 +118,11 @@ export default function PerformanceAttributionCard({ attribution, isLoading }: P
                 color:
                   view === 'total'
                     ? attribution.totalGLPercent >= 0
-                      ? '#22c55e'
-                      : '#ef4444'
+                      ? 'var(--pd-up)'
+                      : 'var(--pd-down)'
                     : attribution.dayGLPercent >= 0
-                      ? '#22c55e'
-                      : '#ef4444',
+                      ? 'var(--pd-up)'
+                      : 'var(--pd-down)',
               }}
             >
               {(view === 'total' ? attribution.totalGLPercent : attribution.dayGLPercent).toFixed(2)}%
@@ -188,14 +188,14 @@ export default function PerformanceAttributionCard({ attribution, isLoading }: P
                     <TableCell
                       sx={{
                         fontSize: '0.78rem',
-                        color: isPos ? '#22c55e' : '#ef4444',
+                        color: isPos ? 'var(--pd-up)' : 'var(--pd-down)',
                         fontWeight: 600,
                       }}
                     >
                       {isPos ? '+' : ''}
                       {view === 'total' ? `${val.toFixed(2)}%` : fnCurrency(val)}
                     </TableCell>
-                    <TableCell sx={{ fontSize: '0.78rem', color: glPct >= 0 ? '#22c55e' : '#ef4444' }}>
+                    <TableCell sx={{ fontSize: '0.78rem', color: glPct >= 0 ? 'var(--pd-up)' : 'var(--pd-down)' }}>
                       {glPct >= 0 ? '+' : ''}
                       {glPct.toFixed(2)}%
                     </TableCell>
@@ -216,7 +216,7 @@ export default function PerformanceAttributionCard({ attribution, isLoading }: P
                             top: 0,
                             height: '100%',
                             width: `${barWidth}%`,
-                            bgcolor: isPos ? '#22c55e' : '#ef4444',
+                            bgcolor: isPos ? 'var(--pd-up)' : 'var(--pd-down)',
                             borderRadius: 2,
                             transition: 'width 0.3s',
                           }}

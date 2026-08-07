@@ -128,8 +128,8 @@ export default function ResearchEarningsHistoryCard({ history, isLoading }: Prop
                             height: 18,
                             fontSize: '0.68rem',
                             fontWeight: 700,
-                            bgcolor: beat ? 'rgba(74,222,128,0.12)' : 'rgba(248,113,113,0.12)',
-                            color: beat ? '#4ade80' : '#f87171',
+                            bgcolor: beat ? 'var(--pd-up-bg)' : 'var(--pd-down-bg)',
+                            color: beat ? 'var(--pd-up)' : 'var(--pd-down)',
                             border: `1px solid ${beat ? 'rgba(74,222,128,0.25)' : 'rgba(248,113,113,0.25)'}`,
                             '& .MuiChip-label': { px: 0.75 },
                           }}

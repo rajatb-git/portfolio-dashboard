@@ -1,18 +1,23 @@
 import * as React from 'react';
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+
 import Box from '@mui/material/Box';
+import LinearProgress from '@mui/material/LinearProgress';
 import useMediaQuery from '@mui/material/useMediaQuery';
+import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { ToastContainer } from 'react-toastify';
 
-import Drawer from '@/components/Nav/Drawer';
-import ThemeRegistry from '@/components/ThemeRegistry/ThemeRegistry';
 import AuthGate from '@/components/AuthGate';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import PWAInstallPrompt from '@/components/PWAInstallPrompt';
+import Sidebar from '@/components/Nav/Sidebar';
+import TopBar from '@/components/Nav/TopBar';
+import ThemeRegistry from '@/components/ThemeRegistry/ThemeRegistry';
+import { useThemeMode } from '@/components/ThemeRegistry/ThemeModeContext';
+import { TOPBAR_HEIGHT } from '@/components/ThemeRegistry/tokens';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 import { DashboardDataProvider } from '@/contexts/DashboardDataContext';
 import { useIdleLock } from '@/hooks/useIdleLock';
-import { DRAWER_WIDTH, DRAWER_COLLAPSED_WIDTH } from '@/config';
+import { DRAWER_COLLAPSED_WIDTH, DRAWER_WIDTH } from '@/config';
 
 const Dashboard = React.lazy(() => import('@/pages/Dashboard'));
 const Today = React.lazy(() => import('@/pages/Today'));
@@ -35,6 +40,16 @@ function IdleLockBinder() {
   return null;
 }
 
+/** A route transition is a fast, bounded wait — a top progress bar reads as
+ *  "loading" without the layout shift a full-page skeleton would cause. */
+function RouteFallback() {
+  return (
+    <Box sx={{ position: 'fixed', top: TOPBAR_HEIGHT, left: 0, right: 0, zIndex: 1200 }} aria-busy="true">
+      <LinearProgress sx={{ height: 2 }} />
+    </Box>
+  );
+}
+
 function AppShell() {
   const [collapsed, setCollapsed] = React.useState(() => localStorage.getItem('nav_collapsed') === 'true');
   const [mobileOpen, setMobileOpen] = React.useState(false);
@@ -49,34 +64,44 @@ function AppShell() {
     });
   };
 
-  const handleMobileDrawer = (open: boolean) => setMobileOpen(open);
-
   const drawerWidth = collapsed ? DRAWER_COLLAPSED_WIDTH : DRAWER_WIDTH;
 
   return (
     <>
       <IdleLockBinder />
-      <Drawer
+
+      {/* eslint-disable-next-line jsx-a11y/anchor-is-valid */}
+      <a className="skip-to-content" href="#main-content">
+        Skip to content
+      </a>
+
+      <Sidebar
         collapsed={collapsed}
         onToggle={handleToggle}
         isMobile={isMobile}
         mobileOpen={mobileOpen}
-        onMobileDrawer={handleMobileDrawer}
+        onMobileDrawer={setMobileOpen}
       />
+
+      <TopBar isMobile={isMobile} drawerWidth={drawerWidth} onOpenMobileDrawer={() => setMobileOpen(true)} />
 
       <Box
         component="main"
+        id="main-content"
+        tabIndex={-1}
         sx={{
           flexGrow: 1,
+          minWidth: 0,
           bgcolor: 'background.default',
           ml: isMobile ? 0 : `${drawerWidth}px`,
-          p: { xs: 1.5, md: 3 },
-          mt: '48px',
-          transition: 'margin-left 0.2s ease',
+          mt: `${TOPBAR_HEIGHT}px`,
+          p: { xs: 1.5, sm: 2, lg: 3 },
+          transition: 'margin-left 200ms cubic-bezier(0.4, 0, 0.2, 1)',
+          outline: 'none',
         }}
       >
         <ErrorBoundary key={location.pathname + location.search}>
-          <React.Suspense fallback={<div>Loading...</div>}>
+          <React.Suspense fallback={<RouteFallback />}>
             <Routes>
               <Route path="/" element={<Navigate to="/dashboard" replace />} />
               <Route path="/dashboard" element={<Dashboard />} />
@@ -98,6 +123,26 @@ function AppShell() {
   );
 }
 
+/** Toasts inherit the app's light/dark choice rather than being pinned dark. */
+function Toasts() {
+  const { resolvedMode } = useThemeMode();
+  return (
+    <ToastContainer
+      position="bottom-right"
+      autoClose={5000}
+      hideProgressBar={false}
+      newestOnTop={false}
+      closeOnClick={false}
+      rtl={false}
+      pauseOnFocusLoss
+      draggable={false}
+      pauseOnHover
+      theme={resolvedMode}
+      stacked
+    />
+  );
+}
+
 export default function App() {
   return (
     <BrowserRouter>
@@ -110,20 +155,7 @@ export default function App() {
           </AuthGate>
 
           <PWAInstallPrompt />
-
-          <ToastContainer
-            position="bottom-right"
-            autoClose={5000}
-            hideProgressBar={false}
-            newestOnTop={false}
-            closeOnClick={false}
-            rtl={false}
-            pauseOnFocusLoss
-            draggable={false}
-            pauseOnHover
-            theme="dark"
-            stacked={true}
-          />
+          <Toasts />
         </AuthProvider>
       </ThemeRegistry>
     </BrowserRouter>

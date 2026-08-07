@@ -37,29 +37,14 @@ import { HoldingAggregate } from '@/api/dashboard';
 import { IAccount } from '@/models/AccountsModel';
 import { ITransaction } from '@/models/TransactionsModel';
 import { Iconify } from '@/components/Iconify';
-import MarketStatusChip from '@/components/MarketStatusChip';
+import { FONT_SIZE } from '@/components/ThemeRegistry/tokens';
+import Delta from '@/components/ui/Delta';
+import Metric from '@/components/ui/Metric';
+import StateView from '@/components/ui/StateView';
+import ToolbarButton from '@/components/ui/ToolbarButton';
 import RecommendationDonutGraphMui from '@/components/RecommendationDonutGraphMui';
 import { PriceHistoryGraph } from '@/components/PriceHistoryGraph';
 import LocalStorageArray from '@/utils/localStorageArray';
-
-function StatItem({ label, value }: { label: string; value?: string }) {
-  return (
-    <Box sx={{ textAlign: 'center', px: 1.5 }}>
-      <Typography
-        sx={{
-          fontSize: '0.65rem',
-          color: 'text.disabled',
-          textTransform: 'uppercase',
-          letterSpacing: '0.05em',
-          mb: 0.25,
-        }}
-      >
-        {label}
-      </Typography>
-      <Typography sx={{ fontSize: '0.82rem', fontWeight: 600, color: 'text.secondary' }}>{value ?? '—'}</Typography>
-    </Box>
-  );
-}
 
 function Research() {
   const [searchParams] = useSearchParams();
@@ -229,19 +214,15 @@ function Research() {
 
   if (notFound) {
     return (
-      <Stack spacing={2}>
-        <Card sx={{ p: 4, textAlign: 'center' }}>
-          <Stack spacing={1.5} sx={{ alignItems: 'center' }}>
-            <Iconify icon="eva:search-fill" width={40} sx={{ color: 'text.disabled' }} />
-            <Typography variant="h6" sx={{ fontWeight: 700 }}>
-              No data found for &quot;{searchText}&quot;
-            </Typography>
-            <Typography sx={{ fontSize: '0.85rem', color: 'text.secondary' }}>
-              Double-check the ticker symbol and try again.
-            </Typography>
-          </Stack>
-        </Card>
-      </Stack>
+      <Card>
+        <StateView
+          state="empty"
+          icon="tabler:zoom-question"
+          title={`No data found for "${searchText}"`}
+          message="Double-check the ticker symbol and try again. Press ⌘K to search for another."
+          minHeight={280}
+        />
+      </Card>
     );
   }
 
@@ -330,45 +311,26 @@ function Research() {
                   )}
                 </Stack>
 
-                <Stack direction="row" spacing={1.5} sx={{ alignItems: 'baseline' }}>
-                  <Typography sx={{ fontSize: '1.75rem', fontWeight: 700, lineHeight: 1 }}>
+                <Stack direction="row" spacing={1.5} sx={{ alignItems: 'baseline', flexWrap: 'wrap' }}>
+                  <Typography
+                    data-numeric=""
+                    sx={{ fontSize: FONT_SIZE.display, fontWeight: 700, lineHeight: 1, letterSpacing: '-0.03em' }}
+                  >
                     {fnCurrency(price?.price)}
                   </Typography>
-                  <Box
-                    sx={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: 0.4,
-                      px: 0.9,
-                      py: 0.3,
-                      borderRadius: '6px',
-                      bgcolor: isPositive ? 'rgba(74,222,128,0.12)' : 'rgba(248,113,113,0.12)',
-                      border: `1px solid ${isPositive ? 'rgba(34,197,94,0.25)' : 'rgba(239,68,68,0.25)'}`,
-                    }}
-                  >
-                    <Iconify
-                      icon={isPositive ? 'eva:trending-up-fill' : 'eva:trending-down-fill'}
-                      width={14}
-                      sx={{ color: isPositive ? '#4ade80' : '#f87171' }}
-                    />
-                    <Typography
-                      sx={{
-                        fontSize: '0.875rem',
-                        fontWeight: 600,
-                        color: isPositive ? '#4ade80' : '#f87171',
-                      }}
-                    >
-                      {isPositive ? '+' : ''}
-                      {price?.percentChange?.toFixed(2)}%
-                    </Typography>
-                  </Box>
+                  <Delta
+                    value={price?.percentChange}
+                    display={`${isPositive ? '+' : ''}${price?.percentChange?.toFixed(2)}%`}
+                    variant="chip"
+                    size="medium"
+                  />
                   {!!price?.change && (
-                    <Typography
-                      sx={{ fontSize: '0.82rem', color: isPositive ? '#4ade80' : '#f87171', fontWeight: 500 }}
-                    >
-                      ({isPositive ? '+' : ''}
-                      {fnCurrency(price.change)})
-                    </Typography>
+                    <Delta
+                      value={price.change}
+                      display={`(${isPositive ? '+' : ''}${fnCurrency(price.change)})`}
+                      size="small"
+                      showIcon={false}
+                    />
                   )}
                 </Stack>
               </>
@@ -378,12 +340,13 @@ function Research() {
           {/* Market status + refresh + timestamp */}
           <Stack spacing={0.5} sx={{ alignItems: 'flex-end', flexShrink: 0 }}>
             <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center' }}>
-              <MarketStatusChip />
-              <Tooltip title="Refresh">
-                <IconButton size="small" onClick={() => getResearchData(searchText)} sx={{ color: 'primary.main' }}>
-                  <Iconify icon="mingcute:refresh-3-fill" width={20} />
-                </IconButton>
-              </Tooltip>
+              <ToolbarButton
+                icon="tabler:refresh"
+                label={`Refresh ${searchText || 'research'} data`}
+                onClick={() => getResearchData(searchText)}
+                color="primary.main"
+                size={19}
+              />
             </Stack>
             <Typography variant="caption" color="text.disabled" sx={{ textAlign: 'right' }}>
               as of {moment(price?.priceDate).format('MMM D, h:mm a')}
@@ -403,7 +366,7 @@ function Research() {
                 { label: 'Prev Close', value: price?.prevClose ? fnCurrency(price.prevClose) : '—' },
               ].map((s) => (
                 <Grid key={s.label} size={{ xs: 6, sm: 3 }}>
-                  <StatItem label={s.label} value={s.value} />
+                  <Metric label={s.label} value={s.value ?? '—'} sx={{ textAlign: 'center', px: 1.5 }} />
                 </Grid>
               ))}
             </Grid>

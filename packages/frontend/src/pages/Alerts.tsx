@@ -27,6 +27,8 @@ import { toast } from 'react-toastify';
 import apis from '@/api';
 import AlertDialog, { type DraftAlert, EMPTY_DRAFT } from '@/components/Alerts/AlertDialog';
 import { Iconify } from '@/components/Iconify';
+import PageHeader from '@/components/ui/PageHeader';
+import ToolbarButton from '@/components/ui/ToolbarButton';
 import type { IAlertStatus } from '@/models/AlertModel';
 import { fnCurrency } from '@/utils/formatNumber';
 import { notifyTriggeredAlerts } from '@/utils/priceAlertNotifications';
@@ -97,32 +99,34 @@ export default function Alerts() {
 
   return (
     <Box sx={{ maxWidth: 920 }}>
-      <Stack direction="row" sx={{ alignItems: 'center', mb: 2.5, gap: 1 }}>
-        <Typography variant="h6" sx={{ fontWeight: 700, flexGrow: 1 }}>
-          Alerts
-        </Typography>
-        <Tooltip title="Refresh">
-          <IconButton size="small" onClick={() => load(false)}>
-            <Iconify icon="mingcute:refresh-3-fill" width={18} />
-          </IconButton>
-        </Tooltip>
-        <Button
-          variant="contained"
-          size="small"
-          startIcon={<Iconify icon="mdi:plus" width={16} />}
-          onClick={openCreate}
-          sx={{ textTransform: 'none' }}
-        >
-          New alert
-        </Button>
-      </Stack>
+      <PageHeader
+        title="Alerts"
+        subtitle={
+          triggeredCount > 0
+            ? `${triggeredCount} alert${triggeredCount === 1 ? '' : 's'} triggered`
+            : 'Price triggers on the symbols you follow'
+        }
+        actions={
+          <>
+            <ToolbarButton icon="tabler:refresh" label="Refresh alerts" onClick={() => load(false)} busy={isLoading} />
+            <Button
+              variant="contained"
+              size="small"
+              startIcon={<Iconify icon="tabler:plus" width={16} aria-hidden />}
+              onClick={openCreate}
+            >
+              New alert
+            </Button>
+          </>
+        }
+      />
 
       <Card variant="outlined">
         <Stack direction="row" sx={{ alignItems: 'center', px: 2, py: 1.25, gap: 1 }}>
           <Iconify
             icon="tabler:bell-ringing"
             width={16}
-            sx={{ color: triggeredCount > 0 ? '#f59e0b' : 'primary.main' }}
+            sx={{ color: triggeredCount > 0 ? 'var(--pd-warn)' : 'primary.main' }}
           />
           <Typography
             sx={{
@@ -143,8 +147,8 @@ export default function Alerts() {
                 height: 18,
                 fontSize: '0.65rem',
                 fontWeight: 700,
-                bgcolor: 'rgba(245,158,11,0.15)',
-                color: '#f59e0b',
+                bgcolor: 'var(--pd-warn-bg)',
+                color: 'var(--pd-warn)',
                 border: '1px solid rgba(245,158,11,0.3)',
               }}
             />
@@ -209,7 +213,7 @@ export default function Alerts() {
                           sx={{
                             fontSize: '0.68rem',
                             ml: 0.5,
-                            color: a.percentChange >= 0 ? '#22c55e' : '#ef4444',
+                            color: a.percentChange >= 0 ? 'var(--pd-up)' : 'var(--pd-down)',
                           }}
                         >
                           {a.percentChange >= 0 ? '+' : ''}
@@ -229,8 +233,8 @@ export default function Alerts() {
                           height: 20,
                           fontSize: '0.65rem',
                           fontWeight: 700,
-                          bgcolor: a.triggered ? 'rgba(34,197,94,0.14)' : 'rgba(100,116,139,0.12)',
-                          color: a.triggered ? '#22c55e' : 'text.secondary',
+                          bgcolor: a.triggered ? 'var(--pd-up-bg)' : 'rgba(100,116,139,0.12)',
+                          color: a.triggered ? 'var(--pd-up)' : 'text.secondary',
                           border: `1px solid ${a.triggered ? 'rgba(34,197,94,0.3)' : 'rgba(100,116,139,0.2)'}`,
                         }}
                       />

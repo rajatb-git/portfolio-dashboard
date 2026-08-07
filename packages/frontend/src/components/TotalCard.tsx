@@ -1,13 +1,13 @@
 import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
-import IconButton from '@mui/material/IconButton';
 import Stack from '@mui/material/Stack';
-import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
-import { useTheme } from '@mui/material/styles';
 
-import { Iconify } from '@/components/Iconify';
-import { fnCurrency, fnPercent } from '@/utils/formatNumber';
+import { FONT_SIZE, MOTION } from '@/components/ThemeRegistry/tokens';
+import Delta from '@/components/ui/Delta';
+import ToolbarButton from '@/components/ui/ToolbarButton';
+import { useSentiment } from '@/components/ui/useSentiment';
+import { fnCurrency } from '@/utils/formatNumber';
 
 import { Total } from './DashboardTable/dashTableUtils';
 
@@ -16,144 +16,106 @@ type TotalCardProps = {
   onManageCash?: (accountId: string) => void;
 };
 
+/**
+ * One account's position. Sentiment is carried by a single accent rail and the
+ * delta chip rather than by washing the whole card in green or red — a wall of
+ * tinted cards makes the actual numbers harder to compare.
+ */
 export default function TotalCard({ total, onManageCash }: TotalCardProps) {
-  const theme = useTheme();
-  const isLight = theme.palette.mode === 'light';
-  const isPositive = total.totalGL > 0;
-
-  const borderColor = isPositive
-    ? isLight
-      ? 'rgba(22,163,74,0.3)'
-      : 'rgba(34,197,94,0.25)'
-    : isLight
-      ? 'rgba(220,38,38,0.3)'
-      : 'rgba(239,68,68,0.25)';
-  const glowColor = isPositive
-    ? isLight
-      ? 'rgba(22,163,74,0.1)'
-      : 'rgba(34,197,94,0.08)'
-    : isLight
-      ? 'rgba(220,38,38,0.1)'
-      : 'rgba(239,68,68,0.08)';
-  const accentColor = isPositive ? (isLight ? '#15803d' : '#4ade80') : isLight ? '#dc2626' : '#f87171';
-  const dimAccent = isPositive ? (isLight ? '#166534' : '#86efac') : isLight ? '#991b1b' : '#fca5a5';
-
-  const background = isPositive
-    ? isLight
-      ? 'linear-gradient(135deg, rgba(187,247,208,0.6) 0%, rgba(220,252,231,0.4) 100%)'
-      : 'linear-gradient(135deg, rgba(22,101,52,0.55) 0%, rgba(15,60,35,0.4) 100%)'
-    : isLight
-      ? 'linear-gradient(135deg, rgba(254,202,202,0.6) 0%, rgba(254,226,226,0.4) 100%)'
-      : 'linear-gradient(135deg, rgba(127,29,29,0.55) 0%, rgba(80,10,10,0.4) 100%)';
-
-  const pillBg = isPositive
-    ? isLight
-      ? 'rgba(22,163,74,0.08)'
-      : 'rgba(74,222,128,0.10)'
-    : isLight
-      ? 'rgba(220,38,38,0.08)'
-      : 'rgba(248,113,113,0.10)';
-
-  const negativeCash = (total.cashBalance ?? 0) < 0;
+  const tone = useSentiment(total.totalGL);
+  const cash = total.cashBalance ?? 0;
+  const cashTone = useSentiment(cash < 0 ? -1 : 0);
 
   return (
     <Card
       sx={{
-        px: 1.25,
-        py: 1,
-        background,
-        border: `1px solid ${borderColor}`,
-        boxShadow: `0 2px 10px ${glowColor}, 0 1px 2px ${isLight ? 'rgba(0,0,0,0.06)' : 'rgba(0,0,0,0.35)'}`,
+        position: 'relative',
+        p: 1.5,
+        pl: 1.75,
+        height: '100%',
+        transition: `border-color ${MOTION.fast} ${MOTION.easing}`,
+        '&:hover': { borderColor: tone.border },
       }}
     >
-      <Stack direction="column" spacing={0.5}>
-        {/* Header: account name + G/L% pill */}
-        <Stack direction="row" sx={{ justifyContent: 'space-between', alignItems: 'center' }}>
+      <Box
+        aria-hidden
+        sx={{
+          position: 'absolute',
+          left: 0,
+          top: 0,
+          bottom: 0,
+          width: 3,
+          bgcolor: tone.main,
+          opacity: 0.85,
+        }}
+      />
+
+      <Stack spacing={0.75}>
+        <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
           <Typography
             noWrap
             sx={{
-              fontSize: '0.62rem',
+              fontSize: FONT_SIZE.micro,
               fontWeight: 700,
               letterSpacing: '0.06em',
               textTransform: 'uppercase',
-              color: dimAccent,
-              opacity: 0.85,
+              color: 'text.secondary',
               minWidth: 0,
             }}
           >
             {total.accountName ?? total.accountId}
           </Typography>
-
-          <Stack
-            direction="row"
-            spacing={0.25}
-            sx={{
-              alignItems: 'center',
-              bgcolor: pillBg,
-              border: `1px solid ${borderColor}`,
-              borderRadius: '6px',
-              px: 0.6,
-              py: 0.2,
-              flexShrink: 0,
-            }}
-          >
-            <Iconify
-              icon={isPositive ? 'eva:trending-up-fill' : 'eva:trending-down-fill'}
-              width={12}
-              sx={{ color: accentColor }}
-            />
-            <Typography sx={{ fontSize: '0.7rem', fontWeight: 700, color: accentColor }}>
-              {total.percentGL > 0 ? '+' : ''}
-              {fnPercent(total.percentGL)}
-            </Typography>
-          </Stack>
+          <Delta value={total.percentGL} format="percent" size="micro" variant="chip" />
         </Stack>
 
-        {/* Hero: market value + G/L amount */}
-        <Stack direction="row" sx={{ justifyContent: 'space-between', alignItems: 'baseline' }}>
-          <Typography sx={{ fontSize: '1.15rem', fontWeight: 700, color: 'text.primary', lineHeight: 1.1 }}>
+        <Stack direction="row" sx={{ alignItems: 'baseline', justifyContent: 'space-between', gap: 1 }}>
+          <Typography
+            data-numeric=""
+            noWrap
+            sx={{ fontSize: '1.1875rem', fontWeight: 700, letterSpacing: '-0.025em', lineHeight: 1.15 }}
+          >
             {fnCurrency(total.totalValue)}
           </Typography>
-          <Typography sx={{ fontSize: '0.78rem', fontWeight: 600, color: accentColor }}>
+          <Typography data-numeric="" noWrap sx={{ fontSize: FONT_SIZE.xs, fontWeight: 650, color: tone.main }}>
             {total.totalGL > 0 ? '+' : ''}
             {fnCurrency(total.totalGL)}
           </Typography>
         </Stack>
 
-        {/* Footer: invested · cash, with manage action */}
         <Stack
           direction="row"
-          sx={{
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            borderTop: `1px solid ${borderColor}`,
-            pt: 0.5,
-          }}
+          sx={{ alignItems: 'center', justifyContent: 'space-between', gap: 1, pt: 0.5, borderTop: 1, borderColor: 'divider' }}
         >
-          <Typography noWrap sx={{ fontSize: '0.66rem', color: dimAccent, opacity: 0.8, fontWeight: 500, minWidth: 0 }}>
-            Inv {fnCurrency(total.totalInvestment)}
-            <Box component="span" sx={{ opacity: 0.5, mx: 0.5 }}>
+          <Typography noWrap sx={{ fontSize: FONT_SIZE.micro, color: 'text.secondary', minWidth: 0 }}>
+            <Box component="span" sx={{ color: 'text.disabled' }}>
+              Invested
+            </Box>{' '}
+            <Box component="span" data-numeric="" sx={{ fontWeight: 600 }}>
+              {fnCurrency(total.totalInvestment)}
+            </Box>
+            <Box component="span" sx={{ opacity: 0.4, mx: 0.625 }}>
               ·
             </Box>
-            Cash{' '}
+            <Box component="span" sx={{ color: 'text.disabled' }}>
+              Cash
+            </Box>{' '}
             <Box
               component="span"
-              sx={{ fontWeight: 600, color: negativeCash ? (isLight ? '#dc2626' : '#f87171') : 'inherit' }}
+              data-numeric=""
+              sx={{ fontWeight: 600, color: cash < 0 ? cashTone.main : 'inherit' }}
             >
-              {fnCurrency(total.cashBalance ?? 0)}
+              {fnCurrency(cash)}
             </Box>
           </Typography>
 
           {onManageCash && (
-            <Tooltip title="Deposit / Withdraw cash">
-              <IconButton
-                size="small"
-                onClick={() => onManageCash(total.accountId)}
-                sx={{ color: dimAccent, p: 0.25, flexShrink: 0, '&:hover': { bgcolor: pillBg } }}
-              >
-                <Iconify icon="mdi:cash-plus" width={16} />
-              </IconButton>
-            </Tooltip>
+            <ToolbarButton
+              icon="tabler:cash"
+              label={`Deposit or withdraw cash — ${total.accountName ?? total.accountId}`}
+              onClick={() => onManageCash(total.accountId)}
+              size={15}
+              sx={{ p: 0.375, color: 'text.disabled' }}
+            />
           )}
         </Stack>
       </Stack>

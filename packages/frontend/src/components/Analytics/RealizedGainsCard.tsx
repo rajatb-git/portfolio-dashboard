@@ -27,7 +27,7 @@ type Props = {
   isLoading: boolean;
 };
 
-const gainColor = (v: number) => (v >= 0 ? '#22c55e' : '#ef4444');
+const gainColor = (v: number) => (v >= 0 ? 'var(--pd-up)' : 'var(--pd-down)');
 const signed = (v: number) => `${v >= 0 ? '+' : ''}${fnCurrency(v)}`;
 
 function csvEscape(value: string | number): string {
@@ -242,8 +242,8 @@ export default function RealizedGainsCard({ data, isLoading }: Props) {
                           height: 18,
                           fontSize: '0.62rem',
                           fontWeight: 600,
-                          bgcolor: l.term === 'long' ? 'rgba(34,197,94,0.12)' : 'rgba(245,158,11,0.12)',
-                          color: l.term === 'long' ? '#22c55e' : '#f59e0b',
+                          bgcolor: l.term === 'long' ? 'var(--pd-up-bg)' : 'var(--pd-warn-bg)',
+                          color: l.term === 'long' ? 'var(--pd-up)' : 'var(--pd-warn)',
                         }}
                       />
                     </TableCell>

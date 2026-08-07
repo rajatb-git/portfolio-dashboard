@@ -74,8 +74,8 @@ export default function TaxLossHarvestingCard({ data, isLoading }: Props) {
             useFlexGap
             sx={{ flexWrap: 'wrap', px: 2, py: 1.5, borderBottom: '1px solid', borderColor: 'divider' }}
           >
-            <Metric label="Harvestable Now" value={loss(data.harvestableNow)} color="#ef4444" />
-            <Metric label="Total Unrealized Loss" value={loss(data.totalUnrealizedLoss)} color="#ef4444" />
+            <Metric label="Harvestable Now" value={loss(data.harvestableNow)} color="var(--pd-down)" />
+            <Metric label="Total Unrealized Loss" value={loss(data.totalUnrealizedLoss)} color="var(--pd-down)" />
             <Metric label="Short-term" value={loss(data.shortTermLoss)} />
             <Metric label="Long-term" value={loss(data.longTermLoss)} />
           </Stack>
@@ -114,7 +114,7 @@ export default function TaxLossHarvestingCard({ data, isLoading }: Props) {
                       sx={{
                         fontSize: '0.78rem',
                         fontWeight: 600,
-                        color: '#ef4444',
+                        color: 'var(--pd-down)',
                         fontVariantNumeric: 'tabular-nums',
                       }}
                     >
@@ -122,7 +122,7 @@ export default function TaxLossHarvestingCard({ data, isLoading }: Props) {
                     </TableCell>
                     <TableCell
                       align="right"
-                      sx={{ fontSize: '0.78rem', color: '#ef4444', fontVariantNumeric: 'tabular-nums' }}
+                      sx={{ fontSize: '0.78rem', color: 'var(--pd-down)', fontVariantNumeric: 'tabular-nums' }}
                     >
                       {c.lossPercent.toFixed(2)}%
                     </TableCell>
@@ -134,8 +134,8 @@ export default function TaxLossHarvestingCard({ data, isLoading }: Props) {
                           height: 18,
                           fontSize: '0.62rem',
                           fontWeight: 600,
-                          bgcolor: c.term === 'long' ? 'rgba(34,197,94,0.12)' : 'rgba(245,158,11,0.12)',
-                          color: c.term === 'long' ? '#22c55e' : '#f59e0b',
+                          bgcolor: c.term === 'long' ? 'var(--pd-up-bg)' : 'var(--pd-warn-bg)',
+                          color: c.term === 'long' ? 'var(--pd-up)' : 'var(--pd-warn)',
                         }}
                       />
                     </TableCell>
@@ -156,8 +156,8 @@ export default function TaxLossHarvestingCard({ data, isLoading }: Props) {
                               height: 18,
                               fontSize: '0.62rem',
                               fontWeight: 600,
-                              bgcolor: 'rgba(239,68,68,0.12)',
-                              color: '#ef4444',
+                              bgcolor: 'var(--pd-down-bg)',
+                              color: 'var(--pd-down)',
                             }}
                           />
                         </Tooltip>
@@ -169,8 +169,8 @@ export default function TaxLossHarvestingCard({ data, isLoading }: Props) {
                             height: 18,
                             fontSize: '0.62rem',
                             fontWeight: 600,
-                            bgcolor: 'rgba(34,197,94,0.12)',
-                            color: '#22c55e',
+                            bgcolor: 'var(--pd-up-bg)',
+                            color: 'var(--pd-up)',
                           }}
                         />
                       )}

@@ -20,7 +20,7 @@ const cellStyle = (value: number, diagonal: boolean) => {
   };
 };
 
-const scoreColor = (score: number) => (score >= 66 ? '#22c55e' : score >= 40 ? '#f59e0b' : '#ef4444');
+const scoreColor = (score: number) => (score >= 66 ? 'var(--pd-up)' : score >= 40 ? 'var(--pd-warn)' : 'var(--pd-down)');
 
 export default function CorrelationMatrixCard({ data, isLoading }: Props) {
   const hasData = data && data.symbols.length >= 2;
@@ -83,7 +83,7 @@ export default function CorrelationMatrixCard({ data, isLoading }: Props) {
               {data.mostCorrelated && (
                 <Typography sx={{ fontSize: '0.7rem', color: 'text.secondary' }}>
                   Most correlated{' '}
-                  <strong style={{ color: '#ef4444' }}>
+                  <strong style={{ color: 'var(--pd-down)' }}>
                     {data.mostCorrelated.a}/{data.mostCorrelated.b} {data.mostCorrelated.value.toFixed(2)}
                   </strong>
                 </Typography>
@@ -91,7 +91,7 @@ export default function CorrelationMatrixCard({ data, isLoading }: Props) {
               {data.leastCorrelated && (
                 <Typography sx={{ fontSize: '0.7rem', color: 'text.secondary' }}>
                   Least correlated{' '}
-                  <strong style={{ color: '#22c55e' }}>
+                  <strong style={{ color: 'var(--pd-up)' }}>
                     {data.leastCorrelated.a}/{data.leastCorrelated.b} {data.leastCorrelated.value.toFixed(2)}
                   </strong>
                 </Typography>
