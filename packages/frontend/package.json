@@ -40,7 +40,7 @@
     "react": "^19.2.8",
     "react-apexcharts": "^2.1.1",
     "react-dom": "^19.2.8",
-    "react-dropzone": "^15.0.0",
+    "react-dropzone": "^20.0.0",
     "react-router-dom": "^7.18.2",
     "react-toastify": "^11.1.0",
     "typescript": "^7.0.2",
