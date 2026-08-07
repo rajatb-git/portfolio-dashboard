@@ -35,12 +35,12 @@ body {
 /* Painted before the theme mounts so a hard refresh in dark mode does not
    flash a white canvas. */
 body {
-  background-color: #05080f;
+  background-color: #07080b;
 }
 
 @media (prefers-color-scheme: light) {
   body {
-    background-color: #f1f4f9;
+    background-color: #eceff5;
   }
 }
 

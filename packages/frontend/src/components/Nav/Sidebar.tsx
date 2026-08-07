@@ -10,7 +10,7 @@ import { useTheme } from '@mui/material/styles';
 import { useLocation } from 'react-router-dom';
 
 import { Iconify } from '@/components/Iconify';
-import { FONT_SIZE, MOTION, RADIUS } from '@/components/ThemeRegistry/tokens';
+import { FONT_SIZE, MOTION, RADIUS, SURFACE } from '@/components/ThemeRegistry/tokens';
 import { DRAWER_COLLAPSED_WIDTH, DRAWER_WIDTH, NAV_CONFIG, NAV_SETTINGS_CONFIG, type NavItemConfig } from '@/config';
 
 import SideNavItem from './SideNavItem';
@@ -62,7 +62,7 @@ export default function Sidebar({ collapsed, onToggle, isMobile, mobileOpen, onM
           height: '100%',
           border: 0,
           borderRight: `1px solid ${theme.palette.divider}`,
-          bgcolor: theme.palette.background.default,
+          bgcolor: SURFACE[theme.palette.mode === 'light' ? 'light' : 'dark'].sunken,
           backgroundImage: 'none',
           display: 'flex',
           flexDirection: 'column',
