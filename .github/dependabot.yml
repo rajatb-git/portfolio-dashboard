@@ -19,6 +19,17 @@ updates:
       interval: weekly
     open-pull-requests-limit: 5
     groups:
+      # FullCalendar plugins pin core with a tilde range (~6.1.21), so a solo
+      # major bump of one package produces an unbuildable tree. Group every
+      # @fullcalendar/* package — majors included — so they move together or
+      # not at all. Note the plugins have no stable v7, only core and react do.
+      fullcalendar:
+        patterns:
+          - '@fullcalendar/*'
+        update-types:
+          - major
+          - minor
+          - patch
       frontend-minor-and-patch:
         update-types:
           - minor
