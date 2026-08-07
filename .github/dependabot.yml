@@ -18,16 +18,28 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
+    ignore:
+      # FullCalendar packages must all sit on the same version — the plugins
+      # pin core with a tilde peer range, and @fullcalendar/react depends on an
+      # exact core version. A solo major bump therefore yields a tree that
+      # cannot compile, which has broken the Docker build twice (#134, #124).
+      #
+      # A group would not help: @fullcalendar/daygrid, /interaction and /list
+      # have no stable v7 at all (only betas and rcs), so even a grouped major
+      # bump would drag core and react to 7.x while the plugins stayed on 6.x —
+      # the same broken combination.
+      #
+      # Lift this once all five packages have a stable matching major, then
+      # upgrade them together in one PR and port Calendar.tsx to the v7 API.
+      - dependency-name: '@fullcalendar/*'
+        update-types:
+          - version-update:semver-major
     groups:
-      # FullCalendar plugins pin core with a tilde range (~6.1.21), so a solo
-      # major bump of one package produces an unbuildable tree. Group every
-      # @fullcalendar/* package — majors included — so they move together or
-      # not at all. Note the plugins have no stable v7, only core and react do.
+      # Keep the family moving in lockstep for the updates still allowed.
       fullcalendar:
         patterns:
           - '@fullcalendar/*'
         update-types:
-          - major
           - minor
           - patch
       frontend-minor-and-patch:
@@ -41,6 +53,12 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
+    ignore:
+      # Same constraint as the frontend config above: the root scan also raises
+      # @fullcalendar/* bumps against the workspace packages.
+      - dependency-name: '@fullcalendar/*'
+        update-types:
+          - version-update:semver-major
 
   # GitHub Actions used by CI and release workflows
   - package-ecosystem: github-actions
