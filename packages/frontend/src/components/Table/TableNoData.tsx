@@ -1,38 +1,27 @@
-import Paper from '@mui/material/Paper';
-import TableCell from '@mui/material/TableCell';
-import TableRow from '@mui/material/TableRow';
-import Typography from '@mui/material/Typography';
+import StateView from '@/components/ui/StateView';
+
 type TableNoDataProps = {
   query: string;
 };
 
+/** Rendered as a sibling of the table, not a row inside it — a colSpan cell
+ *  inherits the table's min-width and scrolls off-screen on a phone. */
 export default function TableNoData({ query }: TableNoDataProps) {
-  return (
-    <TableRow>
-      <TableCell align="center" colSpan={100} sx={{ py: 2 }}>
-        <Paper
-          sx={{
-            textAlign: 'center',
-            p: 1,
-          }}
-        >
-          {query ? (
-            <>
-              <Typography variant="h6">Not found</Typography>
-
-              <Typography variant="body2">
-                No results found for &nbsp;
-                <strong>&quot;{query}&quot;</strong>.
-                <br /> Try checking for typos or using complete words.
-              </Typography>
-            </>
-          ) : (
-            <Typography variant="subtitle2" color="disabled">
-              No data
-            </Typography>
-          )}
-        </Paper>
-      </TableCell>
-    </TableRow>
+  return query ? (
+    <StateView
+      state="empty"
+      icon="tabler:search-off"
+      title={`No results for "${query}"`}
+      message="Check for typos, or try the full company name instead of the ticker."
+      minHeight={220}
+    />
+  ) : (
+    <StateView
+      state="empty"
+      icon="tabler:wallet-off"
+      title="No holdings yet"
+      message="Add holdings under Database, or import them from a broker statement, and they will appear here with live prices."
+      minHeight={220}
+    />
   );
 }

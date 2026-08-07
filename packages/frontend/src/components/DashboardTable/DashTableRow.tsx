@@ -31,7 +31,7 @@ export default function DashTableRow({
   onSetAlert,
 }: TableRowProps) {
   const alertBadge = alertState?.triggered
-    ? { label: 'Alert hit', color: '#22c55e', bg: 'rgba(34,197,94,0.15)', border: 'rgba(34,197,94,0.3)' }
+    ? { label: 'Alert hit', color: 'var(--pd-up)', bg: 'var(--pd-up-bg)', border: 'rgba(34,197,94,0.3)' }
     : alertState?.near
       ? { label: 'Near Alert', color: '#fbbf24', bg: 'rgba(251,191,36,0.15)', border: 'rgba(251,191,36,0.3)' }
       : null;

@@ -3,15 +3,15 @@ import { Card, Chip, Divider, Grid, Skeleton, Stack, Typography } from '@mui/mat
 import type { RiskMetrics } from '@/api/analytics';
 
 function getSharpeColor(value: number): string {
-  if (value >= 1) return '#22c55e';
-  if (value >= 0.5) return '#f59e0b';
-  return '#ef4444';
+  if (value >= 1) return 'var(--pd-up)';
+  if (value >= 0.5) return 'var(--pd-warn)';
+  return 'var(--pd-down)';
 }
 
 function getDrawdownColor(value: number): string {
-  if (value <= 5) return '#22c55e';
-  if (value <= 15) return '#f59e0b';
-  return '#ef4444';
+  if (value <= 5) return 'var(--pd-up)';
+  if (value <= 15) return 'var(--pd-warn)';
+  return 'var(--pd-down)';
 }
 
 type MetricItemProps = {
@@ -91,7 +91,7 @@ export default function RiskMetricsCard({ metrics, isLoading }: Props) {
             <MetricItem
               label="Annualized Return"
               value={`${metrics.annualizedReturn}%`}
-              color={metrics.annualizedReturn >= 0 ? '#22c55e' : '#ef4444'}
+              color={metrics.annualizedReturn >= 0 ? 'var(--pd-up)' : 'var(--pd-down)'}
             />
           </Grid>
           <Grid size={{ xs: 6, sm: 4, md: 2 }}>
@@ -125,13 +125,13 @@ export default function RiskMetricsCard({ metrics, isLoading }: Props) {
               <MetricItem
                 label="Best Day"
                 value={`+${metrics.bestDay.return}%`}
-                color="#22c55e"
+                color="var(--pd-up)"
                 subtext={metrics.bestDay.date}
               />
               <MetricItem
                 label="Worst Day"
                 value={`${metrics.worstDay.return}%`}
-                color="#ef4444"
+                color="var(--pd-down)"
                 subtext={metrics.worstDay.date}
               />
             </Stack>

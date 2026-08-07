@@ -28,12 +28,14 @@ export default function DashTableToolbar({ filterName, onFilterName, refreshData
       sx={{
         display: 'flex',
         justifyContent: 'space-between',
-        py: '0px !important',
+        alignItems: 'center',
+        flexWrap: 'wrap',
+        gap: 1,
+        py: '6px !important',
         px: '8px !important',
         minHeight: '48px !important',
       }}
       direction="row"
-      spacing={2}
     >
       <OutlinedInput
         fullWidth
@@ -48,7 +50,10 @@ export default function DashTableToolbar({ filterName, onFilterName, refreshData
         }
         sx={{
           fieldset: { border: '0 !important' },
+          bgcolor: 'transparent',
           pl: 0,
+          flex: '1 1 200px',
+          minWidth: 0,
           '& input': { fontSize: '0.875rem' },
         }}
       />

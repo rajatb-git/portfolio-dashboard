@@ -20,7 +20,12 @@ import apis from '@/api';
 import type { DailyRecap, HoldingMovement, IndexMovement } from '@/api/dashboard';
 import type { MarketMover, MarketMovers, MarketNewsDigest } from '@/api/live';
 import { Iconify } from '@/components/Iconify';
-import MarketStatusChip from '@/components/MarketStatusChip';
+import { FONT_SIZE } from '@/components/ThemeRegistry/tokens';
+import Delta from '@/components/ui/Delta';
+import PageHeader from '@/components/ui/PageHeader';
+import Panel from '@/components/ui/Panel';
+import StateView from '@/components/ui/StateView';
+import ToolbarButton from '@/components/ui/ToolbarButton';
 import { fnCurrency, fnShortenCurrency } from '@/utils/formatNumber';
 
 const fmtPct = (v: number) => `${v >= 0 ? '+' : ''}${v.toFixed(2)}%`;
@@ -42,119 +47,97 @@ function SectionCard({
   children: React.ReactNode;
 }) {
   return (
-    <Card variant="outlined" sx={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}>
-      <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', pr: 1 }}>
-        <Stack direction="row" spacing={1} sx={{ alignItems: 'center', p: '10px 16px' }}>
-          <Iconify icon={icon} width={16} sx={{ color: iconColor }} />
-          <Typography
-            sx={{
-              color: 'text.secondary',
-              fontWeight: 700,
-              fontSize: '0.72rem',
-              letterSpacing: '0.06em',
-              textTransform: 'uppercase',
-            }}
-          >
-            {title}
-          </Typography>
-        </Stack>
-        {action}
-      </Stack>
-      <Divider />
-      <Box sx={{ flexGrow: 1 }}>{children}</Box>
-    </Card>
+    <Panel
+      eyebrow={title}
+      icon={icon}
+      actions={action}
+      flush
+      dense
+      sx={{ width: '100%', height: '100%' }}
+      bodySx={{ '& > *': { minWidth: 0 }, '& .MuiSvgIcon-root': { color: iconColor } }}
+    >
+      {children}
+    </Panel>
   );
 }
 
 function IndexRow({ idx }: { idx: IndexMovement }) {
-  const theme = useTheme();
-  const up = idx.percentChange >= 0;
-  const color = up ? theme.palette.success.main : theme.palette.error.main;
   return (
-    <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', px: 2, py: 1.25 }}>
-      <Box>
-        <Typography sx={{ fontSize: '0.82rem', fontWeight: 600, color: 'text.primary' }}>{idx.label}</Typography>
-        <Typography sx={{ fontSize: '0.68rem', color: 'text.disabled' }}>{idx.symbol}</Typography>
+    <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', px: 2, py: 1.25, gap: 1 }}>
+      <Box sx={{ minWidth: 0 }}>
+        <Typography noWrap sx={{ fontSize: FONT_SIZE.sm, fontWeight: 600 }}>
+          {idx.label}
+        </Typography>
+        <Typography sx={{ fontSize: FONT_SIZE.micro, color: 'text.disabled' }}>{idx.symbol}</Typography>
       </Box>
-      <Stack sx={{ alignItems: 'flex-end' }}>
-        <Typography sx={{ fontSize: '0.82rem', fontWeight: 600, color: 'text.primary' }}>
+      <Stack sx={{ alignItems: 'flex-end', flexShrink: 0 }}>
+        <Typography data-numeric="" sx={{ fontSize: FONT_SIZE.sm, fontWeight: 600 }}>
           {fnCurrency(idx.price)}
         </Typography>
-        <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center' }}>
-          <Iconify icon={up ? 'eva:trending-up-fill' : 'eva:trending-down-fill'} width={14} sx={{ color }} />
-          <Typography sx={{ fontSize: '0.75rem', fontWeight: 700, color }}>{fmtPct(idx.percentChange)}</Typography>
-        </Stack>
+        <Delta value={idx.percentChange} display={fmtPct(idx.percentChange)} size="small" />
       </Stack>
     </Stack>
   );
 }
 
 function MoverRow({ h }: { h: HoldingMovement }) {
-  const theme = useTheme();
-  const up = h.dayGL >= 0;
-  const color = up ? theme.palette.success.main : theme.palette.error.main;
   return (
-    <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', px: 2, py: 1 }}>
-      <Box sx={{ minWidth: 0, pr: 1 }}>
-        <Typography sx={{ fontSize: '0.82rem', fontWeight: 700, color: 'text.primary' }}>{h.symbol}</Typography>
-        <Typography noWrap sx={{ fontSize: '0.68rem', color: 'text.disabled', maxWidth: 180 }}>
+    <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', px: 2, py: 1, gap: 1 }}>
+      <Box sx={{ minWidth: 0 }}>
+        <Typography sx={{ fontSize: FONT_SIZE.sm, fontWeight: 700 }}>{h.symbol}</Typography>
+        <Typography noWrap sx={{ fontSize: FONT_SIZE.micro, color: 'text.disabled', maxWidth: 180 }}>
           {h.name}
         </Typography>
       </Box>
-      <Stack sx={{ alignItems: 'flex-end' }}>
-        <Typography sx={{ fontSize: '0.82rem', fontWeight: 700, color }}>{fmtSignedCurrency(h.dayGL)}</Typography>
-        <Typography sx={{ fontSize: '0.72rem', fontWeight: 600, color }}>{fmtPct(h.percentChange)}</Typography>
+      <Stack sx={{ alignItems: 'flex-end', flexShrink: 0 }}>
+        <Delta value={h.dayGL} display={fmtSignedCurrency(h.dayGL)} size="medium" />
+        <Delta value={h.percentChange} display={fmtPct(h.percentChange)} size="micro" showIcon={false} />
       </Stack>
     </Stack>
   );
 }
 
 function MarketMoverRow({ m, rank }: { m: MarketMover; rank: number }) {
-  const theme = useTheme();
-  const up = m.changePercent >= 0;
-  const color = up ? theme.palette.success.main : theme.palette.error.main;
   return (
     <Stack direction="row" spacing={1} sx={{ alignItems: 'center', justifyContent: 'space-between', px: 2, py: 1 }}>
       <Stack direction="row" spacing={1} sx={{ alignItems: 'baseline', minWidth: 0, pr: 1 }}>
-        <Typography sx={{ fontSize: '0.72rem', fontWeight: 800, color: 'text.disabled', minWidth: 16 }}>
+        <Typography
+          data-numeric=""
+          sx={{ fontSize: FONT_SIZE.micro, fontWeight: 800, color: 'text.disabled', minWidth: 16 }}
+        >
           {rank}
         </Typography>
         <Box sx={{ minWidth: 0 }}>
-          <Typography sx={{ fontSize: '0.82rem', fontWeight: 700, color: 'text.primary' }}>{m.symbol}</Typography>
-          <Typography noWrap sx={{ fontSize: '0.68rem', color: 'text.disabled', maxWidth: 180 }}>
+          <Typography sx={{ fontSize: FONT_SIZE.sm, fontWeight: 700 }}>{m.symbol}</Typography>
+          <Typography noWrap sx={{ fontSize: FONT_SIZE.micro, color: 'text.disabled', maxWidth: 180 }}>
             {m.name}
           </Typography>
           {m.marketCap > 0 && (
-            <Typography sx={{ fontSize: '0.62rem', color: 'text.disabled' }}>
+            <Typography sx={{ fontSize: FONT_SIZE.micro, color: 'text.disabled' }}>
               {fnShortenCurrency(m.marketCap)} cap
             </Typography>
           )}
         </Box>
       </Stack>
-      <Stack sx={{ alignItems: 'flex-end' }}>
-        <Typography sx={{ fontSize: '0.8rem', fontWeight: 600, color: 'text.primary' }}>
+      <Stack sx={{ alignItems: 'flex-end', flexShrink: 0 }}>
+        <Typography data-numeric="" sx={{ fontSize: FONT_SIZE.sm, fontWeight: 600 }}>
           {fmtMoverPrice(m.price)}
         </Typography>
-        <Typography sx={{ fontSize: '0.75rem', fontWeight: 700, color }}>{fmtPct(m.changePercent)}</Typography>
+        <Delta value={m.changePercent} display={fmtPct(m.changePercent)} size="small" />
       </Stack>
     </Stack>
   );
 }
 
 function EmptyState({ icon, text }: { icon: string; text: string }) {
-  return (
-    <Stack sx={{ alignItems: 'center', justifyContent: 'center', p: 3, flexGrow: 1, minHeight: 120 }}>
-      <Iconify icon={icon} width={30} sx={{ color: 'text.disabled', mb: 1 }} />
-      <Typography sx={{ color: 'text.disabled', fontSize: '0.8rem', textAlign: 'center' }}>{text}</Typography>
-    </Stack>
-  );
+  return <StateView state="empty" icon={icon} title={text} minHeight={140} />;
 }
 
 function ListSkeleton({ rows = 4 }: { rows?: number }) {
   return (
-    <Stack spacing={1} sx={{ p: 2 }}>
-      {Array.from({ length: rows }).map((_, i) => (
-        <Skeleton key={i} variant="rounded" height={40} />
+    <Stack spacing={1} sx={{ p: 2 }} aria-busy="true">
+      {Array.from({ length: rows }, (_, i) => (
+        <Skeleton key={`row-${rows}-${i}`} variant="rounded" height={40} />
       ))}
     </Stack>
   );
@@ -237,46 +220,45 @@ export default function Today() {
     [recap]
   );
 
-  const totalColor = recap && recap.totalDayGL >= 0 ? theme.palette.success.main : theme.palette.error.main;
-
   return (
     <Stack spacing={2}>
-      {/* Header */}
-      <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 1 }}>
-        <Box>
-          <Typography sx={{ fontSize: '1.15rem', fontWeight: 800, color: 'text.primary' }}>Today</Typography>
-          <Typography sx={{ fontSize: '0.78rem', color: 'text.disabled' }}>
-            {moment().format('dddd, MMMM D, YYYY')}
-          </Typography>
-        </Box>
-        <Stack direction="row" spacing={2} sx={{ alignItems: 'center' }}>
-          <MarketStatusChip />
-          {!recapLoading && recap && (
-            <Stack sx={{ alignItems: 'flex-end' }}>
-              <Typography
-                sx={{
-                  fontSize: '0.62rem',
-                  color: 'text.disabled',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.06em',
-                }}
-              >
-                {recap.marketDayIsToday
-                  ? 'Portfolio day P&L'
-                  : `Portfolio P&L · ${moment(recap.marketDay).format('ddd')}`}
-              </Typography>
-              <Typography sx={{ fontSize: '1.05rem', fontWeight: 800, color: totalColor }}>
-                {fmtSignedCurrency(recap.totalDayGL)} ({fmtPct(recap.totalDayGLPercent)})
-              </Typography>
-            </Stack>
-          )}
-          <Tooltip title="Refresh">
-            <IconButton size="small" onClick={loadRecap} sx={{ color: 'text.disabled' }}>
-              <Iconify icon="mingcute:refresh-3-fill" width={18} />
-            </IconButton>
-          </Tooltip>
-        </Stack>
-      </Stack>
+      <PageHeader
+        title="Today"
+        subtitle={moment().format('dddd, MMMM D, YYYY')}
+        actions={
+          <>
+            {!recapLoading && recap && (
+              <Stack sx={{ alignItems: 'flex-end', mr: 0.5 }}>
+                <Typography
+                  sx={{
+                    fontSize: FONT_SIZE.micro,
+                    color: 'text.disabled',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.06em',
+                    fontWeight: 700,
+                  }}
+                >
+                  {recap.marketDayIsToday
+                    ? 'Portfolio day P&L'
+                    : `Portfolio P&L · ${moment(recap.marketDay).format('ddd')}`}
+                </Typography>
+                <Delta
+                  value={recap.totalDayGL}
+                  display={`${fmtSignedCurrency(recap.totalDayGL)} (${fmtPct(recap.totalDayGLPercent)})`}
+                  size="large"
+                />
+              </Stack>
+            )}
+            <ToolbarButton
+              icon="tabler:refresh"
+              label="Refresh today's recap"
+              onClick={loadRecap}
+              busy={recapLoading}
+              color="primary.main"
+            />
+          </>
+        }
+      />
 
       {/* Session banner — when the market is closed, spell out which trading day
           the figures below actually reflect (e.g. Friday when viewed on a Sunday). */}

@@ -28,22 +28,22 @@ type PortfolioSentiment = {
 
 const SENTIMENT_CONFIG = {
   positive: {
-    color: '#22c55e',
-    bg: 'rgba(34,197,94,0.12)',
-    border: 'rgba(34,197,94,0.25)',
+    color: 'var(--pd-up)',
+    bg: 'var(--pd-up-bg)',
+    border: 'var(--pd-up-border)',
     label: 'Positive',
     icon: 'eva:trending-up-fill',
   },
   negative: {
-    color: '#ef4444',
-    bg: 'rgba(239,68,68,0.12)',
-    border: 'rgba(239,68,68,0.25)',
+    color: 'var(--pd-down)',
+    bg: 'var(--pd-down-bg)',
+    border: 'var(--pd-down-border)',
     label: 'Negative',
     icon: 'eva:trending-down-fill',
   },
   neutral: {
-    color: '#f59e0b',
-    bg: 'rgba(245,158,11,0.12)',
+    color: 'var(--pd-warn)',
+    bg: 'var(--pd-warn-bg)',
     border: 'rgba(245,158,11,0.25)',
     label: 'Neutral',
     icon: 'pepicons-pop:line-x',

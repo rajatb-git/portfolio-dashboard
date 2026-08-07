@@ -127,7 +127,7 @@ export default function ResearchPositionDetailsCard({ positions, accounts, isLoa
                       sx={{
                         fontSize: '0.78rem',
                         fontWeight: 600,
-                        color: isGain ? '#4ade80' : '#f87171',
+                        color: isGain ? 'var(--pd-up)' : 'var(--pd-down)',
                         borderBottom: '1px solid',
                         borderColor: 'divider',
                       }}
@@ -141,8 +141,8 @@ export default function ResearchPositionDetailsCard({ positions, accounts, isLoa
                           height: 18,
                           fontSize: '0.68rem',
                           fontWeight: 700,
-                          bgcolor: isGain ? 'rgba(74,222,128,0.12)' : 'rgba(248,113,113,0.12)',
-                          color: isGain ? '#4ade80' : '#f87171',
+                          bgcolor: isGain ? 'var(--pd-up-bg)' : 'var(--pd-down-bg)',
+                          color: isGain ? 'var(--pd-up)' : 'var(--pd-down)',
                           border: `1px solid ${isGain ? 'rgba(74,222,128,0.25)' : 'rgba(248,113,113,0.25)'}`,
                           '& .MuiChip-label': { px: 0.75 },
                         }}
@@ -187,7 +187,7 @@ export default function ResearchPositionDetailsCard({ positions, accounts, isLoa
                     Total P&L
                   </Typography>
                   <Typography
-                    sx={{ fontSize: '0.82rem', fontWeight: 600, color: totalGL >= 0 ? '#4ade80' : '#f87171' }}
+                    sx={{ fontSize: '0.82rem', fontWeight: 600, color: totalGL >= 0 ? 'var(--pd-up)' : 'var(--pd-down)' }}
                   >
                     {totalGL >= 0 ? '+' : ''}
                     {fnCurrency(totalGL)} ({totalGLPercent >= 0 ? '+' : ''}

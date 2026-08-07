@@ -1,6 +1,5 @@
 import { Alert, Box, Collapse, Divider, Grid, Stack, ToggleButton, ToggleButtonGroup } from '@mui/material';
 import Card from '@mui/material/Card';
-import IconButton from '@mui/material/IconButton';
 import { default as MuiTable } from '@mui/material/Table';
 import TableBody from '@mui/material/TableBody';
 import TableContainer from '@mui/material/TableContainer';
@@ -19,7 +18,10 @@ import type { IAccount } from '@/models/AccountsModel';
 import type { IAlertStatus } from '@/models/AlertModel';
 import type { Column } from '@/types';
 import LocalStorageUtil from '@/utils/localStorage';
-import { fnCurrency, fnPercent } from '@/utils/formatNumber';
+import { fnCurrency } from '@/utils/formatNumber';
+import { FONT_SIZE } from '@/components/ThemeRegistry/tokens';
+import StatTile from '@/components/ui/StatTile';
+import { useSentiment } from '@/components/ui/useSentiment';
 import TableNoData from '../Table/TableNoData';
 import { TableSkeleton } from '../Table/TableSkeleton';
 import TotalCard from '../TotalCard';
@@ -229,53 +231,120 @@ export default function Table<T>({
   const grandInvested = totals.reduce((s, t) => s + t.totalInvestment, 0);
   const grandGL = totals.reduce((s, t) => s + t.totalGL, 0);
   const grandGLPercent = grandInvested > 0 ? grandGL / grandInvested : 0;
+  const grandGLTone = useSentiment(grandGL);
+
+  const totalCash = totals.reduce((s, t) => s + (t.cashBalance ?? 0), 0);
+  const positionCount = viewMode === 'consolidated' ? displayItems.length : dataFiltered.length;
 
   return (
     <>
-      <Box>
-        <Stack
-          direction="row"
-          onClick={toggleSummary}
-          sx={{ alignItems: 'center', gap: 0.75, cursor: 'pointer', py: 0.25, userSelect: 'none' }}
+      {/* Portfolio headline. The single most important number on the page gets
+          the largest tile; everything else supports it. */}
+      <Grid container spacing={1.5} sx={{ mb: 2 }}>
+        <Grid size={{ xs: 12, sm: 6, lg: 3 }}>
+          <StatTile
+            label="Portfolio value"
+            value={fnCurrency(grandValue)}
+            delta={grandGLPercent}
+            deltaFormat="percent"
+            icon="tabler:wallet"
+            loading={isLoading}
+            emphasis
+          />
+        </Grid>
+        <Grid size={{ xs: 6, sm: 6, lg: 3 }}>
+          <StatTile
+            label="Total gain / loss"
+            value={
+              <Box component="span" sx={{ color: grandGLTone.main }}>
+                {grandGL > 0 ? '+' : ''}
+                {fnCurrency(grandGL)}
+              </Box>
+            }
+            icon="tabler:chart-line"
+            loading={isLoading}
+            hint="Unrealised gain or loss across every account, against cost basis."
+          />
+        </Grid>
+        <Grid size={{ xs: 6, sm: 6, lg: 3 }}>
+          <StatTile
+            label="Invested"
+            value={fnCurrency(grandInvested)}
+            icon="tabler:pig-money"
+            loading={isLoading}
+            hint="Total cost basis of all open positions."
+          />
+        </Grid>
+        <Grid size={{ xs: 12, sm: 6, lg: 3 }}>
+          <StatTile
+            label="Cash"
+            value={fnCurrency(totalCash)}
+            icon="tabler:cash"
+            loading={isLoading}
+            footer={
+              <Typography sx={{ fontSize: FONT_SIZE.micro, color: 'text.disabled' }}>
+                {positionCount} position{positionCount === 1 ? '' : 's'} · {totals.length} account
+                {totals.length === 1 ? '' : 's'}
+              </Typography>
+            }
+          />
+        </Grid>
+      </Grid>
+
+      {nearTargetCount > 0 && (
+        <Alert
+          severity="warning"
+          icon={<Iconify icon="tabler:bell-ringing" width={18} />}
+          sx={{ mb: 2, py: 0.5 }}
         >
-          <IconButton size="small" sx={{ p: 0.25 }} aria-label="toggle account summary">
-            <Iconify
-              icon={summaryCollapsed ? 'eva:arrow-ios-forward-fill' : 'eva:arrow-ios-downward-fill'}
-              width={18}
-            />
-          </IconButton>
+          {nearTargetCount} holding{nearTargetCount > 1 ? 's have' : ' has'} a price alert near or triggered
+        </Alert>
+      )}
+
+      <Box sx={{ mb: 2 }}>
+        <Box
+          component="button"
+          type="button"
+          onClick={toggleSummary}
+          aria-expanded={!summaryCollapsed}
+          aria-controls="account-summary-grid"
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 0.5,
+            width: '100%',
+            px: 0,
+            py: 0.5,
+            border: 0,
+            bgcolor: 'transparent',
+            color: 'text.secondary',
+            cursor: 'pointer',
+            font: 'inherit',
+            textAlign: 'left',
+            '&:hover': { color: 'text.primary' },
+          }}
+        >
+          <Iconify icon={summaryCollapsed ? 'tabler:chevron-right' : 'tabler:chevron-down'} width={16} aria-hidden />
           <Typography
             sx={{
-              fontSize: '0.7rem',
+              fontSize: FONT_SIZE.micro,
               fontWeight: 700,
               textTransform: 'uppercase',
-              letterSpacing: '0.06em',
-              color: 'text.secondary',
+              letterSpacing: '0.07em',
+              color: 'inherit',
             }}
           >
-            Account Summary
+            By account
           </Typography>
-          <Typography sx={{ fontSize: '0.68rem', color: 'text.disabled' }}>
-            ({totals.length} account{totals.length === 1 ? '' : 's'})
+          <Typography sx={{ fontSize: FONT_SIZE.micro, color: 'text.disabled' }}>
+            {totals.length} account{totals.length === 1 ? '' : 's'}
           </Typography>
-
-          <Box sx={{ flexGrow: 1 }} />
-
-          <Typography sx={{ fontSize: '0.9rem', fontWeight: 700, color: 'text.primary' }}>
-            {fnCurrency(grandValue)}
-          </Typography>
-          <Typography
-            sx={{ fontSize: '0.78rem', fontWeight: 600, color: grandGL >= 0 ? 'success.main' : 'error.main' }}
-          >
-            {grandGL > 0 ? '+' : ''}
-            {fnPercent(grandGLPercent)}
-          </Typography>
-        </Stack>
+        </Box>
 
         <Collapse in={!summaryCollapsed}>
-          <Grid container spacing={1} sx={{ pt: 0.5 }}>
+          <Grid container spacing={1.5} id="account-summary-grid" sx={{ pt: 1 }}>
             {totals.map((total) => (
-              <Grid key={total.accountId} size={{ xs: 6, sm: 4, md: 3, lg: 2 }}>
+              <Grid key={total.accountId} size={{ xs: 12, sm: 6, md: 4, lg: 3, xl: 2 }}>
                 <TotalCard total={total} onManageCash={handleManageCash} />
               </Grid>
             ))}
@@ -283,18 +352,8 @@ export default function Table<T>({
         </Collapse>
       </Box>
 
-      {nearTargetCount > 0 && (
-        <Alert
-          severity="warning"
-          sx={{ mt: 2, fontSize: '0.8rem', py: 0.5, '& .MuiAlert-icon': { fontSize: '1.1rem' } }}
-        >
-          {nearTargetCount} holding{nearTargetCount > 1 ? 's have' : ' has'} a price alert near or triggered
-        </Alert>
-      )}
-
       <Box
         sx={{
-          mt: 2,
           mb: 1.5,
           display: 'flex',
           justifyContent: 'space-between',
@@ -363,9 +422,11 @@ export default function Table<T>({
 
         <Divider />
 
+        {/* The table is the one thing allowed to scroll horizontally; the page
+            body must never do so. */}
         <Box sx={{ overflowX: 'auto' }}>
-          <TableContainer ref={tableContainerRef} sx={{ maxHeight: '60vh' }}>
-            <MuiTable stickyHeader sx={{ minWidth: 820 }}>
+          <TableContainer ref={tableContainerRef} sx={{ maxHeight: { xs: '65vh', lg: 'calc(100vh - 320px)' }, minHeight: 280 }}>
+            <MuiTable stickyHeader sx={{ minWidth: 900 }}>
               <TableHead
                 order={order}
                 orderBy={orderBy}
@@ -412,11 +473,14 @@ export default function Table<T>({
                   })
                 )}
 
-                {notFound && !isLoading && <TableNoData query={filterName} />}
               </TableBody>
             </MuiTable>
           </TableContainer>
         </Box>
+
+        {/* Outside the scroll container: a colSpan cell inherits the table's
+            900px min-width and would slide off-screen on a phone. */}
+        {notFound && !isLoading && <TableNoData query={filterName} />}
 
         <Divider />
 

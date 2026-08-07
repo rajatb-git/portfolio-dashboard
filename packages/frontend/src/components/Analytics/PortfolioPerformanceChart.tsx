@@ -18,6 +18,7 @@ import { toast } from 'react-toastify';
 import apis from '@/api';
 import type { PortfolioSnapshot } from '@/api/dashboard';
 import { useThemeMode } from '@/components/ThemeRegistry/ThemeModeContext';
+import { SERIES, TEXT } from '@/components/ThemeRegistry/tokens';
 import { fnCurrency } from '@/utils/formatNumber';
 
 const ReactApexChart = React.lazy(() => import('react-apexcharts'));
@@ -134,6 +135,9 @@ export default function PortfolioPerformanceChart({ snapshots }: Props) {
     ...(spySeries.length ? [{ name: BENCHMARKS[benchmark], data: spySeries, type: 'area' }] : []),
   ];
 
+  const axisColor = mode === 'light' ? TEXT.light.secondary : TEXT.dark.secondary;
+  const gridColor = mode === 'light' ? 'rgba(15,23,42,0.12)' : 'rgba(148,163,184,0.16)';
+
   const options: ApexOptions = {
     theme: { mode: mode as 'dark' | 'light' },
     chart: {
@@ -154,25 +158,32 @@ export default function PortfolioPerformanceChart({ snapshots }: Props) {
         stops: [0, 90, 100],
       },
     },
-    colors: ['#3b82f6', '#f59e0b'],
+    // Portfolio first, benchmark second — the benchmark is a reference line,
+    // so it gets the quieter hue.
+    colors: [SERIES[0], SERIES[1]],
     xaxis: {
       type: 'datetime',
-      labels: { datetimeUTC: false },
+      labels: { datetimeUTC: false, style: { colors: axisColor, fontSize: '11px' } },
+      axisBorder: { color: gridColor },
+      axisTicks: { color: gridColor },
     },
     yaxis: {
       labels: {
         formatter: (val) => fnCurrency(val),
+        style: { colors: axisColor, fontSize: '11px' },
       },
       opposite: true,
     },
     tooltip: {
+      theme: mode,
       x: { format: 'MMM dd, yyyy HH:mm' },
       y: { formatter: (val) => fnCurrency(val) },
     },
-    legend: { show: true, position: 'top', horizontalAlign: 'left' },
+    legend: { show: true, position: 'top', horizontalAlign: 'left', labels: { colors: axisColor } },
     grid: {
       show: true,
-      borderColor: mode === 'light' ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.07)',
+      borderColor: mode === 'light' ? 'rgba(15,23,42,0.08)' : 'rgba(148,163,184,0.12)',
+      strokeDashArray: 3,
     },
   };
 

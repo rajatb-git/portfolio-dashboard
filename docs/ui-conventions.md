@@ -97,7 +97,7 @@ Example:
 
 ## Empty / error / not-configured states
 
-These are **three different states and need three different UIs**:
+These are **four different situations and each needs its own UI**:
 
 | State | When | UI |
 |---|---|---|
@@ -106,13 +106,39 @@ These are **three different states and need three different UIs**:
 | Not configured | feature disabled / prerequisite missing | Muted info icon + setup hint |
 | Empty | request succeeded but no data | Muted icon + "No data yet" text |
 
+`components/ui/StateView.tsx` renders all four — pass `state` and, for error and not-configured, a `message`:
+
+```tsx
+<StateView state="error" message={err} action={{ label: 'Retry', onClick: load }} />
+<StateView state="empty" icon="tabler:wallet-off" title="No holdings yet" message="…" />
+```
+
 Do not collapse an error into the "not configured" state. A user who sees "configure your AI provider" when the real problem is a network timeout will waste time fighting the wrong problem. See `components/Research/AgentInsightsCard.tsx` for the split.
+
+## The primitive library (`components/ui/`)
+
+Build with these before writing a new card, header, or figure from scratch.
+
+| Primitive | Use for |
+|---|---|
+| `PageHeader` | The page's `h1`, subtitle, page-level actions, and an optional filter/tab row |
+| `Panel` | Any card-shaped surface: header (eyebrow/title/icon/actions), body, footer |
+| `StatTile` | A KPI: label, value, optional delta, sparkline, hint, footer |
+| `Delta` | **Any** gain/loss figure — colour, sign and direction glyph together |
+| `Metric` | A plain label/value pair inside dense detail lists |
+| `Sparkline` | Axis-free trend shape beside a figure |
+| `StateView` | The four states above; `BlockSkeleton` for the loading case |
+| `ToolbarButton` | Icon-only action with a mandatory accessible name |
+| `useSentiment` | Mode-correct gain/loss colours for custom layouts |
+
+Every page has **exactly one** `PageHeader`, and it is the page's only `h1`.
 
 ## Cards and sections
 
-- Cards use `variant="outlined"` or `elevation={0}` with a divider border.
-- Section headers inside a card: uppercase, `0.72rem`, weight 700, letter-spacing `0.06em`, padded `10px 16px`, followed by a `Divider`. Use the `SettingsSection` pattern (`pages/Settings.tsx`).
-- Rows inside a section: `SettingRow` — label + optional description on the left, controls on the right, `borderBottom: 1px solid divider`.
+- Prefer `Panel`. Reach for a bare `Card` only when `Panel`'s header does not fit.
+- Cards use `elevation={0}` with a divider border — the theme applies this by default.
+- Section headers inside a card: use Panel's `eyebrow`, or the `SettingsSection` pattern in `pages/Settings.tsx`.
+- Rows inside a section: `SettingRow` — label + optional description on the left, controls on the right.
 
 ## Tables
 
@@ -120,12 +146,28 @@ Do not collapse an error into the "not configured" state. A user who sees "confi
 - Plain MUI `Table` for read-mostly dashboards (`DashboardTable`).
 - Row click routes to the Research page when a ticker is involved: `navigate('/research?searchText=SYMBOL')`.
 - Inline actions live in an action column (edit / delete / trade icons) — do not hide them behind row hover only.
+- Anything holding a figure takes `data-numeric=""` so digits align.
+- A wide table scrolls inside its own `overflowX: 'auto'` container. **The page body must never scroll horizontally.** Render empty and error states as a *sibling* of the table, not as a `colSpan` row — a cell inherits the table's `minWidth` and slides off-screen on a phone.
 
 ## Navigation
 
-- Sidebar is always visible; it can be collapsed to an icon strip. Respect the `DRAWER_WIDTH` / `DRAWER_COLLAPSED_WIDTH` constants in `config.ts`.
-- Top app bar holds a global search (`⌘K`). Keep it and the sidebar consistent across pages.
+- Sidebar is always visible on desktop and collapses to an icon strip; on mobile it is a temporary overlay. Respect `DRAWER_WIDTH` / `DRAWER_COLLAPSED_WIDTH` in `config.ts`.
+- Add a new route to `NAV_CONFIG` with a `section` and a one-line `description` (the description is the collapsed-state tooltip).
+- The top bar holds global search (`⌘K`), market status and the theme toggle. It repeats the page title on mobile only — on desktop the page's own `h1` does that job.
 - Page content goes inside the main layout; don't introduce a second header bar.
+
+## Accessibility
+
+Non-negotiable, and cheap if done while writing the component:
+
+- **Never signal with colour alone.** Pair it with a glyph or text — `Delta` handles this for gain/loss.
+- Every icon-only control needs an accessible name. `ToolbarButton` requires `label`; a bare `IconButton` needs `aria-label`.
+- Icons are decorative: `aria-hidden` when adjacent text names the thing, `role="img"` + `aria-label` when the icon carries the meaning alone.
+- Interactive elements must be real `button`/`a` elements so they are focusable and keyboard-operable. A clickable `Box` is a bug.
+- Toggles that expand something carry `aria-expanded` (plus `aria-controls` where a target id exists).
+- Tabs need `role="tabpanel"`, `id` and `aria-labelledby` wiring — see `pages/Analytics.tsx`.
+- Do not remove the focus ring. It is `:focus-visible`-scoped already, so it never fires on mouse click.
+- Check new colours against the surface they sit on. AA (4.5:1) for text, 3:1 for UI chrome.
 
 ## Currency and dates
 
@@ -135,15 +177,19 @@ Do not collapse an error into the "not configured" state. A user who sees "confi
 
 ## Refreshing data
 
-- Provide an explicit refresh `IconButton` (icon: `mingcute:refresh-3-fill`) on pages/cards that fetch live data.
-- `IconButton` color `primary.main`, size small.
-- Refresh should re-run the same fetch the page ran on mount.
+- Provide an explicit refresh control on pages/cards that fetch live data:
+  `<ToolbarButton icon="tabler:refresh" label="Refresh …" onClick={load} busy={isLoading} color="primary.main" />`
+- The `label` is both the tooltip and the accessible name — make it specific ("Refresh holdings and prices", not "Refresh").
+- `busy` swaps the icon for a small spinner. This is the one sanctioned spinner in the app: a skeleton would be wrong for a control that stays in place.
+- Refresh re-runs the same fetch the page ran on mount.
 
 ## Do not
 
 - Add custom CSS files beyond `global.css`. Use `sx` or the theme's `components` overrides.
-- Hardcode colors when a theme token exists — except the brand gradient and sentiment colors, which are defined values.
-- Add a spinner. Use Skeleton.
+- Write a raw hex in a component. Use a theme token, a `tokens.ts` export, or a `var(--pd-*)` sentiment variable.
+- Use green or red for anything that is not gain/loss. Categorical series come from `SERIES`.
+- Add a spinner in place of a loading state. Use `Skeleton` / `StateView`.
 - Auto-save text or dropdown inputs.
 - Use native `alert` / `confirm` — use a MUI `Dialog`.
 - Introduce a new icon library. Everything goes through Iconify.
+- Re-introduce motion that bypasses `prefers-reduced-motion`.

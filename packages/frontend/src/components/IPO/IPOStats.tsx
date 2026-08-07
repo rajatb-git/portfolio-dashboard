@@ -72,10 +72,10 @@ export default function IPOStats({ ipos, isLoading }: Props) {
             <MetricItem label="Expected Raise" value={fnShortenCurrency(stats.expectedRaise)} />
           </Grid>
           <Grid size={{ xs: 6, sm: 4, md: 2.4 }}>
-            <MetricItem label="Priced This Week" value={`${stats.pricedThisWeek}`} color="#22c55e" />
+            <MetricItem label="Priced This Week" value={`${stats.pricedThisWeek}`} color="var(--pd-up)" />
           </Grid>
           <Grid size={{ xs: 6, sm: 4, md: 2.4 }}>
-            <MetricItem label="Withdrawn" value={`${stats.withdrawn}`} color={stats.withdrawn > 0 ? '#ef4444' : undefined} />
+            <MetricItem label="Withdrawn" value={`${stats.withdrawn}`} color={stats.withdrawn > 0 ? 'var(--pd-down)' : undefined} />
           </Grid>
         </Grid>
       )}

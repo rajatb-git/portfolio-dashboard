@@ -85,7 +85,7 @@ export default function PortfolioGoalCard() {
     }
   };
 
-  const onTrackColor = progress?.onTrack === true ? '#22c55e' : progress?.onTrack === false ? '#ef4444' : '#f59e0b';
+  const onTrackColor = progress?.onTrack === true ? 'var(--pd-up)' : progress?.onTrack === false ? 'var(--pd-down)' : 'var(--pd-warn)';
 
   return (
     <Card variant="outlined">
@@ -104,7 +104,7 @@ export default function PortfolioGoalCard() {
         </Typography>
         <Box sx={{ flexGrow: 1 }} />
         {isDirty && (
-          <Typography sx={{ fontSize: '0.68rem', color: '#f59e0b', fontWeight: 600 }}>Unsaved changes</Typography>
+          <Typography sx={{ fontSize: '0.68rem', color: 'var(--pd-warn)', fontWeight: 600 }}>Unsaved changes</Typography>
         )}
       </Stack>
       <Divider />
@@ -198,7 +198,7 @@ export default function PortfolioGoalCard() {
                   <Metric
                     label="Monthly growth"
                     value={`${progress.monthlyGrowthRate >= 0 ? '+' : ''}${progress.monthlyGrowthRate}%`}
-                    color={progress.monthlyGrowthRate >= 0 ? '#22c55e' : '#ef4444'}
+                    color={progress.monthlyGrowthRate >= 0 ? 'var(--pd-up)' : 'var(--pd-down)'}
                   />
                 )}
                 {progress.projectedDate && (

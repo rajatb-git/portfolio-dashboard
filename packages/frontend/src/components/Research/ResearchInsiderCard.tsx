@@ -101,8 +101,8 @@ export default function ResearchInsiderCard({ transactions, isLoading }: Props) 
                           height: 18,
                           fontSize: '0.68rem',
                           fontWeight: 700,
-                          bgcolor: isBuy ? 'rgba(74,222,128,0.12)' : 'rgba(248,113,113,0.12)',
-                          color: isBuy ? '#4ade80' : '#f87171',
+                          bgcolor: isBuy ? 'var(--pd-up-bg)' : 'var(--pd-down-bg)',
+                          color: isBuy ? 'var(--pd-up)' : 'var(--pd-down)',
                           border: `1px solid ${isBuy ? 'rgba(74,222,128,0.25)' : 'rgba(248,113,113,0.25)'}`,
                           '& .MuiChip-label': { px: 0.75 },
                         }}

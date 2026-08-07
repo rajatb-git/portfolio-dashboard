@@ -1,6 +1,6 @@
 import * as React from 'react';
 
-import { Box, Button, Stack, ToggleButton, ToggleButtonGroup, Typography } from '@mui/material';
+import { Box, Stack, ToggleButton, ToggleButtonGroup } from '@mui/material';
 import { toast } from 'react-toastify';
 
 import apis from '@/api';
@@ -9,7 +9,9 @@ import { ICalendarEvent } from '@/components/Calendar/types';
 import { Iconify } from '@/components/Iconify';
 import IPOList from '@/components/IPO/IPOList';
 import IPOStats from '@/components/IPO/IPOStats';
-import theme from '@/components/ThemeRegistry/theme';
+import { ERROR, PRIMARY, SECONDARY, WARNING } from '@/components/ThemeRegistry/tokens';
+import PageHeader from '@/components/ui/PageHeader';
+import ToolbarButton from '@/components/ui/ToolbarButton';
 import { IIPO } from '@/models/IPOModel';
 
 type ViewMode = 'list' | 'calendar';
@@ -65,33 +67,38 @@ export default function IPOCalendar() {
 
   return (
     <Stack spacing={2}>
-      <Stack direction="row" sx={{ alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
-        <Typography variant="h6" sx={{ flexGrow: 1 }}>
-          IPO Calendar
-        </Typography>
+      <PageHeader
+        title="IPO Calendar"
+        subtitle="Upcoming and recent listings"
+        actions={
+          <>
+            <ToggleButtonGroup
+              size="small"
+              value={view}
+              exclusive
+              onChange={handleViewChange}
+              aria-label="Calendar view mode"
+            >
+              <ToggleButton value="list">
+                <Iconify icon="tabler:list" width={15} sx={{ mr: 0.5 }} aria-hidden />
+                List
+              </ToggleButton>
+              <ToggleButton value="calendar">
+                <Iconify icon="tabler:calendar-month" width={15} sx={{ mr: 0.5 }} aria-hidden />
+                Calendar
+              </ToggleButton>
+            </ToggleButtonGroup>
 
-        <ToggleButtonGroup size="small" value={view} exclusive onChange={handleViewChange} aria-label="view-mode">
-          <ToggleButton value="list">
-            <Iconify icon="mdi:format-list-bulleted" width={16} sx={{ mr: 0.5 }} />
-            List
-          </ToggleButton>
-          <ToggleButton value="calendar">
-            <Iconify icon="mdi:calendar-month-outline" width={16} sx={{ mr: 0.5 }} />
-            Calendar
-          </ToggleButton>
-        </ToggleButtonGroup>
-
-        <Button
-          variant="contained"
-          startIcon={<Iconify icon="mynaui:refresh" />}
-          onClick={loadData}
-          size="small"
-          color="secondary"
-          disabled={isLoading}
-        >
-          Refresh
-        </Button>
-      </Stack>
+            <ToolbarButton
+              icon="tabler:refresh"
+              label="Refresh IPO calendar"
+              onClick={loadData}
+              busy={isLoading}
+              color="primary.main"
+            />
+          </>
+        }
+      />
 
       <IPOStats ipos={ipos} isLoading={isLoading} />
 
@@ -115,14 +122,14 @@ export default function IPOCalendar() {
 const getEventColor = (event: ICalendarEvent | IIPO) => {
   switch (event.status) {
     case 'expected':
-      return theme.palette.warning.main;
+      return WARNING.main;
     case 'priced':
-      return theme.palette.primary.main;
+      return PRIMARY.main;
     case 'withdrawn':
-      return theme.palette.error.main;
+      return ERROR.main;
     case 'filed':
-      return theme.palette.warning.main;
+      return WARNING.main;
     default:
-      return theme.palette.secondary.main;
+      return SECONDARY.main;
   }
 };

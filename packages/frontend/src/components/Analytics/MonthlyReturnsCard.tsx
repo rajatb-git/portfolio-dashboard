@@ -56,10 +56,10 @@ export default function MonthlyReturnsCard({ data, isLoading }: Props) {
         {hasData && data.bestMonth && data.worstMonth && (
           <Stack direction="row" spacing={2}>
             <Typography sx={{ fontSize: '0.68rem', color: 'text.disabled' }}>
-              Best <strong style={{ color: '#22c55e' }}>+{data.bestMonth.return}%</strong>
+              Best <strong style={{ color: 'var(--pd-up)' }}>+{data.bestMonth.return}%</strong>
             </Typography>
             <Typography sx={{ fontSize: '0.68rem', color: 'text.disabled' }}>
-              Worst <strong style={{ color: '#ef4444' }}>{data.worstMonth.return}%</strong>
+              Worst <strong style={{ color: 'var(--pd-down)' }}>{data.worstMonth.return}%</strong>
             </Typography>
           </Stack>
         )}
@@ -128,7 +128,7 @@ export default function MonthlyReturnsCard({ data, isLoading }: Props) {
                     fontSize: '0.62rem',
                     fontWeight: 700,
                     fontVariantNumeric: 'tabular-nums',
-                    color: (yearTotal.get(year) ?? 0) >= 0 ? '#22c55e' : '#ef4444',
+                    color: (yearTotal.get(year) ?? 0) >= 0 ? 'var(--pd-up)' : 'var(--pd-down)',
                     border: '1px solid',
                     borderColor: 'divider',
                   }}

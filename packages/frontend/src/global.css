@@ -1,22 +1,13 @@
-@font-face {
-  font-family: "M PLUS Rounded 1c";
-  src: url("/fonts/MPLUSRounded1c-Thin.ttf") format("truetype");
-  font-weight: 100;
-  font-style: normal;
-}
-
-@font-face {
-  font-family: "M PLUS Rounded 1c";
-  src: url("/fonts/MPLUSRounded1c-Light.ttf") format("truetype");
-  font-weight: 300;
-  font-style: normal;
-}
+/* Typography, colour, scrollbars and reduced-motion live in
+   ThemeRegistry/overrides.ts (MuiCssBaseline) so they follow the active theme.
+   This file carries only what has to exist before React mounts. */
 
 @font-face {
   font-family: "M PLUS Rounded 1c";
   src: url("/fonts/MPLUSRounded1c-Regular.ttf") format("truetype");
   font-weight: 400;
   font-style: normal;
+  font-display: swap;
 }
 
 @font-face {
@@ -24,6 +15,7 @@
   src: url("/fonts/MPLUSRounded1c-Medium.ttf") format("truetype");
   font-weight: 500;
   font-style: normal;
+  font-display: swap;
 }
 
 @font-face {
@@ -31,29 +23,41 @@
   src: url("/fonts/MPLUSRounded1c-Bold.ttf") format("truetype");
   font-weight: 700;
   font-style: normal;
+  font-display: swap;
 }
 
-@font-face {
-  font-family: "M PLUS Rounded 1c";
-  src: url("/fonts/MPLUSRounded1c-ExtraBold.ttf") format("truetype");
-  font-weight: 800;
-  font-style: normal;
-}
-
-@font-face {
-  font-family: "M PLUS Rounded 1c";
-  src: url("/fonts/MPLUSRounded1c-Black.ttf") format("truetype");
-  font-weight: 900;
-  font-style: normal;
-}
-
-* {
-  font-family: "M PLUS Rounded 1c", sans-serif;
-}
-
+html,
 body {
   margin: 0;
   padding: 0;
 }
 
-/* Scrollbar and selection styles are in ThemeRegistry/overrides.ts (MuiCssBaseline) for theme awareness */
+/* Painted before the theme mounts so a hard refresh in dark mode does not
+   flash a white canvas. */
+body {
+  background-color: #05080f;
+}
+
+@media (prefers-color-scheme: light) {
+  body {
+    background-color: #f1f4f9;
+  }
+}
+
+/* Keyboard-only escape hatch to the main content region. */
+.skip-to-content {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  z-index: 2000;
+  padding: 10px 16px;
+  border-radius: 0 0 8px 0;
+  background: #3b82f6;
+  color: #ffffff;
+  font: 600 14px/1.4 system-ui, sans-serif;
+  text-decoration: none;
+}
+
+.skip-to-content:focus {
+  left: 0;
+}

@@ -41,6 +41,7 @@ import type {
 } from '@/api/settings';
 import { Iconify } from '@/components/Iconify';
 import { useThemeMode } from '@/components/ThemeRegistry/ThemeModeContext';
+import PageHeader from '@/components/ui/PageHeader';
 import { DB_HOST } from '@/config';
 import { useAuth } from '@/contexts/AuthContext';
 import type { IAccount } from '@/models/AccountsModel';
@@ -134,7 +135,7 @@ const CATEGORIES = [
 type CategoryId = (typeof CATEGORIES)[number]['id'];
 
 export default function Settings() {
-  const { mode, setMode } = useThemeMode();
+  const { mode, setMode, density, setDensity } = useThemeMode();
   const { refreshStatus } = useAuth();
   const theme = useTheme();
   const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
@@ -737,9 +738,7 @@ export default function Settings() {
 
   return (
     <Box sx={{ maxWidth: { xs: '100%', md: 960 } }}>
-      <Typography variant="h6" sx={{ mb: 2.5, fontWeight: 700 }}>
-        Settings
-      </Typography>
+      <PageHeader title="Settings" subtitle="Accounts, appearance, integrations and backups" />
 
       <Stack direction={{ xs: 'column', md: 'row' }} spacing={{ xs: 2, md: 4 }} sx={{ alignItems: 'flex-start' }}>
         <Tabs
@@ -796,6 +795,25 @@ export default function Settings() {
                     </ToggleButton>
                     <ToggleButton value="light" sx={{ px: 2, fontSize: '0.78rem' }}>
                       Light
+                    </ToggleButton>
+                  </ToggleButtonGroup>
+                </SettingRow>
+
+                <SettingRow label="Density" description="Row height and card padding across tables and lists">
+                  <ToggleButtonGroup
+                    size="small"
+                    value={density}
+                    exclusive
+                    onChange={(_, val) => {
+                      if (val) setDensity(val);
+                    }}
+                    aria-label="Interface density"
+                  >
+                    <ToggleButton value="comfortable" sx={{ px: 2, fontSize: '0.78rem' }}>
+                      Comfortable
+                    </ToggleButton>
+                    <ToggleButton value="compact" sx={{ px: 2, fontSize: '0.78rem' }}>
+                      Compact
                     </ToggleButton>
                   </ToggleButtonGroup>
                 </SettingRow>

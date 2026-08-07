@@ -12,9 +12,9 @@ type Props = {
 };
 
 function daysLabel(days: number): { label: string; color: string } {
-  if (days <= 0) return { label: 'Today', color: '#ef4444' };
-  if (days === 1) return { label: 'Tomorrow', color: '#f59e0b' };
-  if (days <= 7) return { label: `${days}d`, color: '#f59e0b' };
+  if (days <= 0) return { label: 'Today', color: 'var(--pd-down)' };
+  if (days === 1) return { label: 'Tomorrow', color: 'var(--pd-warn)' };
+  if (days <= 7) return { label: `${days}d`, color: 'var(--pd-warn)' };
   return { label: `${days}d`, color: '#64748b' };
 }
 
