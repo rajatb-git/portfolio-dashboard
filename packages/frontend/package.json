@@ -1,6 +1,6 @@
 {
   "name": "@portfolio/frontend",
-  "version": "3.13.1",
+  "version": "3.13.2",
   "private": true,
   "license": "MIT",
   "author": "Rajat Bansal",
@@ -23,7 +23,7 @@
     "@fullcalendar/daygrid": "^6.1.21",
     "@fullcalendar/interaction": "^6.1.21",
     "@fullcalendar/list": "^6.1.21",
-    "@fullcalendar/react": "^7.0.2",
+    "@fullcalendar/react": "^6.1.21",
     "@iconify/react": "^6.0.2",
     "@mui/icons-material": "^9.2.0",
     "@mui/material": "^9.2.0",
