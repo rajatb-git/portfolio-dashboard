@@ -14,7 +14,7 @@ import { Iconify } from '@/components/Iconify';
 import MarketStatusChip from '@/components/MarketStatusChip';
 import { SearchTickerModal } from '@/components/SearchTickerModal';
 import { useThemeMode } from '@/components/ThemeRegistry/ThemeModeContext';
-import { FONT_SIZE, MOTION, RADIUS, TOPBAR_HEIGHT } from '@/components/ThemeRegistry/tokens';
+import { FONT_SIZE, MOTION, RADIUS, SURFACE, TOPBAR_HEIGHT } from '@/components/ThemeRegistry/tokens';
 import { NAV_CONFIG, NAV_SETTINGS_CONFIG } from '@/config';
 import LocalStorageArray from '@/utils/localStorageArray';
 
@@ -93,7 +93,7 @@ export default function TopBar({ isMobile, drawerWidth, onOpenMobileDrawer }: To
         sx={{
           // Translucent + blur keeps the content edge visible as it scrolls
           // under the bar, so the page reads as one continuous surface.
-          bgcolor: alpha(theme.palette.background.default, isLight ? 0.82 : 0.72),
+          bgcolor: alpha(SURFACE[isLight ? 'light' : 'dark'].sunken, isLight ? 0.85 : 0.78),
           backdropFilter: 'blur(14px)',
           WebkitBackdropFilter: 'blur(14px)',
           borderBottom: `1px solid ${theme.palette.divider}`,

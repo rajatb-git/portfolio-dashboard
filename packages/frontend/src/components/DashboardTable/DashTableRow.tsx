@@ -1,5 +1,4 @@
-import { Avatar, Chip, IconButton, Tooltip } from '@mui/material';
-import { blue, green, red } from '@mui/material/colors';
+import { Chip, IconButton, Tooltip } from '@mui/material';
 import Stack from '@mui/material/Stack';
 import { default as MuiTableRow } from '@mui/material/TableRow';
 import Typography from '@mui/material/Typography';
@@ -7,7 +6,10 @@ import Typography from '@mui/material/Typography';
 import { HoldingAggregate } from '@/api/dashboard';
 import { Iconify } from '@/components/Iconify';
 import Label from '@/components/Label';
+import AnalystBar from '@/components/ui/AnalystBar';
 import { TableCell } from '@/components/Table/TableCell';
+import moment from 'moment';
+
 import { fnCurrency } from '@/utils/formatNumber';
 import type { AlertState } from './dashTableUtils';
 
@@ -115,7 +117,7 @@ export default function DashTableRow({
       </TableCell>
 
       <TableCell align="right">
-        <Stack direction="column" spacing={0}>
+        <Stack direction="column" spacing={0} data-numeric="">
           {fnCurrency(row.currentPrice)}
           <Typography variant="caption" noWrap>
             {row.dayLow?.toFixed(2)} - {row.dayHigh?.toFixed(2)}
@@ -132,8 +134,8 @@ export default function DashTableRow({
             {row.percentChange?.toFixed(2)}%
           </Label>
 
-          <Typography variant="caption" noWrap>
-            {row.priceDate}
+          <Typography variant="caption" noWrap sx={{ color: 'text.disabled' }}>
+            {row.priceDate ? moment(row.priceDate).format('MMM D, h:mm a') : '—'}
           </Typography>
         </Stack>
       </TableCell>
@@ -154,10 +156,12 @@ export default function DashTableRow({
         </Stack>
       </TableCell>
 
-      <TableCell align="right">{fnCurrency(row.marketValue)}</TableCell>
+      <TableCell align="right" data-numeric="">
+        {fnCurrency(row.marketValue)}
+      </TableCell>
 
       <TableCell align="right">
-        <Stack direction="column" spacing={0}>
+        <Stack direction="column" spacing={0} data-numeric="">
           {fnCurrency(row.averagePrice * row.qty)}
           <Typography variant="caption" noWrap>
             {fnCurrency(row.averagePrice)} / Share
@@ -166,7 +170,7 @@ export default function DashTableRow({
       </TableCell>
 
       <TableCell align="right">
-        <Typography variant="body2" noWrap>
+        <Typography variant="body2" noWrap data-numeric="">
           {row.accountPercent != null ? `${row.accountPercent.toFixed(1)}%` : '—'}
         </Typography>
       </TableCell>
@@ -175,43 +179,15 @@ export default function DashTableRow({
 
       <TableCell>
         {row.strongBuy >= 0 && (
-          <>
-            <Tooltip title="Strong Buy">
-              <Avatar sx={{ display: 'inline-flex', height: 24, width: 24, mr: '4px', bgcolor: green[900] }}>
-                <Typography sx={{ fontWeight: 700, color: 'white' }} variant="caption">
-                  {row.strongBuy}
-                </Typography>
-              </Avatar>
-            </Tooltip>
-            <Tooltip title="Buy">
-              <Avatar sx={{ display: 'inline-flex', height: 24, width: 24, mr: '4px', bgcolor: green[700] }}>
-                <Typography sx={{ fontWeight: 700, color: 'white' }} variant="caption">
-                  {row.buy}
-                </Typography>
-              </Avatar>
-            </Tooltip>
-            <Tooltip title="Hold">
-              <Avatar sx={{ display: 'inline-flex', height: 24, width: 24, mr: '4px', bgcolor: blue[500] }}>
-                <Typography sx={{ fontWeight: 700, color: 'white' }} variant="caption">
-                  {row.hold}
-                </Typography>
-              </Avatar>
-            </Tooltip>
-            <Tooltip title="Sell">
-              <Avatar sx={{ display: 'inline-flex', height: 24, width: 24, mr: '4px', bgcolor: red[500] }}>
-                <Typography sx={{ fontWeight: 700, color: 'white' }} variant="caption">
-                  {row.sell}
-                </Typography>
-              </Avatar>
-            </Tooltip>
-            <Tooltip title="Strong Sell">
-              <Avatar sx={{ display: 'inline-flex', height: 24, width: 24, mr: '4px', bgcolor: red[900] }}>
-                <Typography sx={{ fontWeight: 700, color: 'white' }} variant="caption">
-                  {row.strongSell}
-                </Typography>
-              </Avatar>
-            </Tooltip>
-          </>
+          <AnalystBar
+            counts={{
+              strongBuy: row.strongBuy,
+              buy: row.buy,
+              hold: row.hold,
+              sell: row.sell,
+              strongSell: row.strongSell,
+            }}
+          />
         )}
       </TableCell>
     </MuiTableRow>

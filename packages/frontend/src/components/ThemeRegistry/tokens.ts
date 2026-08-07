@@ -1,49 +1,68 @@
 // Design tokens for the Portfolio Dashboard.
 //
-// The visual system is a "data-dense financial dashboard": deep near-black
-// surfaces, one trust-blue accent, and semantic green/red reserved exclusively
-// for gain/loss. Decorative colour is deliberately absent — in a portfolio app
-// every colour a user sees should carry a number's meaning.
+// The visual system pairs a trading-terminal core with modern-fintech chrome:
+// a near-black canvas and monospaced figures for the data itself, wrapped in
+// elevated panels with real depth and a generous type hierarchy.
+//
+// Colour discipline is the rule that holds it together. Blue is brand/action,
+// amber is "look here", and green/red are reserved *exclusively* for gain and
+// loss — in a portfolio app every colour a user sees should carry a number's
+// meaning.
 
 export type Mode = 'light' | 'dark';
 
 // Surfaces
 // ---------------------------------------------------------------------------
-// Dark is a navy-black ramp rather than neutral grey: it reads as "financial"
-// and keeps the blue accent from looking like it is floating on charcoal.
+// Three planes, and the steps between them are large on purpose:
+//   canvas (#07080b) → chrome (#0a0b0f) → panel (#14171d)
+// The old ramp moved only ~5 RGB points between canvas and panel, so the whole
+// app read as one flat sheet no matter how many borders were drawn on it.
 
 export const SURFACE = {
   dark: {
-    canvas: '#05080f',
-    sunken: '#080c15',
-    paper: '#0b111d',
-    raised: '#111a2b',
-    overlay: '#16213494',
-    hover: 'rgba(255,255,255,0.045)',
-    selected: 'rgba(59,130,246,0.14)',
-    border: 'rgba(148,163,184,0.14)',
-    borderStrong: 'rgba(148,163,184,0.26)',
+    // A terminal-black canvas with panels that sit visibly *above* it. The
+    // canvas→paper step is deliberately large (~13 RGB points): a 5-point step
+    // reads as one flat sheet no matter how many borders are drawn on it.
+    canvas: '#07080b',
+    sunken: '#0a0b0f',
+    paper: '#14171d',
+    raised: '#1c2029',
+    overlay: '#14171de6',
+    hover: 'rgba(255,255,255,0.055)',
+    selected: 'rgba(59,130,246,0.16)',
+    border: 'rgba(255,255,255,0.07)',
+    borderStrong: 'rgba(255,255,255,0.16)',
+    /** Top-edge catch-light. On near-black, this sells elevation where a
+     *  drop shadow has almost nothing to darken. */
+    highlight: 'inset 0 1px 0 rgba(255,255,255,0.05)',
+    /** Hairline rule for terminal-style data regions that carry no card. */
+    rule: 'rgba(255,255,255,0.06)',
   },
   light: {
     // Never pure white — a full-white canvas under dense tabular data is
     // fatiguing and flattens the card/canvas separation.
-    canvas: '#f1f4f9',
-    sunken: '#e8edf5',
+    canvas: '#eceff5',
+    // In light mode "elevated" means lighter, so the sidebar/top-bar plane sits
+    // above the canvas rather than below it. At #e3e8f0 the brand blue landed
+    // at 2.99:1 on this surface — a hair under the 3:1 UI-component floor.
+    sunken: '#f5f7fa',
     paper: '#ffffff',
     raised: '#ffffff',
-    overlay: '#ffffffcc',
-    hover: 'rgba(15,23,42,0.04)',
+    overlay: '#ffffffe6',
+    hover: 'rgba(15,23,42,0.045)',
     selected: 'rgba(59,130,246,0.10)',
-    border: 'rgba(15,23,42,0.10)',
+    border: 'rgba(15,23,42,0.09)',
     borderStrong: 'rgba(15,23,42,0.20)',
+    highlight: 'inset 0 1px 0 rgba(255,255,255,0.9)',
+    rule: 'rgba(15,23,42,0.07)',
   },
 } as const;
 
 export const TEXT = {
   dark: {
-    primary: '#e8eef7',
-    secondary: '#93a3b8',
-    disabled: '#5a6b82',
+    primary: '#f2f5fa',
+    secondary: '#9aa4b5',
+    disabled: '#626c7d',
   },
   light: {
     primary: '#0f1b2d',
@@ -116,6 +135,16 @@ export const ERROR = {
   dark: '#b91c1c',
   darker: '#7f1d1d',
   contrastText: '#ffffff',
+} as const;
+
+/**
+ * Attention accent for data chrome — active sort column, live values, focused
+ * rows. Blue stays the brand/action colour; amber marks "look here" without
+ * borrowing the green/red that mean gain and loss.
+ */
+export const DATA_ACCENT = {
+  dark: { main: '#f5b942', dim: '#8a6a24', bg: 'rgba(245,185,66,0.12)', border: 'rgba(245,185,66,0.3)' },
+  light: { main: '#8a5a06', dim: '#a97b23', bg: 'rgba(138,90,6,0.10)', border: 'rgba(138,90,6,0.28)' },
 } as const;
 
 export const GREY = {
@@ -226,8 +255,8 @@ export const FONT_SIZE = {
   md: '0.875rem', // 14px — default body
   lg: '1rem', // 16px — card titles
   xl: '1.125rem', // 18px — page titles
-  display: '1.75rem', // 28px — hero figures
-  hero: '2.25rem', // 36px — portfolio total
+  display: '1.9375rem', // 31px — stat-tile figures
+  hero: '2.75rem', // 44px — the portfolio total, the loudest thing on screen
 } as const;
 
 // Shape, spacing, motion
@@ -246,8 +275,8 @@ export const RADIUS = {
 export const SPACING_UNIT = 8;
 
 export const DENSITY = {
-  comfortable: { rowHeight: 44, cardPadding: 16, gap: 12 },
-  compact: { rowHeight: 34, cardPadding: 12, gap: 8 },
+  comfortable: { rowHeight: 38, cardPadding: 18, gap: 14 },
+  compact: { rowHeight: 30, cardPadding: 12, gap: 8 },
 } as const;
 
 export type Density = keyof typeof DENSITY;
@@ -270,16 +299,16 @@ export const FOCUS_RING = (color: string) => ({
 
 export const SHADOW = {
   dark: {
-    xs: '0 1px 2px rgba(0,0,0,0.5)',
-    sm: '0 2px 6px rgba(0,0,0,0.45)',
-    md: '0 6px 18px rgba(0,0,0,0.5)',
-    lg: '0 18px 44px rgba(0,0,0,0.6)',
+    xs: '0 1px 2px rgba(0,0,0,0.6)',
+    sm: '0 2px 8px rgba(0,0,0,0.55), 0 1px 2px rgba(0,0,0,0.7)',
+    md: '0 8px 24px rgba(0,0,0,0.6), 0 2px 6px rgba(0,0,0,0.7)',
+    lg: '0 24px 60px rgba(0,0,0,0.75), 0 4px 12px rgba(0,0,0,0.6)',
   },
   light: {
-    xs: '0 1px 2px rgba(15,23,42,0.06)',
-    sm: '0 2px 6px rgba(15,23,42,0.07)',
-    md: '0 6px 18px rgba(15,23,42,0.09)',
-    lg: '0 18px 44px rgba(15,23,42,0.14)',
+    xs: '0 1px 2px rgba(15,23,42,0.07)',
+    sm: '0 2px 8px rgba(15,23,42,0.09), 0 1px 2px rgba(15,23,42,0.05)',
+    md: '0 8px 24px rgba(15,23,42,0.11), 0 2px 6px rgba(15,23,42,0.06)',
+    lg: '0 24px 60px rgba(15,23,42,0.18), 0 4px 12px rgba(15,23,42,0.08)',
   },
 } as const;
 

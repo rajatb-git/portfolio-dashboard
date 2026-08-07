@@ -2,6 +2,7 @@ import { outlinedInputClasses } from '@mui/material/OutlinedInput';
 import { alpha, type Theme } from '@mui/material/styles';
 
 import {
+  DATA_ACCENT,
   DENSITY,
   type Density,
   FONT_SIZE,
@@ -18,6 +19,7 @@ export function overrides(theme: Theme, density: Density = 'comfortable') {
   const isLight = theme.palette.mode === 'light';
   const s = SURFACE[isLight ? 'light' : 'dark'];
   const sentiment = SENTIMENT[isLight ? 'light' : 'dark'];
+  const accent = DATA_ACCENT[isLight ? 'light' : 'dark'];
   const shadow = SHADOW[isLight ? 'light' : 'dark'];
   const d = DENSITY[density];
   const focusColor = theme.palette.primary.main;
@@ -68,15 +70,23 @@ export function overrides(theme: Theme, density: Density = 'comfortable') {
           '--pd-flat-bg': sentiment.flat.bg,
           '--pd-warn': isLight ? '#a15c07' : '#fbbf24',
           '--pd-warn-bg': isLight ? 'rgba(161,92,7,0.10)' : 'rgba(251,191,36,0.12)',
+          '--pd-accent': accent.main,
+          '--pd-accent-bg': accent.bg,
+          '--pd-accent-border': accent.border,
           '--pd-ai': isLight ? '#5b3bc4' : '#a78bfa',
           '--pd-ai-bg': isLight ? 'rgba(91,59,196,0.10)' : 'rgba(167,139,250,0.12)',
         },
 
-        // Any element that opts into `data-numeric` gets aligned digits — the
-        // single highest-impact legibility fix for a holdings table.
+        // Every figure in the app renders in monospace. Beyond making columns
+        // align perfectly, this is what separates a trading tool from a generic
+        // dashboard at a glance — the numbers read as instrument output rather
+        // than as body copy.
         '[data-numeric]': {
+          fontFamily: FONT_STACK_MONO,
           fontVariantNumeric: 'tabular-nums lining-nums',
           fontFeatureSettings: TABULAR,
+          letterSpacing: '-0.02em',
+          fontWeight: 500,
         },
         '[data-mono]': { fontFamily: FONT_STACK_MONO },
 
@@ -136,11 +146,14 @@ export function overrides(theme: Theme, density: Density = 'comfortable') {
       defaultProps: { elevation: 0 },
       styleOverrides: {
         root: {
-          borderRadius: RADIUS.lg,
+          borderRadius: RADIUS.xl,
           border: `1px solid ${s.border}`,
           backgroundImage: 'none',
           backgroundColor: theme.palette.background.paper,
-          boxShadow: shadow.xs,
+          // Lighter surface + drop shadow + top catch-light. On a near-black
+          // canvas a shadow alone has nothing to darken, so the raised
+          // background and the highlight do most of the lifting.
+          boxShadow: `${shadow.sm}, ${s.highlight}`,
           overflow: 'hidden',
         },
       },
@@ -318,20 +331,20 @@ export function overrides(theme: Theme, density: Density = 'comfortable') {
     MuiTableCell: {
       styleOverrides: {
         head: {
-          color: theme.palette.text.secondary,
-          backgroundColor: theme.palette.background.paper,
+          color: theme.palette.text.disabled,
+          backgroundColor: isLight ? theme.palette.background.paper : s.sunken,
           fontSize: FONT_SIZE.micro,
           fontWeight: 700,
-          letterSpacing: '0.06em',
+          letterSpacing: '0.09em',
           textTransform: 'uppercase',
-          borderBottom: `1px solid ${s.border}`,
+          borderBottom: `1px solid ${s.borderStrong}`,
           whiteSpace: 'nowrap',
-          padding: '8px 14px',
+          padding: '9px 14px',
         },
         root: {
           fontSize: FONT_SIZE.sm,
-          borderBottom: `1px solid ${isLight ? 'rgba(15,23,42,0.06)' : 'rgba(148,163,184,0.09)'}`,
-          padding: `${(d.rowHeight - 20) / 2}px 14px`,
+          borderBottom: `1px solid ${s.rule}`,
+          padding: `${Math.max(4, (d.rowHeight - 20) / 2)}px 14px`,
           fontFeatureSettings: TABULAR,
         },
       },
@@ -351,7 +364,10 @@ export function overrides(theme: Theme, density: Density = 'comfortable') {
       styleOverrides: {
         root: {
           '&:focus-visible': { ...focusRing, borderRadius: RADIUS.xs },
-          '&.Mui-active': { color: theme.palette.primary.main },
+          '&.Mui-active': {
+            color: accent.main,
+            '& .MuiTableSortLabel-icon': { color: `${accent.main} !important` },
+          },
         },
       },
     },
@@ -380,12 +396,12 @@ export function overrides(theme: Theme, density: Density = 'comfortable') {
         },
         columnHeaders: { borderBottom: `1px solid ${s.border}` },
         columnHeader: {
-          backgroundColor: theme.palette.background.paper,
+          backgroundColor: isLight ? theme.palette.background.paper : s.sunken,
           fontSize: FONT_SIZE.micro,
           fontWeight: 700,
-          letterSpacing: '0.06em',
+          letterSpacing: '0.09em',
           textTransform: 'uppercase',
-          color: theme.palette.text.secondary,
+          color: theme.palette.text.disabled,
           '&:focus, &:focus-within': { outline: 'none' },
         },
         row: {

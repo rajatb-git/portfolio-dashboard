@@ -6,7 +6,7 @@ import Skeleton from '@mui/material/Skeleton';
 import Stack from '@mui/material/Stack';
 import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
-import type { SxProps, Theme } from '@mui/material/styles';
+import { alpha, type SxProps, type Theme } from '@mui/material/styles';
 
 import { Iconify } from '@/components/Iconify';
 import { FONT_SIZE, MOTION } from '@/components/ThemeRegistry/tokens';
@@ -86,16 +86,16 @@ export default function StatTile({
       </Stack>
 
       {loading ? (
-        <Skeleton variant="rounded" height={emphasis ? 34 : 24} width="65%" />
+        <Skeleton variant="rounded" height={emphasis ? 46 : 26} width="65%" />
       ) : (
         <Typography
           data-numeric=""
           noWrap
           sx={{
-            fontSize: emphasis ? FONT_SIZE.display : '1.0625rem',
-            fontWeight: 700,
-            letterSpacing: '-0.025em',
-            lineHeight: 1.15,
+            fontSize: emphasis ? FONT_SIZE.hero : '1.25rem',
+            fontWeight: emphasis ? 600 : 550,
+            letterSpacing: emphasis ? '-0.04em' : '-0.02em',
+            lineHeight: 1.05,
             color: 'text.primary',
           }}
         >
@@ -133,9 +133,13 @@ export default function StatTile({
         // Tiles sit in a row; equal height keeps their labels on one baseline
         // even when only some of them carry a delta or a footer.
         height: '100%',
-        p: emphasis ? 2 : 1.75,
+        p: emphasis ? 2.5 : 2,
         font: 'inherit',
         color: 'inherit',
+        ...(emphasis && {
+          background: (t: Theme) =>
+            `linear-gradient(160deg, ${alpha(t.palette.primary.main, t.palette.mode === 'dark' ? 0.1 : 0.06)} 0%, transparent 62%)`,
+        }),
         ...(interactive && {
           cursor: 'pointer',
           transition: `border-color ${MOTION.fast} ${MOTION.easing}, background-color ${MOTION.fast} ${MOTION.easing}`,
