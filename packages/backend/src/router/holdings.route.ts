@@ -9,15 +9,13 @@ import { normalizeTradeDate } from '../utils';
 import { errorBody } from '../utils/error';
 import { logger } from '../utils/winston';
 
-const holdingsModel = HoldingsModel();
-holdingsModel.initialize();
-
 export const HoldingsRouter = () => {
   const router = new Router();
 
   // create
-  router.put('/holdings', (ctx) => {
+  router.put('/holdings', async (ctx) => {
     try {
+      const holdingsModel = await HoldingsModel().initialize();
       ctx.body = holdingsModel.insertOne(ctx.request.body);
       ctx.status = 200;
     } catch (error: any) {
@@ -28,8 +26,9 @@ export const HoldingsRouter = () => {
   });
 
   // read
-  router.get('/holdings', (ctx) => {
+  router.get('/holdings', async (ctx) => {
     try {
+      const holdingsModel = await HoldingsModel().initialize();
       ctx.body = holdingsModel.getAllRecords();
       ctx.status = 200;
     } catch (error: any) {
@@ -41,6 +40,7 @@ export const HoldingsRouter = () => {
 
   router.get('/holdings/symbol/:symbol', async (ctx) => {
     try {
+      const holdingsModel = await HoldingsModel().initialize();
       const { symbol } = ctx.params;
       if (!symbol || !/^[A-Za-z0-9.\-^]{1,20}$/.test(symbol)) {
         ctx.status = 400;
@@ -103,8 +103,9 @@ export const HoldingsRouter = () => {
     }
   });
 
-  router.get('/holdings/:id', (ctx) => {
+  router.get('/holdings/:id', async (ctx) => {
     try {
+      const holdingsModel = await HoldingsModel().initialize();
       if (ctx.params.id) {
         ctx.body = holdingsModel.findById(ctx.params.id);
         ctx.status = 200;
@@ -122,6 +123,7 @@ export const HoldingsRouter = () => {
   // update
   router.post('/holdings', async (ctx) => {
     try {
+      const holdingsModel = await HoldingsModel().initialize();
       const body: any = ctx.request.body;
 
       ctx.body = await holdingsModel.insertOrUpdate(body, body.id);
@@ -142,6 +144,7 @@ export const HoldingsRouter = () => {
   // delete
   router.delete('/holdings/:id', async (ctx) => {
     try {
+      const holdingsModel = await HoldingsModel().initialize();
       if (ctx.params.id) {
         await holdingsModel.deleteById(ctx.params.id);
 
@@ -218,6 +221,7 @@ export const HoldingsRouter = () => {
   // file import
   router.post('/holdings/import', async (ctx) => {
     try {
+      const holdingsModel = await HoldingsModel().initialize();
       const incomingArr = ctx.request.body as Array<any>;
 
       const isCashRow = (x: any) => String(x['symbol'] ?? '').trim().toUpperCase() === 'CASH';

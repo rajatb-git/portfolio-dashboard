@@ -2,12 +2,6 @@ import { AccountModel } from '../models/AccountModel';
 import { TransactionModel } from '../models/TransactionModel';
 import { logger } from '../utils/winston';
 
-const accountsModel = AccountModel();
-accountsModel.initialize();
-
-const transactionModel = TransactionModel();
-transactionModel.initialize();
-
 export const transactionCashImpact = (tx: { action?: string; qty?: number; price?: number }): number => {
   const gross = (tx.qty ?? 0) * (tx.price ?? 0);
   switch (tx.action) {
@@ -23,6 +17,7 @@ export const transactionCashImpact = (tx: { action?: string; qty?: number; price
 };
 
 export const adjustCash = async (accountId: string, delta: number): Promise<number> => {
+  const accountsModel = await AccountModel().initialize();
   const account = accountsModel.findById(accountId);
   if (!account) {
     throw new Error(`Account ${accountId} not found`);
@@ -46,6 +41,7 @@ export const recordCashMovement = async (
   const cashBalance = await adjustCash(accountId, delta);
 
   try {
+    const transactionModel = await TransactionModel().initialize();
     await transactionModel.insertOne({
       accountId,
       symbol: 'CASH',

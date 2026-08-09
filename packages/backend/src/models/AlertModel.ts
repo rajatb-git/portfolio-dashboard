@@ -1,4 +1,6 @@
-import { ISkewerModel, SchemaType, SkewerModel } from 'skewer-db';
+import { ISkewerModel, SchemaType } from 'skewer-db';
+
+import { createStorageModel } from '../utils/storageModelFactory';
 
 export interface IAlert {
   symbol: string;
@@ -25,11 +27,4 @@ export const AlertSchema: SchemaType = {
 
 export interface IAlertModel extends IAlert, ISkewerModel {}
 
-let instance: SkewerModel<IAlertModel> | null = null;
-
-export const AlertModel = (): SkewerModel<IAlertModel> => {
-  if (!instance) {
-    instance = new SkewerModel<IAlertModel>('alerts', AlertSchema);
-  }
-  return instance;
-};
+export const AlertModel = createStorageModel<IAlertModel>('alerts', AlertSchema);

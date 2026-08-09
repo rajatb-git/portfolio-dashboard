@@ -1,4 +1,6 @@
-import { ISkewerModel, SchemaType, SkewerModel } from 'skewer-db';
+import { ISkewerModel, SchemaType } from 'skewer-db';
+
+import { createStorageModel } from '../utils/storageModelFactory';
 
 export interface INote {
   symbol: string; // uppercased ticker, used as record ID
@@ -12,11 +14,4 @@ export const NoteSchema: SchemaType = {
 
 export interface INoteModel extends INote, ISkewerModel {}
 
-let instance: SkewerModel<INoteModel> | null = null;
-
-export const NoteModel = (): SkewerModel<INoteModel> => {
-  if (!instance) {
-    instance = new SkewerModel<INoteModel>('notes', NoteSchema);
-  }
-  return instance;
-};
+export const NoteModel = createStorageModel<INoteModel>('notes', NoteSchema);

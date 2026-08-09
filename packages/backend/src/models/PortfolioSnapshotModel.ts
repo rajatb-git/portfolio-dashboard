@@ -1,4 +1,6 @@
-import { ISkewerModel, SchemaType, SkewerModel } from 'skewer-db';
+import { ISkewerModel, SchemaType } from 'skewer-db';
+
+import { createStorageModel } from '../utils/storageModelFactory';
 
 export interface IPortfolioSnapshot {
   timestamp: string; // ISO 8601, unique per calculation — used as record ID
@@ -14,5 +16,7 @@ export const PortfolioSnapshotSchema: SchemaType = {
 
 export interface IPortfolioSnapshotModel extends IPortfolioSnapshot, ISkewerModel {}
 
-export const PortfolioSnapshotDBModel = () =>
-  new SkewerModel<IPortfolioSnapshotModel>('portfolio_snapshots', PortfolioSnapshotSchema);
+export const PortfolioSnapshotDBModel = createStorageModel<IPortfolioSnapshotModel>(
+  'portfolio_snapshots',
+  PortfolioSnapshotSchema
+);

@@ -1,4 +1,6 @@
-import { ISkewerModel, SchemaType, SkewerModel } from 'skewer-db';
+import { ISkewerModel, SchemaType } from 'skewer-db';
+
+import { createStorageModel } from '../utils/storageModelFactory';
 
 export interface ITransaction {
   accountId: string;
@@ -26,11 +28,4 @@ export const TransactionSchema: SchemaType = {
 
 export interface ITransactionModel extends ITransaction, ISkewerModel {}
 
-let instance: SkewerModel<ITransactionModel> | null = null;
-
-export const TransactionModel = (): SkewerModel<ITransactionModel> => {
-  if (!instance) {
-    instance = new SkewerModel<ITransactionModel>('Transaction', TransactionSchema);
-  }
-  return instance;
-};
+export const TransactionModel = createStorageModel<ITransactionModel>('Transaction', TransactionSchema);

@@ -6,9 +6,6 @@ import { normalizeTradeDate } from '../utils';
 import { errorBody } from '../utils/error';
 import { logger } from '../utils/winston';
 
-const transactionModel = TransactionModel();
-transactionModel.initialize();
-
 const VALID_TYPES = ['stock', 'crypto', 'cash'];
 const VALID_ACTIONS = ['buy', 'sell', 'deposit', 'withdraw'];
 
@@ -32,6 +29,7 @@ export const TransactionsRouter = () => {
   // bulk import (generic CSV template -> transaction log, no holdings side effects)
   router.post('/transactions/import', async (ctx) => {
     try {
+      const transactionModel = await TransactionModel().initialize();
       const incoming = ctx.request.body;
       if (!Array.isArray(incoming) || incoming.length === 0) {
         ctx.status = 400;
@@ -88,8 +86,9 @@ export const TransactionsRouter = () => {
   });
 
   // create
-  router.put('/transactions', (ctx) => {
+  router.put('/transactions', async (ctx) => {
     try {
+      const transactionModel = await TransactionModel().initialize();
       ctx.body = transactionModel.insertOne(withNormalizedDate(ctx.request.body));
       ctx.status = 200;
     } catch (err: any) {
@@ -100,8 +99,9 @@ export const TransactionsRouter = () => {
   });
 
   /// read
-  router.get('/transactions', (ctx) => {
+  router.get('/transactions', async (ctx) => {
     try {
+      const transactionModel = await TransactionModel().initialize();
       ctx.body = transactionModel.getAllRecords();
       ctx.status = 200;
     } catch (err: any) {
@@ -111,8 +111,9 @@ export const TransactionsRouter = () => {
     }
   });
 
-  router.get('/transactions/symbol/:symbol', (ctx) => {
+  router.get('/transactions/symbol/:symbol', async (ctx) => {
     try {
+      const transactionModel = await TransactionModel().initialize();
       const { symbol } = ctx.params;
       if (!symbol || !/^[A-Za-z0-9.\-^]{1,20}$/.test(symbol)) {
         ctx.status = 400;
@@ -129,8 +130,9 @@ export const TransactionsRouter = () => {
     }
   });
 
-  router.get('/transactions/:id', (ctx) => {
+  router.get('/transactions/:id', async (ctx) => {
     try {
+      const transactionModel = await TransactionModel().initialize();
       if (ctx.params.id) {
         ctx.body = transactionModel.findById(ctx.params.id);
         ctx.status = 200;
@@ -148,6 +150,7 @@ export const TransactionsRouter = () => {
   // update
   router.post('/transactions', async (ctx) => {
     try {
+      const transactionModel = await TransactionModel().initialize();
       const body: any = ctx.request.body;
       const previous = body.id ? transactionModel.findById(body.id) : null;
 
@@ -172,6 +175,7 @@ export const TransactionsRouter = () => {
   // delete
   router.delete('/transactions', async (ctx) => {
     try {
+      const transactionModel = await TransactionModel().initialize();
       const body: any = ctx.request.body;
       const previous = body.id ? transactionModel.findById(body.id) : null;
 

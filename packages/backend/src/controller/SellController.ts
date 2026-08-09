@@ -2,10 +2,8 @@ import { IHoldings, IHoldingsModel, HoldingsModel } from '../models/HoldingsMode
 import { adjustCash } from './CashController';
 import { logSellTransaction } from './TransactionController';
 
-const holdingsModel = HoldingsModel();
-holdingsModel.initialize();
-
 export const sell = async (soldHolding: IHoldings, date?: string): Promise<IHoldingsModel> => {
+  const holdingsModel = await HoldingsModel().initialize();
   const existingHolding = holdingsModel.find({ symbol: soldHolding.symbol, accountId: soldHolding.accountId })[0];
 
   if (!existingHolding) {

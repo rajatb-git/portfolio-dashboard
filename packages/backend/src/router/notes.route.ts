@@ -3,16 +3,14 @@ import { NoteModel } from '../models/NoteModel';
 import { errorBody } from '../utils/error';
 import { logger } from '../utils/winston';
 
-const noteModel = NoteModel();
-noteModel.initialize();
-
 const SYMBOL_RE = /^[A-Za-z0-9.\-^]{1,20}$/;
 
 export const NotesRouter = () => {
   const router = new Router();
 
-  router.get('/notes/:symbol', (ctx) => {
+  router.get('/notes/:symbol', async (ctx) => {
     try {
+      const noteModel = await NoteModel().initialize();
       const { symbol } = ctx.params;
       if (!symbol || !SYMBOL_RE.test(symbol)) {
         ctx.status = 400;
@@ -31,6 +29,7 @@ export const NotesRouter = () => {
 
   router.post('/notes/:symbol', async (ctx) => {
     try {
+      const noteModel = await NoteModel().initialize();
       const { symbol } = ctx.params;
       if (!symbol || !SYMBOL_RE.test(symbol)) {
         ctx.status = 400;
