@@ -4,9 +4,6 @@ import { AlertModel } from '../models/AlertModel';
 import { errorBody } from '../utils/error';
 import { logger } from '../utils/winston';
 
-const alertModel = AlertModel();
-alertModel.initialize();
-
 const SYMBOL_RE = /^[A-Za-z0-9.\-^]{1,20}$/;
 
 const parseAlertBody = (raw: any) => {
@@ -31,8 +28,9 @@ const parseAlertBody = (raw: any) => {
 export const AlertsRouter = () => {
   const router = new Router();
 
-  router.get('/alerts', (ctx) => {
+  router.get('/alerts', async (ctx) => {
     try {
+      const alertModel = await AlertModel().initialize();
       ctx.body = alertModel.getAllRecords();
       ctx.status = 200;
     } catch (err: any) {
@@ -45,6 +43,7 @@ export const AlertsRouter = () => {
   // Alerts enriched with live price and whether the target has been reached.
   router.get('/alerts/status', async (ctx) => {
     try {
+      const alertModel = await AlertModel().initialize();
       const alerts = alertModel.getAllRecords();
       const quoteController = new LiveQuoteController();
 
@@ -88,6 +87,7 @@ export const AlertsRouter = () => {
 
   router.put('/alerts', async (ctx) => {
     try {
+      const alertModel = await AlertModel().initialize();
       const payload = parseAlertBody(ctx.request.body);
       ctx.body = await alertModel.insertOne(payload);
       ctx.status = 201;
@@ -100,6 +100,7 @@ export const AlertsRouter = () => {
 
   router.post('/alerts/:id', async (ctx) => {
     try {
+      const alertModel = await AlertModel().initialize();
       const { id } = ctx.params;
       if (!alertModel.findById(id)) {
         ctx.status = 404;
@@ -118,6 +119,7 @@ export const AlertsRouter = () => {
 
   router.delete('/alerts/:id', async (ctx) => {
     try {
+      const alertModel = await AlertModel().initialize();
       await alertModel.deleteById(ctx.params.id);
       ctx.body = { deleted: ctx.params.id };
       ctx.status = 200;

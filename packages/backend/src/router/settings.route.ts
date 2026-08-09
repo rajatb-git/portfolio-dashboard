@@ -38,6 +38,7 @@ import {
   VALID_RETENTION_COUNTS,
 } from '../models/ScheduledBackupConfigModel';
 import { alertMonitorService } from '../controller/AlertMonitorService';
+import { disableDemoMode, enableDemoMode, getDemoModeStatus, resetDemoData } from '../controller/DemoModeController';
 import { ipoAnnouncementService } from '../controller/IpoAnnouncementService';
 import { ipoReminderService } from '../controller/IpoReminderService';
 import { moveAlertService } from '../controller/MoveAlertService';
@@ -45,6 +46,7 @@ import { configureFromSaved, sendTestNotification } from '../controller/Notifica
 import { portfolioValueCalcService } from '../controller/PortfolioValueCalcService';
 import { scheduledBackupService } from '../controller/ScheduledBackupService';
 import { tradingSummaryService } from '../controller/TradingSummaryService';
+import { isDemoMode, MOCK_STORAGE_DIR } from '../utils/demoMode';
 import { errorBody } from '../utils/error';
 import { BACKUPS_DIR, STORAGE_DIR } from '../utils/storage';
 import { logger } from '../utils/winston';
@@ -54,7 +56,10 @@ export const SettingsRouter = () => {
 
   router.get('/settings/db/export', async (ctx) => {
     try {
-      if (!fs.existsSync(STORAGE_DIR)) {
+      // Exports/imports always target whichever store is currently active, so a
+      // demo session can never read or overwrite the real portfolio through them.
+      const dir = isDemoMode() ? MOCK_STORAGE_DIR : STORAGE_DIR;
+      if (!fs.existsSync(dir)) {
         ctx.status = 404;
         ctx.body = errorBody('No data to export', 'Storage directory does not exist yet');
         return;
@@ -64,7 +69,7 @@ export const SettingsRouter = () => {
       const passthrough = new PassThrough();
       archive.pipe(passthrough);
 
-      archive.directory(STORAGE_DIR, 'storage');
+      archive.directory(dir, 'storage');
       archive.finalize();
 
       const datestamp = new Date().toISOString().slice(0, 10);
@@ -92,11 +97,13 @@ export const SettingsRouter = () => {
         return;
       }
 
+      const dir = isDemoMode() ? MOCK_STORAGE_DIR : STORAGE_DIR;
+
       // Clear existing storage
-      if (fs.existsSync(STORAGE_DIR)) {
-        fs.rmSync(STORAGE_DIR, { recursive: true, force: true });
+      if (fs.existsSync(dir)) {
+        fs.rmSync(dir, { recursive: true, force: true });
       }
-      fs.mkdirSync(STORAGE_DIR, { recursive: true });
+      fs.mkdirSync(dir, { recursive: true });
 
       // Extract zip
       const directory = await unzipper.Open.buffer(zipBuffer);
@@ -109,10 +116,10 @@ export const SettingsRouter = () => {
           filePath = filePath.slice('storage/'.length);
         }
 
-        const destPath = path.join(STORAGE_DIR, filePath);
+        const destPath = path.join(dir, filePath);
         const destDir = path.dirname(destPath);
 
-        if (!destPath.startsWith(STORAGE_DIR)) continue;
+        if (!destPath.startsWith(dir)) continue;
 
         fs.mkdirSync(destDir, { recursive: true });
         const content = await file.buffer();
@@ -125,6 +132,46 @@ export const SettingsRouter = () => {
       logger.log({ level: 'error', message: error.message, label: 'DB import' });
       ctx.status = 500;
       ctx.body = errorBody('Failed to import database', error.message);
+    }
+  });
+
+  router.get('/settings/demo-mode', async (ctx) => {
+    try {
+      ctx.body = getDemoModeStatus();
+      ctx.status = 200;
+    } catch (error: any) {
+      logger.log({ level: 'error', message: error.message, label: 'demo-mode get' });
+      ctx.status = 500;
+      ctx.body = errorBody('Failed to get demo mode status', error.message);
+    }
+  });
+
+  router.post('/settings/demo-mode', async (ctx) => {
+    try {
+      const body = ctx.request.body as { enabled?: boolean };
+      if (typeof body.enabled !== 'boolean') {
+        ctx.status = 400;
+        ctx.body = errorBody('Invalid request', '"enabled" boolean is required');
+        return;
+      }
+
+      ctx.body = body.enabled ? await enableDemoMode() : disableDemoMode();
+      ctx.status = 200;
+    } catch (error: any) {
+      logger.log({ level: 'error', message: error.message, label: 'demo-mode save' });
+      ctx.status = 500;
+      ctx.body = errorBody('Failed to update demo mode', error.message);
+    }
+  });
+
+  router.post('/settings/demo-mode/reset', async (ctx) => {
+    try {
+      ctx.body = await resetDemoData();
+      ctx.status = 200;
+    } catch (error: any) {
+      logger.log({ level: 'error', message: error.message, label: 'demo-mode reset' });
+      ctx.status = 400;
+      ctx.body = errorBody('Failed to reset demo data', error.message);
     }
   });
 

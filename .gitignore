@@ -36,6 +36,10 @@ yarn-error.log*
 # backend storage
 packages/backend/storage/
 
+# mock database used by demo mode (generated at runtime)
+packages/backend/storage-mock/
+packages/backend/demo-mode.json
+
 # scheduled backups (generated at runtime)
 packages/backend/backups/
 

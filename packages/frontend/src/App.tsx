@@ -16,6 +16,7 @@ import { useThemeMode } from '@/components/ThemeRegistry/ThemeModeContext';
 import { TOPBAR_HEIGHT } from '@/components/ThemeRegistry/tokens';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 import { DashboardDataProvider } from '@/contexts/DashboardDataContext';
+import { DemoModeProvider } from '@/contexts/DemoModeContext';
 import { useIdleLock } from '@/hooks/useIdleLock';
 import { DRAWER_COLLAPSED_WIDTH, DRAWER_WIDTH } from '@/config';
 
@@ -148,14 +149,16 @@ export default function App() {
     <BrowserRouter>
       <ThemeRegistry>
         <AuthProvider>
-          <AuthGate>
-            <DashboardDataProvider>
-              <AppShell />
-            </DashboardDataProvider>
-          </AuthGate>
+          <DemoModeProvider>
+            <AuthGate>
+              <DashboardDataProvider>
+                <AppShell />
+              </DashboardDataProvider>
+            </AuthGate>
 
-          <PWAInstallPrompt />
-          <Toasts />
+            <PWAInstallPrompt />
+            <Toasts />
+          </DemoModeProvider>
         </AuthProvider>
       </ThemeRegistry>
     </BrowserRouter>

@@ -3,10 +3,8 @@ import { calulateAveragePriceBuy } from '../utils';
 import { adjustCash } from './CashController';
 import { logBuyTransaction } from './TransactionController';
 
-const holdingsModel = HoldingsModel();
-holdingsModel.initialize();
-
 export const buy = async (newHolding: IHoldings, date?: string): Promise<IHoldingsModel> => {
+  const holdingsModel = await HoldingsModel().initialize();
   const existingHolding = holdingsModel.find({ symbol: newHolding.symbol, accountId: newHolding.accountId })[0];
 
   let result: IHoldingsModel;

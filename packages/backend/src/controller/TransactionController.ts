@@ -2,15 +2,13 @@ import { IHoldings } from '../models/HoldingsModel';
 import { TransactionModel } from '../models/TransactionModel';
 import { logger } from '../utils/winston';
 
-const transactionModel = TransactionModel();
-transactionModel.initialize();
-
 export const logSellTransaction = async (
   transactionHolding: Partial<IHoldings>,
   pnl?: number,
   date?: string
 ): Promise<void> => {
   try {
+    const transactionModel = await TransactionModel().initialize();
     await transactionModel.insertOne({
       accountId: transactionHolding.accountId,
       symbol: transactionHolding.symbol,
@@ -34,6 +32,7 @@ export const logSellTransaction = async (
 
 export const logBuyTransaction = async (transactionHolding: Partial<IHoldings>, date?: string): Promise<void> => {
   try {
+    const transactionModel = await TransactionModel().initialize();
     await transactionModel.insertOne({
       accountId: transactionHolding.accountId,
       symbol: transactionHolding.symbol,

@@ -5,14 +5,12 @@ import { normalizeTradeDate } from '../utils';
 import { errorBody } from '../utils/error';
 import { logger } from '../utils/winston';
 
-const accountsModel = AccountModel();
-accountsModel.initialize();
-
 export const AccountsRouter = () => {
   const router = new Router();
 
   router.put('/accounts', async (ctx) => {
     try {
+      const accountsModel = await AccountModel().initialize();
       const body: any = ctx.request.body;
       ctx.body = await accountsModel.insertOne(body, body.id);
       ctx.status = 200;
@@ -26,6 +24,7 @@ export const AccountsRouter = () => {
   // read
   router.get('/accounts', async (ctx) => {
     try {
+      const accountsModel = await AccountModel().initialize();
       ctx.body = accountsModel.getAllRecords();
       ctx.status = 200;
     } catch (error: any) {
@@ -37,6 +36,7 @@ export const AccountsRouter = () => {
 
   router.get('/accounts/:id', async (ctx) => {
     try {
+      const accountsModel = await AccountModel().initialize();
       if (ctx.params.id) {
         ctx.body = accountsModel.findById(ctx.params.id);
         ctx.status = 200;
@@ -54,6 +54,7 @@ export const AccountsRouter = () => {
   // update
   router.post('/accounts', async (ctx) => {
     try {
+      const accountsModel = await AccountModel().initialize();
       const body: any = ctx.request.body;
       ctx.body = await accountsModel.insertOrUpdate(body, body.id);
       ctx.status = 200;
@@ -95,6 +96,7 @@ export const AccountsRouter = () => {
   // delete
   router.delete('/accounts/:id', async (ctx) => {
     try {
+      const accountsModel = await AccountModel().initialize();
       if (ctx.params.id) {
         await accountsModel.deleteById(ctx.params.id);
         ctx.status = 200;

@@ -12,6 +12,7 @@ import { useLocation } from 'react-router-dom';
 
 import { Iconify } from '@/components/Iconify';
 import MarketStatusChip from '@/components/MarketStatusChip';
+import MockDataBadge from '@/components/MockDataBadge';
 import { SearchTickerModal } from '@/components/SearchTickerModal';
 import { useThemeMode } from '@/components/ThemeRegistry/ThemeModeContext';
 import { FONT_SIZE, MOTION, RADIUS, SURFACE, TOPBAR_HEIGHT } from '@/components/ThemeRegistry/tokens';
@@ -128,6 +129,8 @@ export default function TopBar({ isMobile, drawerWidth, onOpenMobileDrawer }: To
           )}
 
           <Box sx={{ flexGrow: 1 }} />
+
+          <MockDataBadge />
 
           {!isMobile && <MarketStatusChip />}
 

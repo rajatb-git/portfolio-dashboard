@@ -44,6 +44,7 @@ import { useThemeMode } from '@/components/ThemeRegistry/ThemeModeContext';
 import PageHeader from '@/components/ui/PageHeader';
 import { DB_HOST } from '@/config';
 import { useAuth } from '@/contexts/AuthContext';
+import { useDemoMode } from '@/contexts/DemoModeContext';
 import type { IAccount } from '@/models/AccountsModel';
 import LocalStorageUtil from '@/utils/localStorage';
 import {
@@ -137,6 +138,9 @@ type CategoryId = (typeof CATEGORIES)[number]['id'];
 export default function Settings() {
   const { mode, setMode, density, setDensity } = useThemeMode();
   const { refreshStatus } = useAuth();
+  const { enabled: demoModeEnabled, setEnabled: setDemoModeEnabled } = useDemoMode();
+  const [savingDemoMode, setSavingDemoMode] = React.useState(false);
+  const [resettingDemoData, setResettingDemoData] = React.useState(false);
   const theme = useTheme();
   const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
   const [category, setCategory] = React.useState<CategoryId>('general');
@@ -431,6 +435,31 @@ export default function Settings() {
     setApiHostSaved(true);
     setTimeout(() => setApiHostSaved(false), 2000);
     toast.success('Backend URL saved — reload the page to apply');
+  };
+
+  const handleToggleDemoMode = async (checked: boolean) => {
+    setSavingDemoMode(true);
+    try {
+      const status = await apis.settings.saveDemoMode(checked);
+      setDemoModeEnabled(status.enabled);
+      toast.success(status.enabled ? 'Demo mode enabled — showing sample data' : 'Demo mode disabled — showing your real data');
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to update demo mode');
+    } finally {
+      setSavingDemoMode(false);
+    }
+  };
+
+  const handleResetDemoData = async () => {
+    setResettingDemoData(true);
+    try {
+      await apis.settings.resetDemoData();
+      toast.success('Demo data reset to its original state');
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to reset demo data');
+    } finally {
+      setResettingDemoData(false);
+    }
   };
 
   const handleExport = async () => {
@@ -1517,6 +1546,35 @@ export default function Settings() {
 
           {category === 'data' && (
             <>
+              <SettingsSection title="Demo Mode">
+                <SettingRow
+                  label="Show Sample Data"
+                  description="Switch the whole app to a bundled set of sample accounts, holdings and transactions so you can show it off without exposing your real portfolio. A 'Mock Data' badge appears on every page while this is on; your real data is untouched and returns the moment you switch it off."
+                >
+                  <Switch
+                    checked={demoModeEnabled}
+                    onChange={(_, checked) => handleToggleDemoMode(checked)}
+                    disabled={savingDemoMode}
+                  />
+                </SettingRow>
+                {demoModeEnabled && (
+                  <SettingRow
+                    label="Reset Demo Data"
+                    description="Restore the bundled sample accounts, holdings and transactions to their original state"
+                  >
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      onClick={handleResetDemoData}
+                      disabled={resettingDemoData}
+                      sx={{ fontSize: '0.78rem', textTransform: 'none' }}
+                    >
+                      {resettingDemoData ? 'Resetting...' : 'Reset Demo Data'}
+                    </Button>
+                  </SettingRow>
+                )}
+              </SettingsSection>
+
               <SettingsSection title="Data">
                 <SettingRow label="Export Database" description="Download a zip backup of all your portfolio data">
                   <Button

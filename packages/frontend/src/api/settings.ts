@@ -70,6 +70,8 @@ export type ScheduledBackupConfig = {
 
 export type BackupFile = { file: string; size: number; createdAt: string };
 
+export type DemoModeStatus = { enabled: boolean };
+
 export default class SettingsAPI {
   getLock = async (): Promise<LockStatus> =>
     axios
@@ -212,6 +214,24 @@ export default class SettingsAPI {
   downloadBackup = async (file: string): Promise<Blob> =>
     axios
       .get(DB_HOST + `/settings/backups/${encodeURIComponent(file)}`, { responseType: 'blob' })
+      .then((response) => response.data)
+      .catch(catchCustomError);
+
+  getDemoMode = async (): Promise<DemoModeStatus> =>
+    axios
+      .get(DB_HOST + '/settings/demo-mode')
+      .then((response) => response.data)
+      .catch(catchCustomError);
+
+  saveDemoMode = async (enabled: boolean): Promise<DemoModeStatus> =>
+    axios
+      .post(DB_HOST + '/settings/demo-mode', { enabled })
+      .then((response) => response.data)
+      .catch(catchCustomError);
+
+  resetDemoData = async (): Promise<DemoModeStatus> =>
+    axios
+      .post(DB_HOST + '/settings/demo-mode/reset')
       .then((response) => response.data)
       .catch(catchCustomError);
 }
