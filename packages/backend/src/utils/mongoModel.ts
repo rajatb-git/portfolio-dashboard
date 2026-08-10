@@ -163,8 +163,36 @@ export class MongoModel<T extends ISkewerModel> {
   }
 
   async insertOrUpdate(record: Partial<T>, id: string): Promise<T> {
-    if (this.dataCache[id]) return this.updateById(id, record);
-    return this.insertOne(record, id);
+    const { id: _id, createdAt: _createdAt, updatedAt: _updatedAt, ...stripped } = record as any;
+    const existing = this.dataCache[id];
+    const now = new Date().toISOString();
+
+    // Validate the same merged view skewer-db would have (its local record
+    // for this id, if any, plus the incoming partial) before writing
+    // anything — insertOrUpdate's Partial<T> input is a genuine partial
+    // update against an existing record, not necessarily a complete one.
+    this.validateSchema(existing ? { ...existing, ...stripped } : stripped);
+
+    // The write itself is a true atomic Mongo upsert, not a check-then-act
+    // (existence check against dataCache, then insert vs update as separate
+    // steps). Every model here is constructed fresh per call (see
+    // storageModelFactory / the CacheDBModel-style factories), so two
+    // concurrent callers racing to write the same id — e.g. two requests
+    // both seeing a cold cache for the same key — each hold their own
+    // dataCache and can't see each other's in-flight write. A check-then-act
+    // would let both conclude "insert" and collide on Mongo's unique _id
+    // index; $setOnInsert lets Mongo itself resolve the race with no
+    // possibility of either side throwing a duplicate-id error.
+    const collection = await this.getCollection();
+    const updated = await collection.findOneAndUpdate(
+      { _id: id } as any,
+      { $set: { ...stripped, id, updatedAt: now }, $setOnInsert: { createdAt: now } } as any,
+      { upsert: true, returnDocument: 'after' }
+    );
+
+    const { _id: mongoId, ...fullRecord } = updated as any;
+    this.dataCache[id] = fullRecord as T;
+    return fullRecord as T;
   }
 
   async deleteById(recordId: string): Promise<T> {
