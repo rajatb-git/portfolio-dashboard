@@ -1,4 +1,4 @@
-import { ISkewerModel, SchemaType, SkewerModel } from 'skewer-db';
+import { ISkewerModel, MongoModel, SchemaType } from '../utils/mongoModel';
 
 export interface IPriceStore {
   price: number;
@@ -24,4 +24,4 @@ export const PriceStoreSchema: SchemaType = {
 
 export interface IPriceStoreModel extends IPriceStore, ISkewerModel {}
 
-export const PriceStoreDBModel = () => new SkewerModel<IPriceStoreModel>('pricestore', PriceStoreSchema);
+export const PriceStoreDBModel = () => new MongoModel<IPriceStoreModel>('pricestore', PriceStoreSchema);

@@ -1,4 +1,4 @@
-import { ISkewerModel, SchemaType, SkewerModel } from 'skewer-db';
+import { ISkewerModel, MongoModel, SchemaType } from '../utils/mongoModel';
 
 export interface IAiConfig {
   enabled: boolean;
@@ -24,7 +24,7 @@ export const AiConfigSchema: SchemaType = {
 
 export interface IAiConfigModel extends IAiConfig, ISkewerModel {}
 
-export const AiConfigDBModel = () => new SkewerModel<IAiConfigModel>('ai_config', AiConfigSchema);
+export const AiConfigDBModel = () => new MongoModel<IAiConfigModel>('ai_config', AiConfigSchema);
 
 const CONFIG_ID = 'ai_config';
 

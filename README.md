@@ -50,7 +50,7 @@ Recommended shots: dashboard, analytics, research (AI insights), IPO calendar.
 | Layer | Technology |
 |---|---|
 | **Frontend** | React 19, MUI 7, Vite, TypeScript, React Router, ApexCharts, MUI X Charts/DataGrid, Iconify, axios |
-| **Backend** | Koa 3, TypeScript, SkewerDB (embedded document DB), winston, archiver/unzipper |
+| **Backend** | Koa 3, TypeScript, MongoDB (centralized), winston, archiver/unzipper |
 | **AI** | `@anthropic-ai/sdk` (Claude), `@google/genai` (Gemini), Ollama (local) — pluggable at runtime |
 | **Market data** | Finnhub (quotes, fundamentals, IPOs), NASDAQ (price history) |
 | **Tooling** | pnpm workspaces, Biome (lint + format), Docker Compose, Node ≥ 22 |
@@ -65,8 +65,8 @@ Recommended shots: dashboard, analytics, research (AI insights), IPO calendar.
                                            │
                         ┌──────────────────┼───────────────────┐
                         ▼                  ▼                   ▼
-                 SkewerDB files     Finnhub / NASDAQ     Claude / Gemini /
-                 (./storage)        (market data)        Ollama (AI)
+                 MongoDB            Finnhub / NASDAQ     Claude / Gemini /
+                 (MONGO_URI)        (market data)        Ollama (AI)
 ```
 
 The frontend never talks to external services directly — every third-party
@@ -131,7 +131,7 @@ packages/
   backend/    Koa 3 API
     src/router/       thin Koa routers
     src/controller/   business logic + caching
-    src/models/       SkewerDB collection wrappers
+    src/models/       MongoDB collection wrappers
     src/aiProviders/  Claude / Gemini / Ollama adapters
     src/externalApis/ Finnhub + NASDAQ adapters
 docs/         architecture, design system, UI + error-handling conventions

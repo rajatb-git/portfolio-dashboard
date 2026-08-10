@@ -1,4 +1,4 @@
-import { ISkewerModel, SchemaType, SkewerModel } from 'skewer-db';
+import { ISkewerModel, MongoModel, SchemaType } from '../utils/mongoModel';
 
 export interface IValueCalcConfig {
   enabled: boolean;
@@ -13,7 +13,7 @@ const ValueCalcConfigSchema: SchemaType = {
 interface IValueCalcConfigModel extends IValueCalcConfig, ISkewerModel {}
 
 const ValueCalcConfigDBModel = () =>
-  new SkewerModel<IValueCalcConfigModel>('value_calc_config', ValueCalcConfigSchema);
+  new MongoModel<IValueCalcConfigModel>('value_calc_config', ValueCalcConfigSchema);
 
 const CONFIG_ID = 'value_calc_config';
 

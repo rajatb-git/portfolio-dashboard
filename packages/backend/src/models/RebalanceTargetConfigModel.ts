@@ -1,4 +1,4 @@
-import { ISkewerModel, SchemaType, SkewerModel } from 'skewer-db';
+import { ISkewerModel, MongoModel, SchemaType } from '../utils/mongoModel';
 import { logger } from '../utils/winston';
 
 export type RebalanceTarget = {
@@ -10,8 +10,10 @@ export interface IRebalanceTargetConfig {
   targets: RebalanceTarget[];
 }
 
-// SkewerDB schemas are flat primitives, so the variable-length target list is
-// serialized to a JSON string column and parsed back on read.
+// Holdover from skewer-db, whose schemas were flat primitives only — MongoDB
+// supports nested docs natively, but unflattening this is out of scope here.
+// The variable-length target list stays serialized to a JSON string column
+// and parsed back on read.
 interface IRebalanceTargetConfigFlat {
   targetsJson: string;
 }
@@ -23,7 +25,7 @@ const RebalanceTargetConfigSchema: SchemaType = {
 interface IRebalanceTargetConfigModel extends IRebalanceTargetConfigFlat, ISkewerModel {}
 
 const RebalanceTargetConfigDBModel = () =>
-  new SkewerModel<IRebalanceTargetConfigModel>('rebalance_target_config', RebalanceTargetConfigSchema);
+  new MongoModel<IRebalanceTargetConfigModel>('rebalance_target_config', RebalanceTargetConfigSchema);
 
 const CONFIG_ID = 'rebalance_target_config';
 

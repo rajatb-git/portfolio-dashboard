@@ -21,7 +21,7 @@ This repository contains the backend code for [portfolio dashboard](https://gith
 
 - **Node.js:** JavaScript runtime environment
 - **Koa:** Web framework for Node.js
-- **SkewerDB:** Embedded database for data persistence
+- **MongoDB:** Centralized database for data persistence
 - **Axios:** Promise-based HTTP client for making API requests
 - **Winston:** Logging library
 - **FinnHub:** External API for stock and cryptocurrency data
@@ -44,7 +44,9 @@ The application relies on external APIs to provide live market data and recommen
 
 ### Database
 
-SkewerDB is used as an embedded database to store accounts data and application state.
+MongoDB is used to store accounts data and application state. Configure `MONGO_URI`/`MONGO_DB_NAME` in `.env` (see `.env.example`) to point at your own MongoDB server.
+
+Upgrading from an older, pre-MongoDB build with existing data in `storage/`? Run `pnpm run migrate:mongo` (from `packages/backend/`, with `MONGO_URI` already configured) to copy those JSON files straight into Mongo — no need for the old server to still be running. It only populates collections that are still empty in Mongo, so it's safe to run more than once; pass `--force` to overwrite instead. The Settings → Export/Import zip flow still works too and covers the same migration if you'd rather do it through the UI.
 
 ## Getting Started
 

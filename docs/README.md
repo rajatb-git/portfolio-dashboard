@@ -21,8 +21,8 @@ For AI-specific working notes (conventions, gotchas, commands), see `CLAUDE.md` 
                                            │
                         ┌──────────────────┼───────────────────┐
                         ▼                  ▼                   ▼
-                 SkewerDB files     Finnhub / NASDAQ     Claude / Gemini /
-                 (./storage)        (market data)        Ollama (AI)
+                 MongoDB            Finnhub / NASDAQ     Claude / Gemini /
+                 (MONGO_URI)        (market data)        Ollama (AI)
 ```
 
-Single-user, self-hosted. Data lives in a local `storage/` folder that can be zipped and restored via Settings → Data.
+Single-user, self-hosted. Data lives in MongoDB (`MONGO_URI`/`MONGO_DB_NAME` in `.env`) and can be exported/restored as a zip via Settings → Data.

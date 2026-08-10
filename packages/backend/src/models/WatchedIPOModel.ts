@@ -1,4 +1,4 @@
-import { ISkewerModel, SchemaType, SkewerModel } from 'skewer-db';
+import { ISkewerModel, MongoModel, SchemaType } from '../utils/mongoModel';
 
 export interface IWatchedIPO {
   symbol: string;
@@ -18,4 +18,4 @@ export interface IWatchedIPOModel extends IWatchedIPO, ISkewerModel {}
 
 // Keyed by symbol (never the ipos row's own id) since IPOController wipes and
 // re-fetches the `ipos` collection roughly daily — row ids don't survive that.
-export const WatchedIPODBModel = () => new SkewerModel<IWatchedIPOModel>('watched_ipos', WatchedIPOSchema);
+export const WatchedIPODBModel = () => new MongoModel<IWatchedIPOModel>('watched_ipos', WatchedIPOSchema);

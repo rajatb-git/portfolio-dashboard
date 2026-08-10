@@ -3,10 +3,6 @@ import * as path from 'node:path';
 
 import { STORAGE_DIR } from './storage';
 
-// Sibling to `storage/`, not inside it — mirrors BACKUPS_DIR so the mock
-// database is never swept up by the real export/import zip flow.
-export const MOCK_STORAGE_DIR = path.resolve(STORAGE_DIR, '..', 'storage-mock');
-
 const FLAG_FILE = path.resolve(STORAGE_DIR, '..', 'demo-mode.json');
 
 const readFlag = (): boolean => {

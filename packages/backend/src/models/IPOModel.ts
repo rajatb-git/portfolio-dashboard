@@ -1,4 +1,4 @@
-import { ISkewerModel, SchemaType, SkewerModel } from 'skewer-db';
+import { ISkewerModel, MongoModel, SchemaType } from '../utils/mongoModel';
 
 export interface IIPO {
   date: string;
@@ -24,4 +24,4 @@ export const IPOSchema: SchemaType = {
 
 export interface IIPOModel extends IIPO, ISkewerModel {}
 
-export const IPODBModel = () => new SkewerModel<IIPOModel>('ipos', IPOSchema);
+export const IPODBModel = () => new MongoModel<IIPOModel>('ipos', IPOSchema);

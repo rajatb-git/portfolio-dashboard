@@ -1,4 +1,4 @@
-import { ISkewerModel, SchemaType, SkewerModel } from 'skewer-db';
+import { ISkewerModel, MongoModel, SchemaType } from '../utils/mongoModel';
 
 export interface IRecommendation {
   buy: number;
@@ -21,4 +21,4 @@ export const RecommendationSchema: SchemaType = {
 export interface IRecommendationModel extends IRecommendation, ISkewerModel {}
 
 export const RecommendationDBModel = () =>
-  new SkewerModel<IRecommendationModel>('recommendations', RecommendationSchema);
+  new MongoModel<IRecommendationModel>('recommendations', RecommendationSchema);

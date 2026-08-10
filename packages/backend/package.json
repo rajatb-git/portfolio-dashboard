@@ -1,6 +1,6 @@
 {
   "name": "@portfolio/backend",
-  "version": "3.15.0",
+  "version": "4.0.0",
   "description": "",
   "main": "dist",
   "scripts": {
@@ -13,7 +13,8 @@
     "fix:all": "pnpm run lint:fix && pnpm run format:fix",
     "start": "node ./dist/server.js",
     "do": "npm run clean && npm run build && npm start",
-    "dev": "nodemon --ignore '*.json' src/server.ts"
+    "dev": "nodemon --ignore '*.json' src/server.ts",
+    "migrate:mongo": "npm run build && node ./dist/scripts/migrateToMongo.js"
   },
   "author": "Rajat Bansal",
   "license": "MIT",
@@ -31,8 +32,8 @@
     "koa-bodyparser": "^4.4.1",
     "koa-helmet": "^9.0.0",
     "moment": "^2.30.1",
+    "mongodb": "^7.5.0",
     "mqtt": "^5.15.1",
-    "skewer-db": "1.0.3",
     "unzipper": "^0.12.3",
     "winston": "^3.19.0",
     "winston-transport": "^4.9.0"
