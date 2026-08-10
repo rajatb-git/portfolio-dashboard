@@ -13,7 +13,8 @@
     "fix:all": "pnpm run lint:fix && pnpm run format:fix",
     "start": "node ./dist/server.js",
     "do": "npm run clean && npm run build && npm start",
-    "dev": "nodemon --ignore '*.json' src/server.ts"
+    "dev": "nodemon --ignore '*.json' src/server.ts",
+    "migrate:mongo": "npm run build && node ./dist/scripts/migrateToMongo.js"
   },
   "author": "Rajat Bansal",
   "license": "MIT",

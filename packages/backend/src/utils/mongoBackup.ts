@@ -1,3 +1,5 @@
+import * as fs from 'node:fs';
+import * as path from 'node:path';
 import type { Archiver } from 'archiver';
 import unzipper from 'unzipper';
 
@@ -29,41 +31,41 @@ export const buildDbArchive = async (dbName: string): Promise<{ archive: Archive
   return { archive, collectionNames: collections.map((c) => c.name) };
 };
 
-export type RestoreResult = { collection: string; status: 'ok' | 'error'; count?: number; error?: string };
+export type ParsedCollection = { collection: string; records: Array<Record<string, any>> };
+export type RestoreResult = { collection: string; status: 'ok' | 'skipped' | 'error'; count?: number; error?: string };
 
-// Restores a zip produced by buildDbArchive (or a pre-migration skewer-db
-// export, which used the identical shape) into the given Mongo database.
-// Every entry is parsed and validated as JSON up front — nothing is written
-// to Mongo unless the whole zip parses cleanly, so a corrupt upload fails
-// clean instead of wiping data partway through. Each collection is then
-// replaced (delete-all + insert), matching the destructive-replace semantics
-// the old file-based import always had — this is a restore, not a merge.
-// Records keep their original id/createdAt/updatedAt from the backup.
-export const restoreDbArchive = async (dbName: string, zipBuffer: Buffer): Promise<RestoreResult[]> => {
-  const directory = await unzipper.Open.buffer(zipBuffer);
+const isCollectionDumpFile = (fileName: string): boolean =>
+  fileName.endsWith('.json') && !fileName.endsWith('_index.json');
 
-  const parsed: Array<{ collection: string; records: Array<Record<string, any>> }> = [];
-  for (const file of directory.files) {
-    if (file.type === 'Directory') continue;
+const collectionNameFromFile = (fileName: string): string => fileName.slice(0, -'.json'.length);
 
-    let filePath = file.path;
-    if (filePath.startsWith('storage/')) filePath = filePath.slice('storage/'.length);
-    // Skip skewer-db's old per-collection index files (backward-compat with
-    // pre-migration zips) and anything else that isn't a collection dump.
-    if (!filePath.endsWith('.json') || filePath.endsWith('_index.json')) continue;
-
-    const collection = filePath.slice(0, -'.json'.length);
-    const content = await file.buffer();
-    const byId = JSON.parse(content.toString('utf-8'));
-    parsed.push({ collection, records: Object.values(byId) });
-  }
-
+// Writes already-parsed collection dumps into Mongo.
+// mode 'replace' always deletes-then-inserts — used for restoring a backup
+// the user explicitly chose to restore, where overwriting whatever is
+// currently there is exactly the point.
+// mode 'migrate-if-empty' only writes collections that are currently empty in
+// Mongo, skipping (not erroring) any that already have data — used for the
+// one-time storage-dir migration, so it's safe to re-run without clobbering
+// real usage that happened after the first run.
+const writeCollectionsToMongo = async (
+  dbName: string,
+  parsed: Array<ParsedCollection>,
+  mode: 'replace' | 'migrate-if-empty'
+): Promise<RestoreResult[]> => {
   const db = await getMongoDb(dbName);
   const results: RestoreResult[] = [];
   for (const { collection, records } of parsed) {
     try {
       const coll = db.collection(collection);
-      await coll.deleteMany({});
+      if (mode === 'migrate-if-empty') {
+        const alreadyHasData = (await coll.countDocuments({}, { limit: 1 })) > 0;
+        if (alreadyHasData) {
+          results.push({ collection, status: 'skipped' });
+          continue;
+        }
+      } else {
+        await coll.deleteMany({});
+      }
       if (records.length) {
         await coll.insertMany(
           records.map((record) => ({ _id: record.id, ...record })),
@@ -76,4 +78,64 @@ export const restoreDbArchive = async (dbName: string, zipBuffer: Buffer): Promi
     }
   }
   return results;
+};
+
+// Restores a zip produced by buildDbArchive (or a pre-migration skewer-db
+// export, which used the identical shape) into the given Mongo database.
+// Every entry is parsed and validated as JSON up front — nothing is written
+// to Mongo unless the whole zip parses cleanly, so a corrupt upload fails
+// clean instead of wiping data partway through. Each collection is then
+// replaced (delete-all + insert), matching the destructive-replace semantics
+// the old file-based import always had — this is a restore, not a merge.
+// Records keep their original id/createdAt/updatedAt from the backup.
+export const restoreDbArchive = async (dbName: string, zipBuffer: Buffer): Promise<RestoreResult[]> => {
+  const directory = await unzipper.Open.buffer(zipBuffer);
+
+  const parsed: Array<ParsedCollection> = [];
+  for (const file of directory.files) {
+    if (file.type === 'Directory') continue;
+
+    let filePath = file.path;
+    if (filePath.startsWith('storage/')) filePath = filePath.slice('storage/'.length);
+    // Skip skewer-db's old per-collection index files (backward-compat with
+    // pre-migration zips) and anything else that isn't a collection dump.
+    if (!isCollectionDumpFile(filePath)) continue;
+
+    const content = await file.buffer();
+    const byId = JSON.parse(content.toString('utf-8'));
+    parsed.push({ collection: collectionNameFromFile(filePath), records: Object.values(byId) });
+  }
+
+  return writeCollectionsToMongo(dbName, parsed, 'replace');
+};
+
+// Reads skewer-db's old per-collection JSON files directly off disk (the
+// same STORAGE_DIR the pre-migration backend read/wrote), without needing
+// the old build's HTTP server running at all — a fresh Mongo deploy sharing
+// the same volume/directory as the old one can migrate straight from it.
+export const parseStorageDir = (storageDir: string): Array<ParsedCollection> => {
+  if (!fs.existsSync(storageDir)) return [];
+
+  const parsed: Array<ParsedCollection> = [];
+  for (const fileName of fs.readdirSync(storageDir)) {
+    if (!isCollectionDumpFile(fileName)) continue;
+    const raw = fs.readFileSync(path.join(storageDir, fileName), 'utf-8');
+    const byId = JSON.parse(raw);
+    parsed.push({ collection: collectionNameFromFile(fileName), records: Object.values(byId) });
+  }
+  return parsed;
+};
+
+// One-time migration of a skewer-db storage directory into Mongo. Safe to
+// re-run: by default it only populates collections that are still empty in
+// Mongo (so running it again after the app has real Mongo-native data does
+// nothing) — pass force=true to make it a destructive replace instead, the
+// same semantics restoreDbArchive uses for restoring a chosen backup.
+export const migrateStorageDirToMongo = async (
+  dbName: string,
+  storageDir: string,
+  force = false
+): Promise<RestoreResult[]> => {
+  const parsed = parseStorageDir(storageDir);
+  return writeCollectionsToMongo(dbName, parsed, force ? 'replace' : 'migrate-if-empty');
 };

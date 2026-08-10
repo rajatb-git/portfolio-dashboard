@@ -75,6 +75,7 @@ Pages fetch on mount and on param change; loading states use MUI `Skeleton`, fai
 ### Database backup
 1. Export: frontend hits `GET /settings/db/export`. Backend enumerates every Mongo collection and streams a zip via `archiver`, one `storage/<collection>.json` entry per collection (shape `{ [id]: record }`).
 2. Import: frontend PUTs the raw zip body to `/settings/db/import`. A dedicated raw-body middleware (registered before `koa-bodyparser` in `server.ts`) captures it. Backend parses and validates every entry first, snapshots current state as a safety backup, then restores each collection (delete-all + insert) — a destructive per-collection replace, not a merge. A confirmation dialog in the UI guards against accidental overwrites.
+3. First-time migration from a pre-MongoDB build: `pnpm run migrate:mongo` (`backend/src/scripts/migrateToMongo.ts`) reads skewer-db's old `storage/*.json` files straight off disk into Mongo, sharing the same parse/write logic as import above (`utils/mongoBackup.ts`). Doesn't need the old server running; only populates collections still empty in Mongo unless run with `--force`.
 
 ## External services
 
