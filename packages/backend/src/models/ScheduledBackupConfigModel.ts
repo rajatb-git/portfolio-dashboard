@@ -1,4 +1,4 @@
-import { ISkewerModel, SchemaType, SkewerModel } from 'skewer-db';
+import { ISkewerModel, MongoModel, SchemaType } from '../utils/mongoModel';
 
 export interface IScheduledBackupConfig {
   enabled: boolean;
@@ -15,7 +15,7 @@ const ScheduledBackupConfigSchema: SchemaType = {
 interface IScheduledBackupConfigModel extends IScheduledBackupConfig, ISkewerModel {}
 
 const ScheduledBackupConfigDBModel = () =>
-  new SkewerModel<IScheduledBackupConfigModel>('scheduled_backup_config', ScheduledBackupConfigSchema);
+  new MongoModel<IScheduledBackupConfigModel>('scheduled_backup_config', ScheduledBackupConfigSchema);
 
 const CONFIG_ID = 'scheduled_backup_config';
 

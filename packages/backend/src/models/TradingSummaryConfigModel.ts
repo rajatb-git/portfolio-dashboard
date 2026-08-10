@@ -1,4 +1,4 @@
-import { ISkewerModel, SchemaType, SkewerModel } from 'skewer-db';
+import { ISkewerModel, MongoModel, SchemaType } from '../utils/mongoModel';
 
 export interface ITradingSummaryConfig {
   enabled: boolean;
@@ -18,7 +18,7 @@ const TradingSummaryConfigSchema: SchemaType = {
 interface ITradingSummaryConfigModel extends ITradingSummaryConfig, ISkewerModel {}
 
 const TradingSummaryConfigDBModel = () =>
-  new SkewerModel<ITradingSummaryConfigModel>('trading_summary_config', TradingSummaryConfigSchema);
+  new MongoModel<ITradingSummaryConfigModel>('trading_summary_config', TradingSummaryConfigSchema);
 
 const CONFIG_ID = 'trading_summary_config';
 

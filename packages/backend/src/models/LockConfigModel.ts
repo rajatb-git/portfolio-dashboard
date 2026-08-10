@@ -1,5 +1,5 @@
 import crypto from 'node:crypto';
-import { ISkewerModel, SchemaType, SkewerModel } from 'skewer-db';
+import { ISkewerModel, MongoModel, SchemaType } from '../utils/mongoModel';
 
 export interface ILockConfig {
   enabled: boolean;
@@ -19,7 +19,7 @@ export const LockConfigSchema: SchemaType = {
 
 export interface ILockConfigModel extends ILockConfig, ISkewerModel {}
 
-export const LockConfigDBModel = () => new SkewerModel<ILockConfigModel>('lock_config', LockConfigSchema);
+export const LockConfigDBModel = () => new MongoModel<ILockConfigModel>('lock_config', LockConfigSchema);
 
 const CONFIG_ID = 'lock_config';
 

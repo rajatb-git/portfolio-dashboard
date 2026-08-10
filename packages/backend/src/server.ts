@@ -6,7 +6,6 @@ import { ensureStorageCwd } from './utils/storage';
 
 ensureStorageCwd();
 
-import './utils/storageRepair';
 import cors from '@koa/cors';
 import Koa from 'koa';
 import KoaBodyParser from 'koa-bodyparser';

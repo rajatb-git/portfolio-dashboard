@@ -21,7 +21,7 @@ This repository contains the backend code for [portfolio dashboard](https://gith
 
 - **Node.js:** JavaScript runtime environment
 - **Koa:** Web framework for Node.js
-- **SkewerDB:** Embedded database for data persistence
+- **MongoDB:** Centralized database for data persistence
 - **Axios:** Promise-based HTTP client for making API requests
 - **Winston:** Logging library
 - **FinnHub:** External API for stock and cryptocurrency data
@@ -44,7 +44,7 @@ The application relies on external APIs to provide live market data and recommen
 
 ### Database
 
-SkewerDB is used as an embedded database to store accounts data and application state.
+MongoDB is used to store accounts data and application state. Configure `MONGO_URI`/`MONGO_DB_NAME` in `.env` (see `.env.example`) to point at your own MongoDB server.
 
 ## Getting Started
 

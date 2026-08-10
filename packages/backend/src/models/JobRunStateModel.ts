@@ -1,4 +1,4 @@
-import { ISkewerModel, SchemaType, SkewerModel } from 'skewer-db';
+import { ISkewerModel, MongoModel, SchemaType } from '../utils/mongoModel';
 
 export interface IJobRunState {
   value: string;
@@ -10,7 +10,7 @@ export const JobRunStateSchema: SchemaType = {
 
 export interface IJobRunStateModel extends IJobRunState, ISkewerModel {}
 
-const JobRunStateDBModel = () => new SkewerModel<IJobRunStateModel>('job_run_state', JobRunStateSchema);
+const JobRunStateDBModel = () => new MongoModel<IJobRunStateModel>('job_run_state', JobRunStateSchema);
 
 export async function getJobState(key: string): Promise<string | null> {
   const model = await JobRunStateDBModel().initialize();

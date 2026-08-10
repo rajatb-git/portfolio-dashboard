@@ -1,4 +1,4 @@
-import { ISkewerModel, SchemaType, SkewerModel } from 'skewer-db';
+import { ISkewerModel, MongoModel, SchemaType } from '../utils/mongoModel';
 
 export interface IAlertMonitorConfig {
   enabled: boolean;
@@ -13,7 +13,7 @@ const AlertMonitorConfigSchema: SchemaType = {
 interface IAlertMonitorConfigModel extends IAlertMonitorConfig, ISkewerModel {}
 
 const AlertMonitorConfigDBModel = () =>
-  new SkewerModel<IAlertMonitorConfigModel>('alert_monitor_config', AlertMonitorConfigSchema);
+  new MongoModel<IAlertMonitorConfigModel>('alert_monitor_config', AlertMonitorConfigSchema);
 
 const CONFIG_ID = 'alert_monitor_config';
 

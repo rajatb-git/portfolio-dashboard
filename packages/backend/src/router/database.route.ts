@@ -1,5 +1,5 @@
 import Router from '@koa/router';
-import type { SkewerModel } from 'skewer-db';
+import type { MongoModel } from '../utils/mongoModel';
 import { AccountModel } from '../models/AccountModel';
 import { AlertModel } from '../models/AlertModel';
 import { HoldingsModel } from '../models/HoldingsModel';
@@ -12,7 +12,7 @@ import { logger } from '../utils/winston';
 // Allowlist of collections exposed on the Database page. Config and cached
 // market-data collections are intentionally excluded — config is managed via
 // Settings, and caches are not user data.
-const userCollections: { [name: string]: () => Promise<SkewerModel<any>> } = {
+const userCollections: { [name: string]: () => Promise<MongoModel<any>> } = {
   accounts: () => AccountModel().initialize(),
   holdings: () => HoldingsModel().initialize(),
   transactions: () => TransactionModel().initialize(),

@@ -1,4 +1,4 @@
-import { ISkewerModel, SchemaType, SkewerModel } from 'skewer-db';
+import { ISkewerModel, MongoModel, SchemaType } from '../utils/mongoModel';
 
 export interface IAnnouncedIPO {
   symbol: string;
@@ -19,4 +19,4 @@ export interface IAnnouncedIPOModel extends IAnnouncedIPO, ISkewerModel {}
 // Records which IPO symbols have already been announced over MQTT so each new
 // calendar entry fires exactly once. Keyed by symbol (never the `ipos` row id,
 // which IPOController wipes and re-fetches roughly daily).
-export const AnnouncedIPODBModel = () => new SkewerModel<IAnnouncedIPOModel>('announced_ipos', AnnouncedIPOSchema);
+export const AnnouncedIPODBModel = () => new MongoModel<IAnnouncedIPOModel>('announced_ipos', AnnouncedIPOSchema);

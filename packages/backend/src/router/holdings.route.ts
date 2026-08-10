@@ -239,7 +239,7 @@ export const HoldingsRouter = () => {
         }));
 
       if (arrHolding.length > 0) {
-        holdingsModel.insertMany(arrHolding);
+        await holdingsModel.insertMany(arrHolding);
       }
 
       // A row with symbol CASH sets an opening cash balance rather than a position.

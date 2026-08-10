@@ -1,7 +1,7 @@
 import moment from 'moment';
 
 // Trade/event dates arrive from the UI as `YYYY-MM-DD` and from CSV imports in
-// assorted formats. Normalize to ISO so they sort against SkewerDB's createdAt.
+// assorted formats. Normalize to ISO so they sort against the stored record's createdAt.
 export const normalizeTradeDate = (value: unknown): string | undefined => {
   if (value === undefined || value === null || value === '') return undefined;
 

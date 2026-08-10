@@ -7,7 +7,7 @@ pnpm monorepo with two workspaces:
 ```
 packages/
   frontend/   — @portfolio/frontend (React 19 + MUI 7, Vite)
-  backend/    — @portfolio/backend  (Koa 3 + TypeScript, SkewerDB)
+  backend/    — @portfolio/backend  (Koa 3 + TypeScript, MongoDB)
 ```
 
 A single top-level `pnpm install` bootstraps both. Commands at the root fan out (`pnpm -r build`, `pnpm dev`).
@@ -16,7 +16,7 @@ A single top-level `pnpm install` bootstraps both. Commands at the root fan out 
 
 - **Frontend** serves a SPA. In dev, Vite on a local port. In production, static files served by any HTTP server.
 - **Backend** is a Koa app on port `3001` by default. Frontend points at it via `VITE_DB_HOST` or a localStorage override (`api_host`, set in Settings).
-- **Data** lives in a `storage/` folder under the backend's working directory. SkewerDB writes one JSON-per-collection file in that folder.
+- **Data** lives in MongoDB — a central instance the backend connects to via `MONGO_URI`/`MONGO_DB_NAME` (see `.env.example`). One Mongo collection per model, same names skewer-db's on-disk files used before this migration. Demo Mode uses a second database (`<MONGO_DB_NAME>_demo`) on the same server.
 - **External APIs** are called from the backend only; the frontend never talks to Finnhub/NASDAQ/AI providers directly.
 
 ## Backend layers
@@ -25,8 +25,9 @@ A single top-level `pnpm install` bootstraps both. Commands at the root fan out 
 router/        thin Koa routers — parse params, call controllers, catch errors,
                return structured responses via errorBody()
 controller/    business logic — orchestrate models + external APIs + caches
-models/        SkewerDB wrappers — one file per collection (Accounts, Holdings,
-               Transactions, Alerts, AiConfig, PortfolioSnapshot, Cache, etc.)
+models/        MongoDB wrappers (MongoModel, utils/mongoModel.ts) — one file per
+               collection (Accounts, Holdings, Transactions, Alerts, AiConfig,
+               PortfolioSnapshot, Cache, etc.)
 externalApis/  adapters for Finnhub and NASDAQ; all log-and-rethrow on failure
 aiProviders/   adapters with a common interface over Claude SDK / Gemini SDK /
                Ollama HTTP; chosen at runtime by AiConfig.provider
@@ -72,8 +73,8 @@ Pages fetch on mount and on param change; loading states use MUI `Skeleton`, fai
 4. `AgentInsightsController.getInsights` checks a 6h cache, otherwise builds a ~2K-token prompt from seven backend data sources, dispatches to the configured provider, parses strict JSON, caches, and returns.
 
 ### Database backup
-1. Export: frontend hits `GET /settings/db/export`. Backend streams a zip of the `storage/` folder via `archiver`.
-2. Import: frontend PUTs the raw zip body to `/settings/db/import`. A dedicated raw-body middleware (registered before `koa-bodyparser` in `server.ts`) captures it; backend unzips into `storage/`. A confirmation dialog in the UI guards against accidental overwrites.
+1. Export: frontend hits `GET /settings/db/export`. Backend enumerates every Mongo collection and streams a zip via `archiver`, one `storage/<collection>.json` entry per collection (shape `{ [id]: record }`).
+2. Import: frontend PUTs the raw zip body to `/settings/db/import`. A dedicated raw-body middleware (registered before `koa-bodyparser` in `server.ts`) captures it. Backend parses and validates every entry first, snapshots current state as a safety backup, then restores each collection (delete-all + insert) — a destructive per-collection replace, not a merge. A confirmation dialog in the UI guards against accidental overwrites.
 
 ## External services
 
@@ -85,7 +86,7 @@ Pages fetch on mount and on param change; loading states use MUI `Skeleton`, fai
 | Google Gemini | AI insights (Gemini provider) | API key stored in AiConfig |
 | Ollama | AI insights (local provider) | host URL stored in AiConfig |
 
-AI config is persisted in SkewerDB, not `.env` — users configure it through the Settings UI.
+AI config is persisted in MongoDB, not `.env` — users configure it through the Settings UI.
 
 ## Caching
 

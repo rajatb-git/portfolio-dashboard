@@ -48,7 +48,7 @@ Frontend runs on `http://localhost:5173`, backend on `http://localhost:3001`.
 
 ```
 packages/frontend/   React 19 + MUI 7 SPA (Vite)
-packages/backend/    Koa 3 API + SkewerDB (embedded document store)
+packages/backend/    Koa 3 API + MongoDB (centralized document store)
 docs/                architecture, design system, UI + error-handling guides
 ```
 

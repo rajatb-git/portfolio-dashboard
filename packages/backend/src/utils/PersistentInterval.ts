@@ -3,7 +3,7 @@ import { logger } from './winston';
 
 const LABEL = 'PersistentInterval';
 
-// setInterval wrapper that persists each run's timestamp to SkewerDB so the
+// setInterval wrapper that persists each run's timestamp to MongoDB so the
 // schedule survives process restarts. On start(), it only fires an immediate
 // catch-up run if the interval has actually elapsed since the last recorded
 // run, instead of unconditionally kicking every time the process boots.

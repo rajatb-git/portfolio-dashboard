@@ -1,4 +1,4 @@
-import { ISkewerModel, SchemaType, SkewerModel } from 'skewer-db';
+import { ISkewerModel, MongoModel, SchemaType } from '../utils/mongoModel';
 
 export interface IMoveAlertConfig {
   enabled: boolean;
@@ -15,7 +15,7 @@ const MoveAlertConfigSchema: SchemaType = {
 interface IMoveAlertConfigModel extends IMoveAlertConfig, ISkewerModel {}
 
 const MoveAlertConfigDBModel = () =>
-  new SkewerModel<IMoveAlertConfigModel>('move_alert_config', MoveAlertConfigSchema);
+  new MongoModel<IMoveAlertConfigModel>('move_alert_config', MoveAlertConfigSchema);
 
 const CONFIG_ID = 'move_alert_config';
 

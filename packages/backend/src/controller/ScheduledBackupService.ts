@@ -2,9 +2,10 @@ import fs from 'node:fs';
 import path from 'node:path';
 import moment from 'moment';
 import type { IScheduledBackupConfig } from '../models/ScheduledBackupConfigModel';
-import { createZipArchive } from '../utils/archive';
 import { PersistentInterval } from '../utils/PersistentInterval';
-import { BACKUPS_DIR, STORAGE_DIR } from '../utils/storage';
+import { DEFAULT_MONGO_DB_NAME } from '../utils/mongoClient';
+import { buildDbArchive } from '../utils/mongoBackup';
+import { BACKUPS_DIR } from '../utils/storage';
 import { logger } from '../utils/winston';
 
 const LABEL = 'ScheduledBackupService';
@@ -45,7 +46,10 @@ class ScheduledBackupService {
     if (this.running) throw new Error('A backup is already in progress');
     this.running = true;
     try {
-      if (!fs.existsSync(STORAGE_DIR)) throw new Error('Storage directory does not exist yet');
+      // Scheduled backups always target the real database, regardless of
+      // demo-mode state — never the demo one.
+      const { archive, collectionNames } = await buildDbArchive(DEFAULT_MONGO_DB_NAME);
+      if (collectionNames.length === 0) throw new Error('No collections exist yet');
       fs.mkdirSync(BACKUPS_DIR, { recursive: true });
 
       const stamp = moment().format('YYYY-MM-DDTHH-mm-ss');
@@ -55,12 +59,10 @@ class ScheduledBackupService {
       try {
         await new Promise<void>((resolve, reject) => {
           const output = fs.createWriteStream(dest);
-          const archive = createZipArchive();
           output.on('close', () => resolve());
           output.on('error', reject);
           archive.on('error', reject);
           archive.pipe(output);
-          archive.directory(STORAGE_DIR, 'storage');
           archive.finalize();
         });
       } catch (err) {

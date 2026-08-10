@@ -1,4 +1,4 @@
-import { ISkewerModel, SchemaType, SkewerModel } from 'skewer-db';
+import { ISkewerModel, MongoModel, SchemaType } from '../utils/mongoModel';
 
 export interface ICache {
   key: string;
@@ -12,4 +12,4 @@ export const CacheSchema: SchemaType = {
 
 export interface ICacheModel extends ICache, ISkewerModel {}
 
-export const CacheDBModel = () => new SkewerModel<ICacheModel>('cache', CacheSchema);
+export const CacheDBModel = () => new MongoModel<ICacheModel>('cache', CacheSchema);

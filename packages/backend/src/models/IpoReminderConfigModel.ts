@@ -1,4 +1,4 @@
-import { ISkewerModel, SchemaType, SkewerModel } from 'skewer-db';
+import { ISkewerModel, MongoModel, SchemaType } from '../utils/mongoModel';
 
 export interface IIpoReminderConfig {
   enabled: boolean;
@@ -13,7 +13,7 @@ const IpoReminderConfigSchema: SchemaType = {
 interface IIpoReminderConfigModel extends IIpoReminderConfig, ISkewerModel {}
 
 const IpoReminderConfigDBModel = () =>
-  new SkewerModel<IIpoReminderConfigModel>('ipo_reminder_config', IpoReminderConfigSchema);
+  new MongoModel<IIpoReminderConfigModel>('ipo_reminder_config', IpoReminderConfigSchema);
 
 const CONFIG_ID = 'ipo_reminder_config';
 

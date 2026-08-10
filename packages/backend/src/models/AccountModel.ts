@@ -1,4 +1,4 @@
-import { ISkewerModel, SchemaType } from 'skewer-db';
+import { ISkewerModel, SchemaType } from '../utils/mongoModel';
 
 import { createStorageModel } from '../utils/storageModelFactory';
 

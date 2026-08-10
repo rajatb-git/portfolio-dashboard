@@ -1,4 +1,4 @@
-import { ISkewerModel, SchemaType, SkewerModel } from 'skewer-db';
+import { ISkewerModel, MongoModel, SchemaType } from '../utils/mongoModel';
 
 export interface IMqttConfig {
   enabled: boolean;
@@ -14,8 +14,9 @@ export interface INotificationConfig {
   mqtt: IMqttConfig;
 }
 
-// SkewerDB schemas are flat primitives, so the nested { mqtt } shape is stored
-// as mqtt* columns and re-nested on read.
+// Holdover from skewer-db, whose schemas were flat primitives only — MongoDB
+// supports nested docs natively, but unflattening this is out of scope here.
+// The nested { mqtt } shape stays stored as mqtt* columns, re-nested on read.
 interface INotificationConfigFlat {
   mqttEnabled: boolean;
   mqttUrl: string;
@@ -39,7 +40,7 @@ const NotificationConfigSchema: SchemaType = {
 interface INotificationConfigModel extends INotificationConfigFlat, ISkewerModel {}
 
 const NotificationConfigDBModel = () =>
-  new SkewerModel<INotificationConfigModel>('notification_config', NotificationConfigSchema);
+  new MongoModel<INotificationConfigModel>('notification_config', NotificationConfigSchema);
 
 const CONFIG_ID = 'notification_config';
 

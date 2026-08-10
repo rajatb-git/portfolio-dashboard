@@ -9,6 +9,10 @@ services:
     ports:
       - "3001:3001"
     environment:
+      # MONGO_URI must be the Mongo host's LAN address — "localhost" here
+      # resolves to this container, not your Mongo host.
+      - MONGO_URI
+      - MONGO_DB_NAME
       - FINN_HUB_API
       - FINN_HUB_API_KEY
       - FINN_HUB_RATE_LIMIT

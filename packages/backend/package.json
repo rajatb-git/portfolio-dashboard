@@ -1,6 +1,6 @@
 {
   "name": "@portfolio/backend",
-  "version": "3.15.0",
+  "version": "4.0.0",
   "description": "",
   "main": "dist",
   "scripts": {
@@ -31,8 +31,8 @@
     "koa-bodyparser": "^4.4.1",
     "koa-helmet": "^9.0.0",
     "moment": "^2.30.1",
+    "mongodb": "^7.5.0",
     "mqtt": "^5.15.1",
-    "skewer-db": "1.0.3",
     "unzipper": "^0.12.3",
     "winston": "^3.19.0",
     "winston-transport": "^4.9.0"

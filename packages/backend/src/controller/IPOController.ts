@@ -7,7 +7,7 @@ import { WatchedIpoController } from './WatchedIpoController';
 const cacheKey = 'lastIPOFetchDate';
 
 const ipoModel = IPODBModel();
-ipoModel.initialize();
+const ipoModelReady = ipoModel.initialize();
 
 const watchedIpoController = new WatchedIpoController();
 
@@ -15,8 +15,10 @@ export type IIPOWithWatched = IIPOModel & { watched: boolean };
 
 export class IPOController {
   getIPOs = async (): Promise<Array<IIPOWithWatched> | Error> => {
+    await ipoModelReady;
+
     if (this.isIPOFetchRequired()) {
-      ipoModel.deleteAll();
+      await ipoModel.deleteAll();
 
       const apiFetch = (await getUpcomingIPOs())?.ipoCalendar;
 

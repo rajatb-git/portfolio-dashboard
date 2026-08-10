@@ -26,7 +26,7 @@ If Ollama is configured as the provider, data stays local. Even so, do not build
 |---|---|
 | Monorepo | pnpm workspaces (`pnpm-workspace.yaml`) |
 | Frontend | React 19, MUI 7, Vite, TypeScript, React Router, react-toastify, ApexCharts, MUI X Charts/DataGrid, Iconify, moment, axios |
-| Backend | Koa 3, TypeScript, SkewerDB (embedded file-based document DB), winston, axios, archiver/unzipper |
+| Backend | Koa 3, TypeScript, MongoDB (centralized — see `MONGO_URI`), winston, axios, archiver/unzipper |
 | AI | `@anthropic-ai/sdk`, `@google/genai`, Ollama HTTP |
 | Linter/formatter | Biome |
 | Node | >=22 |
@@ -54,7 +54,7 @@ packages/
       controller/     # business logic
       aiProviders/    # claude / gemini / ollama adapters
       externalApis/   # finnHub.ts, nasdaq.ts
-      models/         # SkewerDB wrappers
+      models/         # MongoDB wrappers (MongoModel, see utils/mongoModel.ts)
       utils/          # winston logger, error.ts (errorBody)
       server.ts
 ```
@@ -143,14 +143,15 @@ Use `react-toastify`'s `toast.error(...)` for failures and `toast.success(...)` 
 ## Gotchas
 
 - `HoldingAggregate` is NOT assignable to `IHoldings` (no `id`). Components accepting "a holding-like thing" typed as `IHoldings` need `Pick<IHoldings, …>` narrowing — see `BuySellDialog.tsx`.
-- SkewerDB stores files under `process.cwd()/storage`. The export/import flow zips/unzips this directory — do not rename it.
+- All data lives in MongoDB (`MONGO_URI`/`MONGO_DB_NAME`, required — the backend does not run without a reachable Mongo). Demo Mode uses a second database, `<MONGO_DB_NAME>_demo`, on the same server — never a different `MONGO_URI`. Every model in `backend/src/models/` goes through `MongoModel` (`utils/mongoModel.ts`), which preserves skewer-db's old synchronous-read-after-async-`initialize()` contract so call sites don't need to change.
+- The export/import backup flow (`/settings/db/export`, `/settings/db/import`) zips one `storage/<collection>.json` file per Mongo collection — same shape skewer-db's on-disk files used. Import is a destructive per-collection replace (delete-all + insert), not a merge.
 - The backend raw-body middleware for `/settings/db/import` must run BEFORE `koa-bodyparser`. Don't reorder `server.ts` middleware.
 - Model name in Ollama config defaults to `llama3.1`; other providers default to their latest (`claude-sonnet-4-6`, `gemini-2.0-flash`).
 - When adding a new route that takes a filename or path param, always validate against an allowlist.
 
 ## When adding a new feature
 
-1. **Data:** add/extend a SkewerDB model in `backend/src/models/` and a matching TS interface in `frontend/src/models/`.
+1. **Data:** add/extend a MongoDB-backed model in `backend/src/models/` (via `createStorageModel`/`MongoModel`, see existing models for the pattern) and a matching TS interface in `frontend/src/models/`.
 2. **Backend:** add a `controller/` function, expose it from a new or existing `router/*.route.ts` with proper try/catch + `errorBody` + logging. Register the router in `server.ts`.
 3. **Frontend API:** add a method to the matching `api/*.ts` client with `.catch(catchCustomError)`.
 4. **UI:** build the component under `pages/` or `components/`. Hook up `toast.error` on failure. Use `Skeleton` for loading.

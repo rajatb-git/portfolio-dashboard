@@ -1,4 +1,4 @@
-import { ISkewerModel, SchemaType, SkewerModel } from 'skewer-db';
+import { ISkewerModel, MongoModel, SchemaType } from '../utils/mongoModel';
 
 export interface IPortfolioGoalConfig {
   label: string;
@@ -15,7 +15,7 @@ const PortfolioGoalConfigSchema: SchemaType = {
 interface IPortfolioGoalConfigModel extends IPortfolioGoalConfig, ISkewerModel {}
 
 const PortfolioGoalConfigDBModel = () =>
-  new SkewerModel<IPortfolioGoalConfigModel>('portfolio_goal_config', PortfolioGoalConfigSchema);
+  new MongoModel<IPortfolioGoalConfigModel>('portfolio_goal_config', PortfolioGoalConfigSchema);
 
 const CONFIG_ID = 'portfolio_goal_config';
 

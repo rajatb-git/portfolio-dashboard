@@ -2,9 +2,6 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { PassThrough } from 'node:stream';
 import Router from '@koa/router';
-import unzipper from 'unzipper';
-
-import { createZipArchive } from '../utils/archive';
 
 import { getAiConfig, IAiConfig, maskAiConfig, saveAiConfig } from '../models/AiConfigModel';
 import { getAlertMonitorConfig, IAlertMonitorConfig, saveAlertMonitorConfig } from '../models/AlertMonitorConfigModel';
@@ -46,9 +43,11 @@ import { configureFromSaved, sendTestNotification } from '../controller/Notifica
 import { portfolioValueCalcService } from '../controller/PortfolioValueCalcService';
 import { scheduledBackupService } from '../controller/ScheduledBackupService';
 import { tradingSummaryService } from '../controller/TradingSummaryService';
-import { isDemoMode, MOCK_STORAGE_DIR } from '../utils/demoMode';
+import { isDemoMode } from '../utils/demoMode';
 import { errorBody } from '../utils/error';
-import { BACKUPS_DIR, STORAGE_DIR } from '../utils/storage';
+import { DEFAULT_MONGO_DB_NAME, DEMO_MONGO_DB_NAME } from '../utils/mongoClient';
+import { buildDbArchive, restoreDbArchive } from '../utils/mongoBackup';
+import { BACKUPS_DIR } from '../utils/storage';
 import { logger } from '../utils/winston';
 
 export const SettingsRouter = () => {
@@ -56,20 +55,18 @@ export const SettingsRouter = () => {
 
   router.get('/settings/db/export', async (ctx) => {
     try {
-      // Exports/imports always target whichever store is currently active, so a
-      // demo session can never read or overwrite the real portfolio through them.
-      const dir = isDemoMode() ? MOCK_STORAGE_DIR : STORAGE_DIR;
-      if (!fs.existsSync(dir)) {
+      // Exports/imports always target whichever database is currently active, so
+      // a demo session can never read or overwrite the real portfolio through them.
+      const dbName = isDemoMode() ? DEMO_MONGO_DB_NAME : DEFAULT_MONGO_DB_NAME;
+      const { archive, collectionNames } = await buildDbArchive(dbName);
+      if (collectionNames.length === 0) {
         ctx.status = 404;
-        ctx.body = errorBody('No data to export', 'Storage directory does not exist yet');
+        ctx.body = errorBody('No data to export', 'No collections exist yet');
         return;
       }
 
-      const archive = createZipArchive();
       const passthrough = new PassThrough();
       archive.pipe(passthrough);
-
-      archive.directory(dir, 'storage');
       archive.finalize();
 
       const datestamp = new Date().toISOString().slice(0, 10);
@@ -97,36 +94,48 @@ export const SettingsRouter = () => {
         return;
       }
 
-      const dir = isDemoMode() ? MOCK_STORAGE_DIR : STORAGE_DIR;
+      const dbName = isDemoMode() ? DEMO_MONGO_DB_NAME : DEFAULT_MONGO_DB_NAME;
 
-      // Clear existing storage
-      if (fs.existsSync(dir)) {
-        fs.rmSync(dir, { recursive: true, force: true });
-      }
-      fs.mkdirSync(dir, { recursive: true });
-
-      // Extract zip
-      const directory = await unzipper.Open.buffer(zipBuffer);
-      for (const file of directory.files) {
-        if (file.type === 'Directory') continue;
-
-        // Files in the zip are under "storage/" prefix
-        let filePath = file.path;
-        if (filePath.startsWith('storage/')) {
-          filePath = filePath.slice('storage/'.length);
+      // Safety net: snapshot current state before the destructive restore below
+      // clears each collection. Best-effort — a failure here must not block the
+      // import itself.
+      try {
+        const { archive, collectionNames } = await buildDbArchive(dbName);
+        if (collectionNames.length > 0) {
+          fs.mkdirSync(BACKUPS_DIR, { recursive: true });
+          const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+          const safetyFile = path.join(BACKUPS_DIR, `pre-import-safety-${stamp}.zip`);
+          await new Promise<void>((resolve, reject) => {
+            const output = fs.createWriteStream(safetyFile);
+            output.on('close', () => resolve());
+            output.on('error', reject);
+            archive.on('error', reject);
+            archive.pipe(output);
+            archive.finalize();
+          });
         }
-
-        const destPath = path.join(dir, filePath);
-        const destDir = path.dirname(destPath);
-
-        if (!destPath.startsWith(dir)) continue;
-
-        fs.mkdirSync(destDir, { recursive: true });
-        const content = await file.buffer();
-        fs.writeFileSync(destPath, content);
+      } catch (err: any) {
+        logger.log({ level: 'error', message: err.message, label: 'DB import — pre-import safety backup' });
       }
 
-      ctx.body = { message: 'Import completed. Restart the backend for changes to take effect.' };
+      // Restore is a destructive per-collection replace (delete-all + insert),
+      // not a merge — matching the semantics the old file-based import always
+      // had. Every zip entry is parsed and validated before anything is
+      // written, so a corrupt upload fails clean instead of wiping data
+      // partway through. Standalone MongoDB can't wrap this in a single
+      // transaction across collections, so each collection is restored (and
+      // reported) independently — safely re-runnable if one fails.
+      const results = await restoreDbArchive(dbName, zipBuffer);
+      const okCount = results.filter((r) => r.status === 'ok').length;
+      const failed = results.filter((r) => r.status === 'error');
+      const message =
+        failed.length === 0
+          ? `Import completed: ${okCount}/${results.length} collection(s) restored.`
+          : `Import completed with errors: ${okCount}/${results.length} collection(s) restored. Failed: ${failed
+              .map((f) => `${f.collection} (${f.error})`)
+              .join(', ')}`;
+
+      ctx.body = { message };
       ctx.status = 200;
     } catch (error: any) {
       logger.log({ level: 'error', message: error.message, label: 'DB import' });

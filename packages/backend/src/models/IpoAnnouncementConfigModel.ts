@@ -1,4 +1,4 @@
-import { ISkewerModel, SchemaType, SkewerModel } from 'skewer-db';
+import { ISkewerModel, MongoModel, SchemaType } from '../utils/mongoModel';
 
 export interface IIpoAnnouncementConfig {
   enabled: boolean;
@@ -15,7 +15,7 @@ const IpoAnnouncementConfigSchema: SchemaType = {
 interface IIpoAnnouncementConfigModel extends IIpoAnnouncementConfig, ISkewerModel {}
 
 const IpoAnnouncementConfigDBModel = () =>
-  new SkewerModel<IIpoAnnouncementConfigModel>('ipo_announcement_config', IpoAnnouncementConfigSchema);
+  new MongoModel<IIpoAnnouncementConfigModel>('ipo_announcement_config', IpoAnnouncementConfigSchema);
 
 const CONFIG_ID = 'ipo_announcement_config';
 
