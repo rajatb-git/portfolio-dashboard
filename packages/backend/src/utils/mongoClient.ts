@@ -31,3 +31,16 @@ export const getMongoDb = async (dbName?: string): Promise<Db> => {
   const client = await getClient();
   return client.db(dbName || DEFAULT_MONGO_DB_NAME);
 };
+
+// The long-running server process never calls this — keeping the pool open
+// for the process lifetime is the point. Only short-lived one-shot scripts
+// (e.g. migrateToMongo.ts) need it: MongoClient's connection pool keeps
+// background heartbeat/monitor timers running, which otherwise keeps the
+// event loop alive and the process hanging long after the script's actual
+// work is done.
+export const closeMongoClient = async (): Promise<void> => {
+  if (!clientPromise) return;
+  const client = await clientPromise.catch(() => null);
+  clientPromise = null;
+  await client?.close();
+};

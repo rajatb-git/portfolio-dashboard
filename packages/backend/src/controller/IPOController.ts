@@ -17,7 +17,7 @@ export class IPOController {
   getIPOs = async (): Promise<Array<IIPOWithWatched> | Error> => {
     await ipoModelReady;
 
-    if (this.isIPOFetchRequired()) {
+    if (await this.isIPOFetchRequired()) {
       await ipoModel.deleteAll();
 
       const apiFetch = (await getUpcomingIPOs())?.ipoCalendar;
@@ -31,9 +31,10 @@ export class IPOController {
     return ipoModel.getAllRecords().map((ipo) => ({ ...ipo, watched: watchedSymbols.has(ipo.symbol) }));
   };
 
-  isIPOFetchRequired = (): boolean => {
+  isIPOFetchRequired = async (): Promise<boolean> => {
     let flag = true;
-    const lastIPOFetchDate = moment(CacheDBModel().findById(cacheKey)?.value || null);
+    const cacheModel = await CacheDBModel().initialize();
+    const lastIPOFetchDate = moment(cacheModel.findById(cacheKey)?.value || null);
 
     if (lastIPOFetchDate.isValid()) {
       const currentDate = moment();

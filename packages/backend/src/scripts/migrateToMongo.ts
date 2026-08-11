@@ -3,7 +3,7 @@ import * as dotenv from 'dotenv';
 dotenv.config();
 
 import { migrateStorageDirToMongo } from '../utils/mongoBackup';
-import { DEFAULT_MONGO_DB_NAME } from '../utils/mongoClient';
+import { closeMongoClient, DEFAULT_MONGO_DB_NAME } from '../utils/mongoClient';
 import { STORAGE_DIR } from '../utils/storage';
 
 // One-time CLI migration of skewer-db's old storage/*.json files into
@@ -46,7 +46,9 @@ async function main(): Promise<void> {
   }
 }
 
-main().catch((err) => {
-  console.error('Migration failed:', err.message);
-  process.exitCode = 1;
-});
+main()
+  .catch((err) => {
+    console.error('Migration failed:', err.message);
+    process.exitCode = 1;
+  })
+  .finally(() => closeMongoClient());

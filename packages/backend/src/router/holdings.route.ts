@@ -16,7 +16,7 @@ export const HoldingsRouter = () => {
   router.put('/holdings', async (ctx) => {
     try {
       const holdingsModel = await HoldingsModel().initialize();
-      ctx.body = holdingsModel.insertOne(ctx.request.body);
+      ctx.body = await holdingsModel.insertOne(ctx.request.body);
       ctx.status = 200;
     } catch (error: any) {
       logger.log({ level: 'error', message: error.message, label: 'Insert holding' });

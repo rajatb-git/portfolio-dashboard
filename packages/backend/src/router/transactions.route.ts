@@ -89,7 +89,7 @@ export const TransactionsRouter = () => {
   router.put('/transactions', async (ctx) => {
     try {
       const transactionModel = await TransactionModel().initialize();
-      ctx.body = transactionModel.insertOne(withNormalizedDate(ctx.request.body));
+      ctx.body = await transactionModel.insertOne(withNormalizedDate(ctx.request.body));
       ctx.status = 200;
     } catch (err: any) {
       logger.log({ level: 'error', message: err.message, label: 'Create transaction' });
@@ -179,7 +179,7 @@ export const TransactionsRouter = () => {
       const body: any = ctx.request.body;
       const previous = body.id ? transactionModel.findById(body.id) : null;
 
-      ctx.body = transactionModel.deleteById(body.id);
+      ctx.body = await transactionModel.deleteById(body.id);
 
       if (previous) {
         await adjustCash(previous.accountId, -transactionCashImpact(previous));
