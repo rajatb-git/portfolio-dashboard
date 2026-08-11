@@ -7,27 +7,54 @@ import { IRecommendation } from '../models/RecommendationModel';
 // Finnhub rejects bursts with HTTP 429. Every controller fans out over its
 // holdings with Promise.all, so without a shared throttle a single dashboard or
 // sentiment refresh can fire 40+ requests in the same tick and trip the limit.
-// FINN_HUB_RATE_LIMIT is the sustained requests/second ceiling (free tier allows
-// ~30/s and 60/min; the conservative default leaves headroom for concurrent
-// features and can be raised for paid plans).
-const RATE_LIMIT_PER_SEC = Number(process.env.FINN_HUB_RATE_LIMIT) || 8;
-const MIN_INTERVAL_MS = Math.ceil(1000 / Math.max(1, RATE_LIMIT_PER_SEC));
+//
+// The free tier enforces two limits simultaneously — confirmed against the
+// account dashboard, not just docs: FINN_HUB_BURST_LIMIT calls in any rolling
+// 1-second window (default 30), and FINN_HUB_RATE_LIMIT calls in any rolling
+// 60-second window (default 60). The 60s cap is what actually bounds a
+// sustained fan-out — 30/s held for more than ~2s would already exceed it —
+// but modeling both as real sliding windows (instead of collapsing to one
+// flat rate) still lets a queue burst up to the per-second allowance
+// immediately when nothing has run recently, which meaningfully speeds up
+// cold-start warmup: e.g. right after a fresh migration, when every held
+// symbol needs a first-ever live fetch at once.
+const BURST_LIMIT = Number(process.env.FINN_HUB_BURST_LIMIT) || 30;
+const BURST_WINDOW_MS = 1000;
+const SUSTAINED_LIMIT = Number(process.env.FINN_HUB_RATE_LIMIT) || 60;
+const SUSTAINED_WINDOW_MS = 60_000;
 const MAX_RETRIES = 4;
 const MAX_BACKOFF_MS = 8000;
 
 const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
 
-// Serialize only the moment each request is dispatched so calls start at least
-// MIN_INTERVAL_MS apart. The HTTP requests themselves still run concurrently;
-// this just staggers their starts to cap the outbound rate.
+// Timestamps of recent dispatches, oldest first — pruned to the longer
+// (sustained) window on every check, so this never grows past SUSTAINED_LIMIT
+// entries.
+const dispatchLog: number[] = [];
+
+// Serializes callers so each one's wait-then-record happens atomically
+// relative to the others: nothing can dispatch between one caller computing
+// its wait and recording its own timestamp, so the two sliding windows above
+// stay correct even under heavy concurrent fan-out.
 let scheduleChain: Promise<void> = Promise.resolve();
-let lastDispatch = 0;
 
 const acquireSlot = (): Promise<void> => {
   const slot = scheduleChain.then(async () => {
-    const wait = lastDispatch + MIN_INTERVAL_MS - Date.now();
+    const now = Date.now();
+    while (dispatchLog.length && now - dispatchLog[0] > SUSTAINED_WINDOW_MS) dispatchLog.shift();
+
+    const recentBurst = dispatchLog.filter((t) => now - t <= BURST_WINDOW_MS);
+
+    let wait = 0;
+    if (dispatchLog.length >= SUSTAINED_LIMIT) {
+      wait = Math.max(wait, dispatchLog[0] + SUSTAINED_WINDOW_MS - now);
+    }
+    if (recentBurst.length >= BURST_LIMIT) {
+      wait = Math.max(wait, recentBurst[0] + BURST_WINDOW_MS - now);
+    }
     if (wait > 0) await sleep(wait);
-    lastDispatch = Date.now();
+
+    dispatchLog.push(Date.now());
   });
   scheduleChain = slot.catch(() => undefined);
   return slot;
