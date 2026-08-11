@@ -7,10 +7,12 @@ import { IRecommendation } from '../models/RecommendationModel';
 // Finnhub rejects bursts with HTTP 429. Every controller fans out over its
 // holdings with Promise.all, so without a shared throttle a single dashboard or
 // sentiment refresh can fire 40+ requests in the same tick and trip the limit.
-// FINN_HUB_RATE_LIMIT is the sustained requests/second ceiling (free tier allows
-// ~30/s and 60/min; the conservative default leaves headroom for concurrent
-// features and can be raised for paid plans).
-const RATE_LIMIT_PER_SEC = Number(process.env.FINN_HUB_RATE_LIMIT) || 8;
+// FINN_HUB_RATE_LIMIT is the sustained requests/second ceiling. The Finnhub
+// free tier's binding limit is 60 calls/MINUTE (~1/s sustained) — see
+// https://finnhub.io/docs/api/rate-limit — it also has a short per-second
+// burst allowance, but that doesn't help a sustained fan-out across many
+// holdings. 1 is the safe default for the free tier; raise it for paid plans.
+const RATE_LIMIT_PER_SEC = Number(process.env.FINN_HUB_RATE_LIMIT) || 1;
 const MIN_INTERVAL_MS = Math.ceil(1000 / Math.max(1, RATE_LIMIT_PER_SEC));
 const MAX_RETRIES = 4;
 const MAX_BACKOFF_MS = 8000;
