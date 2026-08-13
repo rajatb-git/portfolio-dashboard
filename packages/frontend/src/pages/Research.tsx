@@ -64,6 +64,7 @@ function Research() {
   const [agentEnabled, setAgentEnabled] = React.useState(false);
 
   const [companyProfile, setCompanyProfile] = React.useState<CompanyProfile | undefined>();
+  const [companyProfileError, setCompanyProfileError] = React.useState<string | null>(null);
   const [price, setPrice] = React.useState<IPriceStore>();
   const [recommendation, setRecommendation] = React.useState<IRecommendation>();
   const [news, setNews] = React.useState<Array<IMarketNews>>([]);
@@ -84,10 +85,15 @@ function Research() {
       LocalStorageArray.add('searchText', searchText.toUpperCase());
 
       setIsCompanyProfileLoading(true);
+      setCompanyProfileError(null);
       apis.live
         .getCompanyProfile(searchTicker)
         .then((res) => setCompanyProfile(res))
-        .catch((err) => toast.error(err.message))
+        .catch((err) => {
+          setCompanyProfile(undefined);
+          setCompanyProfileError(err.message || 'Failed to load company profile');
+          toast.error(err.message || 'Failed to load company profile');
+        })
         .finally(() => setIsCompanyProfileLoading(false));
 
       setIsNewsLoading(true);
@@ -210,7 +216,7 @@ function Research() {
   }, []);
 
   const isPositive = (price?.percentChange ?? 0) >= 0;
-  const notFound = !!searchText && !isCompanyProfileLoading && !companyProfile?.name;
+  const notFound = !!searchText && !isCompanyProfileLoading && !companyProfileError && !companyProfile?.name;
 
   if (notFound) {
     return (
@@ -221,6 +227,20 @@ function Research() {
           title={`No data found for "${searchText}"`}
           message="Double-check the ticker symbol and try again. Press ⌘K to search for another."
           minHeight={280}
+        />
+      </Card>
+    );
+  }
+
+  if (searchText && !isCompanyProfileLoading && companyProfileError) {
+    return (
+      <Card>
+        <StateView
+          state="error"
+          title="Failed to load research data"
+          message={companyProfileError}
+          minHeight={280}
+          action={{ label: 'Retry', onClick: () => getResearchData(searchText) }}
         />
       </Card>
     );
