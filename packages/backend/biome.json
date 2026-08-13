@@ -1,4 +1,5 @@
 {
+  "root": false,
   "formatter": {
     "enabled": true,
     "useEditorconfig": true,
@@ -36,7 +37,7 @@
   "linter": {
     "enabled": true,
     "rules": {
-      "recommended": false,
+      "preset": "none",
       "complexity": {
         "noUselessThisAlias": "error",
         "noUselessTypeConstraint": "error",
