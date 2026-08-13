@@ -7,7 +7,9 @@ import { createRequire } from 'module';
 
 const require = createRequire(import.meta.url);
 const { version } = require('./package.json');
-const changelog = fs.readFileSync(path.resolve(__dirname, '../../CHANGELOG.md'), 'utf8');
+// Docker builds this package with context ./packages/frontend (see docker-compose.yml), so the
+// root CHANGELOG.md is out of reach — this is a synced copy, not an independent changelog.
+const changelog = fs.readFileSync(path.resolve(__dirname, 'CHANGELOG.md'), 'utf8');
 
 // https://vite.dev/config/
 export default defineConfig({
