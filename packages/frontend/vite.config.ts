@@ -1,3 +1,4 @@
+import fs from 'fs';
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
@@ -6,6 +7,7 @@ import { createRequire } from 'module';
 
 const require = createRequire(import.meta.url);
 const { version } = require('./package.json');
+const changelog = fs.readFileSync(path.resolve(__dirname, '../../CHANGELOG.md'), 'utf8');
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -68,6 +70,7 @@ export default defineConfig({
   ],
   define: {
     __APP_VERSION__: JSON.stringify(version),
+    __CHANGELOG__: JSON.stringify(changelog),
   },
   resolve: {
     alias: {

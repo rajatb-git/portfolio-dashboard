@@ -30,7 +30,7 @@
       "attributePosition": "auto",
       "bracketSpacing": true
     },
-    "globals": ["__APP_VERSION__"]
+    "globals": ["__APP_VERSION__", "__CHANGELOG__"]
   },
   "files": {
     "includes": ["**", "!.next", "!.github", "!HAapp", "!dist", "!**/dist/**"]

@@ -29,6 +29,7 @@ const Database = React.lazy(() => import('@/pages/Database'));
 const IPOCalendar = React.lazy(() => import('@/pages/IPOCalendar'));
 const IPODetail = React.lazy(() => import('@/pages/IPODetail'));
 const Logs = React.lazy(() => import('@/pages/Logs'));
+const Changelog = React.lazy(() => import('@/pages/Changelog'));
 const Research = React.lazy(() => import('@/pages/Research'));
 const Settings = React.lazy(() => import('@/pages/Settings'));
 
@@ -114,6 +115,7 @@ function AppShell() {
               <Route path="/ipo-calendar" element={<IPOCalendar />} />
               <Route path="/ipo-calendar/:id" element={<IPODetail />} />
               <Route path="/logs" element={<Logs />} />
+              <Route path="/changelog" element={<Changelog />} />
               <Route path="/research" element={<Research />} />
               <Route path="/settings" element={<Settings />} />
             </Routes>
