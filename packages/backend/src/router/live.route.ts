@@ -77,7 +77,13 @@ export const LiveRouter = () => {
         ctx.status = 400;
         return;
       }
-      const result = await getPriceHistoryCandleStick(ctx.params.sym.toUpperCase(), ctx.query.range as any);
+      const symbol = String(ctx.params.sym || '').toUpperCase();
+      if (!/^[A-Z0-9.-]{1,10}$/.test(symbol)) {
+        ctx.body = errorBody('Invalid parameter', 'sym is invalid');
+        ctx.status = 400;
+        return;
+      }
+      const result = await getPriceHistoryCandleStick(symbol, ctx.query.range as any);
 
       ctx.body = result;
       ctx.status = 200;

@@ -12,17 +12,22 @@ import { logger } from '../utils/winston';
 // Allowlist of collections exposed on the Database page. Config and cached
 // market-data collections are intentionally excluded — config is managed via
 // Settings, and caches are not user data.
-const userCollections: { [name: string]: () => Promise<MongoModel<any>> } = {
-  accounts: () => AccountModel().initialize(),
-  holdings: () => HoldingsModel().initialize(),
-  transactions: () => TransactionModel().initialize(),
-  alerts: () => AlertModel().initialize(),
-  notes: () => NoteModel().initialize(),
-  portfolio_snapshots: () => PortfolioSnapshotDBModel().initialize(),
-};
+const userCollections = new Map<string, () => Promise<MongoModel<any>>>([
+  ['accounts', () => AccountModel().initialize()],
+  ['holdings', () => HoldingsModel().initialize()],
+  ['transactions', () => TransactionModel().initialize()],
+  ['alerts', () => AlertModel().initialize()],
+  ['notes', () => NoteModel().initialize()],
+  ['portfolio_snapshots', () => PortfolioSnapshotDBModel().initialize()],
+]);
 
-const resolveCollection = (name: string) =>
-  Object.prototype.hasOwnProperty.call(userCollections, name) ? userCollections[name]() : null;
+const resolveCollection = (name: string) => {
+  if (!userCollections.has(name)) {
+    return null;
+  }
+  const initializeModel = userCollections.get(name);
+  return typeof initializeModel === 'function' ? initializeModel() : null;
+};
 
 export const DatabaseRouter = () => {
   const router = new Router();
