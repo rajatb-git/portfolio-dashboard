@@ -29,7 +29,7 @@
     "@mui/material": "^9.2.0",
     "@mui/x-charts": "^9.10.1",
     "@mui/x-data-grid": "^9.10.1",
-    "apexcharts": "^5.13.0",
+    "apexcharts": "^6.8.0",
     "axios": "^1.19.0",
     "case": "^1.6.3",
     "csvtojson": "^2.0.14",
