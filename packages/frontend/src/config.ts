@@ -62,6 +62,7 @@ export const NAV_CONFIG: NavItemConfig[] = [
     description: 'Accounts, holdings, transactions',
   },
   { text: 'Logs', href: '/logs', icon: 'tabler:file-text', section: 'Manage', description: 'Backend activity' },
+  { text: 'Changelog', href: '/changelog', icon: 'tabler:history', section: 'Manage', description: 'Release history' },
 ];
 
 export const NAV_SETTINGS_CONFIG: NavItemConfig = {

@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
+## [4.2.0] – 2026-08-13
+
+### Added
+- **Changelog page** — New `/changelog` page (Manage section) renders this file's release history in-app, with version headings and color-coded Added/Changed/Fixed/Removed/Security sections.
+
+---
+
 ## [3.0.0] – 2026-06-21
 
 ### Removed
