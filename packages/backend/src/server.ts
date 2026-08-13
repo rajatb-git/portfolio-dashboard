@@ -15,6 +15,7 @@ import { authMiddleware } from './middleware/auth';
 import { alertMonitorService } from './controller/AlertMonitorService';
 import { ipoAnnouncementService } from './controller/IpoAnnouncementService';
 import { ipoReminderService } from './controller/IpoReminderService';
+import { marketStatusService } from './controller/MarketStatusService';
 import { moveAlertService } from './controller/MoveAlertService';
 import { configureFromSaved } from './controller/NotificationDispatcher';
 import { portfolioValueCalcService } from './controller/PortfolioValueCalcService';
@@ -88,6 +89,7 @@ app.use(DatabaseRouter().routes()).use(DatabaseRouter().allowedMethods());
 
 app.listen(port, () => {
   console.log('server started on port ' + port);
+  marketStatusService.start();
   getValueCalcConfig().then((config) => portfolioValueCalcService.start(config));
   getAlertMonitorConfig().then((config) => alertMonitorService.start(config));
   getScheduledBackupConfig().then((config) => scheduledBackupService.start(config));
