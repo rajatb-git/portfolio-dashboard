@@ -27,7 +27,7 @@
     "archiver": "^8.0.0",
     "axios": "^1.19.0",
     "dotenv": "^17.4.2",
-    "fast-xml-parser": "^5.10.1",
+    "fast-xml-parser": "^5.11.0",
     "koa": "^3.2.1",
     "koa-bodyparser": "^4.4.1",
     "koa-helmet": "^9.0.0",
