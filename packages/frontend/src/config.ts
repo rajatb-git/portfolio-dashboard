@@ -48,6 +48,13 @@ export const NAV_CONFIG: NavItemConfig[] = [
   },
   { text: 'Alerts', href: '/alerts', icon: 'tabler:bell', section: 'Markets', description: 'Price triggers' },
   {
+    text: 'Notifications',
+    href: '/notifications',
+    icon: 'tabler:bell-ringing',
+    section: 'Markets',
+    description: 'What the app has sent you',
+  },
+  {
     text: 'IPO Calendar',
     href: '/ipo-calendar',
     icon: 'tabler:calendar-dollar',

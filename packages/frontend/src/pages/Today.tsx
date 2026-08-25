@@ -17,11 +17,12 @@ import * as React from 'react';
 import { toast } from 'react-toastify';
 
 import apis from '@/api';
-import type { DailyRecap, HoldingMovement, IndexMovement } from '@/api/dashboard';
+import type { DailyRecap, HoldingMovement, IndexMovement, PortfolioBrief } from '@/api/dashboard';
 import type { MarketMover, MarketMovers, MarketNewsDigest } from '@/api/live';
 import { Iconify } from '@/components/Iconify';
 import { FONT_SIZE } from '@/components/ThemeRegistry/tokens';
 import Delta from '@/components/ui/Delta';
+import PortfolioBriefCard from '@/components/Today/PortfolioBriefCard';
 import PageHeader from '@/components/ui/PageHeader';
 import Panel from '@/components/ui/Panel';
 import StateView from '@/components/ui/StateView';
@@ -153,6 +154,10 @@ export default function Today() {
   const [newsLoading, setNewsLoading] = React.useState(true);
   const [newsError, setNewsError] = React.useState<string | null>(null);
 
+  const [brief, setBrief] = React.useState<PortfolioBrief | null>(null);
+  const [briefLoading, setBriefLoading] = React.useState(true);
+  const [briefError, setBriefError] = React.useState<string | null>(null);
+
   const [movers, setMovers] = React.useState<MarketMovers | null>(null);
   const [moversLoading, setMoversLoading] = React.useState(true);
   const [moversError, setMoversError] = React.useState<string | null>(null);
@@ -167,6 +172,20 @@ export default function Today() {
         setRecap(null);
       })
       .finally(() => setRecapLoading(false));
+  }, []);
+
+  const loadBrief = React.useCallback(() => {
+    setBriefLoading(true);
+    setBriefError(null);
+    apis.dashboard
+      .getBrief()
+      .then(setBrief)
+      .catch((err) => {
+        setBrief(null);
+        setBriefError(err.message || 'Failed to load your brief');
+        toast.error(err.message || 'Failed to load your brief');
+      })
+      .finally(() => setBriefLoading(false));
   }, []);
 
   const loadNews = React.useCallback((refresh = false) => {
@@ -199,9 +218,10 @@ export default function Today() {
 
   React.useEffect(() => {
     loadRecap();
+    loadBrief();
     loadNews(false);
     loadMovers(false);
-  }, [loadRecap, loadNews, loadMovers]);
+  }, [loadRecap, loadBrief, loadNews, loadMovers]);
 
   const gainers = React.useMemo(
     () =>
@@ -286,6 +306,9 @@ export default function Today() {
           </Typography>
         </Stack>
       )}
+
+      {/* Lead with what changed since the user last looked, before the market at large. */}
+      <PortfolioBriefCard brief={brief} loading={briefLoading} error={briefError} />
 
       {/* Market movement */}
       <SectionCard title="Market Movement" icon="tabler:building-bank" iconColor="#3b82f6">

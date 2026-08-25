@@ -277,10 +277,26 @@ const EVENTS: SeedEvent[] = [
 ];
 
 const ALERTS: IAlert[] = [
-  { symbol: 'AAPL', type: 'stock', targetPrice: 250, direction: 'above', note: 'Trim target' },
-  { symbol: 'NVDA', type: 'stock', targetPrice: 180, direction: 'above', note: 'Consider trimming further' },
-  { symbol: 'BTC', type: 'crypto', targetPrice: 85000, direction: 'below', note: 'Buy the dip' },
-  { symbol: 'TSLA', type: 'stock', targetPrice: 320, direction: 'above', note: 'Reassess position size' },
+  { symbol: 'AAPL', type: 'stock', condition: 'price', targetPrice: 250, direction: 'above', note: 'Trim target' },
+  {
+    symbol: 'NVDA',
+    type: 'stock',
+    condition: 'trailing_stop',
+    targetPrice: 0,
+    direction: 'below',
+    trailPercent: 12,
+    note: 'Lock in the run',
+  },
+  { symbol: 'BTC', type: 'crypto', condition: 'price', targetPrice: 85000, direction: 'below', note: 'Buy the dip' },
+  {
+    symbol: 'TSLA',
+    type: 'stock',
+    condition: 'pct_from_high',
+    targetPrice: 0,
+    direction: 'below',
+    thresholdPercent: 20,
+    note: 'Reassess position size',
+  },
 ];
 
 const round2 = (n: number): number => Math.round(n * 100) / 100;

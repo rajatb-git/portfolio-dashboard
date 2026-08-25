@@ -9,6 +9,7 @@ import DatabaseAPI from './database';
 import AuthAPI from './auth';
 import AlertsAPI from './alerts';
 import NotesAPI from './notes';
+import NotificationsAPI from './notifications';
 import RebalanceAPI from './rebalance';
 import SettingsAPI from './settings';
 
@@ -25,6 +26,7 @@ const apis = {
   settings: new SettingsAPI(),
   notes: new NotesAPI(),
   alerts: new AlertsAPI(),
+  notifications: new NotificationsAPI(),
   rebalance: new RebalanceAPI(),
 };
 

@@ -46,6 +46,32 @@ export type NewsWatchConfig = {
 
 export type NewsWatchTestResult = { ok: boolean; mqttEnabled: boolean };
 
+export type QuietHoursConfig = {
+  enabled: boolean;
+  startHour: number;
+  endHour: number;
+  mode: 'suppress' | 'digest';
+  allowCritical: boolean;
+  criticalThresholdPercent: number;
+};
+
+export type EarningsReminderConfig = {
+  enabled: boolean;
+  daysBefore: number;
+  notifyResults: boolean;
+  topic: string;
+};
+
+export type DividendWatchConfig = {
+  enabled: boolean;
+  daysBefore: number;
+  notifyExDate: boolean;
+  notifyPayment: boolean;
+  topic: string;
+};
+
+export type SimpleTestResult = { ok: boolean };
+
 export type IpoReminderConfig = {
   enabled: boolean;
   daysBefore: number;
@@ -154,6 +180,60 @@ export default class SettingsAPI {
   sendNewsWatchTest = async (): Promise<NewsWatchTestResult> =>
     axios
       .post(DB_HOST + '/settings/news-watch/test')
+      .then((response) => response.data)
+      .catch(catchCustomError);
+
+  getQuietHoursConfig = async (): Promise<QuietHoursConfig> =>
+    axios
+      .get(DB_HOST + '/settings/quiet-hours')
+      .then((response) => response.data)
+      .catch(catchCustomError);
+
+  saveQuietHoursConfig = async (payload: QuietHoursConfig): Promise<QuietHoursConfig> =>
+    axios
+      .post(DB_HOST + '/settings/quiet-hours', payload)
+      .then((response) => response.data)
+      .catch(catchCustomError);
+
+  flushQuietHours = async (): Promise<{ flushed: number }> =>
+    axios
+      .post(DB_HOST + '/settings/quiet-hours/flush')
+      .then((response) => response.data)
+      .catch(catchCustomError);
+
+  getEarningsReminderConfig = async (): Promise<EarningsReminderConfig> =>
+    axios
+      .get(DB_HOST + '/settings/earnings-reminder')
+      .then((response) => response.data)
+      .catch(catchCustomError);
+
+  saveEarningsReminderConfig = async (payload: EarningsReminderConfig): Promise<EarningsReminderConfig> =>
+    axios
+      .post(DB_HOST + '/settings/earnings-reminder', payload)
+      .then((response) => response.data)
+      .catch(catchCustomError);
+
+  sendEarningsReminderTest = async (): Promise<SimpleTestResult> =>
+    axios
+      .post(DB_HOST + '/settings/earnings-reminder/test')
+      .then((response) => response.data)
+      .catch(catchCustomError);
+
+  getDividendWatchConfig = async (): Promise<DividendWatchConfig> =>
+    axios
+      .get(DB_HOST + '/settings/dividend-watch')
+      .then((response) => response.data)
+      .catch(catchCustomError);
+
+  saveDividendWatchConfig = async (payload: DividendWatchConfig): Promise<DividendWatchConfig> =>
+    axios
+      .post(DB_HOST + '/settings/dividend-watch', payload)
+      .then((response) => response.data)
+      .catch(catchCustomError);
+
+  sendDividendWatchTest = async (): Promise<SimpleTestResult> =>
+    axios
+      .post(DB_HOST + '/settings/dividend-watch/test')
       .then((response) => response.data)
       .catch(catchCustomError);
 

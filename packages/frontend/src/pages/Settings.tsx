@@ -33,9 +33,12 @@ import type {
   IpoAnnouncementConfig,
   IpoReminderConfig,
   LockStatus,
+  DividendWatchConfig,
+  EarningsReminderConfig,
   MoveAlertConfig,
   NewsWatchConfig,
   NotificationConfig,
+  QuietHoursConfig,
   ScheduledBackupConfig,
   TradingSummaryConfig,
   ValueCalcConfig,
@@ -232,6 +235,51 @@ export default function Settings() {
   const isNewsWatchDirty = JSON.stringify(savedNewsWatch) !== JSON.stringify(draftNewsWatch);
   const setNewsWatch = (partial: Partial<NewsWatchConfig>) => setDraftNewsWatch((prev) => ({ ...prev, ...partial }));
 
+  const DEFAULT_QUIET_HOURS: QuietHoursConfig = {
+    enabled: false,
+    startHour: 22,
+    endHour: 7,
+    mode: 'digest',
+    allowCritical: true,
+    criticalThresholdPercent: 10,
+  };
+  const [savedQuietHours, setSavedQuietHours] = React.useState<QuietHoursConfig>(DEFAULT_QUIET_HOURS);
+  const [draftQuietHours, setDraftQuietHours] = React.useState<QuietHoursConfig>(DEFAULT_QUIET_HOURS);
+  const [savingQuietHours, setSavingQuietHours] = React.useState(false);
+  const [flushingQuietHours, setFlushingQuietHours] = React.useState(false);
+  const isQuietHoursDirty = JSON.stringify(savedQuietHours) !== JSON.stringify(draftQuietHours);
+  const setQuietHours = (partial: Partial<QuietHoursConfig>) =>
+    setDraftQuietHours((prev) => ({ ...prev, ...partial }));
+
+  const DEFAULT_EARNINGS: EarningsReminderConfig = {
+    enabled: false,
+    daysBefore: 1,
+    notifyResults: true,
+    topic: 'portfolio-dashboard/earnings',
+  };
+  const [savedEarnings, setSavedEarnings] = React.useState<EarningsReminderConfig>(DEFAULT_EARNINGS);
+  const [draftEarnings, setDraftEarnings] = React.useState<EarningsReminderConfig>(DEFAULT_EARNINGS);
+  const [savingEarnings, setSavingEarnings] = React.useState(false);
+  const [testingEarnings, setTestingEarnings] = React.useState(false);
+  const isEarningsDirty = JSON.stringify(savedEarnings) !== JSON.stringify(draftEarnings);
+  const setEarnings = (partial: Partial<EarningsReminderConfig>) =>
+    setDraftEarnings((prev) => ({ ...prev, ...partial }));
+
+  const DEFAULT_DIVIDENDS: DividendWatchConfig = {
+    enabled: false,
+    daysBefore: 3,
+    notifyExDate: true,
+    notifyPayment: true,
+    topic: 'portfolio-dashboard/dividends',
+  };
+  const [savedDividends, setSavedDividends] = React.useState<DividendWatchConfig>(DEFAULT_DIVIDENDS);
+  const [draftDividends, setDraftDividends] = React.useState<DividendWatchConfig>(DEFAULT_DIVIDENDS);
+  const [savingDividends, setSavingDividends] = React.useState(false);
+  const [testingDividends, setTestingDividends] = React.useState(false);
+  const isDividendsDirty = JSON.stringify(savedDividends) !== JSON.stringify(draftDividends);
+  const setDividends = (partial: Partial<DividendWatchConfig>) =>
+    setDraftDividends((prev) => ({ ...prev, ...partial }));
+
   const DEFAULT_IPO_REMINDER: IpoReminderConfig = { enabled: true, daysBefore: 1 };
   const [savedIpoReminder, setSavedIpoReminder] = React.useState<IpoReminderConfig>(DEFAULT_IPO_REMINDER);
   const [draftIpoReminder, setDraftIpoReminder] = React.useState<IpoReminderConfig>(DEFAULT_IPO_REMINDER);
@@ -361,6 +409,30 @@ export default function Settings() {
         setDraftNewsWatch(cfg);
       })
       .catch((err) => toast.error(err.message || 'Failed to load news watch settings'));
+
+    apis.settings
+      .getQuietHoursConfig()
+      .then((cfg) => {
+        setSavedQuietHours(cfg);
+        setDraftQuietHours(cfg);
+      })
+      .catch((err) => toast.error(err.message || 'Failed to load quiet hours settings'));
+
+    apis.settings
+      .getEarningsReminderConfig()
+      .then((cfg) => {
+        setSavedEarnings(cfg);
+        setDraftEarnings(cfg);
+      })
+      .catch((err) => toast.error(err.message || 'Failed to load earnings alert settings'));
+
+    apis.settings
+      .getDividendWatchConfig()
+      .then((cfg) => {
+        setSavedDividends(cfg);
+        setDraftDividends(cfg);
+      })
+      .catch((err) => toast.error(err.message || 'Failed to load dividend alert settings'));
 
     apis.settings
       .getIpoReminderConfig()
@@ -679,6 +751,93 @@ export default function Settings() {
   };
 
   const handleResetNewsWatch = () => setDraftNewsWatch(savedNewsWatch);
+
+  const handleSaveQuietHours = async () => {
+    setSavingQuietHours(true);
+    try {
+      const saved = await apis.settings.saveQuietHoursConfig(draftQuietHours);
+      setSavedQuietHours(saved);
+      setDraftQuietHours(saved);
+      toast.success('Quiet hours saved');
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to save quiet hours');
+    } finally {
+      setSavingQuietHours(false);
+    }
+  };
+
+  const handleResetQuietHours = () => setDraftQuietHours(savedQuietHours);
+
+  const handleFlushQuietHours = async () => {
+    setFlushingQuietHours(true);
+    try {
+      const result = await apis.settings.flushQuietHours();
+      if (result.flushed > 0) toast.success(`Sent a digest of ${result.flushed} held notification(s)`);
+      else toast.success('Nothing is currently held');
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to flush held notifications');
+    } finally {
+      setFlushingQuietHours(false);
+    }
+  };
+
+  const handleSaveEarnings = async () => {
+    setSavingEarnings(true);
+    try {
+      const saved = await apis.settings.saveEarningsReminderConfig(draftEarnings);
+      setSavedEarnings(saved);
+      setDraftEarnings(saved);
+      toast.success('Earnings alert settings saved');
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to save earnings alert settings');
+    } finally {
+      setSavingEarnings(false);
+    }
+  };
+
+  const handleResetEarnings = () => setDraftEarnings(savedEarnings);
+
+  const handleTestEarnings = async () => {
+    setTestingEarnings(true);
+    try {
+      const result = await apis.settings.sendEarningsReminderTest();
+      if (result.ok) toast.success('Test earnings alert published to MQTT');
+      else toast.error('Earnings alert failed — check the broker connection');
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to send test earnings alert');
+    } finally {
+      setTestingEarnings(false);
+    }
+  };
+
+  const handleSaveDividends = async () => {
+    setSavingDividends(true);
+    try {
+      const saved = await apis.settings.saveDividendWatchConfig(draftDividends);
+      setSavedDividends(saved);
+      setDraftDividends(saved);
+      toast.success('Dividend alert settings saved');
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to save dividend alert settings');
+    } finally {
+      setSavingDividends(false);
+    }
+  };
+
+  const handleResetDividends = () => setDraftDividends(savedDividends);
+
+  const handleTestDividends = async () => {
+    setTestingDividends(true);
+    try {
+      const result = await apis.settings.sendDividendWatchTest();
+      if (result.ok) toast.success('Test dividend alert published to MQTT');
+      else toast.error('Dividend alert failed — check the broker connection');
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to send test dividend alert');
+    } finally {
+      setTestingDividends(false);
+    }
+  };
 
   const handleTestNewsWatch = async () => {
     setTestingNewsWatch(true);
@@ -1487,6 +1646,338 @@ export default function Settings() {
                     sx={{ fontSize: '0.78rem', textTransform: 'none' }}
                   >
                     {savingNewsWatch ? 'Saving...' : 'Save'}
+                  </Button>
+                </Stack>
+              </SettingsSection>
+
+              <SettingsSection title="Earnings Alerts">
+                <SettingRow
+                  label="Enable Earnings Alerts"
+                  description="Tell you ahead of time when a company you hold is about to report, then follow up with the actual numbers against consensus."
+                >
+                  <Switch checked={draftEarnings.enabled} onChange={(_, checked) => setEarnings({ enabled: checked })} />
+                </SettingRow>
+                {draftEarnings.enabled && (
+                  <>
+                    <SettingRow label="Notify Ahead" description="How far in advance of the report to warn you">
+                      <Select
+                        size="small"
+                        value={draftEarnings.daysBefore}
+                        onChange={(e) => setEarnings({ daysBefore: Number(e.target.value) })}
+                        sx={{ minWidth: { xs: '100%', sm: 200 }, fontSize: '0.82rem' }}
+                      >
+                        <MenuItem value={0}>On the day</MenuItem>
+                        <MenuItem value={1}>1 day before</MenuItem>
+                        <MenuItem value={2}>2 days before</MenuItem>
+                        <MenuItem value={3}>3 days before</MenuItem>
+                        <MenuItem value={7}>1 week before</MenuItem>
+                      </Select>
+                    </SettingRow>
+                    <SettingRow
+                      label="Follow Up With Results"
+                      description="Send a second alert once the actual EPS lands, with the beat or miss against consensus"
+                    >
+                      <Switch
+                        checked={draftEarnings.notifyResults}
+                        onChange={(_, checked) => setEarnings({ notifyResults: checked })}
+                      />
+                    </SettingRow>
+                    <SettingRow label="MQTT Topic" description="Topic earnings alerts are published to">
+                      <TextField
+                        size="small"
+                        value={draftEarnings.topic}
+                        onChange={(e) => setEarnings({ topic: e.target.value })}
+                        sx={{ width: { xs: '100%', sm: 320 }, '& input': { fontSize: '0.78rem' } }}
+                      />
+                    </SettingRow>
+                  </>
+                )}
+                <Stack
+                  direction="row"
+                  spacing={1}
+                  sx={{ justifyContent: 'flex-end', alignItems: 'center', px: 2, py: 1.5 }}
+                >
+                  {isEarningsDirty && (
+                    <Typography sx={{ fontSize: '0.72rem', color: 'warning.main', mr: 'auto' }}>
+                      Unsaved changes
+                    </Typography>
+                  )}
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    onClick={handleTestEarnings}
+                    disabled={!savedNotif.mqtt.enabled || isEarningsDirty || testingEarnings}
+                    sx={{ fontSize: '0.78rem', textTransform: 'none' }}
+                  >
+                    {testingEarnings ? 'Sending...' : 'Send now'}
+                  </Button>
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    onClick={handleResetEarnings}
+                    disabled={!isEarningsDirty || savingEarnings}
+                    sx={{ fontSize: '0.78rem', textTransform: 'none' }}
+                  >
+                    Reset
+                  </Button>
+                  <Button
+                    size="small"
+                    variant="contained"
+                    onClick={handleSaveEarnings}
+                    disabled={!isEarningsDirty || savingEarnings}
+                    sx={{ fontSize: '0.78rem', textTransform: 'none' }}
+                  >
+                    {savingEarnings ? 'Saving...' : 'Save'}
+                  </Button>
+                </Stack>
+              </SettingsSection>
+
+              <SettingsSection title="Dividend Alerts">
+                <SettingRow
+                  label="Enable Dividend Alerts"
+                  description="Notify ahead of an ex-dividend date or a payment on the stocks you hold, with the amount you can expect."
+                >
+                  <Switch
+                    checked={draftDividends.enabled}
+                    onChange={(_, checked) => setDividends({ enabled: checked })}
+                  />
+                </SettingRow>
+                {draftDividends.enabled && (
+                  <>
+                    <SettingRow label="Notify Ahead" description="How far in advance of the date to notify you">
+                      <Select
+                        size="small"
+                        value={draftDividends.daysBefore}
+                        onChange={(e) => setDividends({ daysBefore: Number(e.target.value) })}
+                        sx={{ minWidth: { xs: '100%', sm: 200 }, fontSize: '0.82rem' }}
+                      >
+                        <MenuItem value={0}>On the day</MenuItem>
+                        <MenuItem value={1}>1 day before</MenuItem>
+                        <MenuItem value={2}>2 days before</MenuItem>
+                        <MenuItem value={3}>3 days before</MenuItem>
+                        <MenuItem value={7}>1 week before</MenuItem>
+                        <MenuItem value={14}>2 weeks before</MenuItem>
+                      </Select>
+                    </SettingRow>
+                    <SettingRow
+                      label="Ex-Dividend Dates"
+                      description="Owning through the ex-date is what earns the payment, so this is the one worth knowing in advance"
+                    >
+                      <Switch
+                        checked={draftDividends.notifyExDate}
+                        onChange={(_, checked) => setDividends({ notifyExDate: checked })}
+                      />
+                    </SettingRow>
+                    <SettingRow label="Payment Dates" description="Notify when the cash actually lands">
+                      <Switch
+                        checked={draftDividends.notifyPayment}
+                        onChange={(_, checked) => setDividends({ notifyPayment: checked })}
+                      />
+                    </SettingRow>
+                    <SettingRow label="MQTT Topic" description="Topic dividend alerts are published to">
+                      <TextField
+                        size="small"
+                        value={draftDividends.topic}
+                        onChange={(e) => setDividends({ topic: e.target.value })}
+                        sx={{ width: { xs: '100%', sm: 320 }, '& input': { fontSize: '0.78rem' } }}
+                      />
+                    </SettingRow>
+                  </>
+                )}
+                <Stack
+                  direction="row"
+                  spacing={1}
+                  sx={{ justifyContent: 'flex-end', alignItems: 'center', px: 2, py: 1.5 }}
+                >
+                  {isDividendsDirty && (
+                    <Typography sx={{ fontSize: '0.72rem', color: 'warning.main', mr: 'auto' }}>
+                      Unsaved changes
+                    </Typography>
+                  )}
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    onClick={handleTestDividends}
+                    disabled={!savedNotif.mqtt.enabled || isDividendsDirty || testingDividends}
+                    sx={{ fontSize: '0.78rem', textTransform: 'none' }}
+                  >
+                    {testingDividends ? 'Sending...' : 'Send now'}
+                  </Button>
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    onClick={handleResetDividends}
+                    disabled={!isDividendsDirty || savingDividends}
+                    sx={{ fontSize: '0.78rem', textTransform: 'none' }}
+                  >
+                    Reset
+                  </Button>
+                  <Button
+                    size="small"
+                    variant="contained"
+                    onClick={handleSaveDividends}
+                    disabled={!isDividendsDirty || savingDividends}
+                    sx={{ fontSize: '0.78rem', textTransform: 'none' }}
+                  >
+                    {savingDividends ? 'Saving...' : 'Save'}
+                  </Button>
+                </Stack>
+              </SettingsSection>
+
+              <SettingsSection title="Quiet Hours">
+                <SettingRow
+                  label="Enable Quiet Hours"
+                  description="Hold back alerts overnight. Scheduled trading summaries and test sends always go through."
+                >
+                  <Switch
+                    checked={draftQuietHours.enabled}
+                    onChange={(_, checked) => setQuietHours({ enabled: checked })}
+                  />
+                </SettingRow>
+                {draftQuietHours.enabled && (
+                  <>
+                    <SettingRow label="Quiet From" description="Start of the quiet window, US Eastern time">
+                      <Select
+                        size="small"
+                        value={draftQuietHours.startHour}
+                        onChange={(e) => setQuietHours({ startHour: Number(e.target.value) })}
+                        sx={{ minWidth: { xs: '100%', sm: 160 }, fontSize: '0.82rem' }}
+                      >
+                        <MenuItem value={0}>00:00</MenuItem>
+                        <MenuItem value={1}>01:00</MenuItem>
+                        <MenuItem value={2}>02:00</MenuItem>
+                        <MenuItem value={3}>03:00</MenuItem>
+                        <MenuItem value={4}>04:00</MenuItem>
+                        <MenuItem value={5}>05:00</MenuItem>
+                        <MenuItem value={6}>06:00</MenuItem>
+                        <MenuItem value={7}>07:00</MenuItem>
+                        <MenuItem value={8}>08:00</MenuItem>
+                        <MenuItem value={9}>09:00</MenuItem>
+                        <MenuItem value={10}>10:00</MenuItem>
+                        <MenuItem value={11}>11:00</MenuItem>
+                        <MenuItem value={12}>12:00</MenuItem>
+                        <MenuItem value={13}>13:00</MenuItem>
+                        <MenuItem value={14}>14:00</MenuItem>
+                        <MenuItem value={15}>15:00</MenuItem>
+                        <MenuItem value={16}>16:00</MenuItem>
+                        <MenuItem value={17}>17:00</MenuItem>
+                        <MenuItem value={18}>18:00</MenuItem>
+                        <MenuItem value={19}>19:00</MenuItem>
+                        <MenuItem value={20}>20:00</MenuItem>
+                        <MenuItem value={21}>21:00</MenuItem>
+                        <MenuItem value={22}>22:00</MenuItem>
+                        <MenuItem value={23}>23:00</MenuItem>
+                      </Select>
+                    </SettingRow>
+                    <SettingRow label="Quiet Until" description="End of the quiet window, US Eastern time">
+                      <Select
+                        size="small"
+                        value={draftQuietHours.endHour}
+                        onChange={(e) => setQuietHours({ endHour: Number(e.target.value) })}
+                        sx={{ minWidth: { xs: '100%', sm: 160 }, fontSize: '0.82rem' }}
+                      >
+                        <MenuItem value={0}>00:00</MenuItem>
+                        <MenuItem value={1}>01:00</MenuItem>
+                        <MenuItem value={2}>02:00</MenuItem>
+                        <MenuItem value={3}>03:00</MenuItem>
+                        <MenuItem value={4}>04:00</MenuItem>
+                        <MenuItem value={5}>05:00</MenuItem>
+                        <MenuItem value={6}>06:00</MenuItem>
+                        <MenuItem value={7}>07:00</MenuItem>
+                        <MenuItem value={8}>08:00</MenuItem>
+                        <MenuItem value={9}>09:00</MenuItem>
+                        <MenuItem value={10}>10:00</MenuItem>
+                        <MenuItem value={11}>11:00</MenuItem>
+                        <MenuItem value={12}>12:00</MenuItem>
+                        <MenuItem value={13}>13:00</MenuItem>
+                        <MenuItem value={14}>14:00</MenuItem>
+                        <MenuItem value={15}>15:00</MenuItem>
+                        <MenuItem value={16}>16:00</MenuItem>
+                        <MenuItem value={17}>17:00</MenuItem>
+                        <MenuItem value={18}>18:00</MenuItem>
+                        <MenuItem value={19}>19:00</MenuItem>
+                        <MenuItem value={20}>20:00</MenuItem>
+                        <MenuItem value={21}>21:00</MenuItem>
+                        <MenuItem value={22}>22:00</MenuItem>
+                        <MenuItem value={23}>23:00</MenuItem>
+                      </Select>
+                    </SettingRow>
+                    <SettingRow
+                      label="What To Do"
+                      description="Hold everything and send one summary when the window ends, or drop it entirely"
+                    >
+                      <Select
+                        size="small"
+                        value={draftQuietHours.mode}
+                        onChange={(e) => setQuietHours({ mode: e.target.value as QuietHoursConfig['mode'] })}
+                        sx={{ minWidth: { xs: '100%', sm: 200 }, fontSize: '0.82rem' }}
+                      >
+                        <MenuItem value="digest">Hold and send a digest</MenuItem>
+                        <MenuItem value="suppress">Drop them</MenuItem>
+                      </Select>
+                    </SettingRow>
+                    <SettingRow
+                      label="Let Big Moves Through"
+                      description="A move past the threshold below still wakes you during quiet hours"
+                    >
+                      <Switch
+                        checked={draftQuietHours.allowCritical}
+                        onChange={(_, checked) => setQuietHours({ allowCritical: checked })}
+                      />
+                    </SettingRow>
+                    {draftQuietHours.allowCritical && (
+                      <SettingRow
+                        label="Wake Me Threshold (%)"
+                        description="Move size that overrides quiet hours"
+                      >
+                        <TextField
+                          size="small"
+                          type="number"
+                          value={draftQuietHours.criticalThresholdPercent}
+                          onChange={(e) => setQuietHours({ criticalThresholdPercent: Number(e.target.value) })}
+                          slotProps={{ htmlInput: { min: 0.1, step: 0.5 } }}
+                          sx={{ width: { xs: '100%', sm: 160 }, '& input': { fontSize: '0.78rem' } }}
+                        />
+                      </SettingRow>
+                    )}
+                  </>
+                )}
+                <Stack
+                  direction="row"
+                  spacing={1}
+                  sx={{ justifyContent: 'flex-end', alignItems: 'center', px: 2, py: 1.5 }}
+                >
+                  {isQuietHoursDirty && (
+                    <Typography sx={{ fontSize: '0.72rem', color: 'warning.main', mr: 'auto' }}>
+                      Unsaved changes
+                    </Typography>
+                  )}
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    onClick={handleFlushQuietHours}
+                    disabled={!savedNotif.mqtt.enabled || flushingQuietHours}
+                    sx={{ fontSize: '0.78rem', textTransform: 'none' }}
+                  >
+                    {flushingQuietHours ? 'Sending...' : 'Send held now'}
+                  </Button>
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    onClick={handleResetQuietHours}
+                    disabled={!isQuietHoursDirty || savingQuietHours}
+                    sx={{ fontSize: '0.78rem', textTransform: 'none' }}
+                  >
+                    Reset
+                  </Button>
+                  <Button
+                    size="small"
+                    variant="contained"
+                    onClick={handleSaveQuietHours}
+                    disabled={!isQuietHoursDirty || savingQuietHours}
+                    sx={{ fontSize: '0.78rem', textTransform: 'none' }}
+                  >
+                    {savingQuietHours ? 'Saving...' : 'Save'}
                   </Button>
                 </Stack>
               </SettingsSection>
