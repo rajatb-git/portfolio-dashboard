@@ -29,7 +29,7 @@ import AlertDialog, { type DraftAlert, EMPTY_DRAFT } from '@/components/Alerts/A
 import { Iconify } from '@/components/Iconify';
 import PageHeader from '@/components/ui/PageHeader';
 import ToolbarButton from '@/components/ui/ToolbarButton';
-import type { IAlertStatus } from '@/models/AlertModel';
+import { ALERT_CONDITION_LABELS, type IAlertStatus } from '@/models/AlertModel';
 import { fnCurrency } from '@/utils/formatNumber';
 import { notifyTriggeredAlerts } from '@/utils/priceAlertNotifications';
 
@@ -75,8 +75,11 @@ export default function Alerts() {
       id: a.id,
       symbol: a.symbol,
       type: a.type,
+      condition: a.condition ?? 'price',
       direction: a.direction,
       targetPrice: String(a.targetPrice),
+      trailPercent: String(a.trailPercent ?? 10),
+      thresholdPercent: String(a.thresholdPercent ?? 20),
       note: a.note ?? '',
     });
     setDialogOpen(true);
@@ -222,9 +225,22 @@ export default function Alerts() {
                       )}
                     </TableCell>
                     <TableCell sx={{ fontSize: '0.78rem', color: 'text.secondary' }}>
-                      {a.direction === 'above' ? '≥' : '≤'}
+                      {a.condition === 'trailing_stop' || a.condition === 'pct_from_high'
+                        ? '≤'
+                        : a.direction === 'above'
+                          ? '≥'
+                          : '≤'}
                     </TableCell>
-                    <TableCell sx={{ fontSize: '0.82rem' }}>{fnCurrency(a.targetPrice)}</TableCell>
+                    <TableCell sx={{ fontSize: '0.82rem' }}>
+                      {a.resolvedTarget != null ? fnCurrency(a.resolvedTarget) : '—'}
+                      {a.condition && a.condition !== 'price' && (
+                        <Typography sx={{ fontSize: '0.62rem', color: 'text.disabled' }} noWrap>
+                          {ALERT_CONDITION_LABELS[a.condition]}
+                          {a.condition === 'trailing_stop' && a.trailPercent ? ` · ${a.trailPercent}%` : ''}
+                          {a.condition === 'pct_from_high' && a.thresholdPercent ? ` · ${a.thresholdPercent}%` : ''}
+                        </Typography>
+                      )}
+                    </TableCell>
                     <TableCell>
                       <Chip
                         label={a.triggered ? 'Triggered' : 'Watching'}

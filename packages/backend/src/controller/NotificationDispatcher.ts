@@ -1,9 +1,12 @@
 import moment from 'moment';
 import type { IAlert } from '../models/AlertModel';
 import type { IIPO } from '../models/IPOModel';
+import { type NotificationKind, recordNotification } from '../models/NotificationHistoryModel';
 import { getNotificationConfig } from '../models/NotificationConfigModel';
+import { getQuietHoursConfig } from '../models/QuietHoursConfigModel';
 import { logger } from '../utils/winston';
 import { mqttPublisher } from './MqttPublisher';
+import { quietHoursService } from './QuietHoursService';
 
 const LABEL = 'NotificationDispatcher';
 
@@ -70,7 +73,14 @@ export type AlertNotificationPayload = {
 };
 
 // Only public market data — never holdings, quantities, P&L, or portfolio value.
-export function buildAlertPayload(alert: IAlert, price: number): AlertNotificationPayload {
+// A cost-basis alert names the condition without quoting the basis itself, so the
+// payload still carries nothing about the size or cost of the position.
+export function buildAlertPayload(
+  alert: IAlert,
+  price: number,
+  description?: string
+): AlertNotificationPayload {
+  const condition = description ?? `target ${alert.direction} ${alert.targetPrice}`;
   return {
     symbol: alert.symbol,
     type: alert.type,
@@ -79,7 +89,7 @@ export function buildAlertPayload(alert: IAlert, price: number): AlertNotificati
     price,
     triggeredAt: alert.triggeredAt || new Date().toISOString(),
     title: `${alert.symbol} alert triggered`,
-    message: `${alert.symbol} is at ${price} (target ${alert.direction} ${alert.targetPrice}).`,
+    message: `${alert.symbol} is at ${price} (${condition}).`,
   };
 }
 
@@ -179,111 +189,293 @@ export function buildIpoAnnouncementPayload(ipo: IIPO): IpoAnnouncementPayload {
   };
 }
 
+export type EarningsPayload = {
+  symbol: string;
+  name: string;
+  date: string;
+  hour: string | null;
+  epsEstimate: number | null;
+  title: string;
+  message: string;
+};
+
+export type EarningsResultPayload = {
+  symbol: string;
+  name: string;
+  date: string;
+  epsActual: number | null;
+  epsEstimate: number | null;
+  surprisePercent: number | null;
+  title: string;
+  message: string;
+};
+
+export type DividendPayload = {
+  symbol: string;
+  name: string;
+  event: 'ex_dividend' | 'payment';
+  date: string;
+  amountPerShare: number;
+  expectedAmount: number;
+  title: string;
+  message: string;
+};
+
+// Earnings dates and EPS estimates are public company data; the expected payment
+// on a dividend is derived from the user's own share count, so like the move and
+// summary payloads it goes only to the user's self-hosted broker — never to an
+// external AI provider.
+export function buildEarningsPayload(
+  symbol: string,
+  name: string,
+  date: string,
+  hour: string | null,
+  epsEstimate: number | null,
+  daysAway: number
+): EarningsPayload {
+  const when = daysAway === 0 ? 'today' : daysAway === 1 ? 'tomorrow' : `in ${daysAway} days`;
+  const slot = hour === 'bmo' ? 'before the open' : hour === 'amc' ? 'after the close' : '';
+  const estimate = epsEstimate !== null ? ` Consensus EPS ${epsEstimate}.` : '';
+  return {
+    symbol,
+    name,
+    date,
+    hour,
+    epsEstimate,
+    title: `${symbol} reports ${when}`,
+    message: `${name} (${symbol}) reports earnings ${when}${slot ? ` ${slot}` : ''} on ${date}.${estimate}`,
+  };
+}
+
+export function buildEarningsResultPayload(
+  symbol: string,
+  name: string,
+  date: string,
+  epsActual: number | null,
+  epsEstimate: number | null,
+  surprisePercent: number | null
+): EarningsResultPayload {
+  const verdict =
+    epsActual !== null && epsEstimate !== null
+      ? epsActual >= epsEstimate
+        ? 'beat'
+        : 'missed'
+      : 'reported';
+  const detail =
+    epsActual !== null && epsEstimate !== null
+      ? ` EPS ${epsActual} vs ${epsEstimate} estimate${
+          surprisePercent !== null ? ` (${surprisePercent >= 0 ? '+' : ''}${surprisePercent.toFixed(1)}%)` : ''
+        }.`
+      : '';
+  return {
+    symbol,
+    name,
+    date,
+    epsActual,
+    epsEstimate,
+    surprisePercent,
+    title: `${symbol} ${verdict} on earnings`,
+    message: `${name} (${symbol}) ${verdict} for the quarter reported ${date}.${detail}`,
+  };
+}
+
+export function buildDividendPayload(
+  symbol: string,
+  name: string,
+  event: 'ex_dividend' | 'payment',
+  date: string,
+  amountPerShare: number,
+  expectedAmount: number
+): DividendPayload {
+  const money = `$${expectedAmount.toFixed(2)}`;
+  return {
+    symbol,
+    name,
+    event,
+    date,
+    amountPerShare,
+    expectedAmount,
+    title: event === 'ex_dividend' ? `${symbol} goes ex-dividend ${date}` : `${symbol} pays ${money} on ${date}`,
+    message:
+      event === 'ex_dividend'
+        ? `${name} (${symbol}) goes ex-dividend on ${date} at $${amountPerShare} per share — you would receive about ${money}.`
+        : `${name} (${symbol}) pays $${amountPerShare} per share on ${date} — about ${money} to you.`,
+  };
+}
+
 export async function configureFromSaved(): Promise<void> {
   try {
     const config = await getNotificationConfig();
     mqttPublisher.configure(config.mqtt);
+    const quiet = await getQuietHoursConfig();
+    quietHoursService.configure(quiet, config.mqtt.topic);
+    quietHoursService.start();
   } catch (err: any) {
     logger.log({ level: 'error', label: LABEL, message: `Failed to configure: ${err.message}` });
   }
 }
 
-// Fire-and-forget delivery from the alert monitor's trigger edge.
-export async function dispatchAlertTriggered(alert: IAlert, price: number): Promise<void> {
-  if (!mqttPublisher.isEnabled()) return;
-  try {
-    const ok = await mqttPublisher.publish(JSON.stringify(buildAlertPayload(alert, price)));
-    if (ok) {
-      logger.log({ level: 'info', label: LABEL, message: `Dispatched MQTT alert for ${alert.symbol}` });
-    } else {
-      logger.log({ level: 'warn', label: LABEL, message: `MQTT alert for ${alert.symbol} was not delivered` });
+type DeliverInput = {
+  kind: NotificationKind;
+  symbol?: string;
+  title: string;
+  message: string;
+  payload: object;
+  topic?: string;
+  // Magnitude of the move behind this notification, when there is one. Quiet
+  // hours measures its critical override against it.
+  severityPercent?: number;
+};
+
+// The single point every notification passes through: quiet-hours gating, the
+// publish itself, and the history record. Never throws — delivery problems are
+// logged and reported through the boolean.
+async function deliver(input: DeliverInput): Promise<boolean> {
+  const { kind, symbol = '', title, message, payload, topic, severityPercent } = input;
+  if (!mqttPublisher.isEnabled()) return false;
+
+  const resolvedTopic = topic ?? '';
+  const gate = quietHoursService.gate(kind, severityPercent);
+
+  if (gate !== 'send') {
+    if (gate === 'hold') {
+      await quietHoursService.hold({ kind, symbol, title, message, topic: resolvedTopic });
     }
+    logger.log({
+      level: 'info',
+      label: LABEL,
+      message: `Quiet hours ${gate === 'hold' ? 'held' : 'dropped'} ${kind} notification${symbol ? ` for ${symbol}` : ''}`,
+    });
+    await safeRecord({ kind, symbol, title, message, topic: resolvedTopic, delivered: false, suppressed: true });
+    return false;
+  }
+
+  let ok = false;
+  try {
+    ok = await mqttPublisher.publish(JSON.stringify(payload), topic);
+    logger.log({
+      level: ok ? 'info' : 'warn',
+      label: LABEL,
+      message: `${ok ? 'Dispatched' : 'Failed to dispatch'} ${kind} notification${symbol ? ` for ${symbol}` : ''}`,
+    });
   } catch (err: any) {
-    logger.log({ level: 'error', label: LABEL, message: `Dispatch failed for ${alert.symbol}: ${err.message}` });
+    logger.log({ level: 'error', label: LABEL, message: `${kind} dispatch failed: ${err.message}` });
+  }
+
+  await safeRecord({ kind, symbol, title, message, topic: resolvedTopic, delivered: ok, suppressed: false });
+  return ok;
+}
+
+// History is a convenience, never a reason to fail a delivery.
+async function safeRecord(entry: Parameters<typeof recordNotification>[0]): Promise<void> {
+  try {
+    await recordNotification(entry);
+  } catch (err: any) {
+    logger.log({ level: 'error', label: LABEL, message: `Failed to record notification: ${err.message}` });
   }
 }
 
-// Fire-and-forget delivery from the move-alert monitor's threshold crossing.
-export async function dispatchMoveAlert(payload: MoveAlertPayload): Promise<void> {
-  if (!mqttPublisher.isEnabled()) return;
-  try {
-    const ok = await mqttPublisher.publish(JSON.stringify(payload));
-    if (ok) {
-      logger.log({
-        level: 'info',
-        label: LABEL,
-        message: `Dispatched MQTT move alert for ${payload.symbol ?? 'portfolio'}`,
-      });
-    } else {
-      logger.log({
-        level: 'warn',
-        label: LABEL,
-        message: `MQTT move alert for ${payload.symbol ?? 'portfolio'} was not delivered`,
-      });
-    }
-  } catch (err: any) {
-    logger.log({ level: 'error', label: LABEL, message: `Move alert dispatch failed: ${err.message}` });
-  }
+export async function dispatchAlertTriggered(
+  alert: IAlert,
+  price: number,
+  description?: string
+): Promise<boolean> {
+  const payload = buildAlertPayload(alert, price, description);
+  return deliver({
+    kind: 'alert',
+    symbol: payload.symbol,
+    title: payload.title,
+    message: payload.message,
+    payload,
+  });
 }
 
-// Fire-and-forget delivery from the news watcher. Returns whether it landed so
-// the watcher only records an article as delivered once it actually went out.
+export async function dispatchMoveAlert(payload: MoveAlertPayload): Promise<boolean> {
+  return deliver({
+    kind: payload.kind === 'spike' ? 'spike' : 'move',
+    symbol: payload.symbol ?? '',
+    title: payload.title,
+    message: payload.message,
+    payload,
+    severityPercent: payload.kind === 'spike' ? payload.windowChange : payload.percentChange,
+  });
+}
+
 export async function dispatchNewsAlert(payload: NewsAlertPayload, topic?: string): Promise<boolean> {
-  if (!mqttPublisher.isEnabled()) return false;
-  try {
-    const ok = await mqttPublisher.publish(JSON.stringify(payload), topic);
-    if (ok) {
-      logger.log({
-        level: 'info',
-        label: LABEL,
-        message: `Dispatched MQTT news alert for ${payload.symbol ?? 'market'}: ${payload.headline}`,
-      });
-    } else {
-      logger.log({ level: 'warn', label: LABEL, message: `News alert for ${payload.symbol ?? 'market'} not delivered` });
-    }
-    return ok;
-  } catch (err: any) {
-    logger.log({ level: 'error', label: LABEL, message: `News alert dispatch failed: ${err.message}` });
-    return false;
-  }
+  return deliver({
+    kind: 'news',
+    symbol: payload.symbol ?? '',
+    title: payload.title,
+    message: payload.message,
+    payload,
+    topic,
+  });
 }
 
-// Fire-and-forget delivery from the IPO reminder service.
-export async function dispatchIpoReminder(payload: IpoReminderPayload): Promise<void> {
-  if (!mqttPublisher.isEnabled()) return;
-  try {
-    const ok = await mqttPublisher.publish(JSON.stringify(payload));
-    if (ok) {
-      logger.log({ level: 'info', label: LABEL, message: `Dispatched MQTT IPO reminder for ${payload.symbol}` });
-    } else {
-      logger.log({ level: 'warn', label: LABEL, message: `MQTT IPO reminder for ${payload.symbol} was not delivered` });
-    }
-  } catch (err: any) {
-    logger.log({
-      level: 'error',
-      label: LABEL,
-      message: `IPO reminder dispatch failed for ${payload.symbol}: ${err.message}`,
-    });
-  }
+export async function dispatchIpoReminder(payload: IpoReminderPayload): Promise<boolean> {
+  return deliver({
+    kind: 'ipo_reminder',
+    symbol: payload.symbol,
+    title: payload.title,
+    message: payload.message,
+    payload,
+  });
 }
 
-// Fire-and-forget delivery from the IPO announcement service.
 export async function dispatchIpoAnnouncement(payload: IpoAnnouncementPayload, topic?: string): Promise<boolean> {
-  if (!mqttPublisher.isEnabled()) return false;
-  try {
-    const ok = await mqttPublisher.publish(JSON.stringify(payload), topic);
-    if (ok) {
-      logger.log({ level: 'info', label: LABEL, message: `Dispatched MQTT IPO announcement for ${payload.symbol}` });
-    }
-    return ok;
-  } catch (err: any) {
-    logger.log({
-      level: 'error',
-      label: LABEL,
-      message: `IPO announcement dispatch failed for ${payload.symbol}: ${err.message}`,
-    });
-    return false;
-  }
+  return deliver({
+    kind: 'ipo_announcement',
+    symbol: payload.symbol,
+    title: payload.title,
+    message: payload.message,
+    payload,
+    topic,
+  });
+}
+
+export async function dispatchEarnings(payload: EarningsPayload, topic?: string): Promise<boolean> {
+  return deliver({
+    kind: 'earnings',
+    symbol: payload.symbol,
+    title: payload.title,
+    message: payload.message,
+    payload,
+    topic,
+  });
+}
+
+export async function dispatchEarningsResult(payload: EarningsResultPayload, topic?: string): Promise<boolean> {
+  return deliver({
+    kind: 'earnings_result',
+    symbol: payload.symbol,
+    title: payload.title,
+    message: payload.message,
+    payload,
+    topic,
+    severityPercent: payload.surprisePercent ?? undefined,
+  });
+}
+
+export async function dispatchDividend(payload: DividendPayload, topic?: string): Promise<boolean> {
+  return deliver({
+    kind: 'dividend',
+    symbol: payload.symbol,
+    title: payload.title,
+    message: payload.message,
+    payload,
+    topic,
+  });
+}
+
+// Scheduled summaries fire at times the user chose, so they bypass quiet hours;
+// routing them through deliver() still puts them in the history.
+export async function dispatchSummary(
+  title: string,
+  message: string,
+  payload: object,
+  topic: string
+): Promise<boolean> {
+  return deliver({ kind: 'summary', title, message, payload, topic });
 }
 
 export type TestResult = { mqtt: { enabled: boolean; ok: boolean; error?: string } };
@@ -302,7 +494,13 @@ export async function sendTestNotification(): Promise<TestResult> {
     title: 'Portfolio Dashboard test',
     message: 'This is a test notification from Portfolio Dashboard.',
   };
-  const ok = await mqttPublisher.publish(JSON.stringify(sample));
+  const ok = await deliver({
+    kind: 'test',
+    symbol: sample.symbol,
+    title: sample.title,
+    message: sample.message,
+    payload: sample,
+  });
   return {
     mqtt: { enabled: true, ok, error: ok ? undefined : 'Publish failed or timed out — check broker URL/credentials' },
   };

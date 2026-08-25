@@ -1,4 +1,5 @@
 import Router from '@koa/router';
+import { buildPortfolioBrief } from '../controller/BriefController';
 import { buildDailyRecap } from '../controller/DailyRecapController';
 import { createDashboard } from '../controller/DashboardController';
 import { PortfolioSnapshotDBModel } from '../models/PortfolioSnapshotModel';
@@ -15,6 +16,17 @@ export const DashboardRouter = () => {
     } catch (err: any) {
       logger.log({ level: 'error', message: err.message, label: 'Daily recap route' });
       ctx.body = errorBody('Failed to build daily recap', err.message);
+      ctx.status = 400;
+    }
+  });
+
+  router.get('/dashboard/brief', async (ctx) => {
+    try {
+      ctx.body = await buildPortfolioBrief();
+      ctx.status = 200;
+    } catch (error: any) {
+      logger.log({ level: 'error', message: error.message, label: 'Portfolio brief route' });
+      ctx.body = errorBody('Failed to build brief', error.message);
       ctx.status = 400;
     }
   });

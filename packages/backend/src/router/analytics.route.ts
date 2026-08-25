@@ -1,6 +1,7 @@
 import Router from '@koa/router';
 
 import { calculateCorrelation } from '../controller/CorrelationController';
+import { buildDividendSummary } from '../controller/DividendController';
 import { getHoldingsEarningsCalendar } from '../controller/HoldingsEarningsController';
 import { calculateMonthlyReturns } from '../controller/MonthlyReturnsController';
 import { getPerformanceAttribution } from '../controller/PerformanceAttributionController';
@@ -72,6 +73,17 @@ export const AnalyticsRouter = () => {
     } catch (error: any) {
       logger.log({ level: 'error', message: error.message, label: 'Holdings earnings calendar route' });
       ctx.body = errorBody('Failed to get earnings calendar', error.message);
+      ctx.status = 400;
+    }
+  });
+
+  router.get('/analytics/dividends', async (ctx) => {
+    try {
+      ctx.body = await buildDividendSummary();
+      ctx.status = 200;
+    } catch (error: any) {
+      logger.log({ level: 'error', message: error.message, label: 'Dividend summary route' });
+      ctx.body = errorBody('Failed to get dividend summary', error.message);
       ctx.status = 400;
     }
   });

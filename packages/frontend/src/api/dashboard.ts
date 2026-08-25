@@ -67,6 +67,42 @@ export type DailyRecap = {
   generatedAt: string;
 };
 
+export type BriefNotification = {
+  kind: string;
+  symbol: string;
+  title: string;
+  message: string;
+  createdAt: string;
+  delivered: boolean;
+};
+
+export type BriefEarning = { symbol: string; name: string; date: string; hour: string | null; daysAway: number };
+
+export type BriefDividend = {
+  symbol: string;
+  name: string;
+  date: string;
+  amount: number;
+  event: 'ex_dividend' | 'payment';
+};
+
+export type BriefAlert = {
+  symbol: string;
+  conditionLabel: string;
+  currentPrice: number | null;
+  triggeredAt: string | null;
+};
+
+export type PortfolioBrief = {
+  fired: BriefNotification[];
+  firedCount: number;
+  earnings: BriefEarning[];
+  dividends: BriefDividend[];
+  triggeredAlerts: BriefAlert[];
+  lookbackHours: number;
+  generatedAt: string;
+};
+
 export class DashboardAPI {
   getDashboard = async (): Promise<Array<HoldingAggregate>> =>
     axios
@@ -85,6 +121,12 @@ export class DashboardAPI {
   getDailyRecap = async (): Promise<DailyRecap> =>
     axios
       .get(DB_HOST + '/dashboard/daily-recap')
+      .then((response) => response.data)
+      .catch(catchCustomError);
+
+  getBrief = async (): Promise<PortfolioBrief> =>
+    axios
+      .get(DB_HOST + '/dashboard/brief')
       .then((response) => response.data)
       .catch(catchCustomError);
 }

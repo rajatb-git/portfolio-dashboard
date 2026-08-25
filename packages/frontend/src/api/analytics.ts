@@ -139,7 +139,38 @@ export type GoalConfig = {
   targetDate: string | null;
 };
 
+export type HoldingDividend = {
+  symbol: string;
+  name: string;
+  qty: number;
+  averagePrice: number;
+  amountPerShare: number;
+  annualizedDividend: number;
+  yieldPercent: number;
+  yieldOnCostPercent: number;
+  annualIncome: number;
+  nextExDate: string;
+  nextPayDate: string;
+  nextPaymentAmount: number;
+};
+
+export type DividendSummary = {
+  holdings: HoldingDividend[];
+  totalAnnualIncome: number;
+  averageMonthlyIncome: number;
+  portfolioYieldOnCostPercent: number;
+  upcoming: Array<{ symbol: string; name: string; date: string; amount: number; event: 'ex_dividend' | 'payment' }>;
+  payerCount: number;
+  generatedAt: string;
+};
+
 export default class AnalyticsAPI {
+  getDividends = async (): Promise<DividendSummary> =>
+    axios
+      .get(DB_HOST + '/analytics/dividends')
+      .then((response) => response.data)
+      .catch(catchCustomError);
+
   getRiskMetrics = async (): Promise<RiskMetrics> =>
     axios
       .get(DB_HOST + '/analytics/risk')

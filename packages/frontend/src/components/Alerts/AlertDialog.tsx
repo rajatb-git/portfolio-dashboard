@@ -3,18 +3,37 @@ import * as React from 'react';
 import { toast } from 'react-toastify';
 
 import apis from '@/api';
-import type { IAlert } from '@/models/AlertModel';
+import { ALERT_CONDITION_LABELS, type AlertCondition, type IAlert } from '@/models/AlertModel';
 
 export type DraftAlert = {
   id?: string;
   symbol: string;
   type: 'stock' | 'crypto';
+  condition: AlertCondition;
   direction: 'above' | 'below';
   targetPrice: string;
+  trailPercent: string;
+  thresholdPercent: string;
   note: string;
 };
 
-export const EMPTY_DRAFT: DraftAlert = { symbol: '', type: 'stock', direction: 'above', targetPrice: '', note: '' };
+export const EMPTY_DRAFT: DraftAlert = {
+  symbol: '',
+  type: 'stock',
+  condition: 'price',
+  direction: 'above',
+  targetPrice: '',
+  trailPercent: '10',
+  thresholdPercent: '20',
+  note: '',
+};
+
+const CONDITION_HELP: Record<AlertCondition, string> = {
+  price: 'Fires when the price crosses a fixed level.',
+  trailing_stop: 'Fires when the price falls this far below the highest price seen since the alert was created.',
+  pct_from_high: 'Fires when the price falls this far below the 52-week high.',
+  cost_basis: 'Fires when the price crosses what this position actually cost you across all accounts.',
+};
 
 type Props = {
   open: boolean;
@@ -37,22 +56,61 @@ export default function AlertDialog({ open, initial, onClose, onSaved }: Props) 
 
   const handleSave = async () => {
     const symbol = draft.symbol.trim().toUpperCase();
-    const targetPrice = parseFloat(draft.targetPrice);
     if (!symbol) {
       toast.error('Symbol is required');
       return;
     }
-    if (!Number.isFinite(targetPrice) || targetPrice <= 0) {
-      toast.error('Enter a target price greater than 0');
-      return;
+
+    const note = draft.note.trim() ? { note: draft.note.trim() } : {};
+    let payload: IAlert;
+
+    if (draft.condition === 'price') {
+      const targetPrice = parseFloat(draft.targetPrice);
+      if (!Number.isFinite(targetPrice) || targetPrice <= 0) {
+        toast.error('Enter a target price greater than 0');
+        return;
+      }
+      payload = { symbol, type: draft.type, condition: 'price', direction: draft.direction, targetPrice, ...note };
+    } else if (draft.condition === 'trailing_stop') {
+      const trailPercent = parseFloat(draft.trailPercent);
+      if (!Number.isFinite(trailPercent) || trailPercent <= 0 || trailPercent >= 100) {
+        toast.error('Enter a trail percent between 0 and 100');
+        return;
+      }
+      payload = {
+        symbol,
+        type: draft.type,
+        condition: 'trailing_stop',
+        direction: 'below',
+        targetPrice: 0,
+        trailPercent,
+        ...note,
+      };
+    } else if (draft.condition === 'pct_from_high') {
+      const thresholdPercent = parseFloat(draft.thresholdPercent);
+      if (!Number.isFinite(thresholdPercent) || thresholdPercent <= 0 || thresholdPercent >= 100) {
+        toast.error('Enter a threshold percent between 0 and 100');
+        return;
+      }
+      payload = {
+        symbol,
+        type: draft.type,
+        condition: 'pct_from_high',
+        direction: 'below',
+        targetPrice: 0,
+        thresholdPercent,
+        ...note,
+      };
+    } else {
+      payload = {
+        symbol,
+        type: draft.type,
+        condition: 'cost_basis',
+        direction: draft.direction,
+        targetPrice: 0,
+        ...note,
+      };
     }
-    const payload: IAlert = {
-      symbol,
-      type: draft.type,
-      direction: draft.direction,
-      targetPrice,
-      ...(draft.note.trim() ? { note: draft.note.trim() } : {}),
-    };
     setSaving(true);
     try {
       if (isEdit && draft.id) await apis.alerts.update(draft.id, payload);
@@ -95,6 +153,23 @@ export default function AlertDialog({ open, initial, onClose, onSaved }: Props) 
             </TextField>
             <TextField
               select
+              label="Watch"
+              size="small"
+              value={draft.condition}
+              onChange={(e) => set({ condition: e.target.value as AlertCondition })}
+              helperText={CONDITION_HELP[draft.condition]}
+              fullWidth
+            >
+              {(Object.keys(ALERT_CONDITION_LABELS) as AlertCondition[]).map((key) => (
+                <MenuItem key={key} value={key}>
+                  {ALERT_CONDITION_LABELS[key]}
+                </MenuItem>
+              ))}
+            </TextField>
+          </Stack>
+          {(draft.condition === 'price' || draft.condition === 'cost_basis') && (
+            <TextField
+              select
               label="Trigger when price"
               size="small"
               value={draft.direction}
@@ -104,16 +179,41 @@ export default function AlertDialog({ open, initial, onClose, onSaved }: Props) 
               <MenuItem value="above">Rises to / above</MenuItem>
               <MenuItem value="below">Falls to / below</MenuItem>
             </TextField>
-          </Stack>
-          <TextField
-            label="Target price"
-            size="small"
-            type="number"
-            value={draft.targetPrice}
-            onChange={(e) => set({ targetPrice: e.target.value })}
-            slotProps={{ htmlInput: { min: 0, step: 'any' } }}
-            fullWidth
-          />
+          )}
+          {draft.condition === 'price' && (
+            <TextField
+              label="Target price"
+              size="small"
+              type="number"
+              value={draft.targetPrice}
+              onChange={(e) => set({ targetPrice: e.target.value })}
+              slotProps={{ htmlInput: { min: 0, step: 'any' } }}
+              fullWidth
+            />
+          )}
+          {draft.condition === 'trailing_stop' && (
+            <TextField
+              label="Trail percent"
+              size="small"
+              type="number"
+              value={draft.trailPercent}
+              onChange={(e) => set({ trailPercent: e.target.value })}
+              slotProps={{ htmlInput: { min: 0.1, max: 99, step: 0.5 } }}
+              helperText="The peak is tracked from the moment the alert is created."
+              fullWidth
+            />
+          )}
+          {draft.condition === 'pct_from_high' && (
+            <TextField
+              label="Percent below 52-week high"
+              size="small"
+              type="number"
+              value={draft.thresholdPercent}
+              onChange={(e) => set({ thresholdPercent: e.target.value })}
+              slotProps={{ htmlInput: { min: 0.1, max: 99, step: 0.5 } }}
+              fullWidth
+            />
+          )}
           <TextField
             label="Note (optional)"
             size="small"

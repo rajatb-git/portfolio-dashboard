@@ -8,6 +8,7 @@ import PageHeader from '@/components/ui/PageHeader';
 import LocalStorageUtil from '@/utils/localStorage';
 
 import apis from '@/api';
+import type { DividendSummary } from '@/api/analytics';
 import type { HoldingAggregate, PortfolioSnapshot } from '@/api/dashboard';
 import type {
   CorrelationMatrix,
@@ -19,6 +20,7 @@ import type {
 } from '@/api/analytics';
 import AllocationCharts from '@/components/Analytics/AllocationCharts';
 import CorrelationMatrixCard from '@/components/Analytics/CorrelationMatrixCard';
+import DividendIncomeCard from '@/components/Analytics/DividendIncomeCard';
 import MonthlyReturnsCard from '@/components/Analytics/MonthlyReturnsCard';
 import NewsSentimentCard from '@/components/Analytics/NewsSentimentCard';
 import PerformanceAttributionCard from '@/components/Analytics/PerformanceAttributionCard';
@@ -36,6 +38,7 @@ const TABS = [
   { value: 'performance', label: 'Performance', icon: 'tabler:chart-line' },
   { value: 'risk', label: 'Risk', icon: 'tabler:shield-half' },
   { value: 'allocation', label: 'Allocation', icon: 'tabler:chart-donut' },
+  { value: 'income', label: 'Income', icon: 'tabler:cash' },
   { value: 'tax', label: 'Realized & Tax', icon: 'tabler:receipt-tax' },
 ] as const;
 
@@ -77,6 +80,10 @@ export default function Analytics() {
 
   const [correlation, setCorrelation] = React.useState<CorrelationMatrix | null>(null);
   const [isCorrelationLoading, setIsCorrelationLoading] = React.useState(true);
+
+  const [dividends, setDividends] = React.useState<DividendSummary | null>(null);
+  const [isDividendsLoading, setIsDividendsLoading] = React.useState(true);
+  const [dividendsError, setDividendsError] = React.useState<string | null>(null);
 
   React.useEffect(() => {
     setIsLoading(true);
@@ -154,6 +161,18 @@ export default function Analytics() {
       .then((data) => setCorrelation(data))
       .catch((err) => toast.error(err.message || 'Failed to load correlation matrix'))
       .finally(() => setIsCorrelationLoading(false));
+
+    setIsDividendsLoading(true);
+    setDividendsError(null);
+    apis.analytics
+      .getDividends()
+      .then((data) => setDividends(data))
+      .catch((err) => {
+        setDividends(null);
+        setDividendsError(err.message || 'Failed to load dividend income');
+        toast.error(err.message || 'Failed to load dividend income');
+      })
+      .finally(() => setIsDividendsLoading(false));
   }, []);
 
   return (
@@ -216,6 +235,10 @@ export default function Analytics() {
             </Grid>
             <AllocationCharts dashboardData={dashboardData} isLoading={isLoading} />
           </Stack>
+        )}
+
+        {tab === 'income' && (
+          <DividendIncomeCard data={dividends} isLoading={isDividendsLoading} error={dividendsError} />
         )}
 
         {tab === 'tax' && (

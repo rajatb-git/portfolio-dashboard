@@ -213,3 +213,82 @@ export const getPriceHistoryCandleStick = async (symbol: string, range: Range): 
     ],
   }));
 };
+
+export type NasdaqDividendRow = {
+  exOrEffDate: string;
+  type: string;
+  amount: number;
+  declarationDate: string;
+  recordDate: string;
+  paymentDate: string;
+};
+
+export type NasdaqDividends = {
+  symbol: string;
+  // Next scheduled ex-dividend date, empty when none is announced.
+  exDividendDate: string;
+  dividendPaymentDate: string;
+  annualizedDividend: number;
+  yieldPercent: number;
+  payoutRatio: number;
+  history: NasdaqDividendRow[];
+};
+
+// NASDAQ renders "N/A" and empty strings for missing dates; normalise both to ''
+// so callers only have to check for falsy.
+const parseNasdaqDate = (raw: string | undefined | null): string => {
+  if (!raw || raw === 'N/A') return '';
+  const parsed = moment(raw, ['MM/DD/YYYY', 'YYYY-MM-DD', moment.ISO_8601], true);
+  return parsed.isValid() ? parsed.format('YYYY-MM-DD') : '';
+};
+
+// Public dividend calendar and rate data for a ticker. Free, key-less, and the
+// same host the quote fallback already uses. Returns null when the symbol pays
+// no dividend or NASDAQ has no record of it.
+export const getDividendsFromNasdaq = async (symbol: string): Promise<NasdaqDividends | null> => {
+  const url = `https://api.nasdaq.com/api/quote/${symbol}/dividends?assetclass=stocks`;
+
+  let data: any;
+  try {
+    const res = await axios.get(url, { httpsAgent: nasdaqAgent, headers: nasdaqHeaders, timeout: 10000 });
+    data = res.data?.data;
+  } catch (error: any) {
+    const err = error as AxiosError;
+    logger.log({
+      level: 'warn',
+      label: `NASDAQ dividends ${symbol}`,
+      message: `${err.message} (status ${err.response?.status ?? 'n/a'})`,
+    });
+    return null;
+  }
+
+  if (!data) return null;
+
+  const rows = Array.isArray(data.dividends?.rows) ? data.dividends.rows : [];
+  const history: NasdaqDividendRow[] = rows
+    .map((row: any) => ({
+      exOrEffDate: parseNasdaqDate(row?.exOrEffDate),
+      type: String(row?.type ?? '').trim(),
+      amount: parseDollarAmount(row?.amount),
+      declarationDate: parseNasdaqDate(row?.declarationDate),
+      recordDate: parseNasdaqDate(row?.recordDate),
+      paymentDate: parseNasdaqDate(row?.paymentDate),
+    }))
+    .filter((row: NasdaqDividendRow) => row.amount > 0);
+
+  const annualizedDividend = parseDollarAmount(data.annualizedDividend);
+  const yieldPercent = parsePercent(data.yield);
+
+  // A non-payer comes back with empty dates, a zero rate and no history.
+  if (!annualizedDividend && history.length === 0) return null;
+
+  return {
+    symbol: symbol.toUpperCase(),
+    exDividendDate: parseNasdaqDate(data.exDividendDate),
+    dividendPaymentDate: parseNasdaqDate(data.dividendPaymentDate),
+    annualizedDividend,
+    yieldPercent,
+    payoutRatio: parsePercent(data.payoutRatio),
+    history,
+  };
+};

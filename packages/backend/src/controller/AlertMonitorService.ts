@@ -1,5 +1,6 @@
 import { AlertModel, IAlertModel } from '../models/AlertModel';
 import type { IAlertMonitorConfig } from '../models/AlertMonitorConfigModel';
+import { buildAlertContext, describeCondition, isTriggered, nextPeak } from './AlertConditions';
 import { isStockMarketOpen } from '../utils/marketCalendar';
 import { PersistentInterval } from '../utils/PersistentInterval';
 import { logger } from '../utils/winston';
@@ -7,9 +8,6 @@ import { LiveQuoteController } from './LiveQuoteController';
 import { dispatchAlertTriggered } from './NotificationDispatcher';
 
 const LABEL = 'AlertMonitorService';
-
-const conditionMet = (direction: 'above' | 'below', price: number, target: number): boolean =>
-  direction === 'above' ? price >= target : price <= target;
 
 class AlertMonitorService {
   private readonly scheduler = new PersistentInterval('alert_monitor');
@@ -41,15 +39,25 @@ class AlertMonitorService {
       );
       const priceMap = new Map(symbols.map((sym, i) => [sym, quotes[i]]));
 
+      // Reference data for the conditions that need it (52-week highs, cost basis).
+      const context = await buildAlertContext(toEval);
+
       const now = new Date().toISOString();
       for (const alert of toEval) {
         const quote = priceMap.get(alert.symbol);
         if (!quote) continue; // leave state untouched on a fetch failure
 
         const price = +quote.price.toFixed(2);
-        const met = conditionMet(alert.direction, price, alert.targetPrice);
 
-        const next: IAlertModel = { ...alert, lastPrice: price, lastCheckedAt: now };
+        // Advance a trailing stop's peak BEFORE evaluating, so a new high raises
+        // the stop in the same pass rather than a cycle later.
+        const peak = nextPeak(alert, price);
+        const armed: IAlertModel = peak !== null ? { ...alert, peakPrice: peak } : alert;
+
+        const met = isTriggered(armed, price, context);
+        const description = describeCondition(armed, context);
+
+        const next: IAlertModel = { ...armed, lastPrice: price, lastCheckedAt: now };
         let justTriggered = false;
         if (met && !alert.triggeredAt) {
           next.triggeredAt = now;
@@ -57,7 +65,7 @@ class AlertMonitorService {
           logger.log({
             level: 'info',
             label: LABEL,
-            message: `ALERT TRIGGERED — ${alert.symbol} ${alert.direction} ${alert.targetPrice} (now ${price})`,
+            message: `ALERT TRIGGERED — ${alert.symbol} ${description} (now ${price})`,
           });
         } else if (!met && alert.triggeredAt) {
           // Condition cleared — re-arm so it can fire again on the next crossing.
@@ -71,7 +79,7 @@ class AlertMonitorService {
         }
 
         // Deliver to configured channels only on the untriggered -> triggered edge.
-        if (justTriggered) void dispatchAlertTriggered(next, price);
+        if (justTriggered) void dispatchAlertTriggered(next, price, description);
       }
     } catch (err: any) {
       logger.log({ level: 'error', label: LABEL, message: err.message });

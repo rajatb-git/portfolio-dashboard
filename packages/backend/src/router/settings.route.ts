@@ -14,6 +14,19 @@ import { getIpoReminderConfig, IIpoReminderConfig, saveIpoReminderConfig, VALID_
 import { getLockStatus, setLockConfig } from '../models/LockConfigModel';
 import { getMoveAlertConfig, IMoveAlertConfig, saveMoveAlertConfig } from '../models/MoveAlertConfigModel';
 import { getNewsWatchConfig, INewsWatchConfig, saveNewsWatchConfig } from '../models/NewsWatchConfigModel';
+import { getQuietHoursConfig, IQuietHoursConfig, saveQuietHoursConfig } from '../models/QuietHoursConfigModel';
+import {
+  getEarningsReminderConfig,
+  IEarningsReminderConfig,
+  saveEarningsReminderConfig,
+  VALID_EARNINGS_DAYS_BEFORE,
+} from '../models/EarningsReminderConfigModel';
+import {
+  getDividendWatchConfig,
+  IDividendWatchConfig,
+  saveDividendWatchConfig,
+  VALID_DIVIDEND_DAYS_BEFORE,
+} from '../models/DividendWatchConfigModel';
 import {
   getNotificationConfig,
   INotificationConfig,
@@ -41,6 +54,9 @@ import { ipoAnnouncementService } from '../controller/IpoAnnouncementService';
 import { ipoReminderService } from '../controller/IpoReminderService';
 import { moveAlertService } from '../controller/MoveAlertService';
 import { newsWatchService } from '../controller/NewsWatchService';
+import { quietHoursService } from '../controller/QuietHoursService';
+import { earningsReminderService } from '../controller/EarningsReminderService';
+import { dividendWatchService } from '../controller/DividendWatchService';
 import { configureFromSaved, sendTestNotification } from '../controller/NotificationDispatcher';
 import { portfolioValueCalcService } from '../controller/PortfolioValueCalcService';
 import { scheduledBackupService } from '../controller/ScheduledBackupService';
@@ -561,6 +577,197 @@ export const SettingsRouter = () => {
       logger.log({ level: 'error', message: error.message, label: 'move-alert config save' });
       ctx.status = 500;
       ctx.body = errorBody('Failed to save move alert config', error.message);
+    }
+  });
+
+  router.get('/settings/earnings-reminder', async (ctx) => {
+    try {
+      ctx.body = await getEarningsReminderConfig();
+      ctx.status = 200;
+    } catch (error: any) {
+      logger.log({ level: 'error', message: error.message, label: 'earnings-reminder config get' });
+      ctx.status = 500;
+      ctx.body = errorBody('Failed to get earnings reminder config', error.message);
+    }
+  });
+
+  router.post('/settings/earnings-reminder', async (ctx) => {
+    try {
+      const body = ctx.request.body as Partial<IEarningsReminderConfig>;
+
+      if (typeof body.enabled !== 'boolean') {
+        ctx.status = 400;
+        ctx.body = errorBody('Invalid request', '"enabled" boolean is required');
+        return;
+      }
+
+      const daysBefore = Number(body.daysBefore ?? 1);
+      if (!VALID_EARNINGS_DAYS_BEFORE.includes(daysBefore)) {
+        ctx.status = 400;
+        ctx.body = errorBody('Invalid days', `daysBefore must be one of: ${VALID_EARNINGS_DAYS_BEFORE.join(', ')}`);
+        return;
+      }
+
+      const config: IEarningsReminderConfig = {
+        enabled: body.enabled,
+        daysBefore,
+        notifyResults: body.notifyResults !== false,
+        topic: String(body.topic ?? '').trim() || 'portfolio-dashboard/earnings',
+      };
+      await saveEarningsReminderConfig(config);
+      earningsReminderService.reconfigure(config);
+
+      ctx.body = config;
+      ctx.status = 200;
+    } catch (error: any) {
+      logger.log({ level: 'error', message: error.message, label: 'earnings-reminder config save' });
+      ctx.status = 500;
+      ctx.body = errorBody('Failed to save earnings reminder config', error.message);
+    }
+  });
+
+  router.post('/settings/earnings-reminder/test', async (ctx) => {
+    try {
+      ctx.body = await earningsReminderService.sendTest();
+      ctx.status = 200;
+    } catch (error: any) {
+      logger.log({ level: 'error', message: error.message, label: 'earnings-reminder test' });
+      ctx.status = 500;
+      ctx.body = errorBody('Failed to send test earnings notification', error.message);
+    }
+  });
+
+  router.get('/settings/dividend-watch', async (ctx) => {
+    try {
+      ctx.body = await getDividendWatchConfig();
+      ctx.status = 200;
+    } catch (error: any) {
+      logger.log({ level: 'error', message: error.message, label: 'dividend-watch config get' });
+      ctx.status = 500;
+      ctx.body = errorBody('Failed to get dividend watch config', error.message);
+    }
+  });
+
+  router.post('/settings/dividend-watch', async (ctx) => {
+    try {
+      const body = ctx.request.body as Partial<IDividendWatchConfig>;
+
+      if (typeof body.enabled !== 'boolean') {
+        ctx.status = 400;
+        ctx.body = errorBody('Invalid request', '"enabled" boolean is required');
+        return;
+      }
+
+      const daysBefore = Number(body.daysBefore ?? 3);
+      if (!VALID_DIVIDEND_DAYS_BEFORE.includes(daysBefore)) {
+        ctx.status = 400;
+        ctx.body = errorBody('Invalid days', `daysBefore must be one of: ${VALID_DIVIDEND_DAYS_BEFORE.join(', ')}`);
+        return;
+      }
+
+      const config: IDividendWatchConfig = {
+        enabled: body.enabled,
+        daysBefore,
+        notifyExDate: body.notifyExDate !== false,
+        notifyPayment: body.notifyPayment !== false,
+        topic: String(body.topic ?? '').trim() || 'portfolio-dashboard/dividends',
+      };
+      await saveDividendWatchConfig(config);
+      dividendWatchService.reconfigure(config);
+
+      ctx.body = config;
+      ctx.status = 200;
+    } catch (error: any) {
+      logger.log({ level: 'error', message: error.message, label: 'dividend-watch config save' });
+      ctx.status = 500;
+      ctx.body = errorBody('Failed to save dividend watch config', error.message);
+    }
+  });
+
+  router.post('/settings/dividend-watch/test', async (ctx) => {
+    try {
+      ctx.body = await dividendWatchService.sendTest();
+      ctx.status = 200;
+    } catch (error: any) {
+      logger.log({ level: 'error', message: error.message, label: 'dividend-watch test' });
+      ctx.status = 500;
+      ctx.body = errorBody('Failed to send test dividend notification', error.message);
+    }
+  });
+
+  router.get('/settings/quiet-hours', async (ctx) => {
+    try {
+      ctx.body = await getQuietHoursConfig();
+      ctx.status = 200;
+    } catch (error: any) {
+      logger.log({ level: 'error', message: error.message, label: 'quiet-hours config get' });
+      ctx.status = 500;
+      ctx.body = errorBody('Failed to get quiet hours config', error.message);
+    }
+  });
+
+  router.post('/settings/quiet-hours', async (ctx) => {
+    try {
+      const body = ctx.request.body as Partial<IQuietHoursConfig>;
+
+      if (typeof body.enabled !== 'boolean') {
+        ctx.status = 400;
+        ctx.body = errorBody('Invalid request', '"enabled" boolean is required');
+        return;
+      }
+
+      const startHour = Number(body.startHour ?? 22);
+      const endHour = Number(body.endHour ?? 7);
+      for (const [name, value] of [
+        ['startHour', startHour],
+        ['endHour', endHour],
+      ] as const) {
+        if (!Number.isInteger(value) || value < 0 || value > 23) {
+          ctx.status = 400;
+          ctx.body = errorBody('Invalid hour', `${name} must be a whole number between 0 and 23`);
+          return;
+        }
+      }
+
+      const mode = body.mode === 'suppress' ? 'suppress' : 'digest';
+
+      const criticalThresholdPercent = Number(body.criticalThresholdPercent ?? 10);
+      if (!Number.isFinite(criticalThresholdPercent) || criticalThresholdPercent <= 0) {
+        ctx.status = 400;
+        ctx.body = errorBody('Invalid threshold', 'criticalThresholdPercent must be a positive number');
+        return;
+      }
+
+      const config: IQuietHoursConfig = {
+        enabled: body.enabled,
+        startHour,
+        endHour,
+        mode,
+        allowCritical: body.allowCritical !== false,
+        criticalThresholdPercent,
+      };
+      await saveQuietHoursConfig(config);
+      const notificationConfig = await getNotificationConfig();
+      quietHoursService.configure(config, notificationConfig.mqtt.topic);
+
+      ctx.body = config;
+      ctx.status = 200;
+    } catch (error: any) {
+      logger.log({ level: 'error', message: error.message, label: 'quiet-hours config save' });
+      ctx.status = 500;
+      ctx.body = errorBody('Failed to save quiet hours config', error.message);
+    }
+  });
+
+  // Send any notifications currently parked by digest mode straight away.
+  router.post('/settings/quiet-hours/flush', async (ctx) => {
+    try {
+      ctx.body = { flushed: await quietHoursService.flush() };
+      ctx.status = 200;
+    } catch (error: any) {
+      logger.log({ level: 'error', message: error.message, label: 'quiet-hours flush' });
+      ctx.status = 500;
+      ctx.body = errorBody('Failed to flush held notifications', error.message);
     }
   });
 

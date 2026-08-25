@@ -8,6 +8,7 @@ import { etDateAndMinutes, getMarketCloseMinutes, isTradingDay } from '../utils/
 import { logger } from '../utils/winston';
 import { buildDailyRecap } from './DailyRecapController';
 import { mqttPublisher } from './MqttPublisher';
+import { dispatchSummary } from './NotificationDispatcher';
 
 const LABEL = 'TradingSummaryService';
 
@@ -137,9 +138,13 @@ class TradingSummaryService {
       // Each summary goes to its own subtopic (…/market, …/pnl, …/holdings). Publishing
       // all three to one topic made consumers (Home Assistant, mobile push bridges)
       // coalesce/retain them into a single notification — hence "only one arrived".
-      const publish = async (kind: string, payload: object): Promise<void> => {
+      const publish = async (
+        kind: string,
+        payload: { title: string; message: string } & Record<string, unknown>
+      ): Promise<void> => {
         const topic = `${config.topic}/${kind}`;
-        const ok = await mqttPublisher.publish(JSON.stringify({ ...base, kind, ...payload }), topic);
+        const body = { ...base, kind, ...payload };
+        const ok = await dispatchSummary(body.title, body.message, body, topic);
         if (ok) published += 1;
         logger.log({
           level: ok ? 'info' : 'warn',

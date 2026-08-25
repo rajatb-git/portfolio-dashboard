@@ -6,6 +6,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
+## [4.4.0] – 2026-08-25
+
+### Added
+- **Quiet hours** — Hold back alerts overnight on an ET window that may wrap midnight. Digest mode parks everything that lands in the window and sends a single summary when it ends; suppress mode drops it. A configurable "wake me" threshold lets a big enough move through anyway. Scheduled trading summaries and test sends always go through, and a "Send held now" button drains the queue on demand.
+- **Notification history** — Every notification the app sends is now recorded and browsable on a new Notifications page, with the source, symbol, message, and whether it was delivered, failed, or held by quiet hours. Kept for 30 days, filterable by source, so thresholds can be tuned against what actually fired.
+- **Earnings alerts** — A heads-up a configurable number of days before any holding reports, including the pre-market/after-close slot and consensus EPS, then a follow-up once the actual number lands showing the beat or miss against estimate.
+- **Dividend tracking** — New Income tab on Analytics showing projected annual income, average per month, portfolio yield on cost, upcoming ex-dividend and payment dates, and a per-holding breakdown with yield on cost against what each position actually cost. Backed by a new public NASDAQ dividends source.
+- **Dividend alerts** — Notify ahead of an ex-dividend date or a payment, with the amount to expect based on your share count.
+- **Richer alert conditions** — Alerts are no longer limited to a fixed price target. Added trailing stop (a drop from the highest price seen since the alert was created, with the peak tracked by the monitor), percent below the 52-week high, and a cost-basis cross. The monitor and the Alerts page now share one evaluator, so the page can never disagree with what actually fires.
+- **Portfolio brief on Today** — The Today page now leads with what changed while you were away: currently triggered alerts, what was sent in the last 24 hours, holdings reporting this week, and dividends due in the next two weeks.
+
+### Changed
+- Every notification now passes through a single delivery chokepoint that applies quiet hours and records history, instead of each service publishing to MQTT independently. Trading summaries route through it too, so they appear in the history.
+
+---
+
 ## [4.3.0] – 2026-08-25
 
 ### Added
