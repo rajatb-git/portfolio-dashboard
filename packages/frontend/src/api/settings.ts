@@ -26,7 +26,25 @@ export type MoveAlertConfig = {
   enabled: boolean;
   intervalMinutes: number;
   thresholdPercent: number;
+  escalationStepPercent: number;
+  spikePercent: number;
+  spikeWindowMinutes: number;
+  cryptoAlwaysOn: boolean;
+  includeAfterHours: boolean;
 };
+
+export type NewsWatchConfig = {
+  enabled: boolean;
+  intervalMinutes: number;
+  topic: string;
+  watchHoldings: boolean;
+  watchMarket: boolean;
+  breakingOnly: boolean;
+  maxPerRun: number;
+  lookbackHours: number;
+};
+
+export type NewsWatchTestResult = { ok: boolean; mqttEnabled: boolean };
 
 export type IpoReminderConfig = {
   enabled: boolean;
@@ -118,6 +136,24 @@ export default class SettingsAPI {
   saveMoveAlertConfig = async (payload: MoveAlertConfig): Promise<MoveAlertConfig> =>
     axios
       .post(DB_HOST + '/settings/move-alert', payload)
+      .then((response) => response.data)
+      .catch(catchCustomError);
+
+  getNewsWatchConfig = async (): Promise<NewsWatchConfig> =>
+    axios
+      .get(DB_HOST + '/settings/news-watch')
+      .then((response) => response.data)
+      .catch(catchCustomError);
+
+  saveNewsWatchConfig = async (payload: NewsWatchConfig): Promise<NewsWatchConfig> =>
+    axios
+      .post(DB_HOST + '/settings/news-watch', payload)
+      .then((response) => response.data)
+      .catch(catchCustomError);
+
+  sendNewsWatchTest = async (): Promise<NewsWatchTestResult> =>
+    axios
+      .post(DB_HOST + '/settings/news-watch/test')
       .then((response) => response.data)
       .catch(catchCustomError);
 

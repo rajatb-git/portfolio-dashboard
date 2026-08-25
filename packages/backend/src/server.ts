@@ -17,6 +17,7 @@ import { ipoAnnouncementService } from './controller/IpoAnnouncementService';
 import { ipoReminderService } from './controller/IpoReminderService';
 import { marketStatusService } from './controller/MarketStatusService';
 import { moveAlertService } from './controller/MoveAlertService';
+import { newsWatchService } from './controller/NewsWatchService';
 import { configureFromSaved } from './controller/NotificationDispatcher';
 import { portfolioValueCalcService } from './controller/PortfolioValueCalcService';
 import { scheduledBackupService } from './controller/ScheduledBackupService';
@@ -25,6 +26,7 @@ import { getAlertMonitorConfig } from './models/AlertMonitorConfigModel';
 import { getIpoAnnouncementConfig } from './models/IpoAnnouncementConfigModel';
 import { getIpoReminderConfig } from './models/IpoReminderConfigModel';
 import { getMoveAlertConfig } from './models/MoveAlertConfigModel';
+import { getNewsWatchConfig } from './models/NewsWatchConfigModel';
 import { getScheduledBackupConfig } from './models/ScheduledBackupConfigModel';
 import { getTradingSummaryConfig } from './models/TradingSummaryConfigModel';
 import { getValueCalcConfig } from './models/ValueCalcConfigModel';
@@ -98,5 +100,6 @@ app.listen(port, () => {
   configureFromSaved().then(() => {
     getTradingSummaryConfig().then((config) => tradingSummaryService.start(config));
     getIpoAnnouncementConfig().then((config) => ipoAnnouncementService.start(config));
+    getNewsWatchConfig().then((config) => newsWatchService.start(config));
   });
 });
