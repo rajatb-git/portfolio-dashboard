@@ -13,6 +13,7 @@ import {
 import { getIpoReminderConfig, IIpoReminderConfig, saveIpoReminderConfig, VALID_DAYS_BEFORE } from '../models/IpoReminderConfigModel';
 import { getLockStatus, setLockConfig } from '../models/LockConfigModel';
 import { getMoveAlertConfig, IMoveAlertConfig, saveMoveAlertConfig } from '../models/MoveAlertConfigModel';
+import { getNewsWatchConfig, INewsWatchConfig, saveNewsWatchConfig } from '../models/NewsWatchConfigModel';
 import {
   getNotificationConfig,
   INotificationConfig,
@@ -39,6 +40,7 @@ import { disableDemoMode, enableDemoMode, getDemoModeStatus, resetDemoData } fro
 import { ipoAnnouncementService } from '../controller/IpoAnnouncementService';
 import { ipoReminderService } from '../controller/IpoReminderService';
 import { moveAlertService } from '../controller/MoveAlertService';
+import { newsWatchService } from '../controller/NewsWatchService';
 import { configureFromSaved, sendTestNotification } from '../controller/NotificationDispatcher';
 import { portfolioValueCalcService } from '../controller/PortfolioValueCalcService';
 import { scheduledBackupService } from '../controller/ScheduledBackupService';
@@ -49,6 +51,10 @@ import { DEFAULT_MONGO_DB_NAME, DEMO_MONGO_DB_NAME } from '../utils/mongoClient'
 import { buildDbArchive, restoreDbArchive } from '../utils/mongoBackup';
 import { BACKUPS_DIR } from '../utils/storage';
 import { logger } from '../utils/winston';
+
+const VALID_SPIKE_WINDOWS = [10, 15, 30, 60, 120];
+const VALID_NEWS_INTERVALS = [5, 10, 15, 30, 60];
+const VALID_LOOKBACK_HOURS = [1, 3, 6, 12, 24];
 
 export const SettingsRouter = () => {
   const router = new Router();
@@ -513,7 +519,39 @@ export const SettingsRouter = () => {
         return;
       }
 
-      const config: IMoveAlertConfig = { enabled: body.enabled, intervalMinutes, thresholdPercent };
+      // 0 turns escalation off, keeping a symbol to one notification per day.
+      const escalationStepPercent = Number(body.escalationStepPercent ?? 0);
+      if (!Number.isFinite(escalationStepPercent) || escalationStepPercent < 0) {
+        ctx.status = 400;
+        ctx.body = errorBody('Invalid escalation step', 'escalationStepPercent must be zero or a positive number');
+        return;
+      }
+
+      // 0 turns spike detection off.
+      const spikePercent = Number(body.spikePercent ?? 0);
+      if (!Number.isFinite(spikePercent) || spikePercent < 0) {
+        ctx.status = 400;
+        ctx.body = errorBody('Invalid spike threshold', 'spikePercent must be zero or a positive number');
+        return;
+      }
+
+      const spikeWindowMinutes = Number(body.spikeWindowMinutes ?? 30);
+      if (!VALID_SPIKE_WINDOWS.includes(spikeWindowMinutes)) {
+        ctx.status = 400;
+        ctx.body = errorBody('Invalid spike window', `spikeWindowMinutes must be one of: ${VALID_SPIKE_WINDOWS.join(', ')}`);
+        return;
+      }
+
+      const config: IMoveAlertConfig = {
+        enabled: body.enabled,
+        intervalMinutes,
+        thresholdPercent,
+        escalationStepPercent,
+        spikePercent,
+        spikeWindowMinutes,
+        cryptoAlwaysOn: body.cryptoAlwaysOn !== false,
+        includeAfterHours: body.includeAfterHours !== false,
+      };
       await saveMoveAlertConfig(config);
       moveAlertService.reconfigure(config);
 
@@ -523,6 +561,81 @@ export const SettingsRouter = () => {
       logger.log({ level: 'error', message: error.message, label: 'move-alert config save' });
       ctx.status = 500;
       ctx.body = errorBody('Failed to save move alert config', error.message);
+    }
+  });
+
+  router.get('/settings/news-watch', async (ctx) => {
+    try {
+      ctx.body = await getNewsWatchConfig();
+      ctx.status = 200;
+    } catch (error: any) {
+      logger.log({ level: 'error', message: error.message, label: 'news-watch config get' });
+      ctx.status = 500;
+      ctx.body = errorBody('Failed to get news watch config', error.message);
+    }
+  });
+
+  router.post('/settings/news-watch', async (ctx) => {
+    try {
+      const body = ctx.request.body as Partial<INewsWatchConfig>;
+
+      if (typeof body.enabled !== 'boolean') {
+        ctx.status = 400;
+        ctx.body = errorBody('Invalid request', '"enabled" boolean is required');
+        return;
+      }
+
+      const intervalMinutes = typeof body.intervalMinutes === 'number' ? body.intervalMinutes : 15;
+      if (!VALID_NEWS_INTERVALS.includes(intervalMinutes)) {
+        ctx.status = 400;
+        ctx.body = errorBody('Invalid interval', `intervalMinutes must be one of: ${VALID_NEWS_INTERVALS.join(', ')}`);
+        return;
+      }
+
+      const maxPerRun = Number(body.maxPerRun ?? 5);
+      if (!Number.isInteger(maxPerRun) || maxPerRun < 1 || maxPerRun > 25) {
+        ctx.status = 400;
+        ctx.body = errorBody('Invalid limit', 'maxPerRun must be a whole number between 1 and 25');
+        return;
+      }
+
+      const lookbackHours = Number(body.lookbackHours ?? 6);
+      if (!VALID_LOOKBACK_HOURS.includes(lookbackHours)) {
+        ctx.status = 400;
+        ctx.body = errorBody('Invalid lookback', `lookbackHours must be one of: ${VALID_LOOKBACK_HOURS.join(', ')}`);
+        return;
+      }
+
+      const config: INewsWatchConfig = {
+        enabled: body.enabled,
+        intervalMinutes,
+        topic: String(body.topic ?? '').trim() || 'portfolio-dashboard/news',
+        watchHoldings: body.watchHoldings !== false,
+        watchMarket: body.watchMarket !== false,
+        breakingOnly: body.breakingOnly !== false,
+        maxPerRun,
+        lookbackHours,
+      };
+      await saveNewsWatchConfig(config);
+      newsWatchService.reconfigure(config);
+
+      ctx.body = config;
+      ctx.status = 200;
+    } catch (error: any) {
+      logger.log({ level: 'error', message: error.message, label: 'news-watch config save' });
+      ctx.status = 500;
+      ctx.body = errorBody('Failed to save news watch config', error.message);
+    }
+  });
+
+  router.post('/settings/news-watch/test', async (ctx) => {
+    try {
+      ctx.body = await newsWatchService.sendTest();
+      ctx.status = 200;
+    } catch (error: any) {
+      logger.log({ level: 'error', message: error.message, label: 'news-watch test' });
+      ctx.status = 500;
+      ctx.body = errorBody('Failed to send test news notification', error.message);
     }
   });
 

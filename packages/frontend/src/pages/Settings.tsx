@@ -34,6 +34,7 @@ import type {
   IpoReminderConfig,
   LockStatus,
   MoveAlertConfig,
+  NewsWatchConfig,
   NotificationConfig,
   ScheduledBackupConfig,
   TradingSummaryConfig,
@@ -198,11 +199,38 @@ export default function Settings() {
   const [savingAlertMonitor, setSavingAlertMonitor] = React.useState(false);
   const isAlertMonitorDirty = JSON.stringify(savedAlertMonitor) !== JSON.stringify(draftAlertMonitor);
 
-  const DEFAULT_MOVE_ALERT: MoveAlertConfig = { enabled: false, intervalMinutes: 15, thresholdPercent: 5 };
+  const DEFAULT_MOVE_ALERT: MoveAlertConfig = {
+    enabled: false,
+    intervalMinutes: 15,
+    thresholdPercent: 5,
+    escalationStepPercent: 3,
+    spikePercent: 2,
+    spikeWindowMinutes: 30,
+    cryptoAlwaysOn: true,
+    includeAfterHours: true,
+  };
   const [savedMoveAlert, setSavedMoveAlert] = React.useState<MoveAlertConfig>(DEFAULT_MOVE_ALERT);
   const [draftMoveAlert, setDraftMoveAlert] = React.useState<MoveAlertConfig>(DEFAULT_MOVE_ALERT);
   const [savingMoveAlert, setSavingMoveAlert] = React.useState(false);
   const isMoveAlertDirty = JSON.stringify(savedMoveAlert) !== JSON.stringify(draftMoveAlert);
+  const setMoveAlert = (partial: Partial<MoveAlertConfig>) => setDraftMoveAlert((prev) => ({ ...prev, ...partial }));
+
+  const DEFAULT_NEWS_WATCH: NewsWatchConfig = {
+    enabled: false,
+    intervalMinutes: 15,
+    topic: 'portfolio-dashboard/news',
+    watchHoldings: true,
+    watchMarket: true,
+    breakingOnly: true,
+    maxPerRun: 5,
+    lookbackHours: 6,
+  };
+  const [savedNewsWatch, setSavedNewsWatch] = React.useState<NewsWatchConfig>(DEFAULT_NEWS_WATCH);
+  const [draftNewsWatch, setDraftNewsWatch] = React.useState<NewsWatchConfig>(DEFAULT_NEWS_WATCH);
+  const [savingNewsWatch, setSavingNewsWatch] = React.useState(false);
+  const [testingNewsWatch, setTestingNewsWatch] = React.useState(false);
+  const isNewsWatchDirty = JSON.stringify(savedNewsWatch) !== JSON.stringify(draftNewsWatch);
+  const setNewsWatch = (partial: Partial<NewsWatchConfig>) => setDraftNewsWatch((prev) => ({ ...prev, ...partial }));
 
   const DEFAULT_IPO_REMINDER: IpoReminderConfig = { enabled: true, daysBefore: 1 };
   const [savedIpoReminder, setSavedIpoReminder] = React.useState<IpoReminderConfig>(DEFAULT_IPO_REMINDER);
@@ -325,6 +353,14 @@ export default function Settings() {
         setDraftMoveAlert(cfg);
       })
       .catch((err) => toast.error(err.message || 'Failed to load move alert settings'));
+
+    apis.settings
+      .getNewsWatchConfig()
+      .then((cfg) => {
+        setSavedNewsWatch(cfg);
+        setDraftNewsWatch(cfg);
+      })
+      .catch((err) => toast.error(err.message || 'Failed to load news watch settings'));
 
     apis.settings
       .getIpoReminderConfig()
@@ -627,6 +663,36 @@ export default function Settings() {
   };
 
   const handleResetMoveAlert = () => setDraftMoveAlert(savedMoveAlert);
+
+  const handleSaveNewsWatch = async () => {
+    setSavingNewsWatch(true);
+    try {
+      const saved = await apis.settings.saveNewsWatchConfig(draftNewsWatch);
+      setSavedNewsWatch(saved);
+      setDraftNewsWatch(saved);
+      toast.success('News alert settings saved');
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to save news alert settings');
+    } finally {
+      setSavingNewsWatch(false);
+    }
+  };
+
+  const handleResetNewsWatch = () => setDraftNewsWatch(savedNewsWatch);
+
+  const handleTestNewsWatch = async () => {
+    setTestingNewsWatch(true);
+    try {
+      const result = await apis.settings.sendNewsWatchTest();
+      if (!result.mqttEnabled) toast.error('Enable MQTT publishing first to send news alerts');
+      else if (result.ok) toast.success('Test news alert published to MQTT');
+      else toast.error('News alert failed — check the broker connection');
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to send test news alert');
+    } finally {
+      setTestingNewsWatch(false);
+    }
+  };
 
   const handleSaveIpoReminder = async () => {
     setSavingIpoReminder(true);
@@ -1167,12 +1233,9 @@ export default function Settings() {
               <SettingsSection title="Move Alerts">
                 <SettingRow
                   label="Enable Move Alerts"
-                  description="Notify when a holding or your total portfolio moves more than the threshold in a single day. Evaluated during US market hours only."
+                  description="Notify when a holding or your total portfolio makes a big move. Escalates as a move grows, and can keep watching outside US market hours."
                 >
-                  <Switch
-                    checked={draftMoveAlert.enabled}
-                    onChange={(_, checked) => setDraftMoveAlert((prev) => ({ ...prev, enabled: checked }))}
-                  />
+                  <Switch checked={draftMoveAlert.enabled} onChange={(_, checked) => setMoveAlert({ enabled: checked })} />
                 </SettingRow>
                 {draftMoveAlert.enabled && (
                   <>
@@ -1183,12 +1246,7 @@ export default function Settings() {
                       <Select
                         size="small"
                         value={draftMoveAlert.intervalMinutes}
-                        onChange={(e) =>
-                          setDraftMoveAlert((prev) => ({
-                            ...prev,
-                            intervalMinutes: Number(e.target.value),
-                          }))
-                        }
+                        onChange={(e) => setMoveAlert({ intervalMinutes: Number(e.target.value) })}
                         sx={{ minWidth: { xs: '100%', sm: 200 }, fontSize: '0.82rem' }}
                       >
                         <MenuItem value={1}>Every minute</MenuItem>
@@ -1199,16 +1257,72 @@ export default function Settings() {
                         <MenuItem value={60}>Every 60 minutes</MenuItem>
                       </Select>
                     </SettingRow>
-                    <SettingRow label="Move Threshold (%)" description="Notify once a day when the move exceeds this percent">
+                    <SettingRow label="Move Threshold (%)" description="The day move that triggers the first alert">
                       <TextField
                         size="small"
                         type="number"
                         value={draftMoveAlert.thresholdPercent}
-                        onChange={(e) =>
-                          setDraftMoveAlert((prev) => ({ ...prev, thresholdPercent: Number(e.target.value) }))
-                        }
+                        onChange={(e) => setMoveAlert({ thresholdPercent: Number(e.target.value) })}
                         slotProps={{ htmlInput: { min: 0.1, step: 0.1 } }}
                         sx={{ width: { xs: '100%', sm: 160 }, '& input': { fontSize: '0.78rem' } }}
+                      />
+                    </SettingRow>
+                    <SettingRow
+                      label="Escalation Step (%)"
+                      description="Alert again each time the move grows by this much beyond the last alert. Set to 0 to alert only once per day."
+                    >
+                      <TextField
+                        size="small"
+                        type="number"
+                        value={draftMoveAlert.escalationStepPercent}
+                        onChange={(e) => setMoveAlert({ escalationStepPercent: Number(e.target.value) })}
+                        slotProps={{ htmlInput: { min: 0, step: 0.5 } }}
+                        sx={{ width: { xs: '100%', sm: 160 }, '& input': { fontSize: '0.78rem' } }}
+                      />
+                    </SettingRow>
+                    <SettingRow
+                      label="Spike Threshold (%)"
+                      description="Alert when a holding moves this much inside the spike window, even if its day change is small. Set to 0 to disable."
+                    >
+                      <TextField
+                        size="small"
+                        type="number"
+                        value={draftMoveAlert.spikePercent}
+                        onChange={(e) => setMoveAlert({ spikePercent: Number(e.target.value) })}
+                        slotProps={{ htmlInput: { min: 0, step: 0.5 } }}
+                        sx={{ width: { xs: '100%', sm: 160 }, '& input': { fontSize: '0.78rem' } }}
+                      />
+                    </SettingRow>
+                    <SettingRow label="Spike Window" description="The rolling window a spike is measured over">
+                      <Select
+                        size="small"
+                        value={draftMoveAlert.spikeWindowMinutes}
+                        onChange={(e) => setMoveAlert({ spikeWindowMinutes: Number(e.target.value) })}
+                        sx={{ minWidth: { xs: '100%', sm: 200 }, fontSize: '0.82rem' }}
+                      >
+                        <MenuItem value={10}>10 minutes</MenuItem>
+                        <MenuItem value={15}>15 minutes</MenuItem>
+                        <MenuItem value={30}>30 minutes</MenuItem>
+                        <MenuItem value={60}>60 minutes</MenuItem>
+                        <MenuItem value={120}>2 hours</MenuItem>
+                      </Select>
+                    </SettingRow>
+                    <SettingRow
+                      label="Watch Crypto 24/7"
+                      description="Keep evaluating crypto holdings around the clock, not just during US market hours"
+                    >
+                      <Switch
+                        checked={draftMoveAlert.cryptoAlwaysOn}
+                        onChange={(_, checked) => setMoveAlert({ cryptoAlwaysOn: checked })}
+                      />
+                    </SettingRow>
+                    <SettingRow
+                      label="Cover After Hours"
+                      description="Keep evaluating stocks once the session closes, so a move that landed at the close still reaches you"
+                    >
+                      <Switch
+                        checked={draftMoveAlert.includeAfterHours}
+                        onChange={(_, checked) => setMoveAlert({ includeAfterHours: checked })}
                       />
                     </SettingRow>
                   </>
@@ -1240,6 +1354,139 @@ export default function Settings() {
                     sx={{ fontSize: '0.78rem', textTransform: 'none' }}
                   >
                     {savingMoveAlert ? 'Saving...' : 'Save'}
+                  </Button>
+                </Stack>
+              </SettingsSection>
+
+              <SettingsSection title="Breaking News Alerts">
+                <SettingRow
+                  label="Enable News Alerts"
+                  description="Watch company news for the tickers you hold plus the broad market wire, and push new headlines as they land. Runs around the clock — news breaks overnight and at weekends. Only public headlines are sent."
+                >
+                  <Switch
+                    checked={draftNewsWatch.enabled}
+                    onChange={(_, checked) => setNewsWatch({ enabled: checked })}
+                  />
+                </SettingRow>
+                {draftNewsWatch.enabled && (
+                  <>
+                    <SettingRow label="Check Interval" description="How often the server polls for new headlines">
+                      <Select
+                        size="small"
+                        value={draftNewsWatch.intervalMinutes}
+                        onChange={(e) => setNewsWatch({ intervalMinutes: Number(e.target.value) })}
+                        sx={{ minWidth: { xs: '100%', sm: 200 }, fontSize: '0.82rem' }}
+                      >
+                        <MenuItem value={5}>Every 5 minutes</MenuItem>
+                        <MenuItem value={10}>Every 10 minutes</MenuItem>
+                        <MenuItem value={15}>Every 15 minutes</MenuItem>
+                        <MenuItem value={30}>Every 30 minutes</MenuItem>
+                        <MenuItem value={60}>Every 60 minutes</MenuItem>
+                      </Select>
+                    </SettingRow>
+                    <SettingRow
+                      label="Watch Your Holdings"
+                      description="Poll company news for every stock ticker you hold"
+                    >
+                      <Switch
+                        checked={draftNewsWatch.watchHoldings}
+                        onChange={(_, checked) => setNewsWatch({ watchHoldings: checked })}
+                      />
+                    </SettingRow>
+                    <SettingRow
+                      label="Watch Market Headlines"
+                      description="Include the broad market wire, tagged with one of your holdings when a story names it"
+                    >
+                      <Switch
+                        checked={draftNewsWatch.watchMarket}
+                        onChange={(_, checked) => setNewsWatch({ watchMarket: checked })}
+                      />
+                    </SettingRow>
+                    <SettingRow
+                      label="Breaking Only"
+                      description="Only push headlines that match a market-moving pattern — halts, guidance, downgrades, M&A, lawsuits, big price moves. Turn off to get every new headline."
+                    >
+                      <Switch
+                        checked={draftNewsWatch.breakingOnly}
+                        onChange={(_, checked) => setNewsWatch({ breakingOnly: checked })}
+                      />
+                    </SettingRow>
+                    <SettingRow
+                      label="Max Alerts Per Check"
+                      description="Ceiling on notifications per cycle, so a busy news hour cannot flood you"
+                    >
+                      <TextField
+                        size="small"
+                        type="number"
+                        value={draftNewsWatch.maxPerRun}
+                        onChange={(e) => setNewsWatch({ maxPerRun: Number(e.target.value) })}
+                        slotProps={{ htmlInput: { min: 1, max: 25, step: 1 } }}
+                        sx={{ width: { xs: '100%', sm: 160 }, '& input': { fontSize: '0.78rem' } }}
+                      />
+                    </SettingRow>
+                    <SettingRow
+                      label="Lookback Window"
+                      description="Ignore anything published longer ago than this, so a restart delivers recent news rather than a backlog"
+                    >
+                      <Select
+                        size="small"
+                        value={draftNewsWatch.lookbackHours}
+                        onChange={(e) => setNewsWatch({ lookbackHours: Number(e.target.value) })}
+                        sx={{ minWidth: { xs: '100%', sm: 200 }, fontSize: '0.82rem' }}
+                      >
+                        <MenuItem value={1}>Last hour</MenuItem>
+                        <MenuItem value={3}>Last 3 hours</MenuItem>
+                        <MenuItem value={6}>Last 6 hours</MenuItem>
+                        <MenuItem value={12}>Last 12 hours</MenuItem>
+                        <MenuItem value={24}>Last 24 hours</MenuItem>
+                      </Select>
+                    </SettingRow>
+                    <SettingRow label="MQTT Topic" description="Topic news alerts are published to">
+                      <TextField
+                        size="small"
+                        value={draftNewsWatch.topic}
+                        onChange={(e) => setNewsWatch({ topic: e.target.value })}
+                        sx={{ width: { xs: '100%', sm: 320 }, '& input': { fontSize: '0.78rem' } }}
+                      />
+                    </SettingRow>
+                  </>
+                )}
+                <Stack
+                  direction="row"
+                  spacing={1}
+                  sx={{ justifyContent: 'flex-end', alignItems: 'center', px: 2, py: 1.5 }}
+                >
+                  {isNewsWatchDirty && (
+                    <Typography sx={{ fontSize: '0.72rem', color: 'warning.main', mr: 'auto' }}>
+                      Unsaved changes
+                    </Typography>
+                  )}
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    onClick={handleTestNewsWatch}
+                    disabled={!savedNotif.mqtt.enabled || isNewsWatchDirty || testingNewsWatch}
+                    sx={{ fontSize: '0.78rem', textTransform: 'none' }}
+                  >
+                    {testingNewsWatch ? 'Sending...' : 'Send now'}
+                  </Button>
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    onClick={handleResetNewsWatch}
+                    disabled={!isNewsWatchDirty || savingNewsWatch}
+                    sx={{ fontSize: '0.78rem', textTransform: 'none' }}
+                  >
+                    Reset
+                  </Button>
+                  <Button
+                    size="small"
+                    variant="contained"
+                    onClick={handleSaveNewsWatch}
+                    disabled={!isNewsWatchDirty || savingNewsWatch}
+                    sx={{ fontSize: '0.78rem', textTransform: 'none' }}
+                  >
+                    {savingNewsWatch ? 'Saving...' : 'Save'}
                   </Button>
                 </Stack>
               </SettingsSection>

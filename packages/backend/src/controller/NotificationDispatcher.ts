@@ -7,11 +7,32 @@ import { mqttPublisher } from './MqttPublisher';
 
 const LABEL = 'NotificationDispatcher';
 
+const signedPct = (n: number): string => `${n >= 0 ? '+' : ''}${n.toFixed(2)}%`;
+
 export type MoveAlertPayload = {
+  // 'threshold' — the day change crossed a configured level.
+  // 'spike' — the price moved sharply inside a short rolling window.
+  kind: 'threshold' | 'spike';
   scope: 'holding' | 'portfolio';
   symbol?: string;
   percentChange: number;
   thresholdPercent: number;
+  windowMinutes?: number;
+  windowChange?: number;
+  title: string;
+  message: string;
+};
+
+export type NewsAlertPayload = {
+  // The holding the story is about, or null for a broad-market headline.
+  symbol: string | null;
+  headline: string;
+  summary: string;
+  source: string;
+  url: string;
+  publishedAt: string;
+  breaking: boolean;
+  matchedKeywords: string[];
   title: string;
   message: string;
 };
@@ -71,15 +92,60 @@ export function buildMoveAlertPayload(
   thresholdPercent: number,
   symbol?: string
 ): MoveAlertPayload {
-  const pct = `${percentChange >= 0 ? '+' : ''}${percentChange.toFixed(2)}%`;
+  const pct = signedPct(percentChange);
   const subject = scope === 'portfolio' ? 'Portfolio' : (symbol as string);
   return {
+    kind: 'threshold',
     scope,
     ...(symbol ? { symbol } : {}),
     percentChange,
     thresholdPercent,
     title: `${subject} moved ${pct} today`,
     message: `${subject} is ${pct} today — past your ${thresholdPercent}% move alert threshold.`,
+  };
+}
+
+// Velocity alert: how far the price ran inside a short window, which a day-change
+// threshold alone misses (a symbol can round-trip 4% and end the day flat).
+export function buildSpikeAlertPayload(
+  symbol: string,
+  windowChange: number,
+  windowMinutes: number,
+  dayPercentChange: number,
+  spikePercent: number
+): MoveAlertPayload {
+  const direction = windowChange >= 0 ? 'jumped' : 'dropped';
+  return {
+    kind: 'spike',
+    scope: 'holding',
+    symbol,
+    percentChange: dayPercentChange,
+    thresholdPercent: spikePercent,
+    windowMinutes,
+    windowChange,
+    title: `${symbol} ${direction} ${signedPct(windowChange)} in ${windowMinutes}m`,
+    message: `${symbol} ${direction} ${signedPct(windowChange)} over the last ${windowMinutes} minutes (${signedPct(dayPercentChange)} on the day).`,
+  };
+}
+
+// Public news only — headline, summary, source, link. No holdings, quantities,
+// cost basis, or P&L travel with a news alert.
+export function buildNewsAlertPayload(article: {
+  symbol: string | null;
+  headline: string;
+  summary: string;
+  source: string;
+  url: string;
+  publishedAt: string;
+  breaking: boolean;
+  matchedKeywords: string[];
+}): NewsAlertPayload {
+  const subject = article.symbol ? `${article.symbol}` : 'Markets';
+  const prefix = article.breaking ? 'Breaking' : 'News';
+  return {
+    ...article,
+    title: `${prefix} · ${subject}`,
+    message: article.headline,
   };
 }
 
@@ -157,6 +223,28 @@ export async function dispatchMoveAlert(payload: MoveAlertPayload): Promise<void
     }
   } catch (err: any) {
     logger.log({ level: 'error', label: LABEL, message: `Move alert dispatch failed: ${err.message}` });
+  }
+}
+
+// Fire-and-forget delivery from the news watcher. Returns whether it landed so
+// the watcher only records an article as delivered once it actually went out.
+export async function dispatchNewsAlert(payload: NewsAlertPayload, topic?: string): Promise<boolean> {
+  if (!mqttPublisher.isEnabled()) return false;
+  try {
+    const ok = await mqttPublisher.publish(JSON.stringify(payload), topic);
+    if (ok) {
+      logger.log({
+        level: 'info',
+        label: LABEL,
+        message: `Dispatched MQTT news alert for ${payload.symbol ?? 'market'}: ${payload.headline}`,
+      });
+    } else {
+      logger.log({ level: 'warn', label: LABEL, message: `News alert for ${payload.symbol ?? 'market'} not delivered` });
+    }
+    return ok;
+  } catch (err: any) {
+    logger.log({ level: 'error', label: LABEL, message: `News alert dispatch failed: ${err.message}` });
+    return false;
   }
 }
 

@@ -13,7 +13,14 @@ export const MARKET_INDICES = [
 ];
 
 export type IndexMovement = { symbol: string; label: string; price: number; percentChange: number; change: number };
-export type HoldingMovement = { symbol: string; name: string; percentChange: number; dayGL: number; marketValue: number };
+export type HoldingMovement = {
+  symbol: string;
+  name: string;
+  type: 'stock' | 'crypto';
+  percentChange: number;
+  dayGL: number;
+  marketValue: number;
+};
 export type AccountMovement = { account: string; dayGL: number; dayGLPercent: number; marketValue: number };
 
 export type DailyRecap = {
@@ -67,10 +74,7 @@ export async function buildDailyRecap(): Promise<DailyRecap> {
 
   const accountName = new Map(accounts.map((a) => [a.id, a.name]));
   const byAccount = new Map<string, { account: string; dayGL: number; prevValue: number; marketValue: number }>();
-  const bySymbol = new Map<
-    string,
-    { symbol: string; name: string; percentChange: number; dayGL: number; marketValue: number }
-  >();
+  const bySymbol = new Map<string, HoldingMovement>();
 
   for (const h of holdings) {
     const q = quoteMap.get(h.symbol);
@@ -90,6 +94,7 @@ export async function buildDailyRecap(): Promise<DailyRecap> {
     const se = bySymbol.get(h.symbol) ?? {
       symbol: h.symbol,
       name: h.name,
+      type: h.type,
       percentChange: +q.percentChange.toFixed(2),
       dayGL: 0,
       marketValue: 0,
@@ -111,6 +116,7 @@ export async function buildDailyRecap(): Promise<DailyRecap> {
   const holdingsOut = [...bySymbol.values()].map((e) => ({
     symbol: e.symbol,
     name: e.name,
+    type: e.type,
     percentChange: e.percentChange,
     dayGL: +e.dayGL.toFixed(2),
     marketValue: +e.marketValue.toFixed(2),

@@ -6,6 +6,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
+## [4.3.0] – 2026-08-25
+
+### Added
+- **Breaking news alerts** — A background news watcher polls company news for every stock ticker you hold plus the broad market wire, and pushes new headlines over MQTT as they land. Runs around the clock rather than on the market calendar, since news breaks overnight and at weekends. Headlines are scored against market-moving patterns (trading halts, guidance, up/downgrades, M&A, lawsuits, regulatory probes, big price moves); "Breaking only" mode publishes just those, and stories about a holding rank above generic coverage. Configurable poll interval, per-run notification cap, lookback window, and topic, with a "Send now" test. Only public headline data is published — no holdings, quantities, or P&L.
+- **Move alert escalation** — Move alerts now re-fire as a move grows instead of going quiet after the first notification. With a 5% threshold and a 3% step, a position sliding to −5%, −8% and −11% reports each leg. Escalation is tracked per direction, so a symbol that reverses intraday is reported both ways. Setting the step to 0 keeps the previous once-per-day behaviour.
+- **Intraday spike alerts** — Move alerts can now flag a holding that runs a configurable percentage inside a rolling window (default 2% in 30 minutes), catching sharp moves that a day-change threshold misses when a symbol round-trips and ends flat.
+- **24/7 move coverage** — Crypto holdings can be evaluated around the clock instead of only during US equity hours, and stock coverage can extend past the close so a move that landed at the bell still reaches you if the server was down at the time.
+
+### Fixed
+- Move alert bookkeeping now rolls on the ET trading day rather than the UTC day. The UTC rollover lands at 8pm ET, which would have re-announced the same day's move during after-hours checks.
+
+---
+
 ## [4.2.0] – 2026-08-13
 
 ### Added
