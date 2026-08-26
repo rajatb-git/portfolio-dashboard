@@ -1,7 +1,13 @@
 import { AccountModel } from '../models/AccountModel';
 import { HoldingsModel } from '../models/HoldingsModel';
 import type { IPriceStoreModel } from '../models/PriceStoreModel';
-import { isViewingLiveTradingDay, mostRecentTradingDay } from '../utils/marketCalendar';
+import {
+  getMarketSession,
+  getNextSessionChange,
+  isViewingLiveTradingDay,
+  type MarketSession,
+  mostRecentTradingDay,
+} from '../utils/marketCalendar';
 import { LiveQuoteController } from './LiveQuoteController';
 
 // Broad-market proxies. These are ETFs, so Finnhub's free tier returns c=0 and
@@ -23,6 +29,27 @@ export type HoldingMovement = {
 };
 export type AccountMovement = { account: string; dayGL: number; dayGLPercent: number; marketValue: number };
 
+// One symbol's pre-market / after-hours move, measured from the regular-session
+// close, plus what that move is worth across the accounts holding it.
+export type ExtendedMovement = {
+  symbol: string;
+  name: string;
+  price: number;
+  change: number;
+  percentChange: number;
+  gl: number;
+  asOf: string;
+};
+
+export type ExtendedRecap = {
+  session: Exclude<MarketSession, 'regular' | 'closed'>;
+  indices: ExtendedMovement[];
+  holdings: ExtendedMovement[];
+  totalGL: number;
+  totalGLPercent: number;
+  asOf: string;
+};
+
 export type DailyRecap = {
   indices: IndexMovement[];
   // Per-symbol positions aggregated across accounts, with today's $ P&L (dayGL).
@@ -35,8 +62,94 @@ export type DailyRecap = {
   // trading day (e.g. Friday) so the UI can say what "today" actually shows.
   marketDay: string;
   marketDayIsToday: boolean;
+  // Which US-equity session is running right now, and when it next changes, so the
+  // UI can say "pre-market, opens in 1h 39m" instead of a flat "markets are closed".
+  session: MarketSession;
+  nextSessionChange: { session: MarketSession; at: string };
+  // Present only during pre-/post-market, and only when extended-hours prices are
+  // actually available for something the user holds or tracks.
+  extended: ExtendedRecap | null;
   generatedAt: string;
 };
+
+// Aggregates the extended-hours prints already stored on each quote into a
+// session view: what the indices are doing before the bell, which holdings are
+// moving, and what those moves are worth. Returns null outside pre-/post-market,
+// or when no tracked symbol has an extended-hours price — a quiet overnight tape
+// is normal and should surface as "nothing trading yet", not an empty card.
+function buildExtendedRecap(
+  session: MarketSession,
+  quoteMap: Map<string, IPriceStoreModel | null>,
+  holdings: Array<{ symbol: string; name: string; qty: number; type: 'stock' | 'crypto' }>,
+  bySymbol: Map<string, HoldingMovement>
+): ExtendedRecap | null {
+  if (session !== 'pre-market' && session !== 'post-market') return null;
+
+  // A quote only counts as extended-hours data if it was captured in the session
+  // running right now — never a leftover print from the previous evening.
+  const extendedQuote = (symbol: string): IPriceStoreModel | null => {
+    const q = quoteMap.get(symbol);
+    if (!q || q.extendedSession !== session) return null;
+    return q.extendedPrice > 0 ? q : null;
+  };
+
+  const indices = MARKET_INDICES.map((idx) => {
+    const q = extendedQuote(idx.symbol);
+    return q
+      ? {
+          symbol: idx.symbol,
+          name: idx.label,
+          price: +q.extendedPrice.toFixed(2),
+          change: +q.extendedChange.toFixed(2),
+          percentChange: +q.extendedPercentChange.toFixed(2),
+          gl: 0,
+          asOf: q.extendedAt,
+        }
+      : null;
+  }).filter((x): x is ExtendedMovement => x !== null);
+
+  const qtyBySymbol = new Map<string, number>();
+  for (const h of holdings) {
+    if (h.type === 'crypto') continue;
+    qtyBySymbol.set(h.symbol, (qtyBySymbol.get(h.symbol) ?? 0) + h.qty);
+  }
+
+  let totalGL = 0;
+  let closeValue = 0;
+  const holdingMoves: ExtendedMovement[] = [];
+
+  for (const [symbol, qty] of qtyBySymbol) {
+    const q = extendedQuote(symbol);
+    if (!q) continue;
+
+    const gl = qty * q.extendedChange;
+    totalGL += gl;
+    closeValue += qty * q.price;
+    holdingMoves.push({
+      symbol,
+      name: bySymbol.get(symbol)?.name ?? symbol,
+      price: +q.extendedPrice.toFixed(2),
+      change: +q.extendedChange.toFixed(2),
+      percentChange: +q.extendedPercentChange.toFixed(2),
+      gl: +gl.toFixed(2),
+      asOf: q.extendedAt,
+    });
+  }
+
+  if (indices.length === 0 && holdingMoves.length === 0) return null;
+
+  holdingMoves.sort((a, b) => Math.abs(b.percentChange) - Math.abs(a.percentChange));
+  const asOf = [...indices, ...holdingMoves].map((m) => m.asOf).filter(Boolean).sort().pop() ?? '';
+
+  return {
+    session,
+    indices,
+    holdings: holdingMoves,
+    totalGL: +totalGL.toFixed(2),
+    totalGLPercent: closeValue > 0 ? +((totalGL / closeValue) * 100).toFixed(2) : 0,
+    asOf,
+  };
+}
 
 // Builds today's portfolio + market snapshot: index movement, per-symbol day P&L,
 // and per-account day P&L. Shared by the /today page and the trading-summary worker.
@@ -104,6 +217,9 @@ export async function buildDailyRecap(): Promise<DailyRecap> {
     bySymbol.set(h.symbol, se);
   }
 
+  const session = getMarketSession();
+  const extended = buildExtendedRecap(session, quoteMap, holdings, bySymbol);
+
   const accountsOut = [...byAccount.values()]
     .map((e) => ({
       account: e.account,
@@ -134,6 +250,9 @@ export async function buildDailyRecap(): Promise<DailyRecap> {
     totalDayGLPercent,
     marketDay: mostRecentTradingDay(),
     marketDayIsToday: isViewingLiveTradingDay(),
+    session,
+    nextSessionChange: getNextSessionChange(),
+    extended,
     generatedAt: new Date().toISOString(),
   };
 }

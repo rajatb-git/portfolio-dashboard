@@ -52,7 +52,46 @@ const MOVER_MIN_PRICE = 5;
 const MOVER_MIN_MARKETCAP = 2_000_000_000;
 const MOVER_LIMIT = 10;
 
-const fetchNasdaqQuote = async (symbol: string, assetclass: 'etf' | 'stocks'): Promise<QuoteResponse | null> => {
+// NASDAQ reports two price blocks whose meaning depends on `marketStatus`:
+// during "Pre-Market"/"After Hours" primaryData is the live extended-hours print
+// and secondaryData is the last completed regular-session close; during the
+// regular session (and once everything is closed) primaryData is the regular
+// quote and secondaryData is empty. Keeping the two apart is what lets the app
+// show "Tuesday's close" and "up 0.4% pre-market" as separate figures instead of
+// silently overwriting one with the other.
+export type ExtendedQuote = {
+  price: number;
+  change: number;
+  percentChange: number;
+  session: 'pre-market' | 'post-market';
+  asOf: string;
+};
+
+export type NasdaqQuote = QuoteResponse & { extended: ExtendedQuote | null };
+
+type PriceBlock = { lastSalePrice?: string; netChange?: string; percentageChange?: string };
+
+const extendedSessionFor = (marketStatus: string): 'pre-market' | 'post-market' | null => {
+  const status = marketStatus.toLowerCase();
+  if (status.includes('pre')) return 'pre-market';
+  if (status.includes('after') || status.includes('post')) return 'post-market';
+  return null;
+};
+
+// "Aug 26, 2026 7:51 AM ET" / "Closed at Aug 25, 2026 4:00 PM ET" — the label is
+// free text, so fall back to now when it doesn't parse rather than dropping the quote.
+const parseNasdaqTimestamp = (raw: string | undefined | null): string => {
+  const cleaned = String(raw ?? '')
+    .replace(/^(closed at|last updated|as of)\s+/i, '')
+    .replace(/\s*ET\b.*$/i, '')
+    .trim();
+  const parsed = moment(cleaned, ['MMM D, YYYY h:mm A', 'MMM D, YYYY'], true);
+  return parsed.isValid() ? parsed.toISOString() : moment().toISOString();
+};
+
+const blockPrice = (block: PriceBlock | undefined): number => parseDollarAmount(block?.lastSalePrice);
+
+const fetchNasdaqQuote = async (symbol: string, assetclass: 'etf' | 'stocks'): Promise<NasdaqQuote | null> => {
   const base = `https://api.nasdaq.com/api/quote/${symbol}`;
   const opts = { httpsAgent: nasdaqAgent, headers: nasdaqHeaders };
 
@@ -70,7 +109,17 @@ const fetchNasdaqQuote = async (symbol: string, assetclass: 'etf' | 'stocks'): P
     return null;
   }
 
-  const price = parseDollarAmount(info?.primaryData?.lastSalePrice);
+  const primary: PriceBlock = info?.primaryData ?? {};
+  const secondary: PriceBlock = info?.secondaryData ?? {};
+  const extendedSession = extendedSessionFor(String(info?.marketStatus ?? ''));
+
+  // In an extended session the *regular* quote lives in secondaryData; only treat
+  // it that way when it actually carries a price, so a malformed response falls
+  // back to the primary block instead of pricing the holding at zero.
+  const useSecondaryAsRegular = !!extendedSession && blockPrice(secondary) > 0;
+  const regular = useSecondaryAsRegular ? secondary : primary;
+
+  const price = blockPrice(regular);
   if (!price) return null;
 
   let summary: any = {};
@@ -86,12 +135,32 @@ const fetchNasdaqQuote = async (symbol: string, assetclass: 'etf' | 'stocks'): P
     });
   }
 
-  const change = parseDollarAmount(info.primaryData.netChange);
-  const percentChange = parseFloat((info.primaryData.percentageChange ?? '0').replace(/[+%]/g, '')) || 0;
+  const change = parseDollarAmount(regular.netChange);
+  const percentChange = parsePercent(regular.percentageChange);
 
-  const prevClose = parseDollarAmount(summary.PreviousClose?.value);
+  // Derive the previous close from the session's own change so price, change and
+  // prevClose always describe the same session. NASDAQ's summary PreviousClose is
+  // relative to *now*, which during pre-market is the very close being read here
+  // as the regular quote — using it directly would make prevClose === price.
+  const derivedPrevClose = change ? +(price - change).toFixed(4) : 0;
+  const prevClose = derivedPrevClose || parseDollarAmount(summary.PreviousClose?.value);
   const dayRange: string = summary.TodayHighLow?.value ?? summary.DayRange?.value ?? '';
   const [low, high] = dayRange.split(/\s*[-/]\s*/).map(parseDollarAmount);
+
+  // NASDAQ's own extended-hours change is quoted against the previous close, not
+  // against the session it interrupts, so derive it from the regular close instead
+  // — that is the number a broker shows next to "pre-market".
+  const extendedPrice = useSecondaryAsRegular ? blockPrice(primary) : 0;
+  const extended: ExtendedQuote | null =
+    extendedSession && extendedPrice > 0
+      ? {
+          price: extendedPrice,
+          change: +(extendedPrice - price).toFixed(4),
+          percentChange: +(((extendedPrice - price) / price) * 100).toFixed(2),
+          session: extendedSession,
+          asOf: parseNasdaqTimestamp(info?.primaryData?.lastTradeTimestamp),
+        }
+      : null;
 
   return {
     c: price,
@@ -102,17 +171,21 @@ const fetchNasdaqQuote = async (symbol: string, assetclass: 'etf' | 'stocks'): P
     o: 0,
     pc: prevClose || price,
     t: Math.floor(Date.now() / 1000),
+    extended,
   };
 };
 
-export const getQuoteFromNasdaq = async (symbol: string): Promise<QuoteResponse> => {
+export const getQuoteFromNasdaq = async (symbol: string): Promise<NasdaqQuote> => {
   for (const assetclass of ['etf', 'stocks'] as const) {
     const quote = await fetchNasdaqQuote(symbol, assetclass);
     if (quote) {
+      const extendedNote = quote.extended
+        ? `, ${quote.extended.session} ${quote.extended.price} (${quote.extended.percentChange}%)`
+        : '';
       logger.log({
         level: 'info',
         label: `NASDAQ quote ${symbol}`,
-        message: `Fetched as ${assetclass} (price ${quote.c})`,
+        message: `Fetched as ${assetclass} (price ${quote.c}${extendedNote})`,
       });
       return quote;
     }

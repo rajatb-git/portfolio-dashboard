@@ -18,11 +18,13 @@ import { toast } from 'react-toastify';
 
 import apis from '@/api';
 import type { DailyRecap, HoldingMovement, IndexMovement, PortfolioBrief } from '@/api/dashboard';
-import type { MarketMover, MarketMovers, MarketNewsDigest } from '@/api/live';
+import type { MarketMover, MarketMovers } from '@/api/live';
 import { Iconify } from '@/components/Iconify';
 import { FONT_SIZE } from '@/components/ThemeRegistry/tokens';
 import Delta from '@/components/ui/Delta';
+import MarketNewsCard from '@/components/Today/MarketNewsCard';
 import PortfolioBriefCard from '@/components/Today/PortfolioBriefCard';
+import SessionMovementCard from '@/components/Today/SessionMovementCard';
 import PageHeader from '@/components/ui/PageHeader';
 import Panel from '@/components/ui/Panel';
 import StateView from '@/components/ui/StateView';
@@ -144,15 +146,92 @@ function ListSkeleton({ rows = 4 }: { rows?: number }) {
   );
 }
 
+// Says which session is running and which one the figures below reflect. Replaces
+// the old "markets are closed" notice, which asserted a stale close even while
+// pre-market prices were moving on the same screen.
+function SessionBanner({ recap }: { recap: DailyRecap }) {
+  const theme = useTheme();
+  // Re-render on a minute tick so the countdown stays honest on a tab left open.
+  const [, setTick] = React.useState(0);
+  React.useEffect(() => {
+    const id = window.setInterval(() => setTick((n) => n + 1), 60_000);
+    return () => window.clearInterval(id);
+  }, []);
+
+  const closeDay = moment(recap.marketDay).format('dddd, MMMM D');
+  const nextAt = moment(recap.nextSessionChange.at);
+  const countdown = nextAt.isAfter(moment()) ? nextAt.fromNow() : 'shortly';
+  const strong = (text: string) => (
+    <Box component="span" sx={{ fontWeight: 700 }}>
+      {text}
+    </Box>
+  );
+
+  const copy: Record<DailyRecap['session'], { icon: string; color: string; body: React.ReactNode }> = {
+    regular: {
+      icon: 'mdi:bell-ring-outline',
+      color: theme.palette.success.main,
+      body: <>Markets are open. The figures below are live — the session closes {countdown}.</>,
+    },
+    'pre-market': {
+      icon: 'mdi:weather-sunset-up',
+      color: theme.palette.warning.main,
+      body: (
+        <>
+          Pre-market trading is under way — the opening bell rings {countdown}. The figures below are{' '}
+          {strong(closeDay)}&apos;s close; pre-market moves are shown separately above.
+        </>
+      ),
+    },
+    'post-market': {
+      icon: 'mdi:weather-night',
+      color: theme.palette.warning.main,
+      body: (
+        <>
+          After-hours trading runs until {nextAt.format('h:mm A')}. The figures below are {strong(closeDay)}&apos;s
+          close; after-hours moves are shown separately above.
+        </>
+      ),
+    },
+    closed: {
+      icon: 'mdi:calendar-clock',
+      color: theme.palette.warning.main,
+      body: (
+        <>
+          Markets are closed. The figures below reflect the last trading session — {strong(closeDay)}. Pre-market opens{' '}
+          {countdown}.
+        </>
+      ),
+    },
+  };
+
+  const { icon, color, body } = copy[recap.session];
+
+  return (
+    <Stack
+      direction="row"
+      spacing={1}
+      sx={{
+        alignItems: 'center',
+        px: 2,
+        py: 1.25,
+        borderRadius: 1,
+        border: '1px solid',
+        borderColor: alpha(color, 0.4),
+        bgcolor: alpha(color, 0.12),
+      }}
+    >
+      <Iconify icon={icon} width={20} sx={{ color, flexShrink: 0 }} />
+      <Typography sx={{ fontSize: '0.85rem', color: 'text.primary' }}>{body}</Typography>
+    </Stack>
+  );
+}
+
 export default function Today() {
   const theme = useTheme();
 
   const [recap, setRecap] = React.useState<DailyRecap | null>(null);
   const [recapLoading, setRecapLoading] = React.useState(true);
-
-  const [news, setNews] = React.useState<MarketNewsDigest | null>(null);
-  const [newsLoading, setNewsLoading] = React.useState(true);
-  const [newsError, setNewsError] = React.useState<string | null>(null);
 
   const [brief, setBrief] = React.useState<PortfolioBrief | null>(null);
   const [briefLoading, setBriefLoading] = React.useState(true);
@@ -188,20 +267,6 @@ export default function Today() {
       .finally(() => setBriefLoading(false));
   }, []);
 
-  const loadNews = React.useCallback((refresh = false) => {
-    setNewsLoading(true);
-    setNewsError(null);
-    apis.live
-      .getMarketNews(refresh)
-      .then((digest) => setNews(digest))
-      .catch((err) => {
-        setNews(null);
-        setNewsError(err.message || 'Failed to load market news');
-        toast.error(err.message || 'Failed to load market news');
-      })
-      .finally(() => setNewsLoading(false));
-  }, []);
-
   const loadMovers = React.useCallback((refresh = false) => {
     setMoversLoading(true);
     setMoversError(null);
@@ -219,9 +284,8 @@ export default function Today() {
   React.useEffect(() => {
     loadRecap();
     loadBrief();
-    loadNews(false);
     loadMovers(false);
-  }, [loadRecap, loadBrief, loadNews, loadMovers]);
+  }, [loadRecap, loadBrief, loadMovers]);
 
   const gainers = React.useMemo(
     () =>
@@ -258,9 +322,9 @@ export default function Today() {
                     fontWeight: 700,
                   }}
                 >
-                  {recap.marketDayIsToday
+                  {recap.session === 'regular'
                     ? 'Portfolio day P&L'
-                    : `Portfolio P&L · ${moment(recap.marketDay).format('ddd')}`}
+                    : `${moment(recap.marketDay).format('ddd')} close P&L`}
                 </Typography>
                 <Delta
                   value={recap.totalDayGL}
@@ -280,35 +344,16 @@ export default function Today() {
         }
       />
 
-      {/* Session banner — when the market is closed, spell out which trading day
-          the figures below actually reflect (e.g. Friday when viewed on a Sunday). */}
-      {!recapLoading && recap && !recap.marketDayIsToday && (
-        <Stack
-          direction="row"
-          spacing={1}
-          sx={{
-            alignItems: 'center',
-            px: 2,
-            py: 1.25,
-            borderRadius: 1,
-            border: '1px solid',
-            borderColor: alpha(theme.palette.warning.main, 0.4),
-            bgcolor: alpha(theme.palette.warning.main, 0.12),
-          }}
-        >
-          <Iconify icon="mdi:calendar-clock" width={20} sx={{ color: theme.palette.warning.main, flexShrink: 0 }} />
-          <Typography sx={{ fontSize: '0.85rem', color: 'text.primary' }}>
-            Markets are closed. The figures below reflect the last trading session —{' '}
-            <Box component="span" sx={{ fontWeight: 700 }}>
-              {moment(recap.marketDay).format('dddd, MMMM D')}
-            </Box>
-            .
-          </Typography>
-        </Stack>
-      )}
+      {/* Session banner — spells out which session the figures below reflect and
+          what is trading right now, so a pre-market price is never presented as
+          if it were the last close (or the reverse). */}
+      {!recapLoading && recap && <SessionBanner recap={recap} />}
 
       {/* Lead with what changed since the user last looked, before the market at large. */}
       <PortfolioBriefCard brief={brief} loading={briefLoading} error={briefError} />
+
+      {/* Extended-hours movement, rendered only while pre-market or after-hours runs. */}
+      <SessionMovementCard extended={recap?.extended ?? null} loading={recapLoading} />
 
       {/* Market movement */}
       <SectionCard title="Market Movement" icon="tabler:building-bank" iconColor="#3b82f6">
@@ -430,97 +475,7 @@ export default function Today() {
       </Grid>
 
       {/* Market news */}
-      <SectionCard
-        title="Top Market News"
-        icon="mdi:newspaper-variant-outline"
-        iconColor="#3b82f6"
-        action={
-          <Tooltip title="Refresh headlines">
-            <span>
-              <IconButton
-                size="small"
-                onClick={() => loadNews(true)}
-                disabled={newsLoading}
-                sx={{ color: 'text.disabled' }}
-              >
-                <Iconify icon="mingcute:refresh-3-fill" width={16} />
-              </IconButton>
-            </span>
-          </Tooltip>
-        }
-      >
-        {newsLoading ? (
-          <ListSkeleton rows={6} />
-        ) : newsError ? (
-          <Stack sx={{ alignItems: 'center', justifyContent: 'center', p: 3, flexGrow: 1, minHeight: 140 }}>
-            <Iconify icon="mdi:alert-circle-outline" width={30} sx={{ color: 'error.main', mb: 1 }} />
-            <Typography sx={{ color: 'error.main', fontSize: '0.82rem', textAlign: 'center', fontWeight: 500 }}>
-              Couldn&apos;t load market news
-            </Typography>
-            <Typography
-              sx={{ color: 'text.disabled', fontSize: '0.75rem', textAlign: 'center', mt: 0.5, maxWidth: 420 }}
-            >
-              {newsError}
-            </Typography>
-            <Typography sx={{ color: 'text.disabled', fontSize: '0.7rem', textAlign: 'center', mt: 1 }}>
-              Top headlines are aggregated from public financial-news RSS feeds (CNBC, Nasdaq).
-            </Typography>
-          </Stack>
-        ) : news && news.articles.length > 0 ? (
-          <>
-            <Stack divider={<Divider />}>
-              {news.articles.map((a, i) => (
-                <Box key={i} sx={{ px: 2, py: 1.25 }}>
-                  <Stack direction="row" spacing={1} sx={{ alignItems: 'baseline' }}>
-                    <Typography sx={{ fontSize: '0.78rem', fontWeight: 800, color: 'text.disabled', minWidth: 18 }}>
-                      {i + 1}
-                    </Typography>
-                    <Box sx={{ flexGrow: 1, minWidth: 0 }}>
-                      {a.url ? (
-                        <Link
-                          href={a.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          underline="hover"
-                          sx={{ fontSize: '0.85rem', fontWeight: 600, color: 'text.primary' }}
-                        >
-                          {a.headline}
-                        </Link>
-                      ) : (
-                        <Typography sx={{ fontSize: '0.85rem', fontWeight: 600, color: 'text.primary' }}>
-                          {a.headline}
-                        </Typography>
-                      )}
-                      {a.summary && (
-                        <Typography sx={{ fontSize: '0.78rem', color: 'text.secondary', lineHeight: 1.5, mt: 0.25 }}>
-                          {a.summary}
-                        </Typography>
-                      )}
-                      <Stack direction="row" spacing={1} sx={{ alignItems: 'center', mt: 0.5, flexWrap: 'wrap' }}>
-                        {a.source && (
-                          <Typography sx={{ fontSize: '0.66rem', fontWeight: 600, color: 'text.disabled' }}>
-                            {a.source}
-                          </Typography>
-                        )}
-                        {a.publishedAt && (
-                          <Typography sx={{ fontSize: '0.66rem', color: 'text.disabled' }}>
-                            {moment(a.publishedAt).fromNow()}
-                          </Typography>
-                        )}
-                      </Stack>
-                    </Box>
-                  </Stack>
-                </Box>
-              ))}
-            </Stack>
-            <Typography sx={{ px: 2, py: 1.5, fontSize: '0.62rem', color: 'text.disabled', fontStyle: 'italic' }}>
-              Top US market headlines via CNBC &amp; Nasdaq RSS{news ? ` · ${moment(news.generatedAt).fromNow()}` : ''}.
-            </Typography>
-          </>
-        ) : (
-          <EmptyState icon="mdi:newspaper-variant-outline" text="No market news available right now." />
-        )}
-      </SectionCard>
+      <MarketNewsCard />
     </Stack>
   );
 }

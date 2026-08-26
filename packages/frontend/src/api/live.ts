@@ -22,6 +22,8 @@ export type AgentInsight = {
   generatedAt: string;
 };
 
+export type NewsCategory = 'markets' | 'business' | 'stocks' | 'economy' | 'tech' | 'crypto';
+
 export type MarketNewsArticle = {
   headline: string;
   summary: string;
@@ -29,10 +31,16 @@ export type MarketNewsArticle = {
   url: string;
   imageUrl: string;
   publishedAt: string;
+  category: string;
+  // Set when the story names a held ticker or its company.
+  symbol: string | null;
+  keywords: string[];
+  breaking: boolean;
 };
 
 export type MarketNewsDigest = {
   articles: MarketNewsArticle[];
+  categories: string[];
   source: string;
   generatedAt: string;
 };
@@ -61,6 +69,7 @@ export type MarketStatus = {
   holiday: string | null;
   exchange: string;
   timezone: string;
+  nextChange: { session: MarketSession; at: string };
   generatedAt: string;
 };
 
@@ -188,8 +197,18 @@ export default class LiveAPI {
       .then((r) => r.data)
       .catch(catchCustomError);
 
-  getMarketNews = async (refresh = false): Promise<MarketNewsDigest> =>
-    axios(DB_HOST + `/live/market-news${refresh ? '?refresh=1' : ''}`)
+  getMarketNews = async (refresh = false, categories: NewsCategory[] = []): Promise<MarketNewsDigest> => {
+    const params = new URLSearchParams();
+    if (refresh) params.set('refresh', '1');
+    if (categories.length) params.set('category', categories.join(','));
+    const query = params.toString();
+    return axios(DB_HOST + `/live/market-news${query ? `?${query}` : ''}`)
+      .then((r) => r.data)
+      .catch(catchCustomError);
+  };
+
+  getPortfolioNews = async (refresh = false): Promise<MarketNewsDigest> =>
+    axios(DB_HOST + `/live/portfolio-news${refresh ? '?refresh=1' : ''}`)
       .then((r) => r.data)
       .catch(catchCustomError);
 

@@ -18,6 +18,15 @@ const SESSION_META: Record<MarketSession, SessionMeta> = {
   closed: { label: 'Market Closed', live: false },
 };
 
+// What the *upcoming* session means for the user, phrased as an event rather
+// than a state ("Opens in 2 hours", not "regular in 2 hours").
+const NEXT_SESSION_COPY: Record<MarketSession, string> = {
+  regular: 'Opens',
+  'pre-market': 'Pre-market opens',
+  'post-market': 'Regular session closes',
+  closed: 'After-hours ends',
+};
+
 export default function MarketStatusChip() {
   const theme = useTheme();
   const [status, setStatus] = React.useState<MarketStatus | null>(null);
@@ -76,6 +85,11 @@ export default function MarketStatusChip() {
       </Typography>
       {status.holiday && (
         <Typography sx={{ fontSize: '0.72rem', opacity: 0.85 }}>Holiday: {status.holiday}</Typography>
+      )}
+      {status.nextChange && moment(status.nextChange.at).isAfter(moment()) && (
+        <Typography sx={{ fontSize: '0.72rem', opacity: 0.85 }}>
+          {NEXT_SESSION_COPY[status.nextChange.session]} {moment(status.nextChange.at).fromNow()}
+        </Typography>
       )}
       <Typography sx={{ fontSize: '0.68rem', opacity: 0.7, mt: 0.25 }}>
         Updated {moment(status.generatedAt).fromNow()}

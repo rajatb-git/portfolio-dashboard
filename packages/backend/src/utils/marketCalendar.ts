@@ -7,6 +7,12 @@ const MARKET_OPEN_MIN = 9 * 60 + 30; // 9:30 ET
 const REGULAR_CLOSE_MIN = 16 * 60; // 16:00 ET
 const EARLY_CLOSE_MIN = 13 * 60; // 13:00 ET (half days)
 
+// Extended-hours windows. Pre-market trading opens at 4:00 ET; after-hours runs
+// until 20:00 ET, or 17:00 ET on an early-close half day.
+const PRE_MARKET_OPEN_MIN = 4 * 60; // 4:00 ET
+const POST_MARKET_CLOSE_MIN = 20 * 60; // 20:00 ET
+const HALF_DAY_POST_CLOSE_MIN = 17 * 60; // 17:00 ET
+
 const pad = (n: number) => String(n).padStart(2, '0');
 const ymd = (y: number, m: number, d: number) => `${y}-${pad(m)}-${pad(d)}`;
 
@@ -120,6 +126,24 @@ function etParts(now: Date): { dateStr: string; minutes: number; day: number } {
   };
 }
 
+// Minutes ET is offset from UTC at a given instant (-240 in EDT, -300 in EST).
+function etOffsetMinutes(utcMs: number): number {
+  const at = new Date(utcMs);
+  const et = new Date(at.toLocaleString('en-US', { timeZone: 'America/New_York' }));
+  const utc = new Date(at.toLocaleString('en-US', { timeZone: 'UTC' }));
+  return Math.round((et.getTime() - utc.getTime()) / 60_000);
+}
+
+// An ET wall-clock date + minutes-since-midnight as a real UTC instant. The
+// offset is resolved twice so a timestamp that lands on a DST changeover still
+// converts against the offset actually in force at that moment.
+function etTimestamp(dateStr: string, minutes: number): string {
+  const [y, m, d] = dateStr.split('-').map(Number);
+  const naive = Date.UTC(y, m - 1, d, 0, minutes);
+  const firstPass = naive - etOffsetMinutes(naive) * 60_000;
+  return new Date(naive - etOffsetMinutes(firstPass) * 60_000).toISOString();
+}
+
 // True only during regular US equity trading hours on a real trading day.
 export function isStockMarketOpen(now: Date = new Date()): boolean {
   const { dateStr, minutes, day } = etParts(now);
@@ -128,6 +152,58 @@ export function isStockMarketOpen(now: Date = new Date()): boolean {
   if (fullCloseHolidays(year).has(dateStr)) return false;
   const close = halfDays(year).has(dateStr) ? EARLY_CLOSE_MIN : REGULAR_CLOSE_MIN;
   return minutes >= MARKET_OPEN_MIN && minutes < close;
+}
+
+// The four phases of a US equity trading day. Anything outside 4:00-20:00 ET on
+// a trading day is 'closed'; crypto is never gated by this.
+export type MarketSession = 'pre-market' | 'regular' | 'post-market' | 'closed';
+
+// Which trading session the given instant falls in, honouring weekends,
+// full-close holidays and early-close half days.
+export function getMarketSession(now: Date = new Date()): MarketSession {
+  const { dateStr, minutes, day } = etParts(now);
+  if (day === 0 || day === 6) return 'closed';
+  const year = Number(dateStr.slice(0, 4));
+  if (fullCloseHolidays(year).has(dateStr)) return 'closed';
+
+  const isHalfDay = halfDays(year).has(dateStr);
+  const regularClose = isHalfDay ? EARLY_CLOSE_MIN : REGULAR_CLOSE_MIN;
+  const postClose = isHalfDay ? HALF_DAY_POST_CLOSE_MIN : POST_MARKET_CLOSE_MIN;
+
+  if (minutes >= MARKET_OPEN_MIN && minutes < regularClose) return 'regular';
+  if (minutes >= PRE_MARKET_OPEN_MIN && minutes < MARKET_OPEN_MIN) return 'pre-market';
+  if (minutes >= regularClose && minutes < postClose) return 'post-market';
+  return 'closed';
+}
+
+// True during pre-market or after-hours, when quotes must come from a source
+// that reports extended-hours trades (Finnhub's REST /quote does not).
+export function isExtendedHoursSession(now: Date = new Date()): boolean {
+  const session = getMarketSession(now);
+  return session === 'pre-market' || session === 'post-market';
+}
+
+// ET wall-clock timestamp of the next session boundary that matters to a viewer:
+// when the regular session opens (during pre-market/closed) or closes (during the
+// regular session), or when after-hours trading ends. Returned as an ISO string in
+// the ET offset so the UI can count down without re-deriving the calendar.
+export function getNextSessionChange(now: Date = new Date()): { session: MarketSession; at: string } {
+  const session = getMarketSession(now);
+  const { dateStr, minutes } = etParts(now);
+  const year = Number(dateStr.slice(0, 4));
+  const isHalfDay = halfDays(year).has(dateStr);
+  const regularClose = isHalfDay ? EARLY_CLOSE_MIN : REGULAR_CLOSE_MIN;
+  const postClose = isHalfDay ? HALF_DAY_POST_CLOSE_MIN : POST_MARKET_CLOSE_MIN;
+
+  if (session === 'pre-market') return { session: 'regular', at: etTimestamp(dateStr, MARKET_OPEN_MIN) };
+  if (session === 'regular') return { session: 'post-market', at: etTimestamp(dateStr, regularClose) };
+  if (session === 'post-market') return { session: 'closed', at: etTimestamp(dateStr, postClose) };
+
+  // Closed: the next thing to happen is pre-market opening on the next trading day
+  // (today if we are before 4:00 ET on one).
+  let cursor = isTradingDayStr(dateStr) && minutes < PRE_MARKET_OPEN_MIN ? dateStr : addDays(dateStr, 1);
+  while (!isTradingDayStr(cursor)) cursor = addDays(cursor, 1);
+  return { session: 'pre-market', at: etTimestamp(cursor, PRE_MARKET_OPEN_MIN) };
 }
 
 // A real trading day in ET (weekday, not a full-close holiday). Unlike

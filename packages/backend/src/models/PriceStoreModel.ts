@@ -9,6 +9,14 @@ export interface IPriceStore {
   open: number;
   prevClose: number;
   priceDate: string;
+  // Latest pre-market / after-hours print, measured against the regular-session
+  // close above. Zeroed (session '') outside extended hours so a stale overnight
+  // quote is never presented as live.
+  extendedPrice: number;
+  extendedChange: number;
+  extendedPercentChange: number;
+  extendedSession: string;
+  extendedAt: string;
 }
 
 export const PriceStoreSchema: SchemaType = {
@@ -20,6 +28,11 @@ export const PriceStoreSchema: SchemaType = {
   open: { type: Number, required: true },
   prevClose: { type: Number, required: true },
   priceDate: { type: String, required: true },
+  extendedPrice: { type: Number, required: false },
+  extendedChange: { type: Number, required: false },
+  extendedPercentChange: { type: Number, required: false },
+  extendedSession: { type: String, required: false },
+  extendedAt: { type: String, required: false },
 };
 
 export interface IPriceStoreModel extends IPriceStore, ISkewerModel {}
