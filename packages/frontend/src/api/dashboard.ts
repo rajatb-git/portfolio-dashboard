@@ -3,6 +3,7 @@ import axios from './axios';
 import { DB_HOST } from '@/config';
 
 import { catchCustomError } from './apiUtil';
+import type { MarketSession } from './live';
 
 export type HoldingAggregate = {
   accountId: string;
@@ -56,6 +57,26 @@ export type AccountMovement = {
   marketValue: number;
 };
 
+// One symbol's pre-market / after-hours move, measured from the regular close.
+export type ExtendedMovement = {
+  symbol: string;
+  name: string;
+  price: number;
+  change: number;
+  percentChange: number;
+  gl: number;
+  asOf: string;
+};
+
+export type ExtendedRecap = {
+  session: 'pre-market' | 'post-market';
+  indices: ExtendedMovement[];
+  holdings: ExtendedMovement[];
+  totalGL: number;
+  totalGLPercent: number;
+  asOf: string;
+};
+
 export type DailyRecap = {
   indices: IndexMovement[];
   holdings: HoldingMovement[];
@@ -64,6 +85,10 @@ export type DailyRecap = {
   totalDayGLPercent: number;
   marketDay: string;
   marketDayIsToday: boolean;
+  session: MarketSession;
+  nextSessionChange: { session: MarketSession; at: string };
+  // Null outside pre-/post-market, or when no extended-hours prices are available.
+  extended: ExtendedRecap | null;
   generatedAt: string;
 };
 

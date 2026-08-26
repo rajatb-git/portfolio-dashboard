@@ -6,6 +6,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
+## [4.5.0] – 2026-08-26
+
+### Added
+- **Pre-market and after-hours movement** — The Today page now shows a dedicated extended-hours card while pre-market (4:00 AM ET) or after-hours (to 8:00 PM ET) trading is running: index moves, which of your holdings are trading, and what the move is worth against the last close. Quotes now keep the regular-session close and the extended-hours print as separate figures instead of overwriting one with the other, so "Tuesday's close" and "up 0.4% pre-market" can both be true at once.
+- **Session-aware Today banner** — Replaces the flat "markets are closed" notice with what is actually happening: which session is running, which session the figures below reflect, and a live countdown to the opening bell (or to the close). The market-status chip carries the same countdown.
+- **News for your holdings** — The market news card gains a second tab showing company news for the tickers you hold, plus any broad-market headline that names one of your positions. Stories are tagged with the ticker and flagged when they carry market-moving language.
+- **News category filters** — Top market news can be narrowed to markets, stocks, business, economy, tech or crypto, each backed by its own feeds.
+
+### Changed
+- News is aggregated from more publishers (added WSJ Markets and Tech, MarketWatch Top Stories and Market Pulse, Nasdaq Stocks, Investing.com, Seeking Alpha and Cointelegraph), so one outlet going down degrades the digest rather than emptying it. Headlines are deduped across outlets by significant words rather than an exact string match, HTML and numeric entities are decoded, summaries are clamped, and each feed is capped so a prolific publisher can't crowd out the rest.
+- The market calendar now models pre-market and after-hours directly, including early-close half days, and quote polling is driven by it — so no more background fetches on holidays.
+- Market status falls back to the local exchange calendar when Finnhub is unreachable or returns no session, instead of failing outright.
+- Market-moving keyword matching now catches inflected forms ("surging", "rallies", "tumbled"), and ticker matching ignores symbols that are also common English words.
+
+---
+
 ## [4.4.0] – 2026-08-25
 
 ### Added

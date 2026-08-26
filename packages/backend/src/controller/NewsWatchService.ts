@@ -11,6 +11,7 @@ import {
 } from '../models/NewsWatchConfigModel';
 import { SeenNewsDBModel } from '../models/SeenNewsModel';
 import { PersistentInterval } from '../utils/PersistentInterval';
+import { matchedPatterns, normalizeCompanyName, relatedSymbol } from '../utils/newsRelevance';
 import { logger } from '../utils/winston';
 import { mqttPublisher } from './MqttPublisher';
 import { buildNewsAlertPayload, dispatchNewsAlert } from './NotificationDispatcher';
@@ -29,41 +30,6 @@ const SEEN_RETENTION_DAYS = 7;
 // rather than all at once.
 const SYMBOL_CONCURRENCY = 4;
 
-// Headline patterns that separate a market-moving story from routine coverage.
-const BREAKING_PATTERNS: RegExp[] = [
-  /\btrading halt(ed)?\b/i,
-  /\bhalt(ed|s)? trading\b/i,
-  /\b(plunge|plummet|tumble|crash|slump|sink)s?\b/i,
-  /\b(soar|surge|spike|rally|jump|skyrocket)s?\b/i,
-  /\b(downgrade|upgrade)[sd]?\b/i,
-  /\bprice target\b/i,
-  /\bguidance\b/i,
-  /\bprofit warning\b/i,
-  /\b(beats|misses|tops)\b.*\b(estimates|expectations)\b/i,
-  /\bearnings\b/i,
-  /\brecall(s|ed)?\b/i,
-  /\b(lawsuit|sues|sued)\b/i,
-  /\b(investigation|probe|subpoena)\b/i,
-  /\b(sec|doj|ftc)\b.*\b(charge|probe|sue|investigat)/i,
-  /\bfraud\b/i,
-  /\b(bankruptcy|chapter 11)\b/i,
-  /\b(merger|acquisition|acquires|buyout|takeover|to buy)\b/i,
-  /\blayoffs?\b/i,
-  /\b(ceo|cfo)\b.*\b(steps down|resigns|ousted|fired|departs)\b/i,
-  /\bfda (approval|approves|rejects)\b/i,
-  /\bbreaking\b/i,
-  /\bactivist (stake|investor)\b/i,
-  /\bshort seller\b/i,
-  /\bdelisting\b/i,
-  /\bdividend (cut|hike|increase)\b/i,
-  /\bstock split\b/i,
-  /\b(secondary|share) offering\b/i,
-  /\bbankrupt\b/i,
-];
-
-// Suffixes stripped before matching a company name inside a headline.
-const NAME_NOISE = /\b(inc|corp|corporation|co|ltd|llc|plc|holdings?|group|company|the|sa|nv|ag)\b\.?/gi;
-
 type Candidate = {
   symbol: string | null;
   headline: string;
@@ -73,22 +39,11 @@ type Candidate = {
   publishedAt: string;
 };
 
-const escapeRegex = (value: string): string => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-
 const articleKey = (url: string, headline: string): string =>
   createHash('sha1')
     .update(url || headline)
     .digest('hex')
     .slice(0, 32);
-
-const matchedPatterns = (text: string): string[] => {
-  const hits: string[] = [];
-  for (const pattern of BREAKING_PATTERNS) {
-    const match = text.match(pattern);
-    if (match) hits.push(match[0].toLowerCase());
-  }
-  return hits;
-};
 
 async function mapWithConcurrency<T, R>(
   items: T[],
@@ -119,7 +74,7 @@ class NewsWatchService {
     for (const holding of holdingsModel.getAllRecords()) {
       if (holding.type !== 'stock') continue;
       if (!watched.has(holding.symbol)) {
-        watched.set(holding.symbol, holding.name.replace(NAME_NOISE, '').replace(/[^\w\s]/g, ' ').trim());
+        watched.set(holding.symbol, normalizeCompanyName(holding.name));
       }
     }
     return watched;
@@ -151,7 +106,7 @@ class NewsWatchService {
     try {
       const headlines = await getTopBusinessHeadlines(25);
       return headlines.map((a) => ({
-        symbol: this.relatedSymbol(a.headline, watched),
+        symbol: relatedSymbol(a.headline, watched),
         headline: a.headline,
         summary: a.summary,
         source: a.source,
@@ -162,16 +117,6 @@ class NewsWatchService {
       logger.log({ level: 'error', label: LABEL, message: `Market headlines failed: ${err.message}` });
       return [];
     }
-  }
-
-  // A broad headline counts as being about a holding when it names the ticker as
-  // a standalone token or spells out the company name.
-  private relatedSymbol(headline: string, watched: Map<string, string>): string | null {
-    for (const [symbol, name] of watched) {
-      if (new RegExp(`\\b${escapeRegex(symbol)}\\b`).test(headline)) return symbol;
-      if (name.length >= 4 && new RegExp(`\\b${escapeRegex(name)}\\b`, 'i').test(headline)) return symbol;
-    }
-    return null;
   }
 
   private async pruneSeen(): Promise<void> {

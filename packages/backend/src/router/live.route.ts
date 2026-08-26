@@ -277,12 +277,29 @@ export const LiveRouter = () => {
   router.get('/live/market-news', async (ctx) => {
     try {
       const forceRefresh = ctx.query.refresh === '1' || ctx.query.refresh === 'true';
-      const result = await new MarketNewsController().getTopNews(forceRefresh);
+      // Unknown category names are dropped by the controller rather than erroring,
+      // so a stale bookmark still returns the full digest.
+      const raw = Array.isArray(ctx.query.category) ? ctx.query.category : [ctx.query.category];
+      const categories = raw.flatMap((value) => String(value ?? '').split(',')).filter(Boolean);
+      const result = await new MarketNewsController().getTopNews(forceRefresh, categories);
       ctx.body = result;
       ctx.status = 200;
     } catch (err: any) {
       logger.log({ level: 'error', message: err.message, label: 'Get market news' });
       ctx.body = errorBody('Failed to get market news', err.message);
+      ctx.status = 400;
+    }
+  });
+
+  router.get('/live/portfolio-news', async (ctx) => {
+    try {
+      const forceRefresh = ctx.query.refresh === '1' || ctx.query.refresh === 'true';
+      const result = await new MarketNewsController().getPortfolioNews(forceRefresh);
+      ctx.body = result;
+      ctx.status = 200;
+    } catch (err: any) {
+      logger.log({ level: 'error', message: err.message, label: 'Get portfolio news' });
+      ctx.body = errorBody('Failed to get portfolio news', err.message);
       ctx.status = 400;
     }
   });

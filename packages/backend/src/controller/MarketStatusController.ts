@@ -1,12 +1,13 @@
 import moment from 'moment';
 import { getMarketStatus } from '../externalApis/finnHub';
 import { CacheDBModel, ICacheModel } from '../models/CacheModel';
+import { getMarketSession, getNextSessionChange, type MarketSession } from '../utils/marketCalendar';
 import { logger } from '../utils/winston';
 
 // US market open/closed/extended-hours status from Finnhub — public exchange
 // data, no personal holdings and no AI provider involved.
 
-export type MarketSession = 'pre-market' | 'regular' | 'post-market' | 'closed';
+export type { MarketSession };
 
 export type MarketStatus = {
   isOpen: boolean;
@@ -14,6 +15,9 @@ export type MarketStatus = {
   holiday: string | null;
   exchange: string;
   timezone: string;
+  // When the current session gives way to the next one, so the UI can count down
+  // to the opening bell rather than just asserting "closed".
+  nextChange: { session: MarketSession; at: string };
   generatedAt: string;
 };
 
@@ -21,12 +25,31 @@ const CACHE_KEY = 'market_status';
 const CACHE_MINUTES = 1;
 const LABEL = 'MarketStatus';
 
+// Finnhub's free tier sometimes returns a null session, and only ever says
+// "closed" for anything outside the regular bell — including pre-market, when
+// prices are very much moving. Fall back to the local exchange calendar, which
+// models pre-/post-market directly.
 const normalizeSession = (session: string | null, isOpen: boolean): MarketSession => {
   const s = (session ?? '').toLowerCase();
   if (s.includes('pre')) return 'pre-market';
   if (s.includes('post') || s.includes('after')) return 'post-market';
   if (s === 'regular' || s === 'market' || isOpen) return 'regular';
-  return 'closed';
+  return getMarketSession();
+};
+
+// Calendar-only status, used when Finnhub is unreachable and nothing usable is
+// cached. Better a locally-derived session than no market status at all.
+const localStatus = (): MarketStatus => {
+  const session = getMarketSession();
+  return {
+    isOpen: session === 'regular',
+    session,
+    holiday: null,
+    exchange: 'US',
+    timezone: 'America/New_York',
+    nextChange: getNextSessionChange(),
+    generatedAt: moment().toISOString(),
+  };
 };
 
 const parseCached = (cached: ICacheModel | undefined): MarketStatus | null => {
@@ -46,7 +69,7 @@ export class MarketStatusController {
     const isFresh = !!cached && moment().diff(moment(cached.updatedAt), 'minutes') < CACHE_MINUTES;
 
     if (!forceRefresh && cachedStatus && isFresh) {
-      return cachedStatus;
+      return { ...cachedStatus, nextChange: getNextSessionChange() };
     }
 
     try {
@@ -57,6 +80,7 @@ export class MarketStatusController {
         holiday: raw.holiday ?? null,
         exchange: raw.exchange || 'US',
         timezone: raw.timezone || 'America/New_York',
+        nextChange: getNextSessionChange(),
         generatedAt: moment().toISOString(),
       };
 
@@ -75,9 +99,14 @@ export class MarketStatusController {
           label: LABEL,
           message: `Live refresh failed, serving cached status: ${err.message}`,
         });
-        return cachedStatus;
+        return { ...cachedStatus, nextChange: getNextSessionChange() };
       }
-      throw err;
+      logger.log({
+        level: 'warn',
+        label: LABEL,
+        message: `Live refresh failed with no cache, serving calendar-derived status: ${err.message}`,
+      });
+      return localStatus();
     }
   };
 }
