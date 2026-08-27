@@ -6,6 +6,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
+## [4.5.1] – 2026-08-27
+
+### Fixed
+- **Wrong next-earnings date** — The next report for a ticker was read as the first entry Finnhub happened to return rather than the nearest one by date, so a symbol with several scheduled releases showed a quarter further out (NVDA reading November instead of its August report). The nearest upcoming release is now picked by date.
+- **Silent earnings reminders** — The holdings earnings calendar is fetched in one unfiltered request, which not every Finnhub plan serves. When that request failed the app quietly kept serving the last cached calendar indefinitely, so both the dashboard and the earnings alerts stayed pinned to a quarter that had already reported and no reminder ever fired. The calendar now falls back to per-symbol lookups, treats an empty bulk result as a failure, and stops trusting a cached calendar it has been unable to refresh for a day.
+- The earnings calendar now counts days against the market's date in ET rather than the server's local date, so a report due that afternoon is not dropped by a UTC host rolling over at 20:00 ET, and "Today"/"Tomorrow" mean what they say. The countdown is recomputed on every read instead of being stored with the cached calendar.
+
+---
+
 ## [4.5.0] – 2026-08-26
 
 ### Added

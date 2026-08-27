@@ -1,8 +1,9 @@
 import axios, { AxiosError, AxiosResponse } from 'axios';
-import { logger } from '../utils/winston';
 import moment from 'moment';
-import { CompanyProfile2Response, MarketNewsResponse, QuoteResponse, UpcomingIPOsResponse } from './types';
 import { IRecommendation } from '../models/RecommendationModel';
+import { etDateAndMinutes } from '../utils/marketCalendar';
+import { logger } from '../utils/winston';
+import { CompanyProfile2Response, MarketNewsResponse, QuoteResponse, UpcomingIPOsResponse } from './types';
 
 // Finnhub rejects bursts with HTTP 429. Every controller fans out over its
 // holdings with Promise.all, so without a shared throttle a single dashboard or
@@ -294,11 +295,23 @@ export const searchSymbols = (query: string): Promise<SymbolSearchResult[]> =>
       throw error;
     });
 
+// Finnhub does not document the order of earningsCalendar, so the first element
+// is not necessarily the next report — for a symbol with several scheduled
+// releases it can be a quarter further out. Pick by date, not by position.
+const nextUpcomingRelease = <T extends { date?: string }>(releases: T[] | undefined, from: string): T | null => {
+  let next: T | null = null;
+  for (const release of releases ?? []) {
+    if (!release?.date || release.date < from) continue;
+    if (!next || release.date < (next.date as string)) next = release;
+  }
+  return next;
+};
+
 export const getEarningsCalendar = (symbol: string): Promise<any> => {
-  const from = moment().format('YYYY-MM-DD');
-  const to = moment().add(12, 'M').format('YYYY-MM-DD');
+  const from = etDateAndMinutes().dateStr;
+  const to = moment(from, 'YYYY-MM-DD').add(12, 'M').format('YYYY-MM-DD');
   return finnhubGet(`/calendar/earnings?symbol=${symbol}&from=${from}&to=${to}`)
-    .then((response) => response.data.earningsCalendar?.[0] ?? null)
+    .then((response) => nextUpcomingRelease(response.data.earningsCalendar, from))
     .catch((error: AxiosError) => {
       logger.log({
         level: 'error',
