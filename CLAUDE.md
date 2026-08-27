@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-Context for Claude (and other AI assistants) working on this repository. Read this before starting a task. For human-facing design and theme documentation, see `docs/`.
+Context for Claude (and other AI assistants) working on this repository. Read this before starting a task. For human-facing documentation, see `docs/` — a VitePress site published to GitHub Pages. Design and theme notes live in `docs/internals/`.
 
 ## Project overview
 
@@ -24,7 +24,7 @@ If Ollama is configured as the provider, data stays local. Even so, do not build
 
 | Layer | Tech |
 |---|---|
-| Monorepo | pnpm workspaces (`pnpm-workspace.yaml`) |
+| Monorepo | pnpm workspaces (`pnpm-workspace.yaml`) — `packages/*` plus `docs` |
 | Frontend | React 19, MUI 7, Vite, TypeScript, React Router, react-toastify, ApexCharts, MUI X Charts/DataGrid, Iconify, moment, axios |
 | Backend | Koa 3, TypeScript, MongoDB (centralized — see `MONGO_URI`), winston, axios, archiver/unzipper |
 | AI | `@anthropic-ai/sdk`, `@google/genai`, Ollama HTTP |
@@ -57,6 +57,9 @@ packages/
       models/         # MongoDB wrappers (MongoModel, see utils/mongoModel.ts)
       utils/          # winston logger, error.ts (errorBody)
       server.ts
+docs/               # VitePress site (GitHub Pages)
+  .vitepress/       # config.mts + theme
+  guide/ features/ reference/ internals/
 ```
 
 ## Commands
@@ -71,6 +74,7 @@ From repo root:
 | Build | `pnpm -r build` |
 | Lint | `pnpm lint` |
 | Format | `pnpm format` |
+| Docs site (dev / build) | `pnpm docs:dev` / `pnpm docs:build` |
 
 The backend listens on `http://localhost:3001` by default; frontend reads `VITE_DB_HOST` (falls back to that) and stores an override in localStorage under `api_host`.
 
