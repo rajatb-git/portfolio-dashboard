@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
+## [4.6.1] – 2026-08-27
+
+### Changed
+- Dependency updates, landed together with a regenerated lockfile: `@anthropic-ai/sdk` 0.117.1 → 0.120.0, `@google/genai` 2.17.1 → 2.18.0, `@mui/x-charts` and `@mui/x-data-grid` 9.11 → 9.12, `apexcharts` 6.8.0 → 6.10.0, `react-dropzone` 20.1.1, `vite` 8.2.2, `@vitejs/plugin-react` 6.1.0, `@types/react-dom` 19.2.5 and `@biomejs/biome` 2.5.8 → 2.5.10 across all three manifests.
+
+---
+
 ## [4.6.0] – 2026-08-27
 
 ### Added
