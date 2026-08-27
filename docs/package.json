@@ -1,0 +1,16 @@
+{
+  "name": "@portfolio/docs",
+  "version": "4.6.0",
+  "private": true,
+  "license": "MIT",
+  "author": "Rajat Bansal",
+  "description": "Documentation site for Portfolio Dashboard, built with VitePress and published to GitHub Pages.",
+  "scripts": {
+    "docs:dev": "vitepress dev",
+    "docs:build": "vitepress build",
+    "docs:preview": "vitepress preview"
+  },
+  "devDependencies": {
+    "vitepress": "^1.6.4"
+  }
+}

@@ -5,7 +5,8 @@ app for tracking stock and crypto holdings. Contributions of all sizes are
 welcome — bug fixes, features, docs, and tests.
 
 Please read this guide before opening a pull request. For deeper design and
-architecture notes, see [`docs/`](docs/).
+architecture notes, see the [documentation site](https://rajatb-git.github.io/portfolio-dashboard/)
+(source in [`docs/`](docs/)).
 
 ## Code of conduct
 
@@ -49,10 +50,10 @@ Frontend runs on `http://localhost:5173`, backend on `http://localhost:3001`.
 ```
 packages/frontend/   React 19 + MUI 7 SPA (Vite)
 packages/backend/    Koa 3 API + MongoDB (centralized document store)
-docs/                architecture, design system, UI + error-handling guides
+docs/                VitePress documentation site (published to GitHub Pages)
 ```
 
-A fuller tour lives in [`docs/architecture.md`](docs/architecture.md).
+A fuller tour lives in [`docs/internals/architecture.md`](docs/internals/architecture.md).
 
 ## The one hard rule: never send personal financial data to external AI
 
@@ -86,7 +87,7 @@ build it — open an issue to discuss first.
   winston, and returns a structured `errorBody(name, message)` — never a raw
   string. Every frontend API method ends with `.catch(catchCustomError)`, and
   every call site surfaces failures via `toast.error(...)`. No silent catches.
-  See [`docs/error-handling.md`](docs/error-handling.md).
+  See [`docs/internals/error-handling.md`](docs/internals/error-handling.md).
 - **Forms.** Inputs persist behind an explicit **Save** button with dirty-state
   tracking, not `onBlur`/`onChange` auto-save. See the AI Agent section of
   `pages/Settings.tsx` for the reference pattern.
@@ -122,6 +123,24 @@ delivers:
 
 Bump once per branch relative to `develop`, as part of your commit (not a
 separate commit).
+
+## Documentation
+
+The documentation site lives in `docs/` and is built with
+[VitePress](https://vitepress.dev/):
+
+```sh
+pnpm docs:dev      # hot-reloading local server
+pnpm docs:build    # production build into docs/.vitepress/dist
+```
+
+Adding a page means creating the Markdown file **and** adding it to the sidebar
+in `docs/.vitepress/config.mts`. The build fails on dead internal links.
+
+Publishing is automatic: the `Docs` workflow builds the site on every PR that
+touches `docs/` and deploys to GitHub Pages on every push to `develop`. If your
+change alters user-facing behaviour, update the page that describes it in the
+same PR.
 
 ## Reporting bugs & requesting features
 

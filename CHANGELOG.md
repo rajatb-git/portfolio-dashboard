@@ -6,6 +6,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
+## [4.6.0] – 2026-08-27
+
+### Added
+- **Documentation site** — A VitePress site under `docs/`, published to GitHub Pages, replacing the four loose Markdown files that lived there. Covers a guide (getting started, configuration, Docker, importing a portfolio, backups, troubleshooting, FAQ), a page per feature, and a reference section: the full REST API surface, every environment variable, the data models, and the defaults and cadence of every background service. Local search, dark mode and the app's own brand palette come with it. `pnpm docs:dev`, `pnpm docs:build` and `pnpm docs:preview` drive it.
+- **GitHub Pages CI** — A `Docs` workflow builds the site on every pull request that touches `docs/` and deploys it to Pages on every push to `develop`. The build fails on dead internal links, so a broken cross-reference is caught in review rather than shipped.
+
+### Changed
+- The README is rewritten for an open-source audience: badges, an accurate feature summary (rebalancing, the four alert conditions, MQTT notifications, broker and AI-assisted imports), quick starts for both local and Docker, the architecture diagram, and an explicit statement of the AI data-privacy boundary with links into the documentation site.
+- The engineering docs (architecture, design system, UI conventions, error handling) moved to `docs/internals/` and gained a page on the AI data-privacy rule explaining the three tiers of AI feature and how the local-only restriction is enforced in code. The architecture page now documents the background services and the notification pipeline.
+
+---
+
 ## [4.5.0] – 2026-08-26
 
 ### Added

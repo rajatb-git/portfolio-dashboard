@@ -31,9 +31,10 @@ models/        MongoDB wrappers (MongoModel, utils/mongoModel.ts) — one file p
 externalApis/  adapters for Finnhub and NASDAQ; all log-and-rethrow on failure
 aiProviders/   adapters with a common interface over Claude SDK / Gemini SDK /
                Ollama HTTP; chosen at runtime by AiConfig.provider
+middleware/    auth — verifies the app-lock session token when the lock is on
 utils/         winston logger, errorBody helper
-server.ts      composes middleware (CORS, helmet, raw-body for zip uploads,
-               bodyparser, routers)
+server.ts      composes middleware (CORS, raw-body for zip uploads, bodyparser,
+               helmet, auth, routers) and starts the background services
 ```
 
 Every controller that wraps an external call caches aggressively — AI insights for 6h, company profiles and sectors for extended periods — to spare rate limits and keep the UI snappy.
@@ -43,8 +44,9 @@ Every controller that wraps an external call caches aggressively — AI insights
 ```
 api/               one axios client per domain; every method chains .catch(catchCustomError)
 models/            TS interfaces for stored entities
-pages/             route-level components (Dashboard, Research, Analytics, Database,
-                   IPOCalendar, Logs, Settings)
+pages/             route-level components (Dashboard, Today, Analytics, Rebalance,
+                   Research, Alerts, Notifications, IPOCalendar, IPODetail,
+                   Database, Logs, Changelog, Settings)
 components/        reusable UI. Notables:
   ThemeRegistry/     palette + theme + MUI overrides + dark/light context
   Nav/Drawer.tsx     sidebar + top app bar + command-K search
@@ -58,6 +60,34 @@ config.ts          DB_HOST, NAV_CONFIG, drawer widths
 ```
 
 Pages fetch on mount and on param change; loading states use MUI `Skeleton`, failures raise toasts.
+
+## Background services
+
+Beyond request/response, the backend runs a set of long-lived services started
+in `server.ts` after `listen()`. Each reads its own config document from
+MongoDB, reschedules itself when that config is saved (no restart needed), and
+records its last run in `job_run_state` so a restart does not replay alerts.
+
+```
+MarketStatusService          which trading session is in effect (45s refresh)
+AlertMonitorService          evaluates saved price alerts
+MoveAlertService             day-change thresholds, escalation and spike windows
+NewsWatchService             breaking headlines for holdings and the market
+EarningsReminderService      pre-report reminders and post-report results
+DividendWatchService         ex-dividend and payment date reminders
+IpoReminderService           watched IPOs approaching their date
+IpoAnnouncementService       newly listed IPOs on the calendar
+TradingSummaryService        morning / midday / close portfolio recaps
+PortfolioValueCalcService    periodic total-value snapshots
+ScheduledBackupService       periodic export zips with retention
+QuietHoursService            holds or drops notifications inside a window
+```
+
+All of them publish through `NotificationDispatcher`, which applies quiet hours,
+records the send in `notification_history`, and hands the payload to
+`MqttPublisher` — a single persistent MQTT client with auto-reconnect whose
+failures are logged, never thrown. A dead broker degrades notifications, not the
+app.
 
 ## Key data flows
 
@@ -88,6 +118,12 @@ Pages fetch on mount and on param change; loading states use MUI `Skeleton`, fai
 | Ollama | AI insights (local provider) | host URL stored in AiConfig |
 
 AI config is persisted in MongoDB, not `.env` — users configure it through the Settings UI.
+
+Which provider a feature may use is not a preference but an invariant:
+ticker and IPO insights (public data only) go through `getActiveProvider()`;
+portfolio insights and AI document import (personal data) construct
+`OllamaProvider` directly and refuse to run against a hosted API. See
+[the AI data-privacy rule](./ai-privacy.md).
 
 ## Caching
 
