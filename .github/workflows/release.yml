@@ -36,10 +36,10 @@ jobs:
         image: [backend, frontend]
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Set up Node.js
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
           node-version: '24'
 
@@ -79,7 +79,7 @@ jobs:
             org.opencontainers.image.vendor=Rajat Bansal
 
       - name: Build and push
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: ./packages/${{ matrix.image }}
           platforms: linux/amd64,linux/arm64
