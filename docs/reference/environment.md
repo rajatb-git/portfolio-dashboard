@@ -48,7 +48,6 @@ history and needs no key.
 |---|---|---|---|
 | `PORT` | — | `3001` | Port the Koa backend listens on |
 | `STORAGE_DIR` | — | `./storage` | Working-directory anchor for scheduled backup zips, logs and the demo-mode flag. Must end in `storage`. No application data lives here — that is all in MongoDB |
-| `NEWS_API_KEY` | — | — | Optional news enrichment |
 
 Scheduled backup zips are written to `STORAGE_DIR/../backups`.
 

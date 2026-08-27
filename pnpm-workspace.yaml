@@ -6,3 +6,7 @@ allowBuilds:
   '@google/genai': false
   esbuild: false
   protobufjs: false
+
+overrides:
+  vite: ">=8.2.2"
+  esbuild: ">=0.24.3"
