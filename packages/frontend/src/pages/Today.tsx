@@ -292,7 +292,7 @@ export default function Today() {
       (recap?.holdings ?? [])
         .filter((h) => h.dayGL > 0)
         .sort((a, b) => b.dayGL - a.dayGL)
-        .slice(0, 5),
+        .slice(0, 10),
     [recap]
   );
   const losers = React.useMemo(
@@ -300,7 +300,7 @@ export default function Today() {
       (recap?.holdings ?? [])
         .filter((h) => h.dayGL < 0)
         .sort((a, b) => a.dayGL - b.dayGL)
-        .slice(0, 5),
+        .slice(0, 10),
     [recap]
   );
 
