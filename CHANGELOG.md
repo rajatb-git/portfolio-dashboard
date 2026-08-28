@@ -6,6 +6,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
+## [4.7.0] – 2026-08-27
+
+### Added
+- **Actual earnings results** — Earnings alerts now follow the heads-up with the numbers themselves: EPS reported against consensus, the surprise percentage, and revenue against expectation. The figures are in the notification title too, so a phone banner shows the result without being opened. The Settings test send now demonstrates both halves when result alerts are on.
+- **Recently Reported card** — The dashboard gains a card listing holdings that reported in the last 14 days with actual EPS against estimate, revenue, and a beat/miss chip, alongside the existing upcoming-earnings card. Backed by a new `/analytics/earnings-results` route.
+
+### Fixed
+- **Result alerts never fired** — The follow-up with the actual numbers matched Finnhub's earnings history on `period === report date`, but `period` is the *fiscal quarter end*, not the announcement day (NVDA's quarter ended Jul 2026 and was reported on Aug 26), so the match never succeeded and every report was abandoned after five days. Results are now read from the earnings calendar's published actuals, falling back to the history endpoint matched on the latest quarter that closed on or before the report.
+- A report is followed to its result even when its heads-up never went out — quiet hours, a restart, or turning result alerts on after the fact. Previously only reports the app had successfully reminded about were ever resolved.
+
+### Changed
+- The earnings calendar window now reaches 14 days into the past as well as four months ahead, so one request serves both the upcoming card and the reported results.
+
+---
+
 ## [4.6.1] – 2026-08-27
 
 ### Changed

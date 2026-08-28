@@ -60,6 +60,18 @@ export type HoldingEarning = {
   daysAway: number;
 };
 
+export type HoldingEarningResult = {
+  symbol: string;
+  name: string;
+  date: string;
+  epsActual: number | null;
+  epsEstimate: number | null;
+  revenueActual: number | null;
+  revenueEstimate: number | null;
+  surprisePercent: number | null;
+  daysAgo: number;
+};
+
 export type PortfolioInsight = {
   summary: string;
   observations: string[];
@@ -198,6 +210,12 @@ export default class AnalyticsAPI {
   getEarningsCalendar = async (): Promise<HoldingEarning[]> =>
     axios
       .get(DB_HOST + '/analytics/earnings-calendar')
+      .then((response) => response.data)
+      .catch(catchCustomError);
+
+  getEarningsResults = async (): Promise<HoldingEarningResult[]> =>
+    axios
+      .get(DB_HOST + '/analytics/earnings-results')
       .then((response) => response.data)
       .catch(catchCustomError);
 

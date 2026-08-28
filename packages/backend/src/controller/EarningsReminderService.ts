@@ -1,13 +1,16 @@
 import moment from 'moment';
 import { getEarningsHistory } from '../externalApis/finnHub';
-import {
-  DEFAULT_EARNINGS_REMINDER_CONFIG,
-  type IEarningsReminderConfig,
-} from '../models/EarningsReminderConfigModel';
+import { DEFAULT_EARNINGS_REMINDER_CONFIG, type IEarningsReminderConfig } from '../models/EarningsReminderConfigModel';
 import { getJobState, setJobState } from '../models/JobRunStateModel';
+import { etDateAndMinutes } from '../utils/marketCalendar';
 import { PersistentInterval } from '../utils/PersistentInterval';
 import { logger } from '../utils/winston';
-import { getHoldingsEarningsCalendar } from './HoldingsEarningsController';
+import {
+  getHoldingsEarningsCalendar,
+  getHoldingsEarningsResults,
+  type HoldingEarning,
+  type HoldingEarningResult,
+} from './HoldingsEarningsController';
 import {
   buildEarningsPayload,
   buildEarningsResultPayload,
@@ -30,8 +33,22 @@ const PENDING_KEY = 'earnings_pending';
 
 // How long to keep chasing results before giving up on a report.
 const RESULT_GRACE_DAYS = 5;
+// Finnhub's /stock/earnings keys each row by the fiscal period END date, not the
+// day the numbers were announced: a quarter ending 2026-07-31 is reported weeks
+// later. This bounds how far back a period may sit from the report that
+// announced it, so the right quarter is matched and an older one never is.
+const MAX_PERIOD_LAG_DAYS = 120;
 
 type Pending = { symbol: string; name: string; date: string };
+
+// The figures a release publishes, from whichever source had them.
+type ResultFigures = Pick<
+  HoldingEarningResult,
+  'epsActual' | 'epsEstimate' | 'revenueActual' | 'revenueEstimate' | 'surprisePercent'
+>;
+
+const daysBetween = (from: string, to: string): number =>
+  moment(to, 'YYYY-MM-DD').diff(moment(from, 'YYYY-MM-DD'), 'days');
 
 class EarningsReminderService {
   private readonly scheduler = new PersistentInterval('earnings_reminder');
@@ -71,10 +88,37 @@ class EarningsReminderService {
     }
   }
 
-  private async sendReminders(pending: Pending[]): Promise<Pending[]> {
-    const calendar = await getHoldingsEarningsCalendar();
+  // Every upcoming report is tracked as soon as it reaches the calendar, not only
+  // the ones a reminder went out for: a report whose heads-up never landed (quiet
+  // hours, a restart, results switched on after the fact) still gets its numbers
+  // announced once they publish. Reports that already published are tracked too,
+  // so a result that landed while nothing was watching is still announced once —
+  // the grace window in sendResults is what keeps that from reaching back weeks.
+  private trackReports(pending: Pending[], calendar: HoldingEarning[], published: HoldingEarningResult[]): Pending[] {
     const next = [...pending];
+    const track = (symbol: string, name: string, date: string) => {
+      if (!next.some((p) => p.symbol === symbol && p.date === date)) next.push({ symbol, name, date });
+    };
 
+    for (const entry of calendar) track(entry.symbol, entry.name, entry.date);
+    for (const result of published) track(result.symbol, result.name, result.date);
+    return next;
+  }
+
+  private async publishedResults(): Promise<HoldingEarningResult[]> {
+    try {
+      return await getHoldingsEarningsResults();
+    } catch (err: any) {
+      logger.log({ level: 'error', label: LABEL, message: `Earnings results lookup failed: ${err.message}` });
+      return [];
+    }
+  }
+
+  private prune(pending: Pending[], today: string): Pending[] {
+    return pending.filter((item) => daysBetween(item.date, today) <= RESULT_GRACE_DAYS);
+  }
+
+  private async sendReminders(calendar: HoldingEarning[]): Promise<void> {
     for (const entry of calendar) {
       if (entry.daysAway > this.config.daysBefore) continue;
 
@@ -94,28 +138,55 @@ class EarningsReminderService {
 
       await this.markFired(key);
       logger.log({ level: 'info', label: LABEL, message: `EARNINGS — ${payload.message}` });
-      if (!next.some((p) => p.symbol === entry.symbol && p.date === entry.date)) {
-        next.push({ symbol: entry.symbol, name: entry.name, date: entry.date });
-      }
     }
-
-    return next;
   }
 
-  // Resolve reports whose date has passed by looking up the actual EPS. Finnhub
-  // publishes the number some hours after the release, so an unresolved report is
-  // retried each run until it lands or the grace window closes.
-  private async sendResults(pending: Pending[]): Promise<Pending[]> {
-    const today = moment().startOf('day');
+  // The calendar entry gains its actual numbers within hours of a release, but not
+  // always — /stock/earnings is the second source. Its rows are keyed by the
+  // fiscal period end rather than the announcement date, so match the latest
+  // quarter that closed on or before the report and near enough to be it.
+  private async resultFromHistory(item: Pending): Promise<ResultFigures | null> {
+    let history: any[];
+    try {
+      history = await getEarningsHistory(item.symbol);
+    } catch (err: any) {
+      logger.log({
+        level: 'error',
+        label: LABEL,
+        message: `Earnings history failed for ${item.symbol}: ${err.message}`,
+      });
+      return null;
+    }
+
+    let match: any = null;
+    for (const row of history ?? []) {
+      if (!row?.period || row.actual == null) continue;
+      if (row.period > item.date || daysBetween(row.period, item.date) > MAX_PERIOD_LAG_DAYS) continue;
+      if (!match || row.period > match.period) match = row;
+    }
+    if (!match) return null;
+
+    return {
+      epsActual: typeof match.actual === 'number' ? match.actual : null,
+      epsEstimate: typeof match.estimate === 'number' ? match.estimate : null,
+      surprisePercent: typeof match.surprisePercent === 'number' ? match.surprisePercent : null,
+      revenueActual: null,
+      revenueEstimate: null,
+    };
+  }
+
+  // Announce the numbers for reports whose date has passed. They publish some
+  // hours after the release, so an unresolved report is retried each run until
+  // they land or the grace window closes.
+  private async sendResults(pending: Pending[], published: HoldingEarningResult[], today: string): Promise<Pending[]> {
     const stillPending: Pending[] = [];
 
     for (const item of pending) {
-      const reportDay = moment(item.date).startOf('day');
-      if (reportDay.isAfter(today)) {
+      if (item.date > today) {
         stillPending.push(item);
         continue;
       }
-      if (today.diff(reportDay, 'days') > RESULT_GRACE_DAYS) {
+      if (daysBetween(item.date, today) > RESULT_GRACE_DAYS) {
         logger.log({
           level: 'warn',
           label: LABEL,
@@ -127,17 +198,9 @@ class EarningsReminderService {
       const key = `${RESULTED_PREFIX}${item.symbol}_${item.date}`;
       if (await this.alreadyFired(key)) continue;
 
-      let history: any[];
-      try {
-        history = await getEarningsHistory(item.symbol);
-      } catch (err: any) {
-        logger.log({ level: 'error', label: LABEL, message: `Earnings history failed for ${item.symbol}: ${err.message}` });
-        stillPending.push(item);
-        continue;
-      }
-
-      const match = (history ?? []).find((h) => h?.period === item.date);
-      if (!match || match.actual == null) {
+      const figures: ResultFigures | null =
+        published.find((r) => r.symbol === item.symbol && r.date === item.date) ?? (await this.resultFromHistory(item));
+      if (!figures || figures.epsActual === null) {
         stillPending.push(item);
         continue;
       }
@@ -146,9 +209,11 @@ class EarningsReminderService {
         item.symbol,
         item.name,
         item.date,
-        typeof match.actual === 'number' ? match.actual : null,
-        typeof match.estimate === 'number' ? match.estimate : null,
-        typeof match.surprisePercent === 'number' ? match.surprisePercent : null
+        figures.epsActual,
+        figures.epsEstimate,
+        figures.surprisePercent,
+        figures.revenueActual,
+        figures.revenueEstimate
       );
       const ok = await dispatchEarningsResult(payload, this.config.topic);
       if (!ok) {
@@ -167,9 +232,14 @@ class EarningsReminderService {
     if (this.running) return;
     this.running = true;
     try {
-      let pending = await this.loadPending();
-      pending = await this.sendReminders(pending);
-      if (this.config.notifyResults) pending = await this.sendResults(pending);
+      const today = etDateAndMinutes().dateStr;
+      const calendar = await getHoldingsEarningsCalendar();
+      const published = this.config.notifyResults ? await this.publishedResults() : [];
+      let pending = this.trackReports(await this.loadPending(), calendar, published);
+      await this.sendReminders(calendar);
+      pending = this.config.notifyResults
+        ? await this.sendResults(pending, published, today)
+        : this.prune(pending, today);
       await this.savePending(pending);
     } catch (err: any) {
       logger.log({ level: 'error', label: LABEL, message: err.message });
@@ -178,10 +248,12 @@ class EarningsReminderService {
     }
   }
 
-  // Publish a sample reminder immediately, bypassing the schedule and the
-  // already-fired ledger, so the Settings page can offer a "Send now" test.
+  // Publish a sample immediately, bypassing the schedule and the already-fired
+  // ledger, so the Settings page can offer a "Send now" test. With results turned
+  // on it sends both halves — the heads-up and the numbers that follow it — since
+  // the result is the one worth seeing the shape of.
   async sendTest(): Promise<{ ok: boolean }> {
-    const payload = buildEarningsPayload(
+    const reminder = buildEarningsPayload(
       'TEST',
       'Test Company Inc.',
       moment().add(1, 'day').format('YYYY-MM-DD'),
@@ -189,7 +261,20 @@ class EarningsReminderService {
       2.35,
       1
     );
-    return { ok: await dispatchEarnings(payload, this.config.topic) };
+    const ok = await dispatchEarnings(reminder, this.config.topic);
+    if (!this.config.notifyResults) return { ok };
+
+    const result = buildEarningsResultPayload(
+      'TEST',
+      'Test Company Inc.',
+      moment().subtract(1, 'day').format('YYYY-MM-DD'),
+      2.48,
+      2.35,
+      5.5,
+      57_000_000_000,
+      54_900_000_000
+    );
+    return { ok: (await dispatchEarningsResult(result, this.config.topic)) && ok };
   }
 
   start(config: IEarningsReminderConfig): void {

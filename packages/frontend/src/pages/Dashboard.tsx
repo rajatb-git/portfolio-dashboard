@@ -3,6 +3,7 @@ import * as React from 'react';
 
 import AlertDialog, { type DraftAlert, EMPTY_DRAFT } from '@/components/Alerts/AlertDialog';
 import DashboardTable from '@/components/DashboardTable/DashTable';
+import ReportedEarningsCard from '@/components/Dashboard/ReportedEarningsCard';
 import UpcomingEarningsCard from '@/components/Dashboard/UpcomingEarningsCard';
 import PageHeader from '@/components/ui/PageHeader';
 import ToolbarButton from '@/components/ui/ToolbarButton';
@@ -10,8 +11,17 @@ import { useDashboardData } from '@/contexts/DashboardDataContext';
 import type { Column } from '@/types';
 
 export default function Dashboard() {
-  const { isLoading, isEarningsLoading, dashboardData, accounts, earnings, alertStatuses, refresh, loadAlerts } =
-    useDashboardData();
+  const {
+    isLoading,
+    isEarningsLoading,
+    dashboardData,
+    accounts,
+    earnings,
+    earningsResults,
+    alertStatuses,
+    refresh,
+    loadAlerts,
+  } = useDashboardData();
   const [alertDialogOpen, setAlertDialogOpen] = React.useState(false);
   const [alertDraft, setAlertDraft] = React.useState<DraftAlert>(EMPTY_DRAFT);
 
@@ -79,6 +89,7 @@ export default function Dashboard() {
         onSetAlert={handleSetAlert}
       />
       <UpcomingEarningsCard earnings={earnings} isLoading={isEarningsLoading} />
+      <ReportedEarningsCard results={earningsResults} isLoading={isEarningsLoading} />
 
       <AlertDialog
         open={alertDialogOpen}

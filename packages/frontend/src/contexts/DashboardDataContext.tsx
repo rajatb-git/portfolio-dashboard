@@ -4,7 +4,7 @@ import { toast } from 'react-toastify';
 
 import apis from '@/api';
 import type { HoldingAggregate } from '@/api/dashboard';
-import type { HoldingEarning } from '@/api/analytics';
+import type { HoldingEarning, HoldingEarningResult } from '@/api/analytics';
 import { notifyTriggeredAlerts } from '@/utils/priceAlertNotifications';
 import type { IAccount } from '@/models/AccountsModel';
 import type { IAlertStatus } from '@/models/AlertModel';
@@ -15,6 +15,7 @@ type DashboardDataContextValue = {
   dashboardData: Array<HoldingAggregate>;
   accounts: Array<IAccount>;
   earnings: Array<HoldingEarning>;
+  earningsResults: Array<HoldingEarningResult>;
   alertStatuses: Array<IAlertStatus>;
   refresh: () => void;
   loadAlerts: () => void;
@@ -31,6 +32,7 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
   const [dashboardData, setDashboardData] = React.useState<Array<HoldingAggregate>>([]);
   const [alertStatuses, setAlertStatuses] = React.useState<Array<IAlertStatus>>([]);
   const [earnings, setEarnings] = React.useState<Array<HoldingEarning>>([]);
+  const [earningsResults, setEarningsResults] = React.useState<Array<HoldingEarningResult>>([]);
   const [isEarningsLoading, setIsEarningsLoading] = React.useState(true);
 
   const loadAlerts = React.useCallback(() => {
@@ -74,6 +76,13 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
           if (!silent) setIsEarningsLoading(false);
         });
 
+      apis.analytics
+        .getEarningsResults()
+        .then((response) => setEarningsResults(response ?? []))
+        .catch((err) => {
+          if (!silent) toast.error(err.message || 'Failed to load earnings results');
+        });
+
       apis.accounts
         .getAll()
         .then((response) => setAccounts(response))
@@ -113,11 +122,22 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
       dashboardData,
       accounts,
       earnings,
+      earningsResults,
       alertStatuses,
       refresh,
       loadAlerts,
     }),
-    [isLoading, isEarningsLoading, dashboardData, accounts, earnings, alertStatuses, refresh, loadAlerts]
+    [
+      isLoading,
+      isEarningsLoading,
+      dashboardData,
+      accounts,
+      earnings,
+      earningsResults,
+      alertStatuses,
+      refresh,
+      loadAlerts,
+    ]
   );
 
   return <DashboardDataContext.Provider value={value}>{children}</DashboardDataContext.Provider>;
