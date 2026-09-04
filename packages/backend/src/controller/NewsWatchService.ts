@@ -86,7 +86,7 @@ class NewsWatchService {
 
     return mapWithConcurrency([...watched.keys()], SYMBOL_CONCURRENCY, async (symbol) => {
       try {
-        const articles = await getCompanyNews(symbol, from, to);
+        const articles = await getCompanyNews(symbol, from, to, 'bulk');
         return articles.map((a) => ({
           symbol,
           headline: a.headline ?? '',

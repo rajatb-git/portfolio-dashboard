@@ -57,7 +57,9 @@ export class NewsSentimentController {
     await Promise.all(
       symbols.map(async (symbol) => {
         try {
-          const news = await getCompanyNews(symbol, fromDate, toDate);
+          // Fans out over every holding, so it yields to anything the user is
+          // waiting on rather than draining the shared Finnhub budget.
+          const news = await getCompanyNews(symbol, fromDate, toDate, 'bulk');
           if (!news || news.length === 0) return;
 
           const scores = news.map((n: any) => scoreText(n.headline));
