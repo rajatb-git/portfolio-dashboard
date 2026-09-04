@@ -307,21 +307,6 @@ const nextUpcomingRelease = <T extends { date?: string }>(releases: T[] | undefi
   return next;
 };
 
-export const getEarningsCalendar = (symbol: string): Promise<any> => {
-  const from = etDateAndMinutes().dateStr;
-  const to = moment(from, 'YYYY-MM-DD').add(12, 'M').format('YYYY-MM-DD');
-  return finnhubGet(`/calendar/earnings?symbol=${symbol}&from=${from}&to=${to}`)
-    .then((response) => nextUpcomingRelease(response.data.earningsCalendar, from))
-    .catch((error: AxiosError) => {
-      logger.log({
-        level: 'error',
-        label: `Earnings calendar request "${symbol}"`,
-        message: `${error.message} (status ${error.response?.status ?? 'n/a'})`,
-      });
-      throw error;
-    });
-};
-
 export interface EarningsCalendarEntry {
   symbol: string;
   date: string;
@@ -348,6 +333,31 @@ export const getBulkEarningsCalendar = (fromDate: string, toDate: string): Promi
       });
       throw error;
     });
+
+// One symbol's releases over a window. A window reaching into the past matters:
+// entries for reports that have already happened carry epsActual/revenueActual
+// once the numbers are published, which is how a release is resolved to a result.
+export const getSymbolEarningsCalendar = (
+  symbol: string,
+  fromDate: string,
+  toDate: string
+): Promise<EarningsCalendarEntry[]> =>
+  finnhubGet(`/calendar/earnings?symbol=${symbol}&from=${fromDate}&to=${toDate}`)
+    .then((response) => response.data.earningsCalendar ?? [])
+    .catch((error: AxiosError) => {
+      logger.log({
+        level: 'error',
+        label: `Earnings calendar request "${symbol}"`,
+        message: `${error.message} (status ${error.response?.status ?? 'n/a'})`,
+      });
+      throw error;
+    });
+
+export const getEarningsCalendar = (symbol: string): Promise<EarningsCalendarEntry | null> => {
+  const from = etDateAndMinutes().dateStr;
+  const to = moment(from, 'YYYY-MM-DD').add(12, 'M').format('YYYY-MM-DD');
+  return getSymbolEarningsCalendar(symbol, from, to).then((releases) => nextUpcomingRelease(releases, from));
+};
 
 export const getEarningsHistory = (symbol: string): Promise<any[]> =>
   finnhubGet(`/stock/earnings?symbol=${symbol}&limit=4`)

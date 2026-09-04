@@ -12,6 +12,13 @@ const LABEL = 'NotificationDispatcher';
 
 const signedPct = (n: number): string => `${n >= 0 ? '+' : ''}${n.toFixed(2)}%`;
 
+const compactUsd = (n: number): string => {
+  if (Math.abs(n) >= 1e12) return `$${(n / 1e12).toFixed(2)}T`;
+  if (Math.abs(n) >= 1e9) return `$${(n / 1e9).toFixed(2)}B`;
+  if (Math.abs(n) >= 1e6) return `$${(n / 1e6).toFixed(1)}M`;
+  return `$${n}`;
+};
+
 export type MoveAlertPayload = {
   // 'threshold' — the day change crossed a configured level.
   // 'spike' — the price moved sharply inside a short rolling window.
@@ -205,6 +212,8 @@ export type EarningsResultPayload = {
   date: string;
   epsActual: number | null;
   epsEstimate: number | null;
+  revenueActual: number | null;
+  revenueEstimate: number | null;
   surprisePercent: number | null;
   title: string;
   message: string;
@@ -253,29 +262,44 @@ export function buildEarningsResultPayload(
   date: string,
   epsActual: number | null,
   epsEstimate: number | null,
-  surprisePercent: number | null
+  surprisePercent: number | null,
+  revenueActual: number | null = null,
+  revenueEstimate: number | null = null
 ): EarningsResultPayload {
   const verdict =
-    epsActual !== null && epsEstimate !== null
-      ? epsActual >= epsEstimate
-        ? 'beat'
-        : 'missed'
-      : 'reported';
-  const detail =
+    epsActual !== null && epsEstimate !== null ? (epsActual >= epsEstimate ? 'beat' : 'missed') : 'reported';
+  const eps =
     epsActual !== null && epsEstimate !== null
       ? ` EPS ${epsActual} vs ${epsEstimate} estimate${
           surprisePercent !== null ? ` (${surprisePercent >= 0 ? '+' : ''}${surprisePercent.toFixed(1)}%)` : ''
         }.`
+      : epsActual !== null
+        ? ` EPS ${epsActual}.`
+        : '';
+  const revenue =
+    revenueActual !== null
+      ? ` Revenue ${compactUsd(revenueActual)}${
+          revenueEstimate !== null ? ` vs ${compactUsd(revenueEstimate)} expected` : ''
+        }.`
       : '';
+  // The numbers belong in the title too: a phone notification shows that line
+  // and nothing else until it is opened.
+  const headline =
+    epsActual !== null && epsEstimate !== null
+      ? `${symbol} ${verdict} — EPS ${epsActual} vs ${epsEstimate}`
+      : `${symbol} ${verdict} on earnings`;
+
   return {
     symbol,
     name,
     date,
     epsActual,
     epsEstimate,
+    revenueActual,
+    revenueEstimate,
     surprisePercent,
-    title: `${symbol} ${verdict} on earnings`,
-    message: `${name} (${symbol}) ${verdict} for the quarter reported ${date}.${detail}`,
+    title: headline,
+    message: `${name} (${symbol}) ${verdict} for the quarter reported ${date}.${eps}${revenue}`,
   };
 }
 
@@ -375,11 +399,7 @@ async function safeRecord(entry: Parameters<typeof recordNotification>[0]): Prom
   }
 }
 
-export async function dispatchAlertTriggered(
-  alert: IAlert,
-  price: number,
-  description?: string
-): Promise<boolean> {
+export async function dispatchAlertTriggered(alert: IAlert, price: number, description?: string): Promise<boolean> {
   const payload = buildAlertPayload(alert, price, description);
   return deliver({
     kind: 'alert',
