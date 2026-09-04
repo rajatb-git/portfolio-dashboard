@@ -26,6 +26,18 @@ const SUSTAINED_WINDOW_MS = 60_000;
 const MAX_RETRIES = 4;
 const MAX_BACKOFF_MS = 8000;
 
+// Not every caller is equally urgent. A page the user is staring at (Research,
+// a quote refresh) must not queue behind a background fan-out that wants one
+// call per holding — on a strict FIFO queue a 30-symbol job pushes an
+// interactive request past the end of the 60s window, which reads as the app
+// hanging for a minute. Bulk work is therefore served only after interactive
+// work, and only while this many slots of the sustained window remain unspent,
+// so an interactive request always finds room.
+export type RequestPriority = 'interactive' | 'bulk';
+
+const INTERACTIVE_RESERVE = Number(process.env.FINN_HUB_INTERACTIVE_RESERVE) || 25;
+const BULK_SUSTAINED_LIMIT = Math.max(1, SUSTAINED_LIMIT - INTERACTIVE_RESERVE);
+
 const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
 
 // Timestamps of recent dispatches, oldest first — pruned to the longer
@@ -33,33 +45,63 @@ const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout
 // entries.
 const dispatchLog: number[] = [];
 
-// Serializes callers so each one's wait-then-record happens atomically
-// relative to the others: nothing can dispatch between one caller computing
-// its wait and recording its own timestamp, so the two sliding windows above
-// stay correct even under heavy concurrent fan-out.
-let scheduleChain: Promise<void> = Promise.resolve();
+type Waiter = { priority: RequestPriority; resolve: () => void };
 
-const acquireSlot = (): Promise<void> => {
-  const slot = scheduleChain.then(async () => {
-    const now = Date.now();
-    while (dispatchLog.length && now - dispatchLog[0] > SUSTAINED_WINDOW_MS) dispatchLog.shift();
+const waiting: Waiter[] = [];
+let pumpTimer: ReturnType<typeof setTimeout> | null = null;
 
-    const recentBurst = dispatchLog.filter((t) => now - t <= BURST_WINDOW_MS);
+// How long a request of this priority must wait before it may dispatch, given
+// the two sliding windows. Zero means "go now".
+const waitFor = (priority: RequestPriority, now: number): number => {
+  while (dispatchLog.length && now - dispatchLog[0] > SUSTAINED_WINDOW_MS) dispatchLog.shift();
 
-    let wait = 0;
-    if (dispatchLog.length >= SUSTAINED_LIMIT) {
-      wait = Math.max(wait, dispatchLog[0] + SUSTAINED_WINDOW_MS - now);
-    }
-    if (recentBurst.length >= BURST_LIMIT) {
-      wait = Math.max(wait, recentBurst[0] + BURST_WINDOW_MS - now);
-    }
-    if (wait > 0) await sleep(wait);
+  const sustainedCap = priority === 'bulk' ? BULK_SUSTAINED_LIMIT : SUSTAINED_LIMIT;
+  let wait = 0;
 
-    dispatchLog.push(Date.now());
-  });
-  scheduleChain = slot.catch(() => undefined);
-  return slot;
+  // The entry that has to age out for the count to drop back under the cap.
+  if (dispatchLog.length >= sustainedCap) {
+    wait = Math.max(wait, dispatchLog[dispatchLog.length - sustainedCap] + SUSTAINED_WINDOW_MS - now);
+  }
+
+  const burst = dispatchLog.filter((t) => now - t <= BURST_WINDOW_MS);
+  if (burst.length >= BURST_LIMIT) {
+    wait = Math.max(wait, burst[burst.length - BURST_LIMIT] + BURST_WINDOW_MS - now);
+  }
+
+  return wait;
 };
+
+// Dispatches every waiter the windows currently allow, interactive first and
+// FIFO within a priority, then sleeps until the next slot frees. Recording the
+// timestamp before resolving keeps the windows correct: resolution runs on the
+// microtask queue, so nothing can dispatch in between.
+const pump = (): void => {
+  if (pumpTimer) {
+    clearTimeout(pumpTimer);
+    pumpTimer = null;
+  }
+
+  while (waiting.length) {
+    const interactive = waiting.findIndex((w) => w.priority === 'interactive');
+    const index = interactive >= 0 ? interactive : 0;
+    const wait = waitFor(waiting[index].priority, Date.now());
+
+    if (wait > 0) {
+      pumpTimer = setTimeout(pump, wait);
+      return;
+    }
+
+    const [waiter] = waiting.splice(index, 1);
+    dispatchLog.push(Date.now());
+    waiter.resolve();
+  }
+};
+
+const acquireSlot = (priority: RequestPriority): Promise<void> =>
+  new Promise<void>((resolve) => {
+    waiting.push({ priority, resolve });
+    pump();
+  });
 
 const retryAfterMs = (error: AxiosError): number | null => {
   const header = error.response?.headers?.['retry-after'];
@@ -70,9 +112,9 @@ const retryAfterMs = (error: AxiosError): number | null => {
 
 // Shared Finnhub GET: throttled to stay under the rate limit and retried with
 // backoff on 429 so a transient burst is absorbed instead of surfacing as an error.
-const finnhubGet = async <T = any>(path: string): Promise<AxiosResponse<T>> => {
+const finnhubGet = async <T = any>(path: string, priority: RequestPriority = 'interactive'): Promise<AxiosResponse<T>> => {
   for (let attempt = 0; ; attempt++) {
-    await acquireSlot();
+    await acquireSlot(priority);
     try {
       return await axios.get<T>(process.env.FINN_HUB_API + path, {
         headers: { 'X-Finnhub-Token': process.env.FINN_HUB_API_KEY, 'Content-Type': 'application/json' },
@@ -135,8 +177,13 @@ export const getQuoteForSymbol = (symbol: string, isCrypto = false): Promise<Quo
  * @param  {string} fromDate - YYYY-MM-DD
  * @param  {string} toDate - YYYY-MM-DD
  */
-export const getCompanyNews = (symbol: string, fromDate: string, toDate: string): Promise<MarketNewsResponse> =>
-  finnhubGet(`/company-news?symbol=${symbol}&from=${fromDate}&to=${toDate}`)
+export const getCompanyNews = (
+  symbol: string,
+  fromDate: string,
+  toDate: string,
+  priority: RequestPriority = 'interactive'
+): Promise<MarketNewsResponse> =>
+  finnhubGet(`/company-news?symbol=${symbol}&from=${fromDate}&to=${toDate}`, priority)
     .then((response) => {
       logger.log({
         level: 'info',

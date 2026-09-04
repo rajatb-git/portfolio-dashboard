@@ -61,6 +61,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - News is aggregated from more publishers (added WSJ Markets and Tech, MarketWatch Top Stories and Market Pulse, Nasdaq Stocks, Investing.com, Seeking Alpha and Cointelegraph), so one outlet going down degrades the digest rather than emptying it. Headlines are deduped across outlets by significant words rather than an exact string match, HTML and numeric entities are decoded, summaries are clamped, and each feed is capped so a prolific publisher can't crowd out the rest.
 - The market calendar now models pre-market and after-hours directly, including early-close half days, and quote polling is driven by it — so no more background fetches on holidays.
 - Market status falls back to the local exchange calendar when Finnhub is unreachable or returns no session, instead of failing outright.
+- Finnhub requests are now prioritised rather than served strictly first-come-first-served. Background fan-outs that want one call per holding (portfolio news, news sentiment, the news watcher) yield to whatever page you are actually looking at, and can only spend part of the per-minute budget, so a page load never queues behind them. Portfolio news also polls a rotating slice of holdings per refresh and merges with what earlier refreshes found, instead of calling Finnhub once per holding every time.
 - Market-moving keyword matching now catches inflected forms ("surging", "rallies", "tumbled"), and ticker matching ignores symbols that are also common English words.
 
 ---
