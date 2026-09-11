@@ -1,5 +1,5 @@
 import moment from 'moment';
-import { getRecommendation } from '../externalApis/finnHub';
+import { getRecommendation, type RequestPriority } from '../externalApis/finnHub';
 import { IRecommendationModel, RecommendationDBModel } from '../models/RecommendationModel';
 
 const recommendationModel = RecommendationDBModel();
@@ -17,31 +17,31 @@ export class LiveRecommendationController {
 
     // No cached recommendation yet — fetch once (blocking).
     if (!dbFetch) {
-      return this.refreshRecommendation(symbol);
+      return this.refreshRecommendation(symbol, 'interactive');
     }
 
     // Stale-while-revalidate: refresh in the background and return the cached value
     // now, so the dashboard never blocks on the recommendations API.
     if (this.liveFetchRequired(dbFetch)) {
-      void this.refreshRecommendation(symbol).catch(() => {});
+      void this.refreshRecommendation(symbol, 'bulk').catch(() => {});
     }
 
     return dbFetch;
   };
 
-  private refreshRecommendation = (symbol: string): Promise<IRecommendationModel> => {
+  private refreshRecommendation = (symbol: string, priority: RequestPriority): Promise<IRecommendationModel> => {
     const existing = inFlightRefreshes.get(symbol);
     if (existing) return existing;
 
-    const promise = this.fetchAndStore(symbol).finally(() => {
+    const promise = this.fetchAndStore(symbol, priority).finally(() => {
       inFlightRefreshes.delete(symbol);
     });
     inFlightRefreshes.set(symbol, promise);
     return promise;
   };
 
-  private fetchAndStore = async (symbol: string): Promise<IRecommendationModel> => {
-    const apiFetch = await getRecommendation(symbol);
+  private fetchAndStore = async (symbol: string, priority: RequestPriority): Promise<IRecommendationModel> => {
+    const apiFetch = await getRecommendation(symbol, priority);
     if (apiFetch) {
       return recommendationModel.insertOrUpdate(apiFetch, symbol);
     }
