@@ -136,11 +136,15 @@ const finnhubGet = async <T = any>(path: string, priority: RequestPriority = 'in
   }
 };
 
-export const getQuoteForSymbol = (symbol: string, isCrypto = false): Promise<QuoteResponse> => {
+export const getQuoteForSymbol = (
+  symbol: string,
+  isCrypto = false,
+  priority: RequestPriority = 'interactive'
+): Promise<QuoteResponse> => {
   const convertedSymbol = isCrypto ? `COINBASE:${symbol}-USDT` : symbol;
 
   // COINBASE:ETH-USDT
-  return finnhubGet(`/quote?symbol=${convertedSymbol}`)
+  return finnhubGet(`/quote?symbol=${convertedSymbol}`, priority)
     .then((response) => {
       logger.log({
         level: 'info',
@@ -204,8 +208,11 @@ export const getCompanyNews = (
       throw error;
     });
 
-export const getRecommendation = async (symbol: string): Promise<IRecommendation | null> =>
-  finnhubGet(`/stock/recommendation?symbol=${symbol}`)
+export const getRecommendation = async (
+  symbol: string,
+  priority: RequestPriority = 'interactive'
+): Promise<IRecommendation | null> =>
+  finnhubGet(`/stock/recommendation?symbol=${symbol}`, priority)
     .then((response) => {
       logger.log({
         level: 'info',

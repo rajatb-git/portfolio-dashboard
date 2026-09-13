@@ -1,5 +1,5 @@
 import moment from 'moment';
-import { getQuoteForSymbol } from '../externalApis/finnHub';
+import { getQuoteForSymbol, type RequestPriority } from '../externalApis/finnHub';
 import { type ExtendedQuote, getQuoteFromNasdaq, type NasdaqQuote } from '../externalApis/nasdaq';
 import type { QuoteResponse } from '../externalApis/types';
 import { IPriceStoreModel, PriceStoreDBModel } from '../models/PriceStoreModel';
@@ -20,7 +20,7 @@ export class LiveQuoteController {
 
     // No cached price yet — fetch once (blocking) so the holding can be priced at all.
     if (!dbFetch) {
-      return this.refreshQuote(symbol, isCrypto);
+      return this.refreshQuote(symbol, isCrypto, 'interactive');
     }
 
     // Stale-while-revalidate: when the cached quote is stale, kick off a background
@@ -29,25 +29,37 @@ export class LiveQuoteController {
     // slow sequential calls per symbol, which made first loads take ~10s and drop any
     // holding whose refresh failed. Returning the cached value keeps loads fast and
     // complete; the refreshed price is picked up on the next poll.
+    // Nobody is waiting on this one — the cached quote is already being returned —
+    // so it yields to requests a user is actually blocked on. The dashboard polls
+    // every 30s across every holding, which at interactive priority was enough to
+    // keep the shared Finnhub budget spoken for.
     if (this.liveFetchRequiredQuote(dbFetch)) {
-      void this.refreshQuote(symbol, isCrypto).catch(() => {});
+      void this.refreshQuote(symbol, isCrypto, 'bulk').catch(() => {});
     }
 
     return dbFetch;
   };
 
-  private refreshQuote = (symbol: string, isCrypto: boolean): Promise<IPriceStoreModel> => {
+  private refreshQuote = (
+    symbol: string,
+    isCrypto: boolean,
+    priority: RequestPriority
+  ): Promise<IPriceStoreModel> => {
     const existing = inFlightRefreshes.get(symbol);
     if (existing) return existing;
 
-    const promise = this.fetchAndStore(symbol, isCrypto).finally(() => {
+    const promise = this.fetchAndStore(symbol, isCrypto, priority).finally(() => {
       inFlightRefreshes.delete(symbol);
     });
     inFlightRefreshes.set(symbol, promise);
     return promise;
   };
 
-  private fetchAndStore = async (symbol: string, isCrypto: boolean): Promise<IPriceStoreModel> => {
+  private fetchAndStore = async (
+    symbol: string,
+    isCrypto: boolean,
+    priority: RequestPriority
+  ): Promise<IPriceStoreModel> => {
     const inExtendedHours = !isCrypto && isExtendedHoursSession();
 
     let apiFetch: QuoteResponse | NasdaqQuote;
@@ -59,10 +71,10 @@ export class LiveQuoteController {
       try {
         apiFetch = await getQuoteFromNasdaq(symbol);
       } catch {
-        apiFetch = await getQuoteForSymbol(symbol, isCrypto);
+        apiFetch = await getQuoteForSymbol(symbol, isCrypto, priority);
       }
     } else {
-      apiFetch = await getQuoteForSymbol(symbol, isCrypto);
+      apiFetch = await getQuoteForSymbol(symbol, isCrypto, priority);
 
       // Finnhub's free tier returns c=0 for symbols it doesn't cover (notably most US ETFs).
       // Fall back to NASDAQ; if that also can't price the symbol it throws and the dashboard

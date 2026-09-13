@@ -10,22 +10,16 @@ import { MarketMoversController } from '../controller/MarketMoversController';
 import { MarketNewsController } from '../controller/MarketNewsController';
 import { MarketStatusController } from '../controller/MarketStatusController';
 import { NewsSentimentController } from '../controller/NewsSentimentController';
+import { ResearchController } from '../controller/ResearchController';
 import { WatchedIpoController } from '../controller/WatchedIpoController';
-import {
-  getCompanyNews,
-  getEarningsCalendar,
-  getEarningsHistory,
-  getInsiderTransactions,
-  getStockMetrics,
-  getStockPeers,
-  searchSymbols,
-} from '../externalApis/finnHub';
+import { searchSymbols } from '../externalApis/finnHub';
 import { getPriceHistoryCandleStick } from '../externalApis/nasdaq';
 import { errorBody } from '../utils/error';
 import { logger } from '../utils/winston';
 
 export const LiveRouter = () => {
   const router = new Router();
+  const research = new ResearchController();
 
   router.get('/live/quote/:sym', async (ctx) => {
     try {
@@ -55,11 +49,7 @@ export const LiveRouter = () => {
 
   router.get('/live/news/:sym', async (ctx) => {
     try {
-      const result = await getCompanyNews(
-        ctx.params.sym.toUpperCase(),
-        moment().subtract(3, 'days').format('YYYY-MM-DD'),
-        moment().format('YYYY-MM-DD')
-      );
+      const result = await research.getNews(ctx.params.sym.toUpperCase());
 
       ctx.body = result;
       ctx.status = 200;
@@ -203,7 +193,7 @@ export const LiveRouter = () => {
 
   router.get('/live/metrics/:sym', async (ctx) => {
     try {
-      const result = await getStockMetrics(ctx.params.sym.toUpperCase());
+      const result = await research.getMetrics(ctx.params.sym.toUpperCase());
       ctx.body = result;
       ctx.status = 200;
     } catch (err: any) {
@@ -215,7 +205,7 @@ export const LiveRouter = () => {
 
   router.get('/live/peers/:sym', async (ctx) => {
     try {
-      const result = await getStockPeers(ctx.params.sym.toUpperCase());
+      const result = await research.getPeers(ctx.params.sym.toUpperCase());
       ctx.body = result;
       ctx.status = 200;
     } catch (err: any) {
@@ -227,7 +217,7 @@ export const LiveRouter = () => {
 
   router.get('/live/earnings/:sym', async (ctx) => {
     try {
-      const result = await getEarningsCalendar(ctx.params.sym.toUpperCase());
+      const result = await research.getEarnings(ctx.params.sym.toUpperCase());
       ctx.body = result;
       ctx.status = 200;
     } catch (err: any) {
@@ -239,7 +229,7 @@ export const LiveRouter = () => {
 
   router.get('/live/earnings-history/:sym', async (ctx) => {
     try {
-      const result = await getEarningsHistory(ctx.params.sym.toUpperCase());
+      const result = await research.getEarningsHistory(ctx.params.sym.toUpperCase());
       ctx.body = result;
       ctx.status = 200;
     } catch (err: any) {
@@ -251,7 +241,7 @@ export const LiveRouter = () => {
 
   router.get('/live/insider/:sym', async (ctx) => {
     try {
-      const result = await getInsiderTransactions(ctx.params.sym.toUpperCase());
+      const result = await research.getInsiderTransactions(ctx.params.sym.toUpperCase());
       ctx.body = result;
       ctx.status = 200;
     } catch (err: any) {
