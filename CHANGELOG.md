@@ -6,10 +6,27 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
-## [4.8.0] – 2026-09-17
+## [4.9.0] – 2026-09-17
 
 ### Added
 - **Movers link through to research** — Every row in Today's gainer and loser lists — your own holdings and the market-wide top ten — is now clickable and opens that ticker's research page. The research page shows a "Back to Today" control when it was reached that way, so looking up one mover is a two-click round trip instead of a detour through the sidebar.
+
+### Fixed
+- The recent-searches list recorded the previously viewed ticker rather than the one being opened, because the entry was written from state the same render had not yet updated.
+
+---
+
+## [4.8.0] – 2026-09-17
+
+### Fixed
+- **Research refresh handed back the stale price it was pressed to replace** — every per-symbol live endpoint served its cache and only revalidated in the background, so pressing refresh on the Research page re-rendered the same quote and the click looked like it did nothing. The button now sends `?refresh=1`, which waits for live data before responding, and spins while it does. The same applies to the profile, news, ratings, fundamentals, peers, earnings and insider cards behind it.
+
+### Added
+- **`?refresh=1` on the per-symbol live routes** — `/live/quote`, `/live/recommendation`, `/live/news`, `/live/company-profile`, `/live/metrics`, `/live/peers`, `/live/earnings`, `/live/earnings-history` and `/live/insider` now accept the same force-refresh flag the market-news routes already had. Without it their stale-while-revalidate behaviour is unchanged, so polling still never blocks on Finnhub.
+
+### Changed
+- The Research header quote refreshes itself every 60s while the tab is visible, and again the moment the tab is refocused, instead of showing whatever price it loaded with until the user navigated away.
+- The quote timestamp now carries a tooltip with the time the price was last checked, so a trade time that lags the clock is distinguishable from a quote that stopped updating.
 
 ---
 

@@ -67,6 +67,7 @@ function Research() {
   const [isEarningsHistoryLoading, setIsEarningsHistoryLoading] = React.useState(true);
   const [isInsiderLoading, setIsInsiderLoading] = React.useState(true);
   const [isAgentLoading, setIsAgentLoading] = React.useState(false);
+  const [isRefreshing, setIsRefreshing] = React.useState(false);
   const [agentInsight, setAgentInsight] = React.useState<AgentInsight | null>(null);
   const [agentError, setAgentError] = React.useState<string | null>(null);
   const [agentEnabled, setAgentEnabled] = React.useState(false);
@@ -87,109 +88,131 @@ function Research() {
   const [symbolTransactions, setSymbolTransactions] = React.useState<ITransaction[]>([]);
   const [isTransactionsLoading, setIsTransactionsLoading] = React.useState(false);
   const [searchText, setSearchText] = React.useState(searchParams.get('searchText')?.toUpperCase() || '');
+  const pricePollNotified = React.useRef(false);
 
-  const getResearchData = (searchTicker: string) => {
-    if (searchTicker && searchTicker.length >= 2) {
-      LocalStorageArray.add('searchText', searchTicker.toUpperCase());
+  // `force` is the refresh button: it tells the backend to bypass its caches and wait
+  // for live data, instead of replaying the cached payload already on screen.
+  const getResearchData = (searchTicker: string, force = false): Promise<unknown> => {
+    if (!searchTicker || searchTicker.length < 2) return Promise.resolve();
 
-      setIsCompanyProfileLoading(true);
-      setCompanyProfileError(null);
-      apis.live
-        .getCompanyProfile(searchTicker)
-        .then((res) => setCompanyProfile(res))
-        .catch((err) => {
-          setCompanyProfile(undefined);
-          setCompanyProfileError(err.message || 'Failed to load company profile');
-          toast.error(err.message || 'Failed to load company profile');
-        })
-        .finally(() => setIsCompanyProfileLoading(false));
+    LocalStorageArray.add('searchText', searchTicker.toUpperCase());
 
-      setIsNewsLoading(true);
-      apis.live
-        .getLiveNews(searchTicker)
-        .then((res) => setNews(res))
-        .catch((err) => toast.error(err.message))
-        .finally(() => setIsNewsLoading(false));
+    setIsCompanyProfileLoading(true);
+    setCompanyProfileError(null);
+    const companyProfileFetch = apis.live
+      .getCompanyProfile(searchTicker, force)
+      .then((res) => setCompanyProfile(res))
+      .catch((err) => {
+        setCompanyProfile(undefined);
+        setCompanyProfileError(err.message || 'Failed to load company profile');
+        toast.error(err.message || 'Failed to load company profile');
+      })
+      .finally(() => setIsCompanyProfileLoading(false));
 
-      setIsPriceLoading(true);
-      apis.live
-        .getLivePrice(searchTicker)
-        .then((res) => setPrice(res))
-        .catch((err) => toast.error(err.message))
-        .finally(() => setIsPriceLoading(false));
+    setIsNewsLoading(true);
+    const newsFetch = apis.live
+      .getLiveNews(searchTicker, force)
+      .then((res) => setNews(res))
+      .catch((err) => toast.error(err.message))
+      .finally(() => setIsNewsLoading(false));
 
-      setIsRecommendationLoading(true);
-      apis.live
-        .getLiveRecommendation(searchTicker)
-        .then((res) => setRecommendation(res))
-        .catch((err) => toast.error(err.message))
-        .finally(() => setIsRecommendationLoading(false));
+    setIsPriceLoading(true);
+    const priceFetch = apis.live
+      .getLivePrice(searchTicker, force)
+      .then((res) => setPrice(res))
+      .catch((err) => toast.error(err.message))
+      .finally(() => setIsPriceLoading(false));
 
-      setIsMetricsLoading(true);
-      apis.live
-        .getStockMetrics(searchTicker)
-        .then((res) => setMetrics(res))
-        .catch((err) => toast.error(err.message))
-        .finally(() => setIsMetricsLoading(false));
+    setIsRecommendationLoading(true);
+    const recommendationFetch = apis.live
+      .getLiveRecommendation(searchTicker, force)
+      .then((res) => setRecommendation(res))
+      .catch((err) => toast.error(err.message))
+      .finally(() => setIsRecommendationLoading(false));
 
-      setIsPeersLoading(true);
-      apis.live
-        .getStockPeers(searchTicker)
-        .then((res) => setPeers(res))
-        .catch((err) => toast.error(err.message))
-        .finally(() => setIsPeersLoading(false));
+    setIsMetricsLoading(true);
+    const metricsFetch = apis.live
+      .getStockMetrics(searchTicker, force)
+      .then((res) => setMetrics(res))
+      .catch((err) => toast.error(err.message))
+      .finally(() => setIsMetricsLoading(false));
 
-      setIsEarningsLoading(true);
-      apis.live
-        .getEarnings(searchTicker)
-        .then((res) => setEarnings(res))
-        .catch((err) => toast.error(err.message))
-        .finally(() => setIsEarningsLoading(false));
+    setIsPeersLoading(true);
+    const peersFetch = apis.live
+      .getStockPeers(searchTicker, force)
+      .then((res) => setPeers(res))
+      .catch((err) => toast.error(err.message))
+      .finally(() => setIsPeersLoading(false));
 
-      setIsEarningsHistoryLoading(true);
-      apis.live
-        .getEarningsHistory(searchTicker)
-        .then((res) => setEarningsHistory(res ?? []))
-        .catch((err) => {
-          setEarningsHistory([]);
-          toast.error(err.message || 'Failed to load earnings history');
-        })
-        .finally(() => setIsEarningsHistoryLoading(false));
+    setIsEarningsLoading(true);
+    const earningsFetch = apis.live
+      .getEarnings(searchTicker, force)
+      .then((res) => setEarnings(res))
+      .catch((err) => toast.error(err.message))
+      .finally(() => setIsEarningsLoading(false));
 
-      setIsInsiderLoading(true);
-      apis.live
-        .getInsiderTransactions(searchTicker)
-        .then((res) => setInsiderTransactions(res ?? []))
-        .catch((err) => {
-          setInsiderTransactions([]);
-          toast.error(err.message || 'Failed to load insider transactions');
-        })
-        .finally(() => setIsInsiderLoading(false));
+    setIsEarningsHistoryLoading(true);
+    const earningsHistoryFetch = apis.live
+      .getEarningsHistory(searchTicker, force)
+      .then((res) => setEarningsHistory(res ?? []))
+      .catch((err) => {
+        setEarningsHistory([]);
+        toast.error(err.message || 'Failed to load earnings history');
+      })
+      .finally(() => setIsEarningsHistoryLoading(false));
 
-      setIsPositionsLoading(true);
-      apis.holdings
-        .getBySymbol(searchTicker)
-        .then((res) => setPositions(res ?? []))
-        .catch((err) => {
-          setPositions([]);
-          toast.error(err.message || 'Failed to load position details');
-        })
-        .finally(() => setIsPositionsLoading(false));
+    setIsInsiderLoading(true);
+    const insiderFetch = apis.live
+      .getInsiderTransactions(searchTicker, force)
+      .then((res) => setInsiderTransactions(res ?? []))
+      .catch((err) => {
+        setInsiderTransactions([]);
+        toast.error(err.message || 'Failed to load insider transactions');
+      })
+      .finally(() => setIsInsiderLoading(false));
 
-      setIsTransactionsLoading(true);
-      apis.transactions
-        .getBySymbol(searchTicker)
-        .then((res) => setSymbolTransactions(res ?? []))
-        .catch((err) => {
-          setSymbolTransactions([]);
-          toast.error(err.message || 'Failed to load transaction history');
-        })
-        .finally(() => setIsTransactionsLoading(false));
+    setIsPositionsLoading(true);
+    const positionsFetch = apis.holdings
+      .getBySymbol(searchTicker)
+      .then((res) => setPositions(res ?? []))
+      .catch((err) => {
+        setPositions([]);
+        toast.error(err.message || 'Failed to load position details');
+      })
+      .finally(() => setIsPositionsLoading(false));
 
-      if (agentEnabled) {
-        fetchAgentInsights(searchTicker);
-      }
+    setIsTransactionsLoading(true);
+    const transactionsFetch = apis.transactions
+      .getBySymbol(searchTicker)
+      .then((res) => setSymbolTransactions(res ?? []))
+      .catch((err) => {
+        setSymbolTransactions([]);
+        toast.error(err.message || 'Failed to load transaction history');
+      })
+      .finally(() => setIsTransactionsLoading(false));
+
+    if (agentEnabled) {
+      fetchAgentInsights(searchTicker);
     }
+
+    return Promise.all([
+      companyProfileFetch,
+      newsFetch,
+      priceFetch,
+      recommendationFetch,
+      metricsFetch,
+      peersFetch,
+      earningsFetch,
+      earningsHistoryFetch,
+      insiderFetch,
+      positionsFetch,
+      transactionsFetch,
+    ]);
+  };
+
+  const handleRefresh = () => {
+    setIsRefreshing(true);
+    getResearchData(searchText, true).finally(() => setIsRefreshing(false));
   };
 
   const fetchAgentInsights = (ticker: string) => {
@@ -211,6 +234,39 @@ function Research() {
     setSearchText(searchTicker);
     getResearchData(searchTicker);
   }, [searchParams]);
+
+  // The quote keeps moving while the page sits open; without this the header shows
+  // whatever it loaded with until the user navigates away. Each poll renders the
+  // latest cached price and nudges the backend's revalidation forward.
+  React.useEffect(() => {
+    if (!searchText || searchText.length < 2) return;
+
+    const POLL_MS = 60_000;
+    const tick = () => {
+      if (document.visibilityState !== 'visible') return;
+      apis.live
+        .getLivePrice(searchText)
+        .then((res) => {
+          pricePollNotified.current = false;
+          setPrice(res);
+        })
+        .catch((err) => {
+          // Runs on a timer — surface the first failure rather than a toast a minute.
+          if (pricePollNotified.current) return;
+          pricePollNotified.current = true;
+          toast.error(err.message || 'Failed to refresh price');
+        });
+    };
+
+    const timer = window.setInterval(tick, POLL_MS);
+    // Catch up immediately when the tab comes back after being hidden.
+    document.addEventListener('visibilitychange', tick);
+
+    return () => {
+      window.clearInterval(timer);
+      document.removeEventListener('visibilitychange', tick);
+    };
+  }, [searchText]);
 
   React.useEffect(() => {
     apis.live
@@ -392,14 +448,17 @@ function Research() {
               <ToolbarButton
                 icon="tabler:refresh"
                 label={`Refresh ${searchText || 'research'} data`}
-                onClick={() => getResearchData(searchText)}
+                onClick={handleRefresh}
+                busy={isRefreshing}
                 color="primary.main"
                 size={19}
               />
             </Stack>
-            <Typography variant="caption" color="text.disabled" sx={{ textAlign: 'right' }}>
-              as of {moment(price?.priceDate).format('MMM D, h:mm a')}
-            </Typography>
+            <Tooltip title={price ? `Last checked ${moment(price.updatedAt).format('MMM D, h:mm:ss a')}` : ''}>
+              <Typography variant="caption" color="text.disabled" sx={{ textAlign: 'right' }}>
+                as of {moment(price?.priceDate).format('MMM D, h:mm a')}
+              </Typography>
+            </Tooltip>
           </Stack>
         </Stack>
 
