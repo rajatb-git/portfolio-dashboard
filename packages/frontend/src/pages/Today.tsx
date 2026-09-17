@@ -14,6 +14,7 @@ import {
 import { alpha } from '@mui/material/styles';
 import moment from 'moment';
 import * as React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 
 import apis from '@/api';
@@ -83,9 +84,21 @@ function IndexRow({ idx }: { idx: IndexMovement }) {
   );
 }
 
-function MoverRow({ h }: { h: HoldingMovement }) {
+function MoverRow({ h, onOpen }: { h: HoldingMovement; onOpen: (symbol: string) => void }) {
   return (
-    <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', px: 2, py: 1, gap: 1 }}>
+    <Stack
+      direction="row"
+      onClick={() => onOpen(h.symbol)}
+      sx={{
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        px: 2,
+        py: 1,
+        gap: 1,
+        cursor: 'pointer',
+        '&:hover': { bgcolor: 'action.hover' },
+      }}
+    >
       <Box sx={{ minWidth: 0 }}>
         <Typography sx={{ fontSize: FONT_SIZE.sm, fontWeight: 700 }}>{h.symbol}</Typography>
         <Typography noWrap sx={{ fontSize: FONT_SIZE.micro, color: 'text.disabled', maxWidth: 180 }}>
@@ -100,9 +113,21 @@ function MoverRow({ h }: { h: HoldingMovement }) {
   );
 }
 
-function MarketMoverRow({ m, rank }: { m: MarketMover; rank: number }) {
+function MarketMoverRow({ m, rank, onOpen }: { m: MarketMover; rank: number; onOpen: (symbol: string) => void }) {
   return (
-    <Stack direction="row" spacing={1} sx={{ alignItems: 'center', justifyContent: 'space-between', px: 2, py: 1 }}>
+    <Stack
+      direction="row"
+      spacing={1}
+      onClick={() => onOpen(m.symbol)}
+      sx={{
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        px: 2,
+        py: 1,
+        cursor: 'pointer',
+        '&:hover': { bgcolor: 'action.hover' },
+      }}
+    >
       <Stack direction="row" spacing={1} sx={{ alignItems: 'baseline', minWidth: 0, pr: 1 }}>
         <Typography
           data-numeric=""
@@ -229,6 +254,14 @@ function SessionBanner({ recap }: { recap: DailyRecap }) {
 
 export default function Today() {
   const theme = useTheme();
+  const navigate = useNavigate();
+
+  const openResearch = React.useCallback(
+    (symbol: string) => {
+      navigate(`/research?searchText=${symbol}`, { state: { from: '/today', fromLabel: 'Today' } });
+    },
+    [navigate]
+  );
 
   const [recap, setRecap] = React.useState<DailyRecap | null>(null);
   const [recapLoading, setRecapLoading] = React.useState(true);
@@ -379,7 +412,7 @@ export default function Today() {
             ) : gainers.length > 0 ? (
               <Stack divider={<Divider />}>
                 {gainers.map((h) => (
-                  <MoverRow key={h.symbol} h={h} />
+                  <MoverRow key={h.symbol} h={h} onOpen={openResearch} />
                 ))}
               </Stack>
             ) : (
@@ -394,7 +427,7 @@ export default function Today() {
             ) : losers.length > 0 ? (
               <Stack divider={<Divider />}>
                 {losers.map((h) => (
-                  <MoverRow key={h.symbol} h={h} />
+                  <MoverRow key={h.symbol} h={h} onOpen={openResearch} />
                 ))}
               </Stack>
             ) : (
@@ -447,7 +480,7 @@ export default function Today() {
             ) : movers && movers.gainers.length > 0 ? (
               <Stack divider={<Divider />}>
                 {movers.gainers.map((m, i) => (
-                  <MarketMoverRow key={m.symbol} m={m} rank={i + 1} />
+                  <MarketMoverRow key={m.symbol} m={m} rank={i + 1} onOpen={openResearch} />
                 ))}
               </Stack>
             ) : (
@@ -464,7 +497,7 @@ export default function Today() {
             ) : movers && movers.losers.length > 0 ? (
               <Stack divider={<Divider />}>
                 {movers.losers.map((m, i) => (
-                  <MarketMoverRow key={m.symbol} m={m} rank={i + 1} />
+                  <MarketMoverRow key={m.symbol} m={m} rank={i + 1} onOpen={openResearch} />
                 ))}
               </Stack>
             ) : (
