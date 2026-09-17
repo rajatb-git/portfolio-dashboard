@@ -118,6 +118,12 @@ never calls Finnhub or NASDAQ directly.
 | `PUT` | `/live/ipos/:symbol/watch` | Watch an IPO |
 | `DELETE` | `/live/ipos/:symbol/watch` | Unwatch |
 
+The per-symbol routes above serve a cached value and revalidate behind it, so a
+page render never waits on Finnhub. Add `?refresh=1` — what the Research page's
+refresh button sends — to bypass the cache and wait for live data instead. The
+same flag works on `/live/market-news`, `/live/portfolio-news`,
+`/live/market-movers` and `/live/market-status`.
+
 ## Analytics
 
 | Method | Path | Description |

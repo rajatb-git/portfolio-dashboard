@@ -13,9 +13,17 @@ const priceStoreReady = priceStoreModel.initialize();
 const inFlightRefreshes = new Map<string, Promise<IPriceStoreModel>>();
 
 export class LiveQuoteController {
-  getLiveQuote = async (symbol: string, isCrypto = false): Promise<IPriceStoreModel> => {
+  getLiveQuote = async (symbol: string, isCrypto = false, force = false): Promise<IPriceStoreModel> => {
     // Ensure the on-disk price cache has finished loading before querying it.
     await priceStoreReady;
+
+    // An explicit refresh from the UI waits for a live quote. Stale-while-revalidate
+    // is right for polling, but on a button press it hands back the very price the
+    // user just asked to replace, so the click looks like it did nothing.
+    if (force) {
+      return this.refreshQuote(symbol, isCrypto, 'interactive');
+    }
+
     const dbFetch = priceStoreModel.findById(symbol);
 
     // No cached price yet — fetch once (blocking) so the holding can be priced at all.

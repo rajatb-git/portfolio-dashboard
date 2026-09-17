@@ -11,8 +11,15 @@ const NO_RECOMMENDATION = { buy: -1, hold: -1, period: '', sell: -1, strongBuy: 
 const inFlightRefreshes = new Map<string, Promise<IRecommendationModel>>();
 
 export class LiveRecommendationController {
-  getLiveRecommendation = async (symbol: string): Promise<IRecommendationModel> => {
+  getLiveRecommendation = async (symbol: string, force = false): Promise<IRecommendationModel> => {
     await recommendationReady;
+
+    // A user-pressed refresh blocks on the live call rather than returning the
+    // cached ratings it was pressed to update.
+    if (force) {
+      return this.refreshRecommendation(symbol, 'interactive');
+    }
+
     const dbFetch = recommendationModel.findById(symbol);
 
     // No cached recommendation yet — fetch once (blocking).

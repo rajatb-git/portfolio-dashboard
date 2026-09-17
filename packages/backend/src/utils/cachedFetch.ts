@@ -35,7 +35,17 @@ const refresh = async <T>(key: string, fetcher: () => Promise<T>): Promise<T> =>
   return promise;
 };
 
-export async function cachedFetch<T>(key: string, ttlMinutes: number, fetcher: () => Promise<T>): Promise<T> {
+// `force` is for an explicit user refresh: it blocks on the upstream call and
+// returns the value that was just stored, so the click visibly changes what is on
+// screen instead of handing back the cached value it was meant to replace.
+export async function cachedFetch<T>(
+  key: string,
+  ttlMinutes: number,
+  fetcher: () => Promise<T>,
+  force = false
+): Promise<T> {
+  if (force) return refresh(key, fetcher);
+
   const model = await CacheDBModel().initialize();
   const cached = model.findById(key);
 

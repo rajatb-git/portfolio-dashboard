@@ -20,21 +20,26 @@ type CompanyProfile2 = {
 };
 
 export class CompanyProfileController {
-  getCompanyProfile2 = (symbol: string): Promise<CompanyProfile2> =>
-    cachedFetch(`company_profile_${symbol}`, TTL_MINUTES, async () => {
-      const response = await getCompanyProfile(symbol);
+  getCompanyProfile2 = (symbol: string, force = false): Promise<CompanyProfile2> =>
+    cachedFetch(
+      `company_profile_${symbol}`,
+      TTL_MINUTES,
+      async () => {
+        const response = await getCompanyProfile(symbol);
 
-      return {
-        country: response.country,
-        currency: response.currency,
-        exchange: response.exchange,
-        industry: response.finnhubIndustry,
-        ipo: response.ipo,
-        logo: response.logo,
-        marketCap: response.marketCapitalization,
-        name: response.name,
-        shareOutstanding: response.shareOutstanding,
-        ticker: response.ticker,
-      };
-    });
+        return {
+          country: response.country,
+          currency: response.currency,
+          exchange: response.exchange,
+          industry: response.finnhubIndustry,
+          ipo: response.ipo,
+          logo: response.logo,
+          marketCap: response.marketCapitalization,
+          name: response.name,
+          shareOutstanding: response.shareOutstanding,
+          ticker: response.ticker,
+        };
+      },
+      force
+    );
 }
