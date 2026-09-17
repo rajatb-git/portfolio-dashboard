@@ -20,7 +20,7 @@
   "license": "MIT",
   "private": true,
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.124.0",
+    "@anthropic-ai/sdk": "^0.125.0",
     "@google/genai": "^2.21.0",
     "@koa/cors": "^5.0.0",
     "@koa/router": "^15.7.0",
@@ -39,7 +39,7 @@
     "winston-transport": "^4.9.0"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.5.12",
+    "@biomejs/biome": "^2.5.13",
     "@types/archiver": "^8.0.0",
     "@types/koa": "^3.0.3",
     "@types/koa-bodyparser": "^4.3.13",
