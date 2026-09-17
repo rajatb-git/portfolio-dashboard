@@ -30,30 +30,42 @@ const TTL_MINUTES = {
 
 const NEWS_LOOKBACK_DAYS = 3;
 
+// `force` comes from the Research page's refresh button, which has to bypass these
+// TTLs — otherwise the click re-renders exactly the cached payload the user pressed
+// it to get rid of.
 export class ResearchController {
-  getMetrics = (symbol: string): Promise<any> =>
-    cachedFetch(`research_metrics_${symbol}`, TTL_MINUTES.metrics, () => getStockMetrics(symbol));
+  getMetrics = (symbol: string, force = false): Promise<any> =>
+    cachedFetch(`research_metrics_${symbol}`, TTL_MINUTES.metrics, () => getStockMetrics(symbol), force);
 
-  getPeers = (symbol: string): Promise<string[]> =>
-    cachedFetch(`research_peers_${symbol}`, TTL_MINUTES.peers, () => getStockPeers(symbol));
+  getPeers = (symbol: string, force = false): Promise<string[]> =>
+    cachedFetch(`research_peers_${symbol}`, TTL_MINUTES.peers, () => getStockPeers(symbol), force);
 
-  getEarnings = (symbol: string): Promise<any> =>
-    cachedFetch(`research_earnings_${symbol}`, TTL_MINUTES.earnings, () => getEarningsCalendar(symbol));
+  getEarnings = (symbol: string, force = false): Promise<any> =>
+    cachedFetch(`research_earnings_${symbol}`, TTL_MINUTES.earnings, () => getEarningsCalendar(symbol), force);
 
-  getEarningsHistory = (symbol: string): Promise<any[]> =>
-    cachedFetch(`research_earnings_history_${symbol}`, TTL_MINUTES.earningsHistory, () => getEarningsHistory(symbol));
+  getEarningsHistory = (symbol: string, force = false): Promise<any[]> =>
+    cachedFetch(
+      `research_earnings_history_${symbol}`,
+      TTL_MINUTES.earningsHistory,
+      () => getEarningsHistory(symbol),
+      force
+    );
 
-  getInsiderTransactions = (symbol: string): Promise<any[]> =>
-    cachedFetch(`research_insider_${symbol}`, TTL_MINUTES.insider, () => getInsiderTransactions(symbol));
+  getInsiderTransactions = (symbol: string, force = false): Promise<any[]> =>
+    cachedFetch(`research_insider_${symbol}`, TTL_MINUTES.insider, () => getInsiderTransactions(symbol), force);
 
   // The date window is computed inside the fetcher so it moves with each refresh
   // rather than being pinned into the cache key.
-  getNews = (symbol: string): Promise<MarketNewsResponse> =>
-    cachedFetch(`research_news_${symbol}`, TTL_MINUTES.news, () =>
-      getCompanyNews(
-        symbol,
-        moment().subtract(NEWS_LOOKBACK_DAYS, 'days').format('YYYY-MM-DD'),
-        moment().format('YYYY-MM-DD')
-      )
+  getNews = (symbol: string, force = false): Promise<MarketNewsResponse> =>
+    cachedFetch(
+      `research_news_${symbol}`,
+      TTL_MINUTES.news,
+      () =>
+        getCompanyNews(
+          symbol,
+          moment().subtract(NEWS_LOOKBACK_DAYS, 'days').format('YYYY-MM-DD'),
+          moment().format('YYYY-MM-DD')
+        ),
+      force
     );
 }

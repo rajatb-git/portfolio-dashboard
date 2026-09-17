@@ -1,4 +1,5 @@
 import Router from '@koa/router';
+import type { Context } from 'koa';
 import moment from 'moment';
 import { AgentInsightsController } from '../controller/AgentInsightsController';
 import { CompanyProfileController } from '../controller/CompanyProfileController';
@@ -17,13 +18,21 @@ import { getPriceHistoryCandleStick } from '../externalApis/nasdaq';
 import { errorBody } from '../utils/error';
 import { logger } from '../utils/winston';
 
+// `?refresh=1` marks a request the user explicitly triggered, which bypasses the
+// serve-from-cache path and waits for live data.
+const isForcedRefresh = (ctx: Context): boolean => ctx.query.refresh === '1' || ctx.query.refresh === 'true';
+
 export const LiveRouter = () => {
   const router = new Router();
   const research = new ResearchController();
 
   router.get('/live/quote/:sym', async (ctx) => {
     try {
-      const result = await new LiveQuoteController().getLiveQuote(ctx.params.sym.toUpperCase());
+      const result = await new LiveQuoteController().getLiveQuote(
+        ctx.params.sym.toUpperCase(),
+        false,
+        isForcedRefresh(ctx)
+      );
 
       ctx.body = result;
       ctx.status = 200;
@@ -36,7 +45,10 @@ export const LiveRouter = () => {
 
   router.get('/live/recommendation/:sym', async (ctx) => {
     try {
-      const result = await new LiveRecommendationController().getLiveRecommendation(ctx.params.sym.toUpperCase());
+      const result = await new LiveRecommendationController().getLiveRecommendation(
+        ctx.params.sym.toUpperCase(),
+        isForcedRefresh(ctx)
+      );
 
       ctx.body = result;
       ctx.status = 200;
@@ -49,7 +61,7 @@ export const LiveRouter = () => {
 
   router.get('/live/news/:sym', async (ctx) => {
     try {
-      const result = await research.getNews(ctx.params.sym.toUpperCase());
+      const result = await research.getNews(ctx.params.sym.toUpperCase(), isForcedRefresh(ctx));
 
       ctx.body = result;
       ctx.status = 200;
@@ -158,7 +170,10 @@ export const LiveRouter = () => {
   router.get('/live/company-profile/:sym', async (ctx) => {
     try {
       if (ctx.params.sym) {
-        const result = await new CompanyProfileController().getCompanyProfile2(ctx.params.sym.toUpperCase());
+        const result = await new CompanyProfileController().getCompanyProfile2(
+          ctx.params.sym.toUpperCase(),
+          isForcedRefresh(ctx)
+        );
 
         ctx.body = result;
         ctx.status = 200;
@@ -193,7 +208,7 @@ export const LiveRouter = () => {
 
   router.get('/live/metrics/:sym', async (ctx) => {
     try {
-      const result = await research.getMetrics(ctx.params.sym.toUpperCase());
+      const result = await research.getMetrics(ctx.params.sym.toUpperCase(), isForcedRefresh(ctx));
       ctx.body = result;
       ctx.status = 200;
     } catch (err: any) {
@@ -205,7 +220,7 @@ export const LiveRouter = () => {
 
   router.get('/live/peers/:sym', async (ctx) => {
     try {
-      const result = await research.getPeers(ctx.params.sym.toUpperCase());
+      const result = await research.getPeers(ctx.params.sym.toUpperCase(), isForcedRefresh(ctx));
       ctx.body = result;
       ctx.status = 200;
     } catch (err: any) {
@@ -217,7 +232,7 @@ export const LiveRouter = () => {
 
   router.get('/live/earnings/:sym', async (ctx) => {
     try {
-      const result = await research.getEarnings(ctx.params.sym.toUpperCase());
+      const result = await research.getEarnings(ctx.params.sym.toUpperCase(), isForcedRefresh(ctx));
       ctx.body = result;
       ctx.status = 200;
     } catch (err: any) {
@@ -229,7 +244,7 @@ export const LiveRouter = () => {
 
   router.get('/live/earnings-history/:sym', async (ctx) => {
     try {
-      const result = await research.getEarningsHistory(ctx.params.sym.toUpperCase());
+      const result = await research.getEarningsHistory(ctx.params.sym.toUpperCase(), isForcedRefresh(ctx));
       ctx.body = result;
       ctx.status = 200;
     } catch (err: any) {
@@ -241,7 +256,7 @@ export const LiveRouter = () => {
 
   router.get('/live/insider/:sym', async (ctx) => {
     try {
-      const result = await research.getInsiderTransactions(ctx.params.sym.toUpperCase());
+      const result = await research.getInsiderTransactions(ctx.params.sym.toUpperCase(), isForcedRefresh(ctx));
       ctx.body = result;
       ctx.status = 200;
     } catch (err: any) {
@@ -263,10 +278,9 @@ export const LiveRouter = () => {
     }
   });
 
-
   router.get('/live/market-news', async (ctx) => {
     try {
-      const forceRefresh = ctx.query.refresh === '1' || ctx.query.refresh === 'true';
+      const forceRefresh = isForcedRefresh(ctx);
       // Unknown category names are dropped by the controller rather than erroring,
       // so a stale bookmark still returns the full digest.
       const raw = Array.isArray(ctx.query.category) ? ctx.query.category : [ctx.query.category];
@@ -283,7 +297,7 @@ export const LiveRouter = () => {
 
   router.get('/live/portfolio-news', async (ctx) => {
     try {
-      const forceRefresh = ctx.query.refresh === '1' || ctx.query.refresh === 'true';
+      const forceRefresh = isForcedRefresh(ctx);
       const result = await new MarketNewsController().getPortfolioNews(forceRefresh);
       ctx.body = result;
       ctx.status = 200;
@@ -296,7 +310,7 @@ export const LiveRouter = () => {
 
   router.get('/live/market-movers', async (ctx) => {
     try {
-      const forceRefresh = ctx.query.refresh === '1' || ctx.query.refresh === 'true';
+      const forceRefresh = isForcedRefresh(ctx);
       const result = await new MarketMoversController().getMovers(forceRefresh);
       ctx.body = result;
       ctx.status = 200;
@@ -309,7 +323,7 @@ export const LiveRouter = () => {
 
   router.get('/live/market-status', async (ctx) => {
     try {
-      const forceRefresh = ctx.query.refresh === '1' || ctx.query.refresh === 'true';
+      const forceRefresh = isForcedRefresh(ctx);
       const result = await new MarketStatusController().getStatus(forceRefresh);
       ctx.body = result;
       ctx.status = 200;

@@ -99,20 +99,20 @@ export type AiConfig = {
 };
 
 export default class LiveAPI {
-  getLivePrice = async (symbol: string): Promise<IPriceStore> =>
-    axios(DB_HOST + `/live/quote/${symbol}`)
+  getLivePrice = async (symbol: string, refresh = false): Promise<IPriceStore> =>
+    axios(DB_HOST + `/live/quote/${symbol}${refresh ? '?refresh=1' : ''}`)
       .then((response) => {
         return response.data;
       })
       .catch(catchCustomError);
 
-  getLiveRecommendation = async (symbol: string): Promise<IRecommendation> =>
-    axios(DB_HOST + `/live/recommendation/${symbol}`).then((response) => {
+  getLiveRecommendation = async (symbol: string, refresh = false): Promise<IRecommendation> =>
+    axios(DB_HOST + `/live/recommendation/${symbol}${refresh ? '?refresh=1' : ''}`).then((response) => {
       return response.data;
     });
 
-  getLiveNews = async (symbol: string): Promise<Array<IMarketNews>> =>
-    axios(DB_HOST + `/live/news/${symbol}`)
+  getLiveNews = async (symbol: string, refresh = false): Promise<Array<IMarketNews>> =>
+    axios(DB_HOST + `/live/news/${symbol}${refresh ? '?refresh=1' : ''}`)
       .then((response) => {
         return response.data;
       })
@@ -144,20 +144,20 @@ export default class LiveAPI {
       .then((response) => response.data)
       .catch(catchCustomError);
 
-  getCompanyProfile = async (symbol: string): Promise<any> =>
-    axios(DB_HOST + `/live/company-profile/${symbol}`)
+  getCompanyProfile = async (symbol: string, refresh = false): Promise<any> =>
+    axios(DB_HOST + `/live/company-profile/${symbol}${refresh ? '?refresh=1' : ''}`)
       .then((response) => {
         return response.data;
       })
       .catch(catchCustomError);
 
-  getStockMetrics = async (symbol: string): Promise<any> =>
-    axios(DB_HOST + `/live/metrics/${symbol}`)
+  getStockMetrics = async (symbol: string, refresh = false): Promise<any> =>
+    axios(DB_HOST + `/live/metrics/${symbol}${refresh ? '?refresh=1' : ''}`)
       .then((response) => response.data)
       .catch(catchCustomError);
 
-  getStockPeers = async (symbol: string): Promise<string[]> =>
-    axios(DB_HOST + `/live/peers/${symbol}`)
+  getStockPeers = async (symbol: string, refresh = false): Promise<string[]> =>
+    axios(DB_HOST + `/live/peers/${symbol}${refresh ? '?refresh=1' : ''}`)
       .then((response) => response.data)
       .catch(catchCustomError);
 
@@ -166,18 +166,18 @@ export default class LiveAPI {
       .then((response) => response.data)
       .catch(catchCustomError);
 
-  getEarnings = async (symbol: string): Promise<any> =>
-    axios(DB_HOST + `/live/earnings/${symbol}`)
+  getEarnings = async (symbol: string, refresh = false): Promise<any> =>
+    axios(DB_HOST + `/live/earnings/${symbol}${refresh ? '?refresh=1' : ''}`)
       .then((response) => response.data)
       .catch(catchCustomError);
 
-  getEarningsHistory = async (symbol: string): Promise<any[]> =>
-    axios(DB_HOST + `/live/earnings-history/${symbol}`)
+  getEarningsHistory = async (symbol: string, refresh = false): Promise<any[]> =>
+    axios(DB_HOST + `/live/earnings-history/${symbol}${refresh ? '?refresh=1' : ''}`)
       .then((response) => response.data)
       .catch(catchCustomError);
 
-  getInsiderTransactions = async (symbol: string): Promise<any[]> =>
-    axios(DB_HOST + `/live/insider/${symbol}`)
+  getInsiderTransactions = async (symbol: string, refresh = false): Promise<any[]> =>
+    axios(DB_HOST + `/live/insider/${symbol}${refresh ? '?refresh=1' : ''}`)
       .then((response) => response.data)
       .catch(catchCustomError);
 
