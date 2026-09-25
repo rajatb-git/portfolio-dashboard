@@ -6,6 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
+## [4.9.2] – 2026-09-25
+
+### Changed
+- **Dependencies updated to latest** — every package across the workspace, replacing the open Dependabot PRs. Majors: ApexCharts 6 → 7, dotenv 17 → 18, and `@anthropic-ai/sdk` 0.124 → 0.128. Minor and patch: React 19.3, Vite 8.3, MUI X 9.14, `@google/genai` 2.24, axios 1.20, mongodb 7.6, mqtt 5.16, moment 2.31, react-router 7.18.4, react-dropzone 20.1.2, Biome 2.5.14 and knip 6.38.
+- FullCalendar stays on 6.1.21: v7 of `@fullcalendar/core`/`react` is out, but its `daygrid`, `list` and `interaction` plugins are still release candidates.
+
+### Fixed
+- **Docs site build** — the workspace's `vite >= 8` override hands VitePress 1.x a Vite it wasn't built for, so `pnpm docs:build` failed with a missing `vue` and a missing `esbuild`. Both are now direct dev dependencies of the docs package.
+
+---
+
 ## [4.9.1] – 2026-09-25
 
 Fixes from a hands-on QA pass of the running app.
