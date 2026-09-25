@@ -125,6 +125,8 @@ const columns: { [collection: string]: Array<GridColDef> } = {
       flex: 1,
       minWidth: 70,
       editable: true,
+      type: 'singleSelect',
+      valueOptions: ['stock', 'crypto'],
     },
     ...timestampColumns,
   ],
@@ -187,6 +189,8 @@ const columns: { [collection: string]: Array<GridColDef> } = {
       flex: 1,
       minWidth: 80,
       editable: true,
+      type: 'singleSelect',
+      valueOptions: ['buy', 'sell', 'deposit', 'withdraw'],
     },
     {
       field: 'price',
@@ -232,6 +236,8 @@ const columns: { [collection: string]: Array<GridColDef> } = {
       flex: 1,
       minWidth: 70,
       editable: true,
+      type: 'singleSelect',
+      valueOptions: ['stock', 'crypto', 'cash'],
     },
     {
       field: 'date',
@@ -289,8 +295,7 @@ const columns: { [collection: string]: Array<GridColDef> } = {
       headerName: 'Triggered',
       flex: 1,
       minWidth: 150,
-      valueFormatter: (value: string | null | undefined) =>
-        value ? moment(value).format('MMM D, YYYY h:mm a') : '—',
+      valueFormatter: (value: string | null | undefined) => (value ? moment(value).format('MMM D, YYYY h:mm a') : '—'),
     },
     {
       field: 'note',
@@ -364,7 +369,6 @@ function AccountsManager({
     try {
       await apis.accounts.create({
         name,
-        id: name.replace(/\s/g, ''),
         cashBalance: 0,
       } as IAccount);
       setNewName('');
@@ -404,6 +408,7 @@ function AccountsManager({
             onKeyDown={(e) => {
               if (e.key === 'Enter') handleAdd();
             }}
+            slotProps={{ htmlInput: { maxLength: 50 } }}
             disabled={adding}
             sx={{ width: 280, '& input': { fontSize: '0.82rem' } }}
           />
@@ -591,10 +596,18 @@ export default function Database() {
     }
   };
 
+  const loadAccountsForImport = async (): Promise<boolean> => {
+    try {
+      setAccountsData(await apis.accounts.getAll());
+      return true;
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to load accounts');
+      return false;
+    }
+  };
+
   const openImportDialog = async () => {
-    await apis.accounts.getAll().then((response) => {
-      setAccountsData(response);
-    });
+    if (!(await loadAccountsForImport())) return;
 
     if (activeCollection === 'transactions') {
       setTxnImportDialogOpen(true);
@@ -614,6 +627,10 @@ export default function Database() {
 
   const insertOrUpdateRecord = async (record: IAccount | ITransaction | IHoldings) => {
     return apis[activeCollection as 'accounts' | 'holdings' | 'transactions'].insertOrUpdateById(record as any);
+  };
+
+  const createRecord = async (record: ITransaction | IHoldings) => {
+    return apis[activeCollection as 'holdings' | 'transactions'].create(record as any);
   };
 
   const insertHoldingsData = async (newData: Array<IHoldings>): Promise<void> => {
@@ -691,8 +708,7 @@ export default function Database() {
               color="secondary"
               startIcon={<Iconify icon="mdi:bank-outline" />}
               onClick={async () => {
-                await apis.accounts.getAll().then((response) => setAccountsData(response));
-                setBrokerImportDialogOpen(true);
+                if (await loadAccountsForImport()) setBrokerImportDialogOpen(true);
               }}
             >
               Broker Import
@@ -703,8 +719,7 @@ export default function Database() {
               color="secondary"
               startIcon={<Iconify icon="mdi:bank-outline" />}
               onClick={async () => {
-                await apis.accounts.getAll().then((response) => setAccountsData(response));
-                setBrokerHoldingsImportDialogOpen(true);
+                if (await loadAccountsForImport()) setBrokerHoldingsImportDialogOpen(true);
               }}
             >
               Broker Import
@@ -715,8 +730,7 @@ export default function Database() {
               color="secondary"
               startIcon={<Iconify icon="mdi:robot-happy-outline" />}
               onClick={async () => {
-                await apis.accounts.getAll().then((response) => setAccountsData(response));
-                setAiImportDialogOpen(true);
+                if (await loadAccountsForImport()) setAiImportDialogOpen(true);
               }}
             >
               AI Import
@@ -755,6 +769,7 @@ export default function Database() {
             initialRows={records}
             deleteRecord={deleteRecord}
             insertOrUpdateRecord={insertOrUpdateRecord}
+            createRecord={createRecord}
             loadData={loadData}
             activeCollection={activeCollection}
             dynamicColumns={columns[activeCollection]}

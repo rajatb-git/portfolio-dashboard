@@ -8,7 +8,7 @@ import { catchCustomError } from './apiUtil';
 export default class TransactionsAPI {
   create = async (transaction: ITransaction): Promise<ITransaction> =>
     axios
-      .put(DB_HOST + '/transactions', { data: transaction })
+      .put(DB_HOST + '/transactions', transaction)
       .then((response) => response.data)
       .catch(catchCustomError);
 
@@ -26,7 +26,7 @@ export default class TransactionsAPI {
 
   getById = async (id: string): Promise<ITransaction> =>
     axios
-      .get(DB_HOST + `/transactions/${id}`)
+      .get(DB_HOST + `/transactions/${encodeURIComponent(id)}`)
       .then((response) => response.data)
       .catch(catchCustomError);
 

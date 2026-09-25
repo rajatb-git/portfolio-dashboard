@@ -14,7 +14,7 @@ export default class HoldingsAPI {
   // create
   create = async (holding: IHoldings): Promise<IHoldings> =>
     axios
-      .put(DB_HOST + '/holdings', { data: holding })
+      .put(DB_HOST + '/holdings', holding)
       .then((response) => response.data)
       .catch(catchCustomError);
 

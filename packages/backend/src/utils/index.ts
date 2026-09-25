@@ -25,11 +25,30 @@ export const calulateAveragePriceBuy = (
   let totalQty = 0,
     averagePrice = 0;
 
-  totalQty = qty1 + qty2;
+  totalQty = roundQty(qty1 + qty2);
 
   const totalInvestment = qty1 * avgPrice1 + qty2 * avgPrice2;
 
   averagePrice = totalInvestment / totalQty;
 
   return { qty: totalQty, averagePrice };
+};
+
+// Crypto trades are fractional; rounding stops float residue (0.1 + 0.2) from leaving dust positions behind.
+export const roundQty = (qty: number): number => +qty.toFixed(8);
+
+export const normalizeTrade = <T extends { symbol: string; qty: number; averagePrice: number }>(trade: T): T => {
+  const symbol = typeof trade.symbol === 'string' ? trade.symbol.trim().toUpperCase() : '';
+  if (!symbol) {
+    throw new Error('Symbol is required');
+  }
+  const qty = Number(trade.qty);
+  if (!Number.isFinite(qty) || qty <= 0) {
+    throw new Error('Quantity must be a positive number');
+  }
+  const averagePrice = Number(trade.averagePrice);
+  if (!Number.isFinite(averagePrice) || averagePrice < 0) {
+    throw new Error('Price must be zero or a positive number');
+  }
+  return { ...trade, symbol, qty: roundQty(qty), averagePrice };
 };

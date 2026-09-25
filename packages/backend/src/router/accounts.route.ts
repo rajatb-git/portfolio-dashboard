@@ -1,9 +1,14 @@
 import Router from '@koa/router';
 import { recordCashMovement } from '../controller/CashController';
 import { AccountModel } from '../models/AccountModel';
+import { DuplicateIdError, RecordNotFoundError } from '../utils/mongoModel';
 import { normalizeTradeDate } from '../utils';
 import { errorBody } from '../utils/error';
 import { logger } from '../utils/winston';
+
+const MAX_ACCOUNT_NAME = 50;
+
+const accountIdFromName = (name: string) => name.replace(/[^A-Za-z0-9_-]/g, '');
 
 export const AccountsRouter = () => {
   const router = new Router();
@@ -12,10 +17,27 @@ export const AccountsRouter = () => {
     try {
       const accountsModel = await AccountModel().initialize();
       const body: any = ctx.request.body;
-      ctx.body = await accountsModel.insertOne(body, body.id);
+      const name = typeof body?.name === 'string' ? body.name.trim() : '';
+      if (!name || name.length > MAX_ACCOUNT_NAME) {
+        ctx.status = 400;
+        ctx.body = errorBody('Invalid account name', `Account name is required (max ${MAX_ACCOUNT_NAME} characters)`);
+        return;
+      }
+      const id = body.id || accountIdFromName(name);
+      if (!id) {
+        ctx.status = 400;
+        ctx.body = errorBody('Invalid account name', 'Account name must contain at least one letter or number');
+        return;
+      }
+      ctx.body = await accountsModel.insertOne({ ...body, name }, id);
       ctx.status = 200;
     } catch (error: any) {
       logger.log({ level: 'error', message: error.message, label: 'Insert account' });
+      if (error instanceof DuplicateIdError) {
+        ctx.status = 400;
+        ctx.body = errorBody('Failed to insert account', 'An account with this name already exists');
+        return;
+      }
       ctx.status = 500;
       ctx.body = errorBody('Failed to insert account', error.message);
     }
@@ -38,7 +60,13 @@ export const AccountsRouter = () => {
     try {
       const accountsModel = await AccountModel().initialize();
       if (ctx.params.id) {
-        ctx.body = accountsModel.findById(ctx.params.id);
+        const account = accountsModel.findById(ctx.params.id);
+        if (!account) {
+          ctx.status = 404;
+          ctx.body = errorBody('Account not found', `Account ${ctx.params.id} not found`);
+          return;
+        }
+        ctx.body = account;
         ctx.status = 200;
         return;
       }
@@ -56,6 +84,11 @@ export const AccountsRouter = () => {
     try {
       const accountsModel = await AccountModel().initialize();
       const body: any = ctx.request.body;
+      if (!body?.id) {
+        ctx.status = 400;
+        ctx.body = errorBody('Account ID is required', 'Account ID is required');
+        return;
+      }
       ctx.body = await accountsModel.insertOrUpdate(body, body.id);
       ctx.status = 200;
     } catch (error: any) {
@@ -107,6 +140,11 @@ export const AccountsRouter = () => {
       ctx.body = errorBody('Account ID is required', 'Account ID is required');
     } catch (error: any) {
       logger.log({ level: 'error', message: error.message, label: `Delete account "${ctx.params.id}"` });
+      if (error instanceof RecordNotFoundError) {
+        ctx.status = 404;
+        ctx.body = errorBody('Account not found', `Account ${ctx.params.id} not found`);
+        return;
+      }
       ctx.status = 500;
       ctx.body = errorBody('Failed to delete account', error.message);
     }

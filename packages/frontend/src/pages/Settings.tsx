@@ -148,7 +148,7 @@ export default function Settings() {
   const theme = useTheme();
   const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
   const [category, setCategory] = React.useState<CategoryId>('general');
-  const savedApiHost = LocalStorageUtil.getItem<string>('api_host') ?? DB_HOST;
+  const [savedApiHost, setSavedApiHost] = React.useState(LocalStorageUtil.getItem<string>('api_host') ?? DB_HOST);
   const [apiHost, setApiHost] = React.useState(savedApiHost);
   const [apiHostSaved, setApiHostSaved] = React.useState(false);
   const isApiHostDirty = apiHost.trim() !== savedApiHost;
@@ -162,14 +162,22 @@ export default function Settings() {
   const [lockNewCode, setLockNewCode] = React.useState('');
   const [lockConfirmCode, setLockConfirmCode] = React.useState('');
   const [savingLock, setSavingLock] = React.useState(false);
-  const savedThreshold = Number(LocalStorageUtil.getItem<string>('alert_threshold') ?? '5') || 5;
+  const savedThreshold = String(Number(LocalStorageUtil.getItem<string>('alert_threshold') ?? '5') || 5);
   const [draftThreshold, setDraftThreshold] = React.useState(savedThreshold);
   const [savedThresholdVal, setSavedThresholdVal] = React.useState(savedThreshold);
   const isThresholdDirty = draftThreshold !== savedThresholdVal;
+  const thresholdNum = Number(draftThreshold);
+  const isThresholdValid = draftThreshold.trim() !== '' && thresholdNum >= 1 && thresholdNum <= 50;
 
   const handleSaveThreshold = () => {
-    LocalStorageUtil.setItem('alert_threshold', String(draftThreshold));
-    setSavedThresholdVal(draftThreshold);
+    if (!isThresholdValid) {
+      toast.error('Threshold must be between 1 and 50');
+      return;
+    }
+    const value = String(thresholdNum);
+    LocalStorageUtil.setItem('alert_threshold', value);
+    setSavedThresholdVal(value);
+    setDraftThreshold(value);
     toast.success('Alert threshold saved');
   };
 
@@ -248,8 +256,7 @@ export default function Settings() {
   const [savingQuietHours, setSavingQuietHours] = React.useState(false);
   const [flushingQuietHours, setFlushingQuietHours] = React.useState(false);
   const isQuietHoursDirty = JSON.stringify(savedQuietHours) !== JSON.stringify(draftQuietHours);
-  const setQuietHours = (partial: Partial<QuietHoursConfig>) =>
-    setDraftQuietHours((prev) => ({ ...prev, ...partial }));
+  const setQuietHours = (partial: Partial<QuietHoursConfig>) => setDraftQuietHours((prev) => ({ ...prev, ...partial }));
 
   const DEFAULT_EARNINGS: EarningsReminderConfig = {
     enabled: false,
@@ -540,6 +547,8 @@ export default function Settings() {
   const handleApiHostSave = () => {
     if (!apiHost.trim() || !isApiHostDirty) return;
     LocalStorageUtil.setItem('api_host', apiHost.trim());
+    setSavedApiHost(apiHost.trim());
+    setApiHost(apiHost.trim());
     setApiHostSaved(true);
     setTimeout(() => setApiHostSaved(false), 2000);
     toast.success('Backend URL saved — reload the page to apply');
@@ -550,7 +559,9 @@ export default function Settings() {
     try {
       const status = await apis.settings.saveDemoMode(checked);
       setDemoModeEnabled(status.enabled);
-      toast.success(status.enabled ? 'Demo mode enabled — showing sample data' : 'Demo mode disabled — showing your real data');
+      toast.success(
+        status.enabled ? 'Demo mode enabled — showing sample data' : 'Demo mode disabled — showing your real data'
+      );
     } catch (err: any) {
       toast.error(err.message || 'Failed to update demo mode');
     } finally {
@@ -965,7 +976,6 @@ export default function Settings() {
     try {
       const created = await apis.accounts.create({
         name,
-        id: name.replace(/\s/g, ''),
       } as IAccount);
       setAccounts((prev) => [...prev, created]);
       setNewAccountName('');
@@ -1079,23 +1089,32 @@ export default function Settings() {
                   description="Show 'Near Target' badge when price is within this % of target"
                 >
                   <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
+                    {isThresholdDirty && (
+                      <Typography sx={{ fontSize: '0.72rem', color: 'warning.main' }}>Unsaved changes</Typography>
+                    )}
                     <TextField
                       size="small"
                       type="number"
                       value={draftThreshold}
-                      onChange={(e) => {
-                        const val = Math.max(1, Math.min(50, Number(e.target.value)));
-                        setDraftThreshold(val);
-                      }}
+                      onChange={(e) => setDraftThreshold(e.target.value)}
+                      error={!isThresholdValid}
                       slotProps={{ htmlInput: { min: 1, max: 50 } }}
                       sx={{ width: 80, '& input': { fontSize: '0.82rem' } }}
                     />
                     <Typography sx={{ fontSize: '0.82rem', color: 'text.secondary' }}>%</Typography>
                     <Button
                       size="small"
+                      onClick={() => setDraftThreshold(savedThresholdVal)}
+                      disabled={!isThresholdDirty}
+                      sx={{ fontSize: '0.78rem', textTransform: 'none' }}
+                    >
+                      Reset
+                    </Button>
+                    <Button
+                      size="small"
                       variant="contained"
                       onClick={handleSaveThreshold}
-                      disabled={!isThresholdDirty}
+                      disabled={!isThresholdDirty || !isThresholdValid}
                       sx={{ fontSize: '0.78rem', textTransform: 'none' }}
                     >
                       Save
@@ -1130,12 +1149,23 @@ export default function Settings() {
                 >
                   <Stack direction="row" spacing={1} useFlexGap sx={{ alignItems: 'center', flexWrap: 'wrap' }}>
                     {apiHostSaved && <Typography sx={{ fontSize: '0.72rem', color: 'success.main' }}>Saved</Typography>}
+                    {isApiHostDirty && (
+                      <Typography sx={{ fontSize: '0.72rem', color: 'warning.main' }}>Unsaved changes</Typography>
+                    )}
                     <TextField
                       size="small"
                       value={apiHost}
                       onChange={(e) => setApiHost(e.target.value)}
                       sx={{ width: { xs: '100%', sm: 240 }, '& input': { fontSize: '0.78rem' } }}
                     />
+                    <Button
+                      size="small"
+                      onClick={() => setApiHost(savedApiHost)}
+                      disabled={!isApiHostDirty}
+                      sx={{ fontSize: '0.78rem', textTransform: 'none' }}
+                    >
+                      Reset
+                    </Button>
                     <Button
                       size="small"
                       variant="contained"
@@ -1193,10 +1223,11 @@ export default function Settings() {
                         borderColor: 'divider',
                       }}
                     >
-                      <Stack direction="row" sx={{ alignItems: 'center' }} spacing={1.5}>
+                      <Stack direction="row" sx={{ alignItems: 'center', minWidth: 0 }} spacing={1.5}>
                         <Iconify icon="mdi:account-outline" width={18} sx={{ color: 'text.secondary' }} />
-                        <Box>
+                        <Box sx={{ minWidth: 0 }}>
                           <Typography
+                            noWrap
                             sx={{
                               fontSize: '0.85rem',
                               fontWeight: 500,
@@ -1233,6 +1264,7 @@ export default function Settings() {
                     onKeyDown={(e) => {
                       if (e.key === 'Enter') handleAddAccount();
                     }}
+                    slotProps={{ htmlInput: { maxLength: 50 } }}
                     disabled={addingAccount}
                     sx={{ flexGrow: 1, '& input': { fontSize: '0.78rem' } }}
                   />
@@ -1394,7 +1426,10 @@ export default function Settings() {
                   label="Enable Move Alerts"
                   description="Notify when a holding or your total portfolio makes a big move. Escalates as a move grows, and can keep watching outside US market hours."
                 >
-                  <Switch checked={draftMoveAlert.enabled} onChange={(_, checked) => setMoveAlert({ enabled: checked })} />
+                  <Switch
+                    checked={draftMoveAlert.enabled}
+                    onChange={(_, checked) => setMoveAlert({ enabled: checked })}
+                  />
                 </SettingRow>
                 {draftMoveAlert.enabled && (
                   <>
@@ -1655,7 +1690,10 @@ export default function Settings() {
                   label="Enable Earnings Alerts"
                   description="Tell you ahead of time when a company you hold is about to report, then follow up with the actual numbers against consensus."
                 >
-                  <Switch checked={draftEarnings.enabled} onChange={(_, checked) => setEarnings({ enabled: checked })} />
+                  <Switch
+                    checked={draftEarnings.enabled}
+                    onChange={(_, checked) => setEarnings({ enabled: checked })}
+                  />
                 </SettingRow>
                 {draftEarnings.enabled && (
                   <>
@@ -1926,10 +1964,7 @@ export default function Settings() {
                       />
                     </SettingRow>
                     {draftQuietHours.allowCritical && (
-                      <SettingRow
-                        label="Wake Me Threshold (%)"
-                        description="Move size that overrides quiet hours"
-                      >
+                      <SettingRow label="Wake Me Threshold (%)" description="Move size that overrides quiet hours">
                         <TextField
                           size="small"
                           type="number"
@@ -2172,13 +2207,14 @@ export default function Settings() {
                   />
                 </SettingRow>
                 {draftIpoReminder.enabled && (
-                  <SettingRow label="Remind Me" description="How far ahead of the expected IPO date to send the reminder">
+                  <SettingRow
+                    label="Remind Me"
+                    description="How far ahead of the expected IPO date to send the reminder"
+                  >
                     <Select
                       size="small"
                       value={draftIpoReminder.daysBefore}
-                      onChange={(e) =>
-                        setDraftIpoReminder((prev) => ({ ...prev, daysBefore: Number(e.target.value) }))
-                      }
+                      onChange={(e) => setDraftIpoReminder((prev) => ({ ...prev, daysBefore: Number(e.target.value) }))}
                       sx={{ minWidth: { xs: '100%', sm: 200 }, fontSize: '0.82rem' }}
                     >
                       <MenuItem value={0}>On the day</MenuItem>

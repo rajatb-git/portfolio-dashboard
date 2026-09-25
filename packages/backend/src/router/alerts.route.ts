@@ -1,11 +1,21 @@
 import Router from '@koa/router';
 import { buildAlertContext, describeCondition, isTriggered, resolveTarget } from '../controller/AlertConditions';
 import { LiveQuoteController } from '../controller/LiveQuoteController';
-import { ALERT_CONDITIONS, type AlertCondition, AlertModel } from '../models/AlertModel';
+import { ALERT_CONDITIONS, type AlertCondition, AlertModel, type IAlert } from '../models/AlertModel';
 import { errorBody } from '../utils/error';
 import { logger } from '../utils/winston';
 
 const SYMBOL_RE = /^[A-Za-z0-9.\-^]{1,20}$/;
+
+const CRITERIA_FIELDS = [
+  'symbol',
+  'type',
+  'condition',
+  'direction',
+  'targetPrice',
+  'trailPercent',
+  'thresholdPercent',
+] as const satisfies ReadonlyArray<keyof IAlert>;
 
 const parsePercentField = (raw: any, label: string): number => {
   const value = Number(raw);
@@ -139,13 +149,27 @@ export const AlertsRouter = () => {
     try {
       const alertModel = await AlertModel().initialize();
       const { id } = ctx.params;
-      if (!alertModel.findById(id)) {
+      const existing = alertModel.findById(id);
+      if (!existing) {
         ctx.status = 404;
         ctx.body = errorBody('Alert not found', `No alert with id ${id}`);
         return;
       }
-      const payload = parseAlertBody(ctx.request.body);
-      ctx.body = await alertModel.insertOrUpdate(payload, id);
+      const payload: Partial<IAlert> = parseAlertBody(ctx.request.body);
+      // Monitor state only stays meaningful while the alert watches the same thing.
+      const sameCriteria = CRITERIA_FIELDS.every((field) => existing[field] === payload[field]);
+      const monitorState = sameCriteria
+        ? {
+            ...(existing.peakPrice !== undefined && { peakPrice: existing.peakPrice }),
+            ...(existing.triggeredAt && { triggeredAt: existing.triggeredAt }),
+          }
+        : {};
+      const carried = {
+        ...(existing.symbol === payload.symbol &&
+          existing.lastPrice !== undefined && { lastPrice: existing.lastPrice }),
+        ...(existing.lastCheckedAt && { lastCheckedAt: existing.lastCheckedAt }),
+      };
+      ctx.body = await alertModel.replaceById(id, { ...payload, ...carried, ...monitorState });
       ctx.status = 200;
     } catch (err: any) {
       logger.log({ level: 'error', message: err.message, label: 'Update alert' });

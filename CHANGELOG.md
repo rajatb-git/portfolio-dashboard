@@ -6,6 +6,27 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
+## [4.8.1] – 2026-09-25
+
+Fixes from a hands-on QA pass of the running app.
+
+### Fixed
+- **Cash dialog wiped the form every 30s** — the dashboard poll handed the dialog a fresh accounts array, which re-ran its reset. It now resets only when it opens.
+- **Trades accepted negative, zero and junk quantities** — a sell of `-5` added shares, and `10abc` was saved as 10. The Trade dialog and both `/holdings/buy` and `/holdings/sell` now require a positive quantity and a non-negative price.
+- **Fractional positions could not be fully sold** — float residue (0.1 + 0.2) left dust holdings and blocked selling the last of a crypto position. Quantities are rounded to 8 decimals.
+- **A failed buy still saved the holding** — the account is now checked before anything is written.
+- **Lowercase tickers became separate positions** — trade symbols are trimmed and uppercased.
+- **Accounts with `/`, `#` or `?` in the name could not be deleted or funded** — account ids are now slugged server-side and account URLs are encoded. Duplicate names return a 400 with a readable message, and names are capped at 50 characters.
+- **Database grid** — the toolbar with Add record and refresh never rendered, and new rows would have been upserted under the id `temp`. New rows now go through the create routes, edits show a success toast, and Action/Type are dropdowns. Holding and transaction create calls sent `{ data: … }` instead of the record.
+- **`POST /transactions`, `/holdings` and `/accounts` without an id** saved a record with id `null`, which crashed the transactions grid. They now return 400, and transaction `action`/`type` are validated.
+- **Clearing an alert's note did not stick** — alert edits now replace the record, so removed fields and stale trailing-stop state go away.
+- **New accounts took up to 30s to appear on the Dashboard** — the Dashboard revalidates when you return to it.
+- **Holdings with no live price vanished from the Dashboard** — they are now listed at cost basis with a notice naming the unpriced symbols.
+- **Price Alert Threshold could not be typed into** — it clamped on every keystroke. It now validates on Save, and it and Backend URL have Reset and Unsaved-changes indicators.
+- Missing accounts/transactions return 404 instead of an empty 200; schema errors name the field rather than the value; the Research price chart and the Database import buttons toast on failure instead of throwing.
+
+---
+
 ## [4.8.0] – 2026-09-17
 
 ### Fixed

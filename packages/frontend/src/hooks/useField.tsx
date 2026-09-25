@@ -46,7 +46,9 @@ export const useField = ({ initValue, validate, required = false }: useFieldProp
       return false;
     }
 
-    if (error) {
+    const err = validate(value);
+    if (err) {
+      setError(err as string);
       return false;
     }
 

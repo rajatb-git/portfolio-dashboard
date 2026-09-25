@@ -18,6 +18,7 @@ type DashboardDataContextValue = {
   earningsResults: Array<HoldingEarningResult>;
   alertStatuses: Array<IAlertStatus>;
   refresh: () => void;
+  revalidate: () => void;
   loadAlerts: () => void;
 };
 
@@ -35,14 +36,16 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
   const [earningsResults, setEarningsResults] = React.useState<Array<HoldingEarningResult>>([]);
   const [isEarningsLoading, setIsEarningsLoading] = React.useState(true);
 
-  const loadAlerts = React.useCallback(() => {
+  const loadAlerts = React.useCallback((silent = false) => {
     apis.alerts
       .getStatus()
       .then((data) => {
         setAlertStatuses(data ?? []);
         notifyTriggeredAlerts(data ?? []);
       })
-      .catch(() => {});
+      .catch((err) => {
+        if (!silent) toast.error(err.message || 'Failed to load alert statuses');
+      });
   }, []);
 
   const fetchData = React.useCallback(
@@ -63,7 +66,7 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
         });
 
       // Evaluate standalone price alerts in the background and notify on triggers.
-      loadAlerts();
+      loadAlerts(silent);
 
       if (!silent) setIsEarningsLoading(true);
       apis.analytics
@@ -94,6 +97,11 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
   );
 
   const refresh = React.useCallback(() => fetchData(false), [fetchData]);
+  const isLoadingRef = React.useRef(isLoading);
+  isLoadingRef.current = isLoading;
+  const revalidate = React.useCallback(() => {
+    if (!isLoadingRef.current) fetchData(true);
+  }, [fetchData]);
 
   React.useEffect(() => {
     fetchData(false);
@@ -125,6 +133,7 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
       earningsResults,
       alertStatuses,
       refresh,
+      revalidate,
       loadAlerts,
     }),
     [
@@ -136,6 +145,7 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
       earningsResults,
       alertStatuses,
       refresh,
+      revalidate,
       loadAlerts,
     ]
   );

@@ -20,10 +20,16 @@ export default function Dashboard() {
     earningsResults,
     alertStatuses,
     refresh,
+    revalidate,
     loadAlerts,
   } = useDashboardData();
   const [alertDialogOpen, setAlertDialogOpen] = React.useState(false);
   const [alertDraft, setAlertDraft] = React.useState<DraftAlert>(EMPTY_DRAFT);
+
+  // Cached data survives navigation, so pick up accounts/holdings edited on other pages right away.
+  React.useEffect(() => {
+    revalidate();
+  }, [revalidate]);
 
   const columns: Array<Column> = [
     {
@@ -95,7 +101,7 @@ export default function Dashboard() {
         open={alertDialogOpen}
         initial={alertDraft}
         onClose={() => setAlertDialogOpen(false)}
-        onSaved={loadAlerts}
+        onSaved={() => loadAlerts()}
       />
     </>
   );

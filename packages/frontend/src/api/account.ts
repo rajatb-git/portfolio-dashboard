@@ -1,4 +1,4 @@
-import axios from "./axios";
+import axios from './axios';
 
 import { DB_HOST } from '@/config';
 import type { IAccount } from '@/models/AccountsModel';
@@ -20,7 +20,7 @@ export default class AccountsAPI {
       .catch(catchCustomError);
 
   getById = async (id: string): Promise<IAccount> =>
-    axios(DB_HOST + `/accounts/${id}`)
+    axios(DB_HOST + `/accounts/${encodeURIComponent(id)}`)
       .then((response) => response.data)
       .catch(catchCustomError);
 
@@ -34,7 +34,7 @@ export default class AccountsAPI {
   // delete
   deleteById = async (id: string): Promise<IAccount> =>
     axios
-      .delete(DB_HOST + '/accounts/' + id)
+      .delete(DB_HOST + '/accounts/' + encodeURIComponent(id))
       .then((response) => response.data)
       .catch(catchCustomError);
 
@@ -46,7 +46,7 @@ export default class AccountsAPI {
     date?: string
   ): Promise<{ cashBalance: number }> =>
     axios
-      .post(DB_HOST + `/accounts/${id}/cash`, { action, amount, date })
+      .post(DB_HOST + `/accounts/${encodeURIComponent(id)}/cash`, { action, amount, date })
       .then((response) => response.data)
       .catch(catchCustomError);
 }

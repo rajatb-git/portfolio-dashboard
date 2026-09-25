@@ -3,6 +3,8 @@ import { useTheme } from '@mui/material/styles';
 import type { ApexOptions } from 'apexcharts';
 import React from 'react';
 
+import { toast } from 'react-toastify';
+
 import apis from '@/api';
 import type { Range } from '@/api/live';
 import { useThemeMode } from './ThemeRegistry/ThemeModeContext';
@@ -22,14 +24,21 @@ export const PriceHistoryGraph = ({ symbol }: Props) => {
   const [range, setRange] = React.useState<Range>('6M');
 
   const loadData = async () => {
-    await apis.live.getPriceHistory(symbol, range).then((data) => {
-      setSeries([
-        {
-          name: 'Price',
-          data,
-        },
-      ]);
-    });
+    if (!symbol) return;
+    await apis.live
+      .getPriceHistory(symbol, range)
+      .then((data) => {
+        setSeries([
+          {
+            name: 'Price',
+            data,
+          },
+        ]);
+      })
+      .catch((err) => {
+        setSeries(undefined);
+        toast.error(err.message || 'Failed to load price history');
+      });
   };
 
   const options: ApexOptions = {
@@ -79,8 +88,8 @@ export const PriceHistoryGraph = ({ symbol }: Props) => {
     },
   };
 
-  const handleRangeChange = (_event: React.MouseEvent<HTMLElement>, newRange: Range) => {
-    setRange(newRange);
+  const handleRangeChange = (_event: React.MouseEvent<HTMLElement>, newRange: Range | null) => {
+    if (newRange) setRange(newRange);
   };
 
   React.useEffect(() => {

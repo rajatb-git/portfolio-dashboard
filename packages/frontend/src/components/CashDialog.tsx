@@ -36,13 +36,16 @@ export default function CashDialog({ open, account, accounts, onClose, onSaved }
   const [date, setDate] = React.useState(today());
   const [saving, setSaving] = React.useState(false);
 
+  const wasOpen = React.useRef(false);
   React.useEffect(() => {
-    if (open) {
+    // Only reset on the closed→open transition — the dashboard poll hands us a fresh `accounts` array every 30s.
+    if (open && !wasOpen.current) {
       setAccountId(account?.id ?? accounts?.[0]?.id ?? '');
       setAction('deposit');
       setAmount('');
       setDate(today());
     }
+    wasOpen.current = open;
   }, [open, account, accounts]);
 
   const selected = (accounts ?? (account ? [account] : [])).find((a) => a.id === accountId) ?? null;

@@ -89,7 +89,20 @@ export const TransactionsRouter = () => {
   router.put('/transactions', async (ctx) => {
     try {
       const transactionModel = await TransactionModel().initialize();
-      ctx.body = await transactionModel.insertOne(withNormalizedDate(ctx.request.body));
+      const body: any = ctx.request.body;
+      if (!VALID_ACTIONS.includes(body?.action)) {
+        ctx.status = 400;
+        ctx.body = errorBody('Invalid transaction', `action must be one of ${VALID_ACTIONS.join(', ')}`);
+        return;
+      }
+      if (!VALID_TYPES.includes(body?.type)) {
+        ctx.status = 400;
+        ctx.body = errorBody('Invalid transaction', `type must be one of ${VALID_TYPES.join(', ')}`);
+        return;
+      }
+      const saved = await transactionModel.insertOne(withNormalizedDate(body));
+      await adjustCash(saved.accountId, transactionCashImpact(saved));
+      ctx.body = saved;
       ctx.status = 200;
     } catch (err: any) {
       logger.log({ level: 'error', message: err.message, label: 'Create transaction' });
@@ -134,7 +147,13 @@ export const TransactionsRouter = () => {
     try {
       const transactionModel = await TransactionModel().initialize();
       if (ctx.params.id) {
-        ctx.body = transactionModel.findById(ctx.params.id);
+        const transaction = transactionModel.findById(ctx.params.id);
+        if (!transaction) {
+          ctx.status = 404;
+          ctx.body = errorBody('Transaction not found', `Transaction ${ctx.params.id} not found`);
+          return;
+        }
+        ctx.body = transaction;
         ctx.status = 200;
         return;
       }
@@ -152,7 +171,22 @@ export const TransactionsRouter = () => {
     try {
       const transactionModel = await TransactionModel().initialize();
       const body: any = ctx.request.body;
-      const previous = body.id ? transactionModel.findById(body.id) : null;
+      if (!body?.id) {
+        ctx.status = 400;
+        ctx.body = errorBody('Missing parameter', 'Transaction ID is required');
+        return;
+      }
+      if (body.action !== undefined && !VALID_ACTIONS.includes(body.action)) {
+        ctx.status = 400;
+        ctx.body = errorBody('Invalid transaction', `action must be one of ${VALID_ACTIONS.join(', ')}`);
+        return;
+      }
+      if (body.type !== undefined && !VALID_TYPES.includes(body.type)) {
+        ctx.status = 400;
+        ctx.body = errorBody('Invalid transaction', `type must be one of ${VALID_TYPES.join(', ')}`);
+        return;
+      }
+      const previous = transactionModel.findById(body.id);
 
       const saved = await transactionModel.insertOrUpdate(withNormalizedDate(body), body.id);
 
@@ -177,7 +211,12 @@ export const TransactionsRouter = () => {
     try {
       const transactionModel = await TransactionModel().initialize();
       const body: any = ctx.request.body;
-      const previous = body.id ? transactionModel.findById(body.id) : null;
+      if (!body?.id) {
+        ctx.status = 400;
+        ctx.body = errorBody('Missing parameter', 'Transaction ID is required');
+        return;
+      }
+      const previous = transactionModel.findById(body.id);
 
       ctx.body = await transactionModel.deleteById(body.id);
 

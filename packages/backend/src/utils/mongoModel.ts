@@ -74,10 +74,10 @@ export class MongoModel<T extends ISkewerModel> {
         throw new SchemaValidationError(key, 'required field');
       }
       if (value && value.toString() && value.constructor !== def.type) {
-        throw new SchemaValidationError(`${value}`, `should be of type ${def.type.name}`);
+        throw new SchemaValidationError(key, `should be of type ${def.type.name}`);
       }
       if (value && def.enum && def.type === String && !def.enum.includes(value)) {
-        throw new SchemaValidationError(`${value}`, `enum ${def.enum}`);
+        throw new SchemaValidationError(key, `enum ${def.enum}`);
       }
     }
   }
@@ -139,10 +139,7 @@ export class MongoModel<T extends ISkewerModel> {
 
     if (prepared.length) {
       const collection = await this.getCollection();
-      await collection.insertMany(
-        prepared.map((record) => ({ _id: record.id, ...record })) as any,
-        { ordered: true }
-      );
+      await collection.insertMany(prepared.map((record) => ({ _id: record.id, ...record })) as any, { ordered: true });
     }
     for (const record of prepared) this.dataCache[record.id] = record;
     return prepared;
@@ -162,7 +159,28 @@ export class MongoModel<T extends ISkewerModel> {
     return merged;
   }
 
+  // Unlike updateById, fields absent from newRecord are dropped rather than carried over.
+  async replaceById(recordId: string, newRecord: Partial<T>): Promise<T> {
+    const oldRecord = this.dataCache[recordId];
+    if (!oldRecord) throw new RecordNotFoundError();
+
+    const { id: _id, createdAt: _createdAt, updatedAt: _updatedAt, ...stripped } = newRecord as any;
+    const replaced = {
+      ...stripped,
+      id: recordId,
+      createdAt: oldRecord.createdAt,
+      updatedAt: new Date().toISOString(),
+    } as T;
+    this.validateSchema(replaced);
+
+    const collection = await this.getCollection();
+    await collection.replaceOne({ _id: recordId } as any, { _id: recordId, ...replaced } as any);
+    this.dataCache[recordId] = replaced;
+    return replaced;
+  }
+
   async insertOrUpdate(record: Partial<T>, id: string): Promise<T> {
+    if (!id) throw new Error('Record id is required');
     const { id: _id, createdAt: _createdAt, updatedAt: _updatedAt, ...stripped } = record as any;
     const existing = this.dataCache[id];
     const now = new Date().toISOString();

@@ -125,6 +125,11 @@ export const HoldingsRouter = () => {
     try {
       const holdingsModel = await HoldingsModel().initialize();
       const body: any = ctx.request.body;
+      if (!body?.id) {
+        ctx.status = 400;
+        ctx.body = errorBody('Holding ID is required', 'Holding ID is required');
+        return;
+      }
 
       ctx.body = await holdingsModel.insertOrUpdate(body, body.id);
       ctx.status = 200;
@@ -224,7 +229,10 @@ export const HoldingsRouter = () => {
       const holdingsModel = await HoldingsModel().initialize();
       const incomingArr = ctx.request.body as Array<any>;
 
-      const isCashRow = (x: any) => String(x['symbol'] ?? '').trim().toUpperCase() === 'CASH';
+      const isCashRow = (x: any) =>
+        String(x['symbol'] ?? '')
+          .trim()
+          .toUpperCase() === 'CASH';
       const parseMoney = (value: any) => parseFloat(String(value ?? '').replace(/\$/g, ''));
 
       const arrHolding = incomingArr

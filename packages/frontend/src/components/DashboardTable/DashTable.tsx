@@ -225,6 +225,10 @@ export default function Table<T>({
     return state?.near || state?.triggered;
   }).length;
 
+  const unpricedSymbols = [
+    ...new Set((rows as HoldingAggregate[]).filter((r) => r.priceUnavailable).map((r) => r.symbol)),
+  ];
+
   const notFound = !dataFiltered.length;
 
   const grandValue = totals.reduce((s, t) => s + t.totalValue, 0);
@@ -291,12 +295,14 @@ export default function Table<T>({
         </Grid>
       </Grid>
 
+      {unpricedSymbols.length > 0 && (
+        <Alert severity="info" sx={{ mb: 2, py: 0.5 }}>
+          Live prices unavailable for {unpricedSymbols.join(', ')} — valued at cost basis
+        </Alert>
+      )}
+
       {nearTargetCount > 0 && (
-        <Alert
-          severity="warning"
-          icon={<Iconify icon="tabler:bell-ringing" width={18} />}
-          sx={{ mb: 2, py: 0.5 }}
-        >
+        <Alert severity="warning" icon={<Iconify icon="tabler:bell-ringing" width={18} />} sx={{ mb: 2, py: 0.5 }}>
           {nearTargetCount} holding{nearTargetCount > 1 ? 's have' : ' has'} a price alert near or triggered
         </Alert>
       )}
@@ -401,11 +407,17 @@ export default function Table<T>({
             exclusive
             onChange={handleAccountFilterChange}
             aria-label="account-filter"
+            sx={{ flexWrap: 'wrap', minWidth: 0 }}
           >
             <ToggleButton value="all">All Accounts</ToggleButton>
             {accounts.map((x) => (
-              <ToggleButton key={x.id} value={x.id}>
-                {x.name}
+              <ToggleButton key={x.id} value={x.id} title={x.name}>
+                <Box
+                  component="span"
+                  sx={{ maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                >
+                  {x.name}
+                </Box>
               </ToggleButton>
             ))}
           </ToggleButtonGroup>
@@ -425,7 +437,10 @@ export default function Table<T>({
         {/* The table is the one thing allowed to scroll horizontally; the page
             body must never do so. */}
         <Box sx={{ overflowX: 'auto' }}>
-          <TableContainer ref={tableContainerRef} sx={{ maxHeight: { xs: '65vh', lg: 'calc(100vh - 320px)' }, minHeight: 280 }}>
+          <TableContainer
+            ref={tableContainerRef}
+            sx={{ maxHeight: { xs: '65vh', lg: 'calc(100vh - 320px)' }, minHeight: 280 }}
+          >
             <MuiTable stickyHeader sx={{ minWidth: 900 }}>
               <TableHead
                 order={order}
@@ -472,7 +487,6 @@ export default function Table<T>({
                     );
                   })
                 )}
-
               </TableBody>
             </MuiTable>
           </TableContainer>
