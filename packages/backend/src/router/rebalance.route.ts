@@ -38,7 +38,28 @@ export const RebalanceRouter = () => {
         ctx.status = 400;
         return;
       }
-      ctx.body = await saveRebalanceTargetConfig({ targets: body.targets as any });
+      const incoming = body.targets as Array<{ symbol?: unknown; targetPercent?: unknown }>;
+      const seen = new Set<string>();
+      for (const t of incoming) {
+        const symbol = typeof t?.symbol === 'string' ? t.symbol.trim().toUpperCase() : '';
+        const percent = Number(t?.targetPercent);
+        if (!symbol || !Number.isFinite(percent) || percent < 0 || percent > 100) {
+          ctx.body = errorBody('Invalid targets', 'Each target needs a symbol and a percent between 0 and 100');
+          ctx.status = 400;
+          return;
+        }
+        if (seen.has(symbol)) {
+          ctx.body = errorBody('Invalid targets', `Duplicate target for ${symbol}`);
+          ctx.status = 400;
+          return;
+        }
+        seen.add(symbol);
+      }
+      // The page only sends symbols in today's plan; keep saved targets for any holding that
+      // dropped out of it (e.g. an unpriced quote) instead of wiping them.
+      const existing = await getRebalanceTargetConfig();
+      const kept = existing.targets.filter((t) => !seen.has(t.symbol));
+      ctx.body = await saveRebalanceTargetConfig({ targets: [...kept, ...(incoming as any)] });
       ctx.status = 200;
     } catch (error: any) {
       logger.log({ level: 'error', message: error.message, label: 'Save rebalance targets route' });

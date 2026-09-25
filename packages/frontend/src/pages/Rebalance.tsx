@@ -26,7 +26,11 @@ import StateView from '@/components/ui/StateView';
 import StatTile from '@/components/ui/StatTile';
 import { fnCurrency } from '@/utils/formatNumber';
 
-type DraftTargets = Record<string, number>;
+// Strings, so a field can be cleared mid-edit without snapping to 0.
+type DraftTargets = Record<string, string>;
+
+const isValidTarget = (v: string | undefined) =>
+  v !== undefined && v.trim() !== '' && Number(v) >= 0 && Number(v) <= 100;
 
 const round2 = (n: number) => Math.round(n * 100) / 100;
 const HOLD_THRESHOLD = 0.5;
@@ -40,7 +44,7 @@ export default function Rebalance() {
 
   const applyPlan = React.useCallback((p: RebalancePlan) => {
     const targets: DraftTargets = {};
-    for (const row of p.rows) targets[row.symbol] = round2(row.targetPercent);
+    for (const row of p.rows) targets[row.symbol] = String(round2(row.targetPercent));
     setPlan(p);
     setSaved(targets);
     setDraft(targets);
@@ -57,42 +61,39 @@ export default function Rebalance() {
 
   const isDirty = JSON.stringify(saved) !== JSON.stringify(draft);
   const totalValue = plan?.totalValue ?? 0;
-  const totalTarget = round2(Object.values(draft).reduce((s, v) => s + (Number.isFinite(v) ? v : 0), 0));
-  const totalOff = Math.abs(totalTarget - 100) > 0.1;
+  const totalTarget = round2(Object.values(draft).reduce((s, v) => s + (isValidTarget(v) ? Number(v) : 0), 0));
+  const totalOff = (plan?.rows.length ?? 0) > 0 && Math.abs(totalTarget - 100) > 0.1;
+  const hasInvalidTarget = Object.values(draft).some((v) => !isValidTarget(v));
 
   // Recompute drift and suggested trades live from the edited targets so the table
   // reacts as the user types, without a round-trip to the server.
   const rows = React.useMemo(() => {
     if (!plan) return [];
-    return plan.rows
-      .map((row) => {
-        const targetPercent = draft[row.symbol] ?? row.currentPercent;
-        const targetValue = (targetPercent / 100) * totalValue;
-        const deltaValue = targetValue - row.currentValue;
-        const driftPercent = round2(row.currentPercent - targetPercent);
-        let action: 'buy' | 'sell' | 'hold' = 'hold';
-        if (Math.abs(driftPercent) >= HOLD_THRESHOLD) action = deltaValue > 0 ? 'buy' : 'sell';
-        return {
-          ...row,
-          targetPercent,
-          driftPercent,
-          action,
-          tradeValue: round2(Math.abs(deltaValue)),
-          shares: row.currentPrice > 0 ? round2(Math.abs(deltaValue) / row.currentPrice) : 0,
-        };
-      })
-      .sort((a, b) => Math.abs(b.driftPercent) - Math.abs(a.driftPercent));
+    return plan.rows.map((row) => {
+      const targetPercent = isValidTarget(draft[row.symbol]) ? Number(draft[row.symbol]) : row.currentPercent;
+      const targetValue = (targetPercent / 100) * totalValue;
+      const deltaValue = targetValue - row.currentValue;
+      const driftPercent = round2(row.currentPercent - targetPercent);
+      let action: 'buy' | 'sell' | 'hold' = 'hold';
+      if (Math.abs(driftPercent) >= HOLD_THRESHOLD) action = deltaValue > 0 ? 'buy' : 'sell';
+      return {
+        ...row,
+        targetPercent,
+        driftPercent,
+        action,
+        tradeValue: round2(Math.abs(deltaValue)),
+        shares: row.currentPrice > 0 ? round2(Math.abs(deltaValue) / row.currentPrice) : 0,
+      };
+    });
   }, [plan, draft, totalValue]);
 
   const setTarget = (symbol: string, value: string) => {
-    const num = value === '' ? 0 : Number(value);
-    if (!Number.isFinite(num)) return;
-    setDraft((d) => ({ ...d, [symbol]: num }));
+    setDraft((d) => ({ ...d, [symbol]: value }));
   };
 
   const handleEqualWeight = () => {
     if (!plan || plan.rows.length === 0) return;
-    const each = round2(100 / plan.rows.length);
+    const each = String(round2(100 / plan.rows.length));
     const next: DraftTargets = {};
     for (const row of plan.rows) next[row.symbol] = each;
     setDraft(next);
@@ -101,15 +102,19 @@ export default function Rebalance() {
   const handleUseCurrent = () => {
     if (!plan) return;
     const next: DraftTargets = {};
-    for (const row of plan.rows) next[row.symbol] = round2(row.currentPercent);
+    for (const row of plan.rows) next[row.symbol] = String(round2(row.currentPercent));
     setDraft(next);
   };
 
   const handleSave = async () => {
     if (!plan) return;
+    if (hasInvalidTarget) {
+      toast.error('Each target must be between 0 and 100%');
+      return;
+    }
     setSaving(true);
     try {
-      const targets = plan.rows.map((row) => ({ symbol: row.symbol, targetPercent: draft[row.symbol] ?? 0 }));
+      const targets = plan.rows.map((row) => ({ symbol: row.symbol, targetPercent: Number(draft[row.symbol] ?? 0) }));
       await apis.rebalance.saveTargets(targets);
       const fresh = await apis.rebalance.getPlan();
       applyPlan(fresh);
@@ -144,7 +149,12 @@ export default function Rebalance() {
             <Button variant="outlined" size="small" onClick={handleUseCurrent}>
               Use current
             </Button>
-            <Button variant="contained" size="small" onClick={handleSave} disabled={!isDirty || saving}>
+            <Button
+              variant="contained"
+              size="small"
+              onClick={handleSave}
+              disabled={!isDirty || saving || hasInvalidTarget}
+            >
               Save targets
             </Button>
           </>
@@ -170,9 +180,7 @@ export default function Rebalance() {
               totalOff ? (
                 <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center' }}>
                   <Iconify icon="tabler:alert-triangle" width={12} sx={{ color: 'warning.main' }} aria-hidden />
-                  <Typography sx={{ fontSize: '0.6875rem', color: 'warning.main' }}>
-                    Does not sum to 100%
-                  </Typography>
+                  <Typography sx={{ fontSize: '0.6875rem', color: 'warning.main' }}>Does not sum to 100%</Typography>
                 </Stack>
               ) : undefined
             }
@@ -250,6 +258,7 @@ export default function Rebalance() {
                         type="number"
                         value={draft[row.symbol] ?? ''}
                         onChange={(e) => setTarget(row.symbol, e.target.value)}
+                        error={!isValidTarget(draft[row.symbol])}
                         slotProps={{
                           input: { endAdornment: <InputAdornment position="end">%</InputAdornment> },
                           htmlInput: { min: 0, max: 100, step: 0.5, style: { textAlign: 'right' } },

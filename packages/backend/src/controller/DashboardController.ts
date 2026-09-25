@@ -98,7 +98,7 @@ export const createDashboard = async (): Promise<Array<HoldingAggregate>> => {
     result.push({
       ...holding,
       currentPrice: +livePrice.price.toFixed(2),
-      priceDate: moment(livePrice.priceDate).format('lll'),
+      priceDate: moment(livePrice.priceDate).toISOString(),
       percentChange: +livePrice.percentChange.toFixed(2),
       dayHigh: livePrice.dayHigh,
       dayLow: livePrice.dayLow,

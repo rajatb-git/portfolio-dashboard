@@ -61,7 +61,7 @@ export default function UpcomingEarningsCard({ earnings, isLoading }: Props) {
                   cursor: 'pointer',
                   '&:hover': { bgcolor: 'action.hover' },
                 }}
-                onClick={() => navigate(`/research?searchText=${e.symbol}`)}
+                onClick={() => navigate(`/research?searchText=${encodeURIComponent(e.symbol)}`)}
               >
                 <Typography sx={{ fontSize: '0.85rem', fontWeight: 700, minWidth: 56 }}>{e.symbol}</Typography>
                 <Box sx={{ flexGrow: 1, minWidth: 0 }}>

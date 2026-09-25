@@ -3,11 +3,12 @@ import * as React from 'react';
 import Box from '@mui/material/Box';
 import LinearProgress from '@mui/material/LinearProgress';
 import useMediaQuery from '@mui/material/useMediaQuery';
-import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom';
+import { BrowserRouter, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { ToastContainer } from 'react-toastify';
 
 import AuthGate from '@/components/AuthGate';
 import ErrorBoundary from '@/components/ErrorBoundary';
+import StateView from '@/components/ui/StateView';
 import PWAInstallPrompt from '@/components/PWAInstallPrompt';
 import Sidebar from '@/components/Nav/Sidebar';
 import TopBar from '@/components/Nav/TopBar';
@@ -50,6 +51,20 @@ function RouteFallback() {
     <Box sx={{ position: 'fixed', top: TOPBAR_HEIGHT, left: 0, right: 0, zIndex: 1200 }} aria-busy="true">
       <LinearProgress sx={{ height: 2 }} />
     </Box>
+  );
+}
+
+function NotFound() {
+  const navigate = useNavigate();
+  return (
+    <StateView
+      state="empty"
+      icon="tabler:map-question"
+      title="Page not found"
+      message="This page doesn't exist. It may have moved, or the link is mistyped."
+      minHeight={320}
+      action={{ label: 'Go to Dashboard', onClick: () => navigate('/dashboard') }}
+    />
   );
 }
 
@@ -120,6 +135,7 @@ function AppShell() {
               <Route path="/changelog" element={<Changelog />} />
               <Route path="/research" element={<Research />} />
               <Route path="/settings" element={<Settings />} />
+              <Route path="*" element={<NotFound />} />
             </Routes>
           </React.Suspense>
         </ErrorBoundary>

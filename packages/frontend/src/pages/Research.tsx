@@ -85,9 +85,9 @@ function Research() {
   // `force` is the refresh button: it tells the backend to bypass its caches and wait
   // for live data, instead of replaying the cached payload already on screen.
   const getResearchData = (searchTicker: string, force = false): Promise<unknown> => {
-    if (!searchTicker || searchTicker.length < 2) return Promise.resolve();
+    if (!searchTicker) return Promise.resolve();
 
-    LocalStorageArray.add('searchText', searchText.toUpperCase());
+    LocalStorageArray.add('searchText', searchTicker);
 
     setIsCompanyProfileLoading(true);
     setCompanyProfileError(null);
@@ -105,42 +105,42 @@ function Research() {
     const newsFetch = apis.live
       .getLiveNews(searchTicker, force)
       .then((res) => setNews(res))
-      .catch((err) => toast.error(err.message))
+      .catch((err) => toast.error(err.message, { toastId: err.message }))
       .finally(() => setIsNewsLoading(false));
 
     setIsPriceLoading(true);
     const priceFetch = apis.live
       .getLivePrice(searchTicker, force)
       .then((res) => setPrice(res))
-      .catch((err) => toast.error(err.message))
+      .catch((err) => toast.error(err.message, { toastId: err.message }))
       .finally(() => setIsPriceLoading(false));
 
     setIsRecommendationLoading(true);
     const recommendationFetch = apis.live
       .getLiveRecommendation(searchTicker, force)
       .then((res) => setRecommendation(res))
-      .catch((err) => toast.error(err.message))
+      .catch((err) => toast.error(err.message, { toastId: err.message }))
       .finally(() => setIsRecommendationLoading(false));
 
     setIsMetricsLoading(true);
     const metricsFetch = apis.live
       .getStockMetrics(searchTicker, force)
       .then((res) => setMetrics(res))
-      .catch((err) => toast.error(err.message))
+      .catch((err) => toast.error(err.message, { toastId: err.message }))
       .finally(() => setIsMetricsLoading(false));
 
     setIsPeersLoading(true);
     const peersFetch = apis.live
       .getStockPeers(searchTicker, force)
       .then((res) => setPeers(res))
-      .catch((err) => toast.error(err.message))
+      .catch((err) => toast.error(err.message, { toastId: err.message }))
       .finally(() => setIsPeersLoading(false));
 
     setIsEarningsLoading(true);
     const earningsFetch = apis.live
       .getEarnings(searchTicker, force)
       .then((res) => setEarnings(res))
-      .catch((err) => toast.error(err.message))
+      .catch((err) => toast.error(err.message, { toastId: err.message }))
       .finally(() => setIsEarningsLoading(false));
 
     setIsEarningsHistoryLoading(true);
@@ -231,7 +231,7 @@ function Research() {
   // whatever it loaded with until the user navigates away. Each poll renders the
   // latest cached price and nudges the backend's revalidation forward.
   React.useEffect(() => {
-    if (!searchText || searchText.length < 2) return;
+    if (!searchText) return;
 
     const POLL_MS = 60_000;
     const tick = () => {
@@ -264,7 +264,7 @@ function Research() {
     apis.live
       .getAiConfig()
       .then((config) => setAgentEnabled(config.enabled))
-      .catch(() => {});
+      .catch((err) => toast.error(err.message || 'Failed to load AI config'));
     apis.accounts
       .getAll()
       .then((res) => setAccounts(res ?? []))
@@ -273,6 +273,20 @@ function Research() {
 
   const isPositive = (price?.percentChange ?? 0) >= 0;
   const notFound = !!searchText && !isCompanyProfileLoading && !companyProfileError && !companyProfile?.name;
+
+  if (!searchText) {
+    return (
+      <Card>
+        <StateView
+          state="empty"
+          icon="tabler:search"
+          title="Search for a ticker"
+          message="Press ⌘K (Ctrl+K) to look up a stock or crypto symbol."
+          minHeight={280}
+        />
+      </Card>
+    );
+  }
 
   if (notFound) {
     return (

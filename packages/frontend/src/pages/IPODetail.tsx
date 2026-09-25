@@ -65,6 +65,7 @@ function IPODetail() {
 
   const [ipo, setIpo] = React.useState<IIPO | undefined>(stateIpo);
   const [isIpoLoading, setIsIpoLoading] = React.useState(!stateIpo);
+  const [ipoError, setIpoError] = React.useState<string | null>(null);
 
   const [companyProfile, setCompanyProfile] = React.useState<CompanyProfile | undefined>();
   const [news, setNews] = React.useState<Array<IMarketNews>>([]);
@@ -112,10 +113,14 @@ function IPODetail() {
       return;
     }
     setIsIpoLoading(true);
+    setIpoError(null);
     apis.live
       .getIPOs()
       .then((list) => setIpo(list.find((x) => x.id === id)))
-      .catch((err) => toast.error(err.message || 'Failed to load IPO'))
+      .catch((err) => {
+        setIpoError(err.message || 'Failed to load IPO');
+        toast.error(err.message || 'Failed to load IPO');
+      })
       .finally(() => setIsIpoLoading(false));
   }, [id, stateIpo]);
 
@@ -129,7 +134,7 @@ function IPODetail() {
     apis.live
       .getAiConfig()
       .then((config) => setAgentEnabled(config.enabled))
-      .catch(() => {});
+      .catch((err) => toast.error(err.message || 'Failed to load AI config'));
   }, []);
 
   const handleToggleWatch = async () => {
@@ -153,13 +158,18 @@ function IPODetail() {
     }
   }, [agentEnabled, ipo, fetchInsights]);
 
-  const statusColor = ipo ? STATUS_COLOR[ipo.status] ?? 'default' : 'default';
+  const statusColor = ipo ? (STATUS_COLOR[ipo.status] ?? 'default') : 'default';
   const hasListedData = !!companyProfile || news.length > 0 || isNewsLoading;
 
   return (
     <Stack spacing={2}>
       <Stack direction="row" sx={{ alignItems: 'center', gap: 1 }}>
-        <IconButton size="small" onClick={() => navigate('/ipo-calendar')} sx={{ color: 'primary.main' }}>
+        <IconButton
+          size="small"
+          aria-label="Back to IPO calendar"
+          onClick={() => navigate('/ipo-calendar')}
+          sx={{ color: 'primary.main' }}
+        >
           <Iconify icon="mdi:arrow-left" width={20} />
         </IconButton>
         <Typography variant="h6" sx={{ flexGrow: 1 }}>
@@ -173,6 +183,13 @@ function IPODetail() {
           <Stack spacing={1}>
             <Skeleton width={260} height={28} />
             <Skeleton width={180} height={22} />
+          </Stack>
+        ) : ipoError ? (
+          <Stack sx={{ alignItems: 'center', py: 4 }} spacing={1}>
+            <Iconify icon="tabler:alert-triangle-filled" width={32} sx={{ color: 'error.main' }} />
+            <Typography sx={{ color: 'text.secondary', fontSize: '0.9rem' }}>
+              Couldn't load IPO details: {ipoError}
+            </Typography>
           </Stack>
         ) : !ipo ? (
           <Stack sx={{ alignItems: 'center', py: 4 }} spacing={1}>

@@ -24,6 +24,14 @@ Fixes from a hands-on QA pass of the running app.
 - **Holdings with no live price vanished from the Dashboard** — they are now listed at cost basis with a notice naming the unpriced symbols.
 - **Price Alert Threshold could not be typed into** — it clamped on every keystroke. It now validates on Save, and it and Backend URL have Reset and Unsaved-changes indicators.
 - Missing accounts/transactions return 404 instead of an empty 200; schema errors name the field rather than the value; the Research price chart and the Database import buttons toast on failure instead of throwing.
+- **Rebalance lost or mixed up targets** — lowercase holdings never matched their (upper-cased) saved target, and saving wiped targets for any holding missing from that day's plan. Symbols are now matched case-insensitively and saves merge with existing targets. Targets must be 0–100% (field error, Save disabled, 400 server-side), duplicates are rejected, a cleared field no longer snaps to 0, and rows no longer re-sort while typing.
+- **Research with a one-letter ticker (e.g. `F`) or no ticker showed skeletons forever** — one-letter tickers load, and `/research` shows a "Search for a ticker" empty state. Identical error toasts from one upstream failure collapse into one.
+- **Ticker links weren't URL-encoded** — `AT&T` researched "AT". Every link into Research now encodes the symbol; the ⌘K palette no longer lists Research twice.
+- `/live/history` rejects unknown `range` values instead of returning `[]`.
+- **Unknown routes rendered a blank page** — they now show a "Page not found" view.
+- **Dashboard** — Cost Basis sorts; the Recommendation header is no longer a dead sort button; a type/account filter with no matches says so instead of "No holdings yet"; `priceDate` is sent as ISO.
+- **IPO pages and the AI Portfolio Review showed "not found" / "not configured" when the request actually failed** — they now show an error state and toast.
+- **Logs** — the API client uses `catchCustomError`, Clear asks for confirmation and confirms success, the viewer no longer overflows on mobile, and lines are coloured by their actual timestamp / level / label / message parts.
 
 ---
 

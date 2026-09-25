@@ -32,9 +32,11 @@ export const getRebalancePlan = async (): Promise<RebalancePlan> => {
   // Aggregate market value and price per symbol across accounts.
   const bySymbol = new Map<string, { name: string; type: 'stock' | 'crypto'; value: number; price: number }>();
   for (const h of holdings) {
-    const existing = bySymbol.get(h.symbol);
+    // Targets are stored upper-cased, so a lowercase holding must key the same way to match its target.
+    const symbol = h.symbol.toUpperCase();
+    const existing = bySymbol.get(symbol);
     if (existing) existing.value += h.marketValue;
-    else bySymbol.set(h.symbol, { name: h.name, type: h.type, value: h.marketValue, price: h.currentPrice });
+    else bySymbol.set(symbol, { name: h.name, type: h.type, value: h.marketValue, price: h.currentPrice });
   }
 
   const totalValue = [...bySymbol.values()].reduce((s, v) => s + v.value, 0);

@@ -9,16 +9,16 @@ type Props = { data: string };
 
 const LogLine = ({ splitLine }: any) => {
   const theme = useTheme();
-  const [timestamp, level, label, message, rest] = splitLine;
+  const [, timestamp, level, label, message, rest] = splitLine;
 
   const timestampStyling = { color: theme.palette.success.main };
   const labelStyling = { color: theme.palette.text.disabled };
   const messageStyling = { color: theme.palette.warning.main };
 
   let levelStyling: any;
-  if (level === 'error') {
+  if (level.toLowerCase() === 'error') {
     levelStyling = { color: theme.palette.error.main };
-  } else if (level === 'warn') {
+  } else if (level.toLowerCase() === 'warn') {
     levelStyling = { color: theme.palette.warning.main };
   } else {
     levelStyling = { color: theme.palette.info.main };
@@ -39,9 +39,9 @@ const LogLine = ({ splitLine }: any) => {
         {'  '}
       </Box>
       <Box component="span" sx={messageStyling}>
-        {message}
+        ({message})
       </Box>
-      {rest}
+      : {rest}
     </>
   );
 };
@@ -50,13 +50,13 @@ export const LogsViewer = ({ data }: Props) => {
   const theme = useTheme();
   const isLight = theme.palette.mode === 'light';
 
-  // eslint-disable-next-line no-useless-escape
-  const regex = /(\d{4}-[01]\d-[0-3]\dT[0-2]\d:[0-5]\d:[0-5]\d[+-][0-2]\d:[0-5]\d)|(info)|\[(.*?)\]|\((.*?)\)|:(.*)/gi;
+  // Mirrors the backend winston format: `<timestamp> <LEVEL> [<label>] (<message>): <meta>`.
+  const regex = /^(\S+)\s+(\w+)\s+\[(.*?)\]\s+\((.*)\):\s?(.*)$/;
 
   return (
     <Box
       sx={{
-        mx: '-22px',
+        mx: { xs: -1.5, sm: -2, lg: -3 },
         borderTop: `1px solid ${theme.palette.divider}`,
         borderBottom: `1px solid ${theme.palette.divider}`,
         overflow: 'auto',
@@ -78,7 +78,8 @@ export const LogsViewer = ({ data }: Props) => {
             <div key={i}>
               <Box
                 sx={{
-                  width: '25px',
+                  minWidth: '25px',
+                  pl: 1,
                   display: 'inline-block',
                   textAlign: 'right',
                   color: theme.palette.text.disabled,

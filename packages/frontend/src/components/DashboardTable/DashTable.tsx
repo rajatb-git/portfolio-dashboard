@@ -123,7 +123,7 @@ export default function Table<T>({
   }, []);
 
   const goToResearchPage = (symbol: string) => {
-    navigate(`/research?searchText=${symbol}`);
+    navigate(`/research?searchText=${encodeURIComponent(symbol)}`);
   };
 
   const handleChangePage = (_event: React.MouseEvent<HTMLButtonElement, MouseEvent> | null, newPage: number) => {
@@ -494,7 +494,7 @@ export default function Table<T>({
 
         {/* Outside the scroll container: a colSpan cell inherits the table's
             900px min-width and would slide off-screen on a phone. */}
-        {notFound && !isLoading && <TableNoData query={filterName} />}
+        {notFound && !isLoading && <TableNoData query={filterName} isFiltered={rows.length > 0} />}
 
         <Divider />
 
