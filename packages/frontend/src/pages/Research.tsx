@@ -4,12 +4,13 @@ import apis from '@/api';
 import { IMarketNews } from '@/models/MarketNews';
 import { IPriceStore } from '@/models/PriceStoreModel';
 import { IRecommendation } from '@/models/RecommendationModel';
-import { useSearchParams } from 'react-router-dom';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { CompanyProfile } from '@/models/CompanyProfileModel';
 import { fnCurrency } from '@/utils/formatNumber';
 import {
   Avatar,
   Box,
+  Button,
   Card,
   Chip,
   Divider,
@@ -48,6 +49,13 @@ import LocalStorageArray from '@/utils/localStorageArray';
 
 function Research() {
   const [searchParams] = useSearchParams();
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  // Set by pages that link into research (e.g. Today's movers) so the user can
+  // return to where they came from instead of hunting through the sidebar.
+  const origin = location.state as { from?: string; fromLabel?: string } | null;
+  const backTo = origin?.from;
 
   const [_isPriceLoading, setIsPriceLoading] = React.useState(true);
   const [isRecommendationLoading, setIsRecommendationLoading] = React.useState(true);
@@ -87,7 +95,7 @@ function Research() {
   const getResearchData = (searchTicker: string, force = false): Promise<unknown> => {
     if (!searchTicker) return Promise.resolve();
 
-    LocalStorageArray.add('searchText', searchTicker);
+    LocalStorageArray.add('searchText', searchTicker.toUpperCase());
 
     setIsCompanyProfileLoading(true);
     setCompanyProfileError(null);
@@ -274,6 +282,19 @@ function Research() {
   const isPositive = (price?.percentChange ?? 0) >= 0;
   const notFound = !!searchText && !isCompanyProfileLoading && !companyProfileError && !companyProfile?.name;
 
+  const backLink = backTo ? (
+    <Box>
+      <Button
+        size="small"
+        startIcon={<Iconify icon="mdi:arrow-left" width={18} />}
+        onClick={() => navigate(backTo)}
+        sx={{ color: 'primary.main' }}
+      >
+        Back to {origin?.fromLabel || 'previous page'}
+      </Button>
+    </Box>
+  ) : null;
+
   if (!searchText) {
     return (
       <Card>
@@ -290,34 +311,42 @@ function Research() {
 
   if (notFound) {
     return (
-      <Card>
-        <StateView
-          state="empty"
-          icon="tabler:zoom-question"
-          title={`No data found for "${searchText}"`}
-          message="Double-check the ticker symbol and try again. Press ⌘K to search for another."
-          minHeight={280}
-        />
-      </Card>
+      <Stack spacing={2}>
+        {backLink}
+        <Card>
+          <StateView
+            state="empty"
+            icon="tabler:zoom-question"
+            title={`No data found for "${searchText}"`}
+            message="Double-check the ticker symbol and try again. Press ⌘K to search for another."
+            minHeight={280}
+          />
+        </Card>
+      </Stack>
     );
   }
 
   if (searchText && !isCompanyProfileLoading && companyProfileError) {
     return (
-      <Card>
-        <StateView
-          state="error"
-          title="Failed to load research data"
-          message={companyProfileError}
-          minHeight={280}
-          action={{ label: 'Retry', onClick: () => getResearchData(searchText) }}
-        />
-      </Card>
+      <Stack spacing={2}>
+        {backLink}
+        <Card>
+          <StateView
+            state="error"
+            title="Failed to load research data"
+            message={companyProfileError}
+            minHeight={280}
+            action={{ label: 'Retry', onClick: () => getResearchData(searchText) }}
+          />
+        </Card>
+      </Stack>
     );
   }
 
   return (
     <Stack spacing={2}>
+      {backLink}
+
       {/* ── Hero header card ── */}
       <Card sx={{ p: 2.5 }}>
         <Stack direction="row" spacing={2.5} sx={{ alignItems: 'flex-start' }}>

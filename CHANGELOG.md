@@ -6,7 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
-## [4.8.1] – 2026-09-25
+## [4.9.1] – 2026-09-25
 
 Fixes from a hands-on QA pass of the running app.
 
@@ -32,6 +32,16 @@ Fixes from a hands-on QA pass of the running app.
 - **Dashboard** — Cost Basis sorts; the Recommendation header is no longer a dead sort button; a type/account filter with no matches says so instead of "No holdings yet"; `priceDate` is sent as ISO.
 - **IPO pages and the AI Portfolio Review showed "not found" / "not configured" when the request actually failed** — they now show an error state and toast.
 - **Logs** — the API client uses `catchCustomError`, Clear asks for confirmation and confirms success, the viewer no longer overflows on mobile, and lines are coloured by their actual timestamp / level / label / message parts.
+
+---
+
+## [4.9.0] – 2026-09-17
+
+### Added
+- **Movers link through to research** — Every row in Today's gainer and loser lists — your own holdings and the market-wide top ten — is now clickable and opens that ticker's research page. The research page shows a "Back to Today" control when it was reached that way, so looking up one mover is a two-click round trip instead of a detour through the sidebar.
+
+### Fixed
+- The recent-searches list recorded the previously viewed ticker rather than the one being opened, because the entry was written from state the same render had not yet updated.
 
 ---
 
