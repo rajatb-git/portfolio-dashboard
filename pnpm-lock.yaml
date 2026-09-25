@@ -22,7 +22,7 @@ importers:
   docs:
     devDependencies:
       esbuild:
-        specifier: ^0.28.2
+        specifier: '>=0.24.3'
         version: 0.28.2
       vitepress:
         specifier: ^1.6.4
