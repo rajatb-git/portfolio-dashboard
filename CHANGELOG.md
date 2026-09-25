@@ -6,6 +6,35 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
+## [4.9.1] – 2026-09-25
+
+Fixes from a hands-on QA pass of the running app.
+
+### Fixed
+- **Cash dialog wiped the form every 30s** — the dashboard poll handed the dialog a fresh accounts array, which re-ran its reset. It now resets only when it opens.
+- **Trades accepted negative, zero and junk quantities** — a sell of `-5` added shares, and `10abc` was saved as 10. The Trade dialog and both `/holdings/buy` and `/holdings/sell` now require a positive quantity and a non-negative price.
+- **Fractional positions could not be fully sold** — float residue (0.1 + 0.2) left dust holdings and blocked selling the last of a crypto position. Quantities are rounded to 8 decimals.
+- **A failed buy still saved the holding** — the account is now checked before anything is written.
+- **Lowercase tickers became separate positions** — trade symbols are trimmed and uppercased.
+- **Accounts with `/`, `#` or `?` in the name could not be deleted or funded** — account ids are now slugged server-side and account URLs are encoded. Duplicate names return a 400 with a readable message, and names are capped at 50 characters.
+- **Database grid** — the toolbar with Add record and refresh never rendered, and new rows would have been upserted under the id `temp`. New rows now go through the create routes, edits show a success toast, and Action/Type are dropdowns. Holding and transaction create calls sent `{ data: … }` instead of the record.
+- **`POST /transactions`, `/holdings` and `/accounts` without an id** saved a record with id `null`, which crashed the transactions grid. They now return 400, and transaction `action`/`type` are validated.
+- **Clearing an alert's note did not stick** — alert edits now replace the record, so removed fields and stale trailing-stop state go away.
+- **New accounts took up to 30s to appear on the Dashboard** — the Dashboard revalidates when you return to it.
+- **Holdings with no live price vanished from the Dashboard** — they are now listed at cost basis with a notice naming the unpriced symbols.
+- **Price Alert Threshold could not be typed into** — it clamped on every keystroke. It now validates on Save, and it and Backend URL have Reset and Unsaved-changes indicators.
+- Missing accounts/transactions return 404 instead of an empty 200; schema errors name the field rather than the value; the Research price chart and the Database import buttons toast on failure instead of throwing.
+- **Rebalance lost or mixed up targets** — lowercase holdings never matched their (upper-cased) saved target, and saving wiped targets for any holding missing from that day's plan. Symbols are now matched case-insensitively and saves merge with existing targets. Targets must be 0–100% (field error, Save disabled, 400 server-side), duplicates are rejected, a cleared field no longer snaps to 0, and rows no longer re-sort while typing.
+- **Research with a one-letter ticker (e.g. `F`) or no ticker showed skeletons forever** — one-letter tickers load, and `/research` shows a "Search for a ticker" empty state. Identical error toasts from one upstream failure collapse into one.
+- **Ticker links weren't URL-encoded** — `AT&T` researched "AT". Every link into Research now encodes the symbol; the ⌘K palette no longer lists Research twice.
+- `/live/history` rejects unknown `range` values instead of returning `[]`.
+- **Unknown routes rendered a blank page** — they now show a "Page not found" view.
+- **Dashboard** — Cost Basis sorts; the Recommendation header is no longer a dead sort button; a type/account filter with no matches says so instead of "No holdings yet"; `priceDate` is sent as ISO.
+- **IPO pages and the AI Portfolio Review showed "not found" / "not configured" when the request actually failed** — they now show an error state and toast.
+- **Logs** — the API client uses `catchCustomError`, Clear asks for confirmation and confirms success, the viewer no longer overflows on mobile, and lines are coloured by their actual timestamp / level / label / message parts.
+
+---
+
 ## [4.9.0] – 2026-09-17
 
 ### Added

@@ -78,7 +78,7 @@ export default function DashTableToolbar({ filterName, onFilterName, refreshData
         Trade
       </Button>
 
-      <IconButton onClick={refreshData} size="small" sx={{ color: 'text.secondary' }}>
+      <IconButton aria-label="Refresh holdings" onClick={refreshData} size="small" sx={{ color: 'text.secondary' }}>
         <Iconify icon="mingcute:refresh-3-fill" width={18} />
       </IconButton>
 

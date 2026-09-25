@@ -1,9 +1,20 @@
+import { AccountModel } from '../models/AccountModel';
 import { HoldingsModel, IHoldings, IHoldingsModel } from '../models/HoldingsModel';
-import { calulateAveragePriceBuy } from '../utils';
+import { calulateAveragePriceBuy, normalizeTrade } from '../utils';
 import { adjustCash } from './CashController';
 import { logBuyTransaction } from './TransactionController';
 
-export const buy = async (newHolding: IHoldings, date?: string): Promise<IHoldingsModel> => {
+export const buy = async (trade: IHoldings, date?: string): Promise<IHoldingsModel> => {
+  const newHolding = normalizeTrade(trade);
+  if (!newHolding.name?.trim()) {
+    newHolding.name = newHolding.symbol;
+  }
+
+  const accountsModel = await AccountModel().initialize();
+  if (!accountsModel.findById(newHolding.accountId)) {
+    throw new Error(`Account ${newHolding.accountId} not found`);
+  }
+
   const holdingsModel = await HoldingsModel().initialize();
   const existingHolding = holdingsModel.find({ symbol: newHolding.symbol, accountId: newHolding.accountId })[0];
 

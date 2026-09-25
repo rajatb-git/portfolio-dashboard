@@ -63,7 +63,7 @@ export default function ResearchPeersCard({
                   key={peer}
                   label={peer}
                   size="small"
-                  onClick={() => navigate(`/research?searchText=${peer}`)}
+                  onClick={() => navigate(`/research?searchText=${encodeURIComponent(peer)}`)}
                   sx={{
                     fontSize: '0.72rem',
                     fontWeight: 600,

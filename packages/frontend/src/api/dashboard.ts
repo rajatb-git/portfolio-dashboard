@@ -26,6 +26,7 @@ export type HoldingAggregate = {
   sell: number;
   strongBuy: number;
   strongSell: number;
+  priceUnavailable?: boolean;
 };
 
 export type PortfolioSnapshot = {

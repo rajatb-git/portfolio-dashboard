@@ -73,9 +73,20 @@ export const createDashboard = async (): Promise<Array<HoldingAggregate>> => {
     const livePrice = quoteMap.get(holding.symbol);
     const recommendation = recMap.get(holding.symbol);
 
-    // Only a missing price drops a holding from the total. A failed recommendation
-    // (optional analyst metadata) must never remove the holding from the value.
+    // A holding with no live quote stays in the list at cost basis, flagged so the UI can say so,
+    // rather than silently vanishing from the totals.
     if (!livePrice || livePrice instanceof Error) {
+      const originalValue = holding.qty * holding.averagePrice;
+      result.push({
+        ...holding,
+        priceUnavailable: true,
+        currentPrice: +holding.averagePrice.toFixed(2),
+        percentChange: 0,
+        originalValue,
+        totalGL: 0,
+        totalGLPercent: 0,
+        marketValue: +originalValue.toFixed(2),
+      } as any);
       continue;
     }
 
@@ -87,13 +98,13 @@ export const createDashboard = async (): Promise<Array<HoldingAggregate>> => {
     result.push({
       ...holding,
       currentPrice: +livePrice.price.toFixed(2),
-      priceDate: moment(livePrice.priceDate).format('lll'),
+      priceDate: moment(livePrice.priceDate).toISOString(),
       percentChange: +livePrice.percentChange.toFixed(2),
       dayHigh: livePrice.dayHigh,
       dayLow: livePrice.dayLow,
       originalValue,
       totalGL,
-      totalGLPercent: +((totalGL / originalValue) * 100).toFixed(2),
+      totalGLPercent: originalValue ? +((totalGL / originalValue) * 100).toFixed(2) : 0,
       marketValue: +(holding.qty * livePrice.price).toFixed(2),
       ...(validRec && {
         buy: validRec.buy,

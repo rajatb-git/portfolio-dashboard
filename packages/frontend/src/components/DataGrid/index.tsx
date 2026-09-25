@@ -39,10 +39,10 @@ function EditToolbar(props: GridSlotProps['toolbar']) {
   const { setRows, setRowModesModel, refreshData, readOnly } = props;
 
   const handleAddRow = () => {
-    setRows((oldRows) => [...oldRows, { id: 'temp', name: '', isNew: true }]);
+    setRows((oldRows) => [...oldRows, { id: 'temp', isNew: true }]);
     setRowModesModel((oldModel) => ({
       ...oldModel,
-      temp: { mode: GridRowModes.Edit, fieldToFocus: 'name' },
+      temp: { mode: GridRowModes.Edit, fieldToFocus: 'accountId' },
     }));
   };
 
@@ -67,6 +67,7 @@ export default function GenericGrid(props: {
   initialRows: Array<any>;
   deleteRecord: any;
   insertOrUpdateRecord: any;
+  createRecord: any;
   loadData: any;
   activeCollection: string;
   dynamicColumns: Array<GridColDef>;
@@ -128,13 +129,18 @@ export default function GenericGrid(props: {
     setRowModesModel(temp);
 
     try {
-      if (Object.hasOwn(newRow, 'isNew')) {
-        delete newRow.isNew;
+      if (newRow.isNew) {
+        const { id: _tempId, isNew: _isNew, ...record } = newRow;
         deleteTempRecord();
+        await props.createRecord(record);
+        toast.success('Record created');
+      } else {
+        const { isNew: _isNew, ...record } = newRow;
+        await props.insertOrUpdateRecord(record);
+        toast.success('Record updated');
       }
-      await props.insertOrUpdateRecord(newRow);
     } catch (err: any) {
-      toast.error(`${err.name} \n ${err.message}`);
+      toast.error(err.message || 'Failed to save record');
     }
 
     await props.refreshPage();
@@ -220,6 +226,7 @@ export default function GenericGrid(props: {
           onRowModesModelChange={handleRowModesModelChange}
           onRowEditStop={handleRowEditStop}
           processRowUpdate={processRowUpdate}
+          showToolbar
           slots={{
             toolbar: EditToolbar,
           }}

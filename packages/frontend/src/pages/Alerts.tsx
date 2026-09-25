@@ -193,7 +193,7 @@ export default function Alerts() {
                         direction="row"
                         spacing={0.75}
                         sx={{ alignItems: 'center', cursor: 'pointer' }}
-                        onClick={() => navigate(`/research?searchText=${a.symbol}`)}
+                        onClick={() => navigate(`/research?searchText=${encodeURIComponent(a.symbol)}`)}
                       >
                         <Typography sx={{ fontSize: '0.82rem', fontWeight: 700 }}>{a.symbol}</Typography>
                         <Chip

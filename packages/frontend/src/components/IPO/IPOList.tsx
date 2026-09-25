@@ -29,7 +29,12 @@ import { Iconify } from '@/components/Iconify';
 import { IIPO } from '@/models/IPOModel';
 import { fnShortenCurrency, fnShortenNumber } from '@/utils/formatNumber';
 
-type Props = { ipos: Array<IIPO>; isLoading: boolean; onToggleWatch?: (ipo: IIPO, watched: boolean) => void };
+type Props = {
+  ipos: Array<IIPO>;
+  isLoading: boolean;
+  error?: string | null;
+  onToggleWatch?: (ipo: IIPO, watched: boolean) => void;
+};
 
 type HeadCell = { id: keyof IIPO; label: string; align: 'left' | 'right' };
 
@@ -53,7 +58,7 @@ const STATUS_COLOR: Record<IIPO['status'], ChipProps['color']> = {
 
 const capitalize = (s: string) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s);
 
-export default function IPOList({ ipos, isLoading, onToggleWatch }: Props) {
+export default function IPOList({ ipos, isLoading, error, onToggleWatch }: Props) {
   const navigate = useNavigate();
   const [order, setOrder] = React.useState<'asc' | 'desc'>('desc');
   const [orderBy, setOrderBy] = React.useState<keyof IIPO>('date');
@@ -83,9 +88,7 @@ export default function IPOList({ ipos, isLoading, onToggleWatch }: Props) {
   const sorted = React.useMemo(() => {
     const query = search.trim().toLowerCase();
     const filtered = query
-      ? ipos.filter(
-          (x) => x.name?.toLowerCase().includes(query) || x.symbol?.toLowerCase().includes(query)
-        )
+      ? ipos.filter((x) => x.name?.toLowerCase().includes(query) || x.symbol?.toLowerCase().includes(query))
       : ipos;
     return [...filtered].sort(getComparator(order, orderBy));
   }, [ipos, order, orderBy, search]);
@@ -129,7 +132,9 @@ export default function IPOList({ ipos, isLoading, onToggleWatch }: Props) {
                   >
                     {cell.label}
                     {orderBy === cell.id ? (
-                      <Box sx={{ ...visuallyHidden }}>{order === 'desc' ? 'sorted descending' : 'sorted ascending'}</Box>
+                      <Box sx={{ ...visuallyHidden }}>
+                        {order === 'desc' ? 'sorted descending' : 'sorted ascending'}
+                      </Box>
                     ) : null}
                   </TableSortLabel>
                 </TableCell>
@@ -140,7 +145,11 @@ export default function IPOList({ ipos, isLoading, onToggleWatch }: Props) {
             {sorted.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={HEAD_CELLS.length + 1} sx={{ textAlign: 'center', color: 'text.disabled', py: 4 }}>
-                  {search.trim() ? 'No IPOs match your search.' : 'No IPOs found.'}
+                  {error
+                    ? `Couldn't load IPOs: ${error}`
+                    : search.trim()
+                      ? 'No IPOs match your search.'
+                      : 'No IPOs found.'}
                 </TableCell>
               </TableRow>
             ) : (

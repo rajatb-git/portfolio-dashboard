@@ -1,6 +1,15 @@
 import * as React from 'react';
 
-import { Button, MenuItem, Select } from '@mui/material';
+import {
+  Button,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogContentText,
+  DialogTitle,
+  MenuItem,
+  Select,
+} from '@mui/material';
 import { toast } from 'react-toastify';
 
 import apis from '@/api';
@@ -15,6 +24,7 @@ export default function Logs() {
   const [isLoading, setIsLoading] = React.useState(true);
   const [file, setFile] = React.useState<File>('combined');
   const [logData, setLogData] = React.useState('');
+  const [confirmClear, setConfirmClear] = React.useState(false);
 
   const loadData = () => {
     setIsLoading(true);
@@ -33,12 +43,14 @@ export default function Logs() {
   };
 
   const deleteLogs = () => {
+    setConfirmClear(false);
     setIsLoading(true);
 
     apis.logs
       .deleteLogs(file)
       .then((response) => {
         setLogData(response);
+        toast.success(`Cleared ${file}.log`);
       })
       .catch((err) => {
         toast.error(err.message);
@@ -75,7 +87,7 @@ export default function Logs() {
               variant="outlined"
               color="error"
               startIcon={<Iconify icon="tabler:trash" width={16} aria-hidden />}
-              onClick={deleteLogs}
+              onClick={() => setConfirmClear(true)}
               disabled={isLoading}
               size="small"
             >
@@ -94,6 +106,19 @@ export default function Logs() {
       />
 
       <LogsViewer data={logData} />
+
+      <Dialog open={confirmClear} onClose={() => setConfirmClear(false)}>
+        <DialogTitle>Clear {file}.log?</DialogTitle>
+        <DialogContent>
+          <DialogContentText>This permanently deletes every entry in the log file.</DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setConfirmClear(false)}>Cancel</Button>
+          <Button color="error" variant="contained" onClick={deleteLogs}>
+            Clear
+          </Button>
+        </DialogActions>
+      </Dialog>
     </>
   );
 }

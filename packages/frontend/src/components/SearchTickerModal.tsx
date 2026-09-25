@@ -35,7 +35,6 @@ type PageCommand = { label: string; href: string; icon: string };
 
 const PAGE_COMMANDS: PageCommand[] = [
   ...NAV_CONFIG.map((n) => ({ label: n.text, href: n.href, icon: n.icon })),
-  { label: 'Research', href: '/research', icon: 'mdi:magnify-scan' },
   { label: NAV_SETTINGS_CONFIG.text, href: NAV_SETTINGS_CONFIG.href, icon: NAV_SETTINGS_CONFIG.icon },
 ];
 
@@ -77,7 +76,7 @@ export function SearchTickerModal({ refreshSearchHistory, searchHistory, isOpen,
     if (!text) return;
     onClose();
     LocalStorageArray.add('searchText', text.toUpperCase());
-    navigate(`/research?searchText=${text.toUpperCase()}`);
+    navigate(`/research?searchText=${encodeURIComponent(text.toUpperCase())}`);
   };
 
   const goToPage = (href: string) => {

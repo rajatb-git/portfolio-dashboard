@@ -37,6 +37,7 @@ const TextField = styled(MuiTextField)(({ theme }: { theme: Theme }) => ({
 }));
 
 const today = () => moment().format('YYYY-MM-DD');
+const NUMERIC = /^\d*\.?\d+$/;
 
 type Props = {
   open: boolean;
@@ -79,12 +80,13 @@ export default function BuySellDialog({ open, handleDialogClose, initialValues, 
     }),
     qty: useField({
       initValue: initialValues?.qty?.toString() || '',
-      validate: () => '',
+      validate: (value: string) =>
+        (!NUMERIC.test(value.trim()) || Number(value) <= 0) && 'Quantity must be a positive number',
       required: true,
     }),
     averagePrice: useField({
       initValue: initialValues?.averagePrice?.toString() || '',
-      validate: () => '',
+      validate: (value: string) => !NUMERIC.test(value.trim()) && 'Price must be zero or a positive number',
       required: true,
     }),
     date: useField({
@@ -108,7 +110,7 @@ export default function BuySellDialog({ open, handleDialogClose, initialValues, 
           await apis.holdings.sellHolding({
             accountId: formFields.accountId.value,
             name: formFields.name.value,
-            symbol: formFields.symbol.value,
+            symbol: formFields.symbol.value.trim().toUpperCase(),
             qty: parseFloat(formFields.qty.value),
             averagePrice: parseFloat(formFields.averagePrice.value),
             type: formFields.type.value as IHoldings['type'],
@@ -127,7 +129,7 @@ export default function BuySellDialog({ open, handleDialogClose, initialValues, 
           await apis.holdings.buyHolding({
             accountId: formFields.accountId.value,
             name: formFields.name.value,
-            symbol: formFields.symbol.value,
+            symbol: formFields.symbol.value.trim().toUpperCase(),
             qty: parseFloat(formFields.qty.value),
             averagePrice: parseFloat(formFields.averagePrice.value),
             type: formFields.type.value as IHoldings['type'],
@@ -157,7 +159,7 @@ export default function BuySellDialog({ open, handleDialogClose, initialValues, 
   };
 
   return (
-    <Dialog open={open} maxWidth="md" fullScreen={fullScreen} onClose={handleDialogClose}>
+    <Dialog open={open} maxWidth="md" fullScreen={fullScreen} onClose={closeAndResetDialog}>
       <Typography sx={{ m: 2 }} variant="h6">
         Buy / Sell
       </Typography>

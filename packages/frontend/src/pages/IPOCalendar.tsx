@@ -19,10 +19,12 @@ type ViewMode = 'list' | 'calendar';
 export default function IPOCalendar() {
   const [isLoading, setIsLoading] = React.useState(true);
   const [ipos, setIpos] = React.useState<Array<IIPO>>([]);
+  const [loadError, setLoadError] = React.useState<string | null>(null);
   const [view, setView] = React.useState<ViewMode>('list');
 
   const loadData = () => {
     setIsLoading(true);
+    setLoadError(null);
 
     apis.live
       .getIPOs()
@@ -30,7 +32,8 @@ export default function IPOCalendar() {
         setIpos(response);
       })
       .catch((err) => {
-        toast.error(err.message);
+        setLoadError(err.message || 'Failed to load IPOs');
+        toast.error(err.message || 'Failed to load IPOs');
       })
       .finally(() => {
         setIsLoading(false);
@@ -107,6 +110,7 @@ export default function IPOCalendar() {
           <IPOList
             ipos={ipos}
             isLoading={isLoading}
+            error={loadError}
             onToggleWatch={(ipo, watched) =>
               setIpos((prev) => prev.map((x) => (x.symbol === ipo.symbol ? { ...x, watched } : x)))
             }

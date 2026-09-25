@@ -22,6 +22,8 @@ import { logger } from '../utils/winston';
 // serve-from-cache path and waits for live data.
 const isForcedRefresh = (ctx: Context): boolean => ctx.query.refresh === '1' || ctx.query.refresh === 'true';
 
+const HISTORY_RANGES = ['1d', '5d', '1M', '3M', '6M', '1y', '2y', '3y'];
+
 export const LiveRouter = () => {
   const router = new Router();
   const research = new ResearchController();
@@ -74,8 +76,8 @@ export const LiveRouter = () => {
 
   router.get('/live/history/:sym', async (ctx) => {
     try {
-      if (!ctx.query.range) {
-        ctx.body = errorBody('Missing parameter', 'range is required');
+      if (!HISTORY_RANGES.includes(String(ctx.query.range))) {
+        ctx.body = errorBody('Invalid parameter', `range must be one of ${HISTORY_RANGES.join(', ')}`);
         ctx.status = 400;
         return;
       }

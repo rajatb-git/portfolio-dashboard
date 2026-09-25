@@ -74,7 +74,7 @@ export default function ReportedEarningsCard({ results, isLoading }: Props) {
                   cursor: 'pointer',
                   '&:hover': { bgcolor: 'action.hover' },
                 }}
-                onClick={() => navigate(`/research?searchText=${r.symbol}`)}
+                onClick={() => navigate(`/research?searchText=${encodeURIComponent(r.symbol)}`)}
               >
                 <Typography sx={{ fontSize: '0.85rem', fontWeight: 700, minWidth: 56 }}>{r.symbol}</Typography>
                 <Box sx={{ flexGrow: 1, minWidth: 0 }}>

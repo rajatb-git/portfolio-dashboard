@@ -2,11 +2,23 @@ import StateView from '@/components/ui/StateView';
 
 type TableNoDataProps = {
   query: string;
+  isFiltered?: boolean;
 };
 
 /** Rendered as a sibling of the table, not a row inside it — a colSpan cell
  *  inherits the table's min-width and scrolls off-screen on a phone. */
-export default function TableNoData({ query }: TableNoDataProps) {
+export default function TableNoData({ query, isFiltered = false }: TableNoDataProps) {
+  if (!query && isFiltered) {
+    return (
+      <StateView
+        state="empty"
+        icon="tabler:filter-off"
+        title="No holdings match these filters"
+        message="Switch the type or account filter back to All to see every holding."
+        minHeight={220}
+      />
+    );
+  }
   return query ? (
     <StateView
       state="empty"
