@@ -86,7 +86,7 @@ export default function ResearchNewsCard({ news, isNewsLoading }: Props) {
                     </Typography>
                     <Box sx={{ flexGrow: 1 }} />
                     <Typography variant="caption" sx={{ color: 'text.disabled' }}>
-                      {moment(x.datetime).format('MMM D, h:mm a')}
+                      {moment.unix(x.datetime).format('MMM D, h:mm a')}
                     </Typography>
                   </Box>
                 </ListItemButton>
