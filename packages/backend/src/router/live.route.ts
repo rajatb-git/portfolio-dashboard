@@ -30,11 +30,11 @@ export const LiveRouter = () => {
 
   router.get('/live/quote/:sym', async (ctx) => {
     try {
-      const result = await new LiveQuoteController().getLiveQuote(
-        ctx.params.sym.toUpperCase(),
-        false,
-        isForcedRefresh(ctx)
-      );
+      const controller = new LiveQuoteController();
+      const sym = ctx.params.sym.toUpperCase();
+      const result = isForcedRefresh(ctx)
+        ? await controller.getLiveQuote(sym, false, true)
+        : await controller.getDisplayQuote(sym);
 
       ctx.body = result;
       ctx.status = 200;

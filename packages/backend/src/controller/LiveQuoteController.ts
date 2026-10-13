@@ -12,8 +12,16 @@ const priceStoreReady = priceStoreModel.initialize();
 // controller per request, so this is kept at module scope to be shared across them.
 const inFlightRefreshes = new Map<string, Promise<IPriceStoreModel>>();
 
+// Past this age the cached quote is no longer "a poll behind" — nothing has asked
+// for the symbol in a while — so a page opening it waits for a live one.
+const DISPLAY_MAX_AGE_MINUTES = 10;
+
 export class LiveQuoteController {
-  getLiveQuote = async (symbol: string, isCrypto = false, force = false): Promise<IPriceStoreModel> => {
+  getLiveQuote = async (rawSymbol: string, isCrypto = false, force = false): Promise<IPriceStoreModel> => {
+    // One cache entry per ticker regardless of how a holding's symbol was typed, so
+    // the alert workers and the Research page never price "oklo" and "OKLO" apart.
+    const symbol = rawSymbol.toUpperCase();
+
     // Ensure the on-disk price cache has finished loading before querying it.
     await priceStoreReady;
 
@@ -46,6 +54,16 @@ export class LiveQuoteController {
     }
 
     return dbFetch;
+  };
+
+  // For a single symbol a user is looking at: the cached quote when it is recent,
+  // otherwise a fresh one. Falls back to the cached quote if the refresh fails, so a
+  // flaky upstream degrades to an older price rather than an error.
+  getDisplayQuote = async (rawSymbol: string, isCrypto = false): Promise<IPriceStoreModel> => {
+    const quote = await this.getLiveQuote(rawSymbol, isCrypto);
+    const tradingNow = isCrypto || getMarketSession() !== 'closed';
+    if (!tradingNow || moment().diff(moment(quote.updatedAt), 'minutes') < DISPLAY_MAX_AGE_MINUTES) return quote;
+    return this.refreshQuote(rawSymbol.toUpperCase(), isCrypto, 'interactive').catch(() => quote);
   };
 
   private refreshQuote = (

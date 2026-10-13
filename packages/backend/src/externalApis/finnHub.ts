@@ -25,6 +25,11 @@ const SUSTAINED_LIMIT = Number(process.env.FINN_HUB_RATE_LIMIT) || 60;
 const SUSTAINED_WINDOW_MS = 60_000;
 const MAX_RETRIES = 4;
 const MAX_BACKOFF_MS = 8000;
+// Without a timeout a stalled connection never settles, and LiveQuoteController's
+// in-flight dedupe then hands that same dead promise to every later refresh of the
+// symbol — the quote freezes for hours and a forced refresh hangs until the
+// browser gives up.
+const REQUEST_TIMEOUT_MS = 10_000;
 
 // Not every caller is equally urgent. A page the user is staring at (Research,
 // a quote refresh) must not queue behind a background fan-out that wants one
@@ -117,6 +122,7 @@ const finnhubGet = async <T = any>(path: string, priority: RequestPriority = 'in
     await acquireSlot(priority);
     try {
       return await axios.get<T>(process.env.FINN_HUB_API + path, {
+        timeout: REQUEST_TIMEOUT_MS,
         headers: { 'X-Finnhub-Token': process.env.FINN_HUB_API_KEY, 'Content-Type': 'application/json' },
       });
     } catch (error) {
