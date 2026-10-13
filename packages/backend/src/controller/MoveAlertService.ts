@@ -14,11 +14,13 @@ import {
 const LABEL = 'MoveAlertService';
 
 const LEVEL_KEY_PREFIX = 'move_alert_level_';
-const OBSERVATIONS_KEY = 'move_alert_observations';
+// Renamed when samples switched from day-% to price, so tracks persisted in the
+// old shape are never compared against the new one.
+const OBSERVATIONS_KEY = 'move_alert_price_observations';
 
-// One rolling price-change track per symbol: the ET date it belongs to, the
-// [epochMs, dayPercentChange] samples inside the spike window, and the epochMs of
-// the last spike fired (its cooldown).
+// One rolling price track per symbol: the ET date it belongs to, the
+// [epochMs, livePrice] samples inside the spike window, and the epochMs of the
+// last spike fired (its cooldown).
 type SymbolTrack = { d: string; pts: [number, number][]; cd: number };
 type Observations = Record<string, SymbolTrack>;
 
@@ -94,9 +96,11 @@ class MoveAlertService {
     void dispatchMoveAlert(payload);
   }
 
-  // Compare each holding against the oldest sample still inside the spike window.
-  // Samples are scoped to an ET date so the overnight reset of the day-change
-  // baseline can't read as a spike at the next open.
+  // Compare each holding's live price against the oldest sample still inside the
+  // spike window. Sampling the day-% instead produced phantom spikes in pre-market,
+  // where it flips between yesterday's regular move and the pre-market print's move
+  // depending on which source answered. A holding with no live print for the
+  // current session is not sampled at all rather than sampled at a stale close.
   private checkSpikes(holdings: HoldingMovement[], observations: Observations): MoveAlertPayload[] {
     const { spikePercent, spikeWindowMinutes } = this.config;
     if (spikePercent <= 0 || spikeWindowMinutes <= 0) return [];
@@ -107,32 +111,36 @@ class MoveAlertService {
     const fired: MoveAlertPayload[] = [];
 
     for (const holding of holdings) {
+      const { live } = holding;
+      if (!live || live.price <= 0) continue;
+
       const existing = observations[holding.symbol];
       const track: SymbolTrack =
         existing && existing.d === dateStr ? existing : { d: dateStr, pts: [], cd: 0 };
 
       track.pts = track.pts.filter(([t]) => now - t <= windowMs);
-      track.pts.push([now, holding.percentChange]);
+      track.pts.push([now, live.price]);
       observations[holding.symbol] = track;
 
       if (track.pts.length < 2) continue;
       if (now - track.cd < windowMs) continue;
 
-      const [, oldestPercent] = track.pts[0];
-      const windowChange = +(holding.percentChange - oldestPercent).toFixed(2);
+      const [, oldestPrice] = track.pts[0];
+      const windowChange = +(((live.price - oldestPrice) / oldestPrice) * 100).toFixed(2);
       if (Math.abs(windowChange) < spikePercent) continue;
 
       track.cd = now;
       // Restart the window from here so the same run isn't re-reported as the
       // buffer refills.
-      track.pts = [[now, holding.percentChange]];
+      track.pts = [[now, live.price]];
       fired.push(
         buildSpikeAlertPayload(
           holding.symbol,
           windowChange,
           spikeWindowMinutes,
-          holding.percentChange,
-          spikePercent
+          live.percentChange,
+          spikePercent,
+          live.extendedSession
         )
       );
     }

@@ -19,6 +19,15 @@ export const MARKET_INDICES = [
 ];
 
 export type IndexMovement = { symbol: string; label: string; price: number; percentChange: number; change: number };
+// The price the symbol is actually trading at right now, and its move against the
+// last regular close. `extendedSession` is set when that price is a pre-/post-market
+// print. Null when there is no trustworthy live print for the current session.
+export type LivePrice = {
+  price: number;
+  percentChange: number;
+  extendedSession: 'pre-market' | 'post-market' | null;
+};
+
 export type HoldingMovement = {
   symbol: string;
   name: string;
@@ -26,7 +35,26 @@ export type HoldingMovement = {
   percentChange: number;
   dayGL: number;
   marketValue: number;
+  live: LivePrice | null;
 };
+
+// A stock quote's `percentChange` changes meaning with the session — during
+// pre-market it is the previous day's regular move, during the session it is
+// today's — and the price store can briefly hold a quote fetched in the previous
+// session. Anything comparing prices across time needs the price that trades now,
+// and nothing at all when the stored quote doesn't belong to the current session.
+function livePriceFor(q: IPriceStoreModel, type: 'stock' | 'crypto', session: MarketSession): LivePrice | null {
+  if (type === 'crypto') return { price: q.price, percentChange: q.percentChange, extendedSession: null };
+  if (session === 'regular') {
+    return q.extendedSession ? null : { price: q.price, percentChange: q.percentChange, extendedSession: null };
+  }
+  if (session === 'pre-market' || session === 'post-market') {
+    return q.extendedSession === session && q.extendedPrice > 0
+      ? { price: q.extendedPrice, percentChange: q.extendedPercentChange, extendedSession: session }
+      : null;
+  }
+  return null;
+}
 export type AccountMovement = { account: string; dayGL: number; dayGLPercent: number; marketValue: number };
 
 // One symbol's pre-market / after-hours move, measured from the regular-session
@@ -188,6 +216,7 @@ export async function buildDailyRecap(): Promise<DailyRecap> {
   const accountName = new Map(accounts.map((a) => [a.id, a.name]));
   const byAccount = new Map<string, { account: string; dayGL: number; prevValue: number; marketValue: number }>();
   const bySymbol = new Map<string, HoldingMovement>();
+  const session = getMarketSession();
 
   for (const h of holdings) {
     const q = quoteMap.get(h.symbol);
@@ -211,13 +240,13 @@ export async function buildDailyRecap(): Promise<DailyRecap> {
       percentChange: +q.percentChange.toFixed(2),
       dayGL: 0,
       marketValue: 0,
+      live: livePriceFor(q, h.type, session),
     };
     se.dayGL += h.qty * q.change;
     se.marketValue += h.qty * q.price;
     bySymbol.set(h.symbol, se);
   }
 
-  const session = getMarketSession();
   const extended = buildExtendedRecap(session, quoteMap, holdings, bySymbol);
 
   const accountsOut = [...byAccount.values()]
@@ -236,6 +265,7 @@ export async function buildDailyRecap(): Promise<DailyRecap> {
     percentChange: e.percentChange,
     dayGL: +e.dayGL.toFixed(2),
     marketValue: +e.marketValue.toFixed(2),
+    live: e.live,
   }));
 
   const totalDayGL = +holdingsOut.reduce((s, h) => s + h.dayGL, 0).toFixed(2);

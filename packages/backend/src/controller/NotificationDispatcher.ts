@@ -129,9 +129,13 @@ export function buildSpikeAlertPayload(
   windowChange: number,
   windowMinutes: number,
   dayPercentChange: number,
-  spikePercent: number
+  spikePercent: number,
+  extendedSession: 'pre-market' | 'post-market' | null = null
 ): MoveAlertPayload {
   const direction = windowChange >= 0 ? 'jumped' : 'dropped';
+  const context = extendedSession
+    ? `${signedPct(dayPercentChange)} ${extendedSession} vs last close`
+    : `${signedPct(dayPercentChange)} on the day`;
   return {
     kind: 'spike',
     scope: 'holding',
@@ -141,7 +145,7 @@ export function buildSpikeAlertPayload(
     windowMinutes,
     windowChange,
     title: `${symbol} ${direction} ${signedPct(windowChange)} in ${windowMinutes}m`,
-    message: `${symbol} ${direction} ${signedPct(windowChange)} over the last ${windowMinutes} minutes (${signedPct(dayPercentChange)} on the day).`,
+    message: `${symbol} ${direction} ${signedPct(windowChange)} over the last ${windowMinutes} minutes (${context}).`,
   };
 }
 
