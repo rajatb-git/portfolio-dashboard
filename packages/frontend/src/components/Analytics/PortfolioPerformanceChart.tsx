@@ -177,7 +177,7 @@ export default function PortfolioPerformanceChart({ snapshots }: Props) {
     tooltip: {
       theme: mode,
       x: { format: 'MMM dd, yyyy HH:mm' },
-      y: { formatter: (val) => fnCurrency(val) },
+      y: { formatter: (val) => fnCurrency(val ?? undefined) },
     },
     legend: { show: true, position: 'top', horizontalAlign: 'left', labels: { colors: axisColor } },
     grid: {
