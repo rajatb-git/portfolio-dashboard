@@ -36,6 +36,9 @@ distinct trigger kinds:
   free-fall does not go quiet after the first message.
 - **Spike** — a sharp move inside a short rolling window (default 2% in
   30 minutes), which catches an intraday shock a day-change threshold would miss.
+  It is measured on the price actually trading — the pre-/post-market print
+  outside the regular session — and a stock with no live print for the current
+  session is skipped rather than compared against a stale close.
 
 Options: **watch crypto 24/7** (on by default — crypto does not keep market
 hours) and **cover after hours**.

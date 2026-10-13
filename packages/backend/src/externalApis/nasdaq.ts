@@ -20,6 +20,11 @@ const nasdaqAgent = new https.Agent({
 
 const nasdaqHeaders = { 'Content-Type': 'application/json', 'User-Agent': 'PostmanRuntime/7.26.8' };
 
+// NASDAQ's edge sometimes holds a connection open instead of refusing it. A quote
+// request that never settles pins LiveQuoteController's in-flight refresh for that
+// symbol, so every later refresh waits on it forever.
+const QUOTE_TIMEOUT_MS = 10_000;
+
 const parseDollarAmount = (raw: string | undefined | null): number => {
   if (!raw || raw === 'N/A') return 0;
   const num = parseFloat(raw.replace(/[$,+\s]/g, ''));
@@ -93,7 +98,7 @@ const blockPrice = (block: PriceBlock | undefined): number => parseDollarAmount(
 
 const fetchNasdaqQuote = async (symbol: string, assetclass: 'etf' | 'stocks'): Promise<NasdaqQuote | null> => {
   const base = `https://api.nasdaq.com/api/quote/${symbol}`;
-  const opts = { httpsAgent: nasdaqAgent, headers: nasdaqHeaders };
+  const opts = { httpsAgent: nasdaqAgent, headers: nasdaqHeaders, timeout: QUOTE_TIMEOUT_MS };
 
   let info: any;
   try {
