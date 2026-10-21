@@ -16,24 +16,6 @@ export const normalizeTradeDate = (value: unknown): string | undefined => {
   return parsed.toISOString();
 };
 
-export const calulateAveragePriceBuy = (
-  qty1: number,
-  avgPrice1: number,
-  qty2: number,
-  avgPrice2: number
-): { qty: number; averagePrice: number } => {
-  let totalQty = 0,
-    averagePrice = 0;
-
-  totalQty = roundQty(qty1 + qty2);
-
-  const totalInvestment = qty1 * avgPrice1 + qty2 * avgPrice2;
-
-  averagePrice = totalInvestment / totalQty;
-
-  return { qty: totalQty, averagePrice };
-};
-
 // Crypto trades are fractional; rounding stops float residue (0.1 + 0.2) from leaving dust positions behind.
 export const roundQty = (qty: number): number => +qty.toFixed(8);
 

@@ -91,9 +91,12 @@ export type HarvestCandidate = {
   averagePrice: number;
   currentPrice: number;
   marketValue: number;
+  harvestQty: number;
   unrealizedLoss: number;
   lossPercent: number;
-  term: 'short' | 'long';
+  shortTermLoss: number;
+  longTermLoss: number;
+  term: 'short' | 'long' | 'mixed';
   washSaleRisk: boolean;
   washSaleClearDate: string | null;
 };
@@ -104,6 +107,35 @@ export type TaxLossHarvesting = {
   harvestableNow: number;
   shortTermLoss: number;
   longTermLoss: number;
+};
+
+export type TaxConfig = {
+  shortTermRate: number;
+  longTermRate: number;
+  stateRate: number;
+};
+
+export type UpcomingLongTerm = {
+  symbol: string;
+  name: string;
+  accountId: string;
+  lotId: string;
+  acquired: string;
+  qty: number;
+  longTermDate: string;
+  daysAway: number;
+  gain: number;
+  taxSaving: number;
+};
+
+export type TaxExposure = {
+  config: TaxConfig;
+  year: number;
+  realizedYtd: { shortTerm: number; longTerm: number; total: number; estimatedTax: number };
+  unrealized: { shortTerm: number; longTerm: number; total: number; estimatedTaxIfSold: number };
+  upcomingLongTerm: UpcomingLongTerm[];
+  estimatedLots: number;
+  unpricedPositions: number;
 };
 
 export type MonthlyReturn = {
@@ -228,6 +260,24 @@ export default class AnalyticsAPI {
   getTaxLossHarvesting = async (): Promise<TaxLossHarvesting> =>
     axios
       .get(DB_HOST + '/analytics/tax-loss-harvesting')
+      .then((response) => response.data)
+      .catch(catchCustomError);
+
+  getTaxExposure = async (): Promise<TaxExposure> =>
+    axios
+      .get(DB_HOST + '/analytics/tax-exposure')
+      .then((response) => response.data)
+      .catch(catchCustomError);
+
+  getTaxConfig = async (): Promise<TaxConfig> =>
+    axios
+      .get(DB_HOST + '/analytics/tax/config')
+      .then((response) => response.data)
+      .catch(catchCustomError);
+
+  saveTaxConfig = async (config: TaxConfig): Promise<TaxConfig> =>
+    axios
+      .post(DB_HOST + '/analytics/tax/config', config)
       .then((response) => response.data)
       .catch(catchCustomError);
 

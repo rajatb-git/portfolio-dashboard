@@ -1,13 +1,62 @@
+import { randomUUID } from 'node:crypto';
 import moment from 'moment';
 import Router from '@koa/router';
 import { buy } from '../controller/BuyController';
 import { adjustCash } from '../controller/CashController';
 import { sell } from '../controller/SellController';
 import { LiveQuoteController } from '../controller/LiveQuoteController';
-import { HoldingsModel } from '../models/HoldingsModel';
-import { normalizeTradeDate } from '../utils';
+import {
+  enrichLots,
+  LOT_METHODS,
+  LotMethod,
+  resolveLots,
+  summarizeLots,
+  totalsFromLots,
+} from '../controller/TaxLotController';
+import { simulateTrade } from '../controller/TradeSimulatorController';
+import { HoldingsModel, ITaxLot } from '../models/HoldingsModel';
+import { getTaxConfig } from '../models/TaxConfigModel';
+import { TransactionModel } from '../models/TransactionModel';
+import { normalizeTradeDate, roundQty } from '../utils';
 import { errorBody } from '../utils/error';
 import { logger } from '../utils/winston';
+
+// Lot method and lot ids ride along on sell/simulate bodies; reject anything
+// that isn't one of the known methods rather than silently falling back to FIFO.
+const parseLotOptions = (body: any): { lotMethod?: LotMethod; lotIds?: string[] } => {
+  const { lotMethod, lotIds } = body ?? {};
+  if (lotMethod !== undefined && !LOT_METHODS.includes(lotMethod)) {
+    throw new Error(`lotMethod must be one of ${LOT_METHODS.join(', ')}`);
+  }
+  if (lotIds !== undefined && (!Array.isArray(lotIds) || lotIds.some((id) => typeof id !== 'string'))) {
+    throw new Error('lotIds must be an array of lot ids');
+  }
+  if (lotMethod === 'specific' && !lotIds?.length) {
+    throw new Error('Choose at least one lot to sell');
+  }
+  return { lotMethod, lotIds };
+};
+
+const parseLots = (raw: unknown): ITaxLot[] => {
+  if (!Array.isArray(raw) || raw.length === 0) throw new Error('A position needs at least one lot');
+  return raw.map((lot: any, i: number) => {
+    const row = `Lot ${i + 1}`;
+    const qty = Number(lot?.qty);
+    if (!Number.isFinite(qty) || qty <= 0) throw new Error(`${row}: quantity must be a positive number`);
+    const price = Number(lot?.price);
+    if (!Number.isFinite(price) || price < 0) throw new Error(`${row}: cost must be zero or a positive number`);
+    const date = moment(String(lot?.date ?? ''), ['YYYY-MM-DD', moment.ISO_8601], true);
+    if (!date.isValid()) throw new Error(`${row}: enter a valid purchase date`);
+    if (date.isAfter(moment(), 'day')) throw new Error(`${row}: purchase date cannot be in the future`);
+    return {
+      id: typeof lot.id === 'string' && lot.id ? lot.id : randomUUID(),
+      qty: roundQty(qty),
+      price,
+      date: date.toISOString(),
+      ...(lot.estimated === true && { estimated: true }),
+    };
+  });
+};
 
 export const HoldingsRouter = () => {
   const router = new Router();
@@ -58,14 +107,18 @@ export const HoldingsRouter = () => {
 
       const isCrypto = matching[0].type === 'crypto';
       const quoteController = new LiveQuoteController();
-      const livePrice = await quoteController.getLiveQuote(upperSymbol, isCrypto).catch((err: any) => {
-        logger.log({
-          level: 'error',
-          label: `holdings by symbol "${upperSymbol}"`,
-          message: `Live quote fetch failed: ${err?.message ?? err}`,
-        });
-        return null;
-      });
+      const [livePrice, txModel, taxConfig] = await Promise.all([
+        quoteController.getLiveQuote(upperSymbol, isCrypto).catch((err: any) => {
+          logger.log({
+            level: 'error',
+            label: `holdings by symbol "${upperSymbol}"`,
+            message: `Live quote fetch failed: ${err?.message ?? err}`,
+          });
+          return null;
+        }),
+        TransactionModel().initialize(),
+        getTaxConfig(),
+      ]);
 
       if (!livePrice) {
         ctx.body = [];
@@ -73,9 +126,11 @@ export const HoldingsRouter = () => {
         return;
       }
 
+      const transactions = txModel.getAllRecords();
       ctx.body = matching.map((holding) => {
         const originalValue = holding.qty * holding.averagePrice;
         const totalGL = +(holding.qty * livePrice.price - originalValue).toFixed(2);
+        const lots = enrichLots(resolveLots(holding, transactions), livePrice.price);
         return {
           ...holding,
           currentPrice: +livePrice.price.toFixed(2),
@@ -87,6 +142,8 @@ export const HoldingsRouter = () => {
           totalGL,
           totalGLPercent: +((totalGL / originalValue) * 100).toFixed(2),
           marketValue: +(holding.qty * livePrice.price).toFixed(2),
+          lots,
+          tax: summarizeLots(lots, taxConfig),
         };
       });
       ctx.status = 200;
@@ -117,6 +174,47 @@ export const HoldingsRouter = () => {
       logger.log({ level: 'error', message: error.message, label: `Get holding "${ctx.params.id}"` });
       ctx.status = 500;
       ctx.body = errorBody('Failed to get holding', error.message);
+    }
+  });
+
+  // Replace a position's tax lots. Quantity and average cost follow the lots;
+  // no trade is recorded and cash is untouched.
+  router.put('/holdings/:id/lots', async (ctx) => {
+    try {
+      const holdingsModel = await HoldingsModel().initialize();
+      const holding = holdingsModel.findById(ctx.params.id);
+      if (!holding) {
+        ctx.status = 404;
+        ctx.body = errorBody('Holding not found', `Holding ${ctx.params.id} not found`);
+        return;
+      }
+      let lots: ITaxLot[];
+      try {
+        lots = parseLots((ctx.request.body as any)?.lots);
+      } catch (error: any) {
+        ctx.status = 400;
+        ctx.body = errorBody('Invalid tax lots', error.message);
+        return;
+      }
+      ctx.body = await holdingsModel.updateById(holding.id, { lots, ...totalsFromLots(lots) });
+      ctx.status = 200;
+    } catch (error: any) {
+      logger.log({ level: 'error', message: error.message, label: `Update lots "${ctx.params.id}"` });
+      ctx.status = 500;
+      ctx.body = errorBody('Failed to update tax lots', error.message);
+    }
+  });
+
+  // Mock buy/sell: computes tax and position impact without writing anything.
+  router.post('/holdings/simulate', async (ctx) => {
+    try {
+      const body: any = ctx.request.body ?? {};
+      ctx.body = await simulateTrade({ ...body, ...parseLotOptions(body) });
+      ctx.status = 200;
+    } catch (error: any) {
+      logger.log({ level: 'error', message: error.message, label: 'Simulate trade' });
+      ctx.status = 400;
+      ctx.body = errorBody('Failed to simulate trade', error.message);
     }
   });
 
@@ -200,8 +298,8 @@ export const HoldingsRouter = () => {
 
     if (body) {
       try {
-        const { date, ...holding } = body;
-        ctx.body = await sell(holding, normalizeTradeDate(date));
+        const { date, lotMethod: _lotMethod, lotIds: _lotIds, ...holding } = body;
+        ctx.body = await sell(holding, normalizeTradeDate(date), parseLotOptions(body));
         ctx.status = 200;
         return;
       } catch (error: any) {
@@ -235,19 +333,59 @@ export const HoldingsRouter = () => {
           .toUpperCase() === 'CASH';
       const parseMoney = (value: any) => parseFloat(String(value ?? '').replace(/\$/g, ''));
 
-      const arrHolding = incomingArr
+      // Each row is one lot; rows for the same account and symbol (and any
+      // position already held there) merge into a single holding.
+      type ImportGroup = { accountId: string; symbol: string; name: string; type: any; lots: ITaxLot[] };
+      const groups = new Map<string, ImportGroup>();
+      incomingArr
         .filter((x) => !isCashRow(x))
-        .map((x) => ({
-          symbol: x['symbol'],
-          name: x['name'],
-          qty: parseFloat(x['qty']),
-          averagePrice: parseMoney(x['averagePrice']),
-          accountId: x.accountId,
-          type: x.type,
-        }));
+        .forEach((x, i) => {
+          const symbol = String(x['symbol'] ?? '')
+            .trim()
+            .toUpperCase();
+          const qty = parseFloat(x['qty']);
+          if (!symbol) throw new Error(`Row ${i + 1}: symbol is required`);
+          if (!Number.isFinite(qty) || qty <= 0) throw new Error(`Row ${i + 1}: qty must be a positive number`);
+          const price = parseMoney(x['averagePrice']);
+          const purchased = x['purchaseDate'] ? moment(String(x['purchaseDate'])) : null;
+          const hasDate = !!purchased?.isValid() && !purchased.isAfter(moment(), 'day');
 
-      if (arrHolding.length > 0) {
-        await holdingsModel.insertMany(arrHolding);
+          const key = `${x.accountId}|${symbol}`;
+          const group: ImportGroup = groups.get(key) ?? {
+            accountId: x.accountId,
+            symbol,
+            name: x['name'] || symbol,
+            type: x.type,
+            lots: [],
+          };
+          group.lots.push({
+            id: randomUUID(),
+            qty: roundQty(qty),
+            price: Number.isFinite(price) ? price : 0,
+            date: hasDate ? (purchased as moment.Moment).toISOString() : moment().toISOString(),
+            ...(!hasDate && { estimated: true }),
+          });
+          groups.set(key, group);
+        });
+
+      if (groups.size > 0) {
+        const transactions = (await TransactionModel().initialize()).getAllRecords();
+        for (const group of groups.values()) {
+          const existing = holdingsModel.find({ symbol: group.symbol, accountId: group.accountId })[0];
+          if (existing) {
+            const lots = [...resolveLots(existing, transactions), ...group.lots];
+            await holdingsModel.updateById(existing.id, { lots, ...totalsFromLots(lots) });
+          } else {
+            await holdingsModel.insertOne({
+              accountId: group.accountId,
+              name: group.name,
+              symbol: group.symbol,
+              type: group.type,
+              lots: group.lots,
+              ...totalsFromLots(group.lots),
+            });
+          }
+        }
       }
 
       // A row with symbol CASH sets an opening cash balance rather than a position.

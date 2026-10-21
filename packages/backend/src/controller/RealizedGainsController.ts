@@ -1,5 +1,6 @@
 import moment from 'moment';
-import { ITransactionModel, TransactionModel } from '../models/TransactionModel';
+import { TransactionModel } from '../models/TransactionModel';
+import { lotTerm, tradeDate } from './TaxLotController';
 
 export type RealizedLot = {
   symbol: string;
@@ -32,10 +33,7 @@ export type RealizedGainsResult = {
 
 const round = (n: number) => +n.toFixed(2);
 
-// Effective trade date: imported rows carry `date`; otherwise fall back to the insert timestamp.
-const effectiveDate = (t: ITransactionModel): string => t.date || t.createdAt || moment().toISOString();
-
-type OpenLot = { qty: number; price: number; date: string };
+type OpenLot = { id: string; qty: number; price: number; date: string };
 
 export const calculateRealizedGains = async (): Promise<RealizedGainsResult> => {
   const model = await TransactionModel().initialize();
@@ -45,9 +43,10 @@ export const calculateRealizedGains = async (): Promise<RealizedGainsResult> => 
     .filter(
       (t) => (t.type === 'stock' || t.type === 'crypto') && (t.action === 'buy' || t.action === 'sell') && t.symbol
     )
-    .sort((a, b) => effectiveDate(a).localeCompare(effectiveDate(b)));
+    .sort((a, b) => tradeDate(a).localeCompare(tradeDate(b)));
 
-  // FIFO open-lot queue per symbol.
+  // Open-lot queue per symbol. Sells that recorded which lots they relieved are
+  // matched to those lots; older sells fall back to FIFO.
   const lotsBySymbol: Record<string, OpenLot[]> = {};
   const realized: RealizedLot[] = [];
   let unmatchedSells = 0;
@@ -58,35 +57,54 @@ export const calculateRealizedGains = async (): Promise<RealizedGainsResult> => 
     const price = t.price ?? 0;
 
     if (t.action === 'buy') {
-      queue.push({ qty: t.qty, price, date: effectiveDate(t) });
+      queue.push({ id: t.lotId || t.id, qty: t.qty, price, date: tradeDate(t) });
       continue;
     }
 
-    // sell — match against the front of the queue
-    let remaining = t.qty;
-    const soldDate = effectiveDate(t);
-    while (remaining > 0 && queue.length > 0) {
-      const lot = queue[0];
-      const matched = Math.min(remaining, lot.qty);
-      const proceeds = matched * price;
-      const costBasis = matched * lot.price;
-      const days = moment(soldDate).diff(moment(lot.date), 'days');
+    const soldDate = tradeDate(t);
+    const record = (qty: number, costPrice: number, acquiredDate: string) => {
+      const proceeds = qty * price;
+      const costBasis = qty * costPrice;
       realized.push({
         symbol,
-        acquiredDate: lot.date,
+        acquiredDate,
         soldDate,
-        qty: round(matched),
+        qty: round(qty),
         proceeds: round(proceeds),
         costBasis: round(costBasis),
         gain: round(proceeds - costBasis),
-        term: days > 365 ? 'long' : 'short',
+        term: lotTerm(acquiredDate, soldDate),
         year: moment(soldDate).year(),
       });
-      lot.qty -= matched;
-      remaining -= matched;
-      if (lot.qty <= 1e-9) queue.shift();
+    };
+    const takeFromQueue = (qty: number, lotId?: string): Array<{ qty: number; lot: OpenLot }> => {
+      const taken: Array<{ qty: number; lot: OpenLot }> = [];
+      let remaining = qty;
+      const named = lotId ? queue.find((l) => l.id === lotId) : undefined;
+      for (const lot of named ? [named, ...queue.filter((l) => l !== named)] : [...queue]) {
+        if (remaining <= 1e-9) break;
+        const matched = Math.min(remaining, lot.qty);
+        if (matched <= 0) continue;
+        taken.push({ qty: matched, lot });
+        lot.qty -= matched;
+        remaining -= matched;
+      }
+      queue.splice(0, queue.length, ...queue.filter((l) => l.qty > 1e-9));
+      return taken;
+    };
+
+    if (t.lots?.length) {
+      for (const relieved of t.lots) {
+        takeFromQueue(relieved.qty, relieved.lotId);
+        record(relieved.qty, relieved.price, relieved.date);
+      }
+      continue;
     }
-    if (remaining > 1e-9) unmatchedSells += 1;
+
+    const taken = takeFromQueue(t.qty);
+    for (const { qty, lot } of taken) record(qty, lot.price, lot.date);
+    const matchedQty = taken.reduce((sum, x) => sum + x.qty, 0);
+    if (t.qty - matchedQty > 1e-9) unmatchedSells += 1;
   }
 
   const byYearMap: Record<number, YearSummary> = {};

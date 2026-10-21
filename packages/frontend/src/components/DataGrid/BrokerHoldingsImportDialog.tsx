@@ -30,7 +30,12 @@ import { fnBytes } from '@/utils/formatNumber';
 type Preset = 'generic' | 'robinhood' | 'schwab' | 'fidelity' | 'coinbase';
 
 const PRESETS: { value: Preset; label: string; description: string; type: 'stock' | 'crypto' }[] = [
-  { value: 'generic', label: 'Generic CSV', description: 'Columns: symbol, name, qty, averagePrice', type: 'stock' },
+  {
+    value: 'generic',
+    label: 'Generic CSV',
+    description: 'Columns: symbol, name, qty, averagePrice, purchaseDate (optional, one row per lot)',
+    type: 'stock',
+  },
   { value: 'robinhood', label: 'Robinhood', description: 'Symbol, Name, Shares, Average Cost', type: 'stock' },
   {
     value: 'schwab',
@@ -61,7 +66,13 @@ function pick(row: Record<string, string>, keys: string[]): string {
   return '';
 }
 
-function mapRow(row: Record<string, string>, preset: Preset, accountId: string, type: string): Partial<IHoldings> {
+// Lot-level exports carry an acquisition date per row; each row then becomes its own tax lot.
+type ImportRow = Partial<IHoldings> & { purchaseDate?: string };
+
+const ACQUIRED_COLUMNS = ['Date Acquired', 'Acquired', 'Acquisition Date', 'Open Date', 'Purchase Date'];
+
+function mapRow(row: Record<string, string>, preset: Preset, accountId: string, type: string): ImportRow {
+  const purchaseDate = pick(row, ACQUIRED_COLUMNS) || undefined;
   switch (preset) {
     case 'robinhood': {
       const qty = num(pick(row, ['Shares', 'Quantity']));
@@ -72,6 +83,7 @@ function mapRow(row: Record<string, string>, preset: Preset, accountId: string, 
         name: pick(row, ['Name', 'Description']),
         qty,
         averagePrice: num(pick(row, ['Average Cost', 'Average Cost Basis', 'Cost'])),
+        purchaseDate,
       };
     }
     case 'schwab': {
@@ -85,6 +97,7 @@ function mapRow(row: Record<string, string>, preset: Preset, accountId: string, 
         name: pick(row, ['Description', 'Name']),
         qty,
         averagePrice: perShare || (qty ? costBasis / qty : 0),
+        purchaseDate,
       };
     }
     case 'fidelity': {
@@ -98,6 +111,7 @@ function mapRow(row: Record<string, string>, preset: Preset, accountId: string, 
         name: pick(row, ['Description', 'Name']),
         qty,
         averagePrice: perShare || (qty ? costBasis / qty : 0),
+        purchaseDate,
       };
     }
     case 'coinbase': {
@@ -110,6 +124,7 @@ function mapRow(row: Record<string, string>, preset: Preset, accountId: string, 
         name: pick(row, ['Name', 'Asset']),
         qty,
         averagePrice: qty ? costBasis / qty : 0,
+        purchaseDate,
       };
     }
     default:

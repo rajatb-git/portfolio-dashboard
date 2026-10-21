@@ -34,7 +34,8 @@ import ResearchNotesCard from '@/components/Research/ResearchNotesCard';
 import ResearchPositionDetailsCard from '@/components/Research/ResearchPositionDetailsCard';
 import ResearchTransactionsCard from '@/components/Research/ResearchTransactionsCard';
 import { AgentInsight, AiConfig } from '@/api/live';
-import { HoldingAggregate } from '@/api/dashboard';
+import type { SymbolPosition } from '@/api/holdings';
+import MockTradeDialog, { type MockTradeInitial } from '@/components/Tax/MockTradeDialog';
 import { IAccount } from '@/models/AccountsModel';
 import { ITransaction } from '@/models/TransactionsModel';
 import { Iconify } from '@/components/Iconify';
@@ -82,7 +83,8 @@ function Research() {
   const [earnings, setEarnings] = React.useState<any>(null);
   const [earningsHistory, setEarningsHistory] = React.useState<any[]>([]);
   const [insiderTransactions, setInsiderTransactions] = React.useState<any[]>([]);
-  const [positions, setPositions] = React.useState<HoldingAggregate[]>([]);
+  const [positions, setPositions] = React.useState<SymbolPosition[]>([]);
+  const [mockTrade, setMockTrade] = React.useState<MockTradeInitial | null>(null);
   const [accounts, setAccounts] = React.useState<IAccount[]>([]);
   const [isPositionsLoading, setIsPositionsLoading] = React.useState(false);
   const [symbolTransactions, setSymbolTransactions] = React.useState<ITransaction[]>([]);
@@ -171,15 +173,7 @@ function Research() {
       })
       .finally(() => setIsInsiderLoading(false));
 
-    setIsPositionsLoading(true);
-    const positionsFetch = apis.holdings
-      .getBySymbol(searchTicker)
-      .then((res) => setPositions(res ?? []))
-      .catch((err) => {
-        setPositions([]);
-        toast.error(err.message || 'Failed to load position details');
-      })
-      .finally(() => setIsPositionsLoading(false));
+    const positionsFetch = loadPositions(searchTicker);
 
     setIsTransactionsLoading(true);
     const transactionsFetch = apis.transactions
@@ -208,6 +202,18 @@ function Research() {
       positionsFetch,
       transactionsFetch,
     ]);
+  };
+
+  const loadPositions = (ticker: string) => {
+    setIsPositionsLoading(true);
+    return apis.holdings
+      .getBySymbol(ticker)
+      .then((res) => setPositions(res ?? []))
+      .catch((err) => {
+        setPositions([]);
+        toast.error(err.message || 'Failed to load position details');
+      })
+      .finally(() => setIsPositionsLoading(false));
   };
 
   const handleRefresh = () => {
@@ -498,8 +504,22 @@ function Research() {
 
       {/* ── Position Details ── */}
       {searchText && (
-        <ResearchPositionDetailsCard positions={positions} accounts={accounts} isLoading={isPositionsLoading} />
+        <ResearchPositionDetailsCard
+          symbol={searchText}
+          positions={positions}
+          accounts={accounts}
+          isLoading={isPositionsLoading}
+          onLotsSaved={() => loadPositions(searchText)}
+          onMockTrade={setMockTrade}
+        />
       )}
+
+      <MockTradeDialog
+        open={!!mockTrade}
+        onClose={() => setMockTrade(null)}
+        accounts={accounts}
+        initial={mockTrade ?? undefined}
+      />
 
       {/* ── Transaction History (collapsed by default) ── */}
       {searchText && (

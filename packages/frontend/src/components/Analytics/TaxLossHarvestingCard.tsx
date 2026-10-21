@@ -62,8 +62,8 @@ export default function TaxLossHarvestingCard({ data, isLoading }: Props) {
         <Stack sx={{ alignItems: 'center', justifyContent: 'center', py: 5, px: 2 }}>
           <Iconify icon="mdi:emoticon-happy-outline" width={28} sx={{ color: 'text.disabled', mb: 1 }} />
           <Typography sx={{ fontSize: '0.82rem', color: 'text.disabled', textAlign: 'center' }}>
-            No positions are currently at a loss. Holdings trading below your cost basis would appear here as candidates
-            to realize a loss against your gains.
+            No tax lots are currently below cost. Lots trading under what you paid would appear here as candidates to
+            realize a loss against your gains.
           </Typography>
         </Stack>
       ) : (
@@ -86,6 +86,9 @@ export default function TaxLossHarvestingCard({ data, isLoading }: Props) {
                 <TableRow>
                   <TableCell sx={{ fontWeight: 700, fontSize: '0.72rem' }}>Symbol</TableCell>
                   <TableCell align="right" sx={{ fontWeight: 700, fontSize: '0.72rem' }}>
+                    Losing Shares
+                  </TableCell>
+                  <TableCell align="right" sx={{ fontWeight: 700, fontSize: '0.72rem' }}>
                     Market Value
                   </TableCell>
                   <TableCell align="right" sx={{ fontWeight: 700, fontSize: '0.72rem' }}>
@@ -107,6 +110,15 @@ export default function TaxLossHarvestingCard({ data, isLoading }: Props) {
                   <TableRow key={`${c.accountId}-${c.symbol}`} hover>
                     <TableCell sx={{ fontSize: '0.78rem', fontWeight: 600 }}>{c.symbol}</TableCell>
                     <TableCell align="right" sx={{ fontSize: '0.78rem', fontVariantNumeric: 'tabular-nums' }}>
+                      {c.harvestQty.toLocaleString()}
+                      {c.harvestQty < c.qty && (
+                        <Typography component="span" sx={{ fontSize: '0.7rem', color: 'text.disabled' }}>
+                          {' '}
+                          of {c.qty.toLocaleString()}
+                        </Typography>
+                      )}
+                    </TableCell>
+                    <TableCell align="right" sx={{ fontSize: '0.78rem', fontVariantNumeric: 'tabular-nums' }}>
                       {fnCurrency(c.marketValue)}
                     </TableCell>
                     <TableCell
@@ -127,17 +139,25 @@ export default function TaxLossHarvestingCard({ data, isLoading }: Props) {
                       {c.lossPercent.toFixed(2)}%
                     </TableCell>
                     <TableCell align="center">
-                      <Chip
-                        label={c.term === 'long' ? 'Long' : 'Short'}
-                        size="small"
-                        sx={{
-                          height: 18,
-                          fontSize: '0.62rem',
-                          fontWeight: 600,
-                          bgcolor: c.term === 'long' ? 'var(--pd-up-bg)' : 'var(--pd-warn-bg)',
-                          color: c.term === 'long' ? 'var(--pd-up)' : 'var(--pd-warn)',
-                        }}
-                      />
+                      <Tooltip
+                        title={
+                          c.term === 'mixed'
+                            ? `Short-term ${loss(c.shortTermLoss)} · long-term ${loss(c.longTermLoss)}`
+                            : ''
+                        }
+                      >
+                        <Chip
+                          label={c.term === 'long' ? 'Long' : c.term === 'mixed' ? 'Mixed' : 'Short'}
+                          size="small"
+                          sx={{
+                            height: 18,
+                            fontSize: '0.62rem',
+                            fontWeight: 600,
+                            bgcolor: c.term === 'long' ? 'var(--pd-up-bg)' : 'var(--pd-warn-bg)',
+                            color: c.term === 'long' ? 'var(--pd-up)' : 'var(--pd-warn)',
+                          }}
+                        />
+                      </Tooltip>
                     </TableCell>
                     <TableCell align="center">
                       {c.washSaleRisk ? (
@@ -182,8 +202,9 @@ export default function TaxLossHarvestingCard({ data, isLoading }: Props) {
           </Box>
 
           <Typography sx={{ fontSize: '0.7rem', color: 'text.disabled', px: 2, py: 1 }}>
-            Holding periods and wash-sale flags are estimated from your recorded buy history. Not tax advice — confirm
-            with your broker's cost-basis records before selling.
+            Losses are measured per tax lot, so a position that is up overall can still have losing lots to harvest —
+            sell just those with Specific lots in Mock trade or the Trade dialog's Highest cost method. Wash-sale flags
+            look at purchases in every account. Not tax advice — confirm with your broker's cost-basis records.
           </Typography>
         </>
       )}

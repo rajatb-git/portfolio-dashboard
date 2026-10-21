@@ -1,6 +1,6 @@
 import * as React from 'react';
 
-import { Button, Stack, Typography } from '@mui/material';
+import { Alert, Button, Skeleton, Stack, Typography } from '@mui/material';
 import Box from '@mui/material/Box';
 import Dialog from '@mui/material/Dialog';
 import MenuItem from '@mui/material/MenuItem';
@@ -9,11 +9,14 @@ import { styled, Theme, useTheme } from '@mui/material/styles';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import { default as MuiTextField } from '@mui/material/TextField';
 import Case from 'case';
+import debounce from 'lodash/debounce';
 import moment from 'moment';
 import { toast } from 'react-toastify';
 
 import apis from '@/api';
+import { LOT_METHOD_LABELS, type LotMethod, type SimulationRequest, type TradeSimulation } from '@/api/holdings';
 import { useField } from '@/hooks/useField';
+import { fnCurrency } from '@/utils/formatNumber';
 import { HoldingTypesEnum } from '@/lib/enums';
 import { IHoldings } from '@/models/HoldingsModel';
 import { IAccount } from '@/models/AccountsModel';
@@ -38,6 +41,8 @@ const TextField = styled(MuiTextField)(({ theme }: { theme: Theme }) => ({
 
 const today = () => moment().format('YYYY-MM-DD');
 const NUMERIC = /^\d*\.?\d+$/;
+const SELL_LOT_METHODS: LotMethod[] = ['fifo', 'lifo', 'hifo', 'taxOptimal'];
+const signed = (v: number) => `${v >= 0 ? '+' : ''}${fnCurrency(v)}`;
 
 type Props = {
   open: boolean;
@@ -51,6 +56,10 @@ export default function BuySellDialog({ open, handleDialogClose, initialValues, 
   const theme = useTheme();
   const fullScreen = useMediaQuery(theme.breakpoints.down('sm'));
   const [isLoading, setIsLoading] = React.useState(false);
+  const [lotMethod, setLotMethod] = React.useState<LotMethod>('fifo');
+  const [preview, setPreview] = React.useState<TradeSimulation | null>(null);
+  const [isPreviewLoading, setIsPreviewLoading] = React.useState(false);
+  const previewSeq = React.useRef(0);
 
   const formFields = {
     buySell: useField({
@@ -115,6 +124,7 @@ export default function BuySellDialog({ open, handleDialogClose, initialValues, 
             averagePrice: parseFloat(formFields.averagePrice.value),
             type: formFields.type.value as IHoldings['type'],
             date: formFields.date.value,
+            lotMethod,
           });
 
           toast('Sold!', {
@@ -156,7 +166,58 @@ export default function BuySellDialog({ open, handleDialogClose, initialValues, 
   const closeAndResetDialog = () => {
     handleDialogClose();
     Object.values(formFields).map((x) => x.resetValue());
+    setLotMethod('fifo');
   };
+
+  // Live tax preview for sells, from the same simulator as Mock trade.
+  const previewRequest: SimulationRequest | null =
+    formFields.buySell.value === 'sell' &&
+    formFields.accountId.value &&
+    formFields.symbol.value.trim().length >= 2 &&
+    NUMERIC.test(formFields.qty.value.trim()) &&
+    Number(formFields.qty.value) > 0 &&
+    NUMERIC.test(formFields.averagePrice.value.trim()) &&
+    moment(formFields.date.value, 'YYYY-MM-DD', true).isValid()
+      ? {
+          action: 'sell',
+          accountId: formFields.accountId.value,
+          symbol: formFields.symbol.value.trim().toUpperCase(),
+          qty: Number(formFields.qty.value),
+          price: Number(formFields.averagePrice.value),
+          date: formFields.date.value,
+          lotMethod,
+        }
+      : null;
+  const previewKey = previewRequest ? JSON.stringify(previewRequest) : '';
+
+  const runPreview = React.useMemo(
+    () =>
+      debounce((req: SimulationRequest) => {
+        const seq = ++previewSeq.current;
+        setIsPreviewLoading(true);
+        apis.holdings
+          .simulate(req)
+          .then((res) => seq === previewSeq.current && setPreview(res))
+          .catch((err) => {
+            if (seq !== previewSeq.current) return;
+            setPreview(null);
+            toast.error(err.message || 'Failed to estimate tax', { toastId: err.message || 'sell-preview' });
+          })
+          .finally(() => seq === previewSeq.current && setIsPreviewLoading(false));
+      }, 500),
+    []
+  );
+
+  React.useEffect(() => {
+    if (open && previewRequest) {
+      runPreview(previewRequest);
+    } else {
+      runPreview.cancel();
+      previewSeq.current += 1;
+      setPreview(null);
+      setIsPreviewLoading(false);
+    }
+  }, [open, previewKey]);
 
   return (
     <Dialog open={open} maxWidth="md" fullScreen={fullScreen} onClose={closeAndResetDialog}>
@@ -314,7 +375,49 @@ export default function BuySellDialog({ open, handleDialogClose, initialValues, 
               slotProps={{ inputLabel: { shrink: true }, htmlInput: { max: today() } }}
             />
           </Stack>
+          {formFields.buySell.value === 'sell' && (
+            <Stack direction="column" spacing={0.5} sx={{ flexGrow: 1 }}>
+              <Select
+                value={lotMethod}
+                onChange={(e) => setLotMethod(e.target.value as LotMethod)}
+                size="small"
+                disabled={isLoading}
+              >
+                {SELL_LOT_METHODS.map((m) => (
+                  <MenuItem key={m} value={m}>
+                    Lots: {LOT_METHOD_LABELS[m]}
+                  </MenuItem>
+                ))}
+              </Select>
+            </Stack>
+          )}
         </Box>
+
+        {formFields.buySell.value === 'sell' &&
+          previewRequest &&
+          (isPreviewLoading && !preview ? (
+            <Skeleton variant="rounded" height={56} sx={{ mt: 2 }} />
+          ) : (
+            preview?.realized &&
+            preview.tax && (
+              <Stack spacing={1} sx={{ mt: 2, opacity: isPreviewLoading ? 0.6 : 1 }}>
+                <Alert severity="info" icon={<Iconify icon="tabler:receipt-tax" />}>
+                  Realized {signed(preview.realized.total)} (short-term {signed(preview.realized.shortTerm)}, long-term{' '}
+                  {signed(preview.realized.longTerm)}) · est. tax{' '}
+                  <strong>
+                    {preview.tax.total < 0 ? `${fnCurrency(-preview.tax.total)} saved` : fnCurrency(preview.tax.total)}
+                  </strong>
+                </Alert>
+                {preview.washSale?.triggered && <Alert severity="warning">{preview.washSale.message}</Alert>}
+                {preview.waitForLongTerm && (
+                  <Alert severity="success">
+                    Waiting until {moment(preview.waitForLongTerm.date).format('MMM D, YYYY')} would save about{' '}
+                    {fnCurrency(preview.waitForLongTerm.taxSaving)} by making these shares long-term.
+                  </Alert>
+                )}
+              </Stack>
+            )
+          ))}
       </Box>
 
       <Box sx={{ m: 2, display: 'flex', justifyContent: 'flex-end', gap: 1 }}>

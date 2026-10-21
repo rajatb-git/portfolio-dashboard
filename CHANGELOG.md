@@ -6,6 +6,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
+## [4.10.0] – 2026-10-21
+
+### Added
+- **Tax lots** — holdings now store one lot per purchase (quantity, cost and purchase date). Existing positions are rebuilt from the trade log automatically; positions imported without history show as one *Estimated* lot until you set the real dates.
+- **Research → Position Details & Tax Lots** — expand any account to see each lot's cost, gain, and short/long-term status with days until it goes long-term; per-position short- vs long-term gains, estimated tax if sold, and the next lot to turn long-term. Lots are editable (pencil) with the usual Save / Reset flow.
+- **Mock trade** — simulate a buy or sell (from Research or the Dashboard toolbar) without saving anything: realized short/long-term gain, estimated tax on top of this year's realized gains, net proceeds, a side-by-side comparison of FIFO / LIFO / highest-cost / tax-optimized / specific-lot selection, wash-sale detection, "wait until long-term" savings, and the position, cash and portfolio-weight before and after. Sale dates can be in the future.
+- **Trade dialog** — sells pick a lot method (FIFO default) and show a live tax preview before you submit.
+- **Analytics → Realized & Tax** — new *Tax Exposure* card (unrealized short/long-term gains, tax if everything were sold today, YTD realized tax, lots turning long-term in the next 90 days) and *Tax Rates* card for the short-term, long-term and state rates every estimate uses.
+- **Holdings import** — an optional `purchaseDate` column (or a broker's *Date Acquired*) makes each row a lot; rows for the same account and symbol merge into one position.
+
+### Changed
+- Sells relieve specific lots, so the remaining average cost and the recorded P&L follow the lots actually sold instead of the running average. The lots relieved are stored on the sell transaction and Realized Gains uses them.
+- Tax-loss harvesting works per lot: a position that is up overall still lists its losing lots, with short/long-term loss split and wash-sale checks across every account.
+- Long-term now follows the IRS rule (held more than one year, i.e. from the day after the anniversary).
+- Demo Mode seeds lots, including a long-term lot and one that turns long-term shortly.
+
+---
+
 ## [4.9.2] – 2026-09-25
 
 ### Changed

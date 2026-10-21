@@ -10,12 +10,14 @@ import { getGoalProgress } from '../controller/PortfolioGoalController';
 import { calculateRealizedGains } from '../controller/RealizedGainsController';
 import { calculateRiskMetrics } from '../controller/RiskAnalyticsController';
 import { getSectorAllocation } from '../controller/SectorController';
+import { getTaxExposure } from '../controller/TaxExposureController';
 import { findTaxLossHarvesting } from '../controller/TaxLossHarvestingController';
 import {
   DEFAULT_PORTFOLIO_GOAL_CONFIG,
   getPortfolioGoalConfig,
   savePortfolioGoalConfig,
 } from '../models/PortfolioGoalConfigModel';
+import { getTaxConfig, saveTaxConfig } from '../models/TaxConfigModel';
 import { errorBody } from '../utils/error';
 import { logger } from '../utils/winston';
 
@@ -117,6 +119,54 @@ export const AnalyticsRouter = () => {
     } catch (error: any) {
       logger.log({ level: 'error', message: error.message, label: 'Tax-loss harvesting route' });
       ctx.body = errorBody('Failed to find tax-loss harvesting opportunities', error.message);
+      ctx.status = 400;
+    }
+  });
+
+  router.get('/analytics/tax-exposure', async (ctx) => {
+    try {
+      ctx.body = await getTaxExposure();
+      ctx.status = 200;
+    } catch (error: any) {
+      logger.log({ level: 'error', message: error.message, label: 'Tax exposure route' });
+      ctx.body = errorBody('Failed to calculate tax exposure', error.message);
+      ctx.status = 400;
+    }
+  });
+
+  router.get('/analytics/tax/config', async (ctx) => {
+    try {
+      ctx.body = await getTaxConfig();
+      ctx.status = 200;
+    } catch (error: any) {
+      logger.log({ level: 'error', message: error.message, label: 'Tax config route' });
+      ctx.body = errorBody('Failed to get tax rates', error.message);
+      ctx.status = 400;
+    }
+  });
+
+  router.post('/analytics/tax/config', async (ctx) => {
+    try {
+      const body = (ctx.request.body ?? {}) as Record<string, unknown>;
+      const rates: Record<string, number> = {};
+      for (const key of ['shortTermRate', 'longTermRate', 'stateRate']) {
+        const value = Number(body[key]);
+        if (body[key] === '' || body[key] === null || !Number.isFinite(value) || value < 0 || value > 100) {
+          ctx.body = errorBody('Invalid tax rates', 'Each rate must be a percentage between 0 and 100');
+          ctx.status = 400;
+          return;
+        }
+        rates[key] = +value.toFixed(2);
+      }
+      ctx.body = await saveTaxConfig({
+        shortTermRate: rates.shortTermRate,
+        longTermRate: rates.longTermRate,
+        stateRate: rates.stateRate,
+      });
+      ctx.status = 200;
+    } catch (error: any) {
+      logger.log({ level: 'error', message: error.message, label: 'Save tax config route' });
+      ctx.body = errorBody('Failed to save tax rates', error.message);
       ctx.status = 400;
     }
   });

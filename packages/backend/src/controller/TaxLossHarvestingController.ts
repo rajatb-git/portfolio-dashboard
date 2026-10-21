@@ -1,6 +1,6 @@
 import moment from 'moment';
-import { TransactionModel } from '../models/TransactionModel';
-import { createDashboard } from './DashboardController';
+import { roundQty } from '../utils';
+import { enrichLots, loadPositionsWithLots } from './TaxLotController';
 
 export type HarvestCandidate = {
   symbol: string;
@@ -11,9 +11,14 @@ export type HarvestCandidate = {
   averagePrice: number;
   currentPrice: number;
   marketValue: number;
-  unrealizedLoss: number; // positive dollar magnitude of the loss
-  lossPercent: number; // negative
-  term: 'short' | 'long';
+  // Shares in the lots trading below cost — selling just those lots harvests
+  // the loss even when the position as a whole is up.
+  harvestQty: number;
+  unrealizedLoss: number; // positive dollar magnitude of the loss across losing lots
+  lossPercent: number; // negative, relative to the losing lots' cost
+  shortTermLoss: number;
+  longTermLoss: number;
+  term: 'short' | 'long' | 'mixed';
   // Crypto is not subject to the US wash-sale rule, so it is never flagged.
   washSaleRisk: boolean;
   washSaleClearDate: string | null; // when a fresh buy stops tainting a harvested loss
@@ -29,79 +34,78 @@ export type TaxLossHarvestingResult = {
 
 const WASH_SALE_DAYS = 30;
 
-// Imported rows carry `date`; otherwise fall back to the insert timestamp.
-const effectiveDate = (t: { date?: string; createdAt?: string }): string =>
-  t.date || t.createdAt || moment().toISOString();
+const round2 = (n: number) => +n.toFixed(2);
 
 export const findTaxLossHarvesting = async (): Promise<TaxLossHarvestingResult> => {
-  const [holdings, txModel] = await Promise.all([createDashboard(), TransactionModel().initialize()]);
-  const transactions = txModel.getAllRecords();
+  const { positions } = await loadPositionsWithLots();
 
-  // Earliest buy (holding-period start) and most recent buy (wash-sale window)
-  // per symbol+account, from recorded buy history.
-  const earliestBuy = new Map<string, string>();
-  const latestBuy = new Map<string, string>();
-  for (const t of transactions) {
-    if (t.action !== 'buy' || !t.symbol) continue;
-    const key = `${t.accountId}:${t.symbol.toUpperCase()}`;
-    const date = effectiveDate(t);
-    const prevEarliest = earliestBuy.get(key);
-    if (!prevEarliest || date < prevEarliest) earliestBuy.set(key, date);
-    const prevLatest = latestBuy.get(key);
-    if (!prevLatest || date > prevLatest) latestBuy.set(key, date);
+  // The wash-sale rule looks across every account, so the most recent purchase
+  // of a symbol anywhere taints a loss harvested in any of them.
+  const latestPurchase = new Map<string, string>();
+  for (const { holding, lots } of positions) {
+    const symbol = holding.symbol.toUpperCase();
+    for (const lot of lots) {
+      if (lot.estimated) continue;
+      const prev = latestPurchase.get(symbol);
+      if (!prev || lot.date > prev) latestPurchase.set(symbol, lot.date);
+    }
   }
 
   const now = moment();
   const candidates: HarvestCandidate[] = [];
 
-  for (const h of holdings) {
-    if (h.totalGL >= 0) continue;
+  for (const { holding, lots, currentPrice } of positions) {
+    if (currentPrice === null) continue;
+    const losing = enrichLots(lots, currentPrice, now).filter((l) => l.gain < 0);
+    if (!losing.length) continue;
 
-    const key = `${h.accountId}:${h.symbol.toUpperCase()}`;
-    const firstBuy = earliestBuy.get(key);
-    const term: 'short' | 'long' = firstBuy && now.diff(moment(firstBuy), 'days') > 365 ? 'long' : 'short';
+    const shortTermLoss = round2(-losing.filter((l) => l.term === 'short').reduce((s, l) => s + l.gain, 0));
+    const longTermLoss = round2(-losing.filter((l) => l.term === 'long').reduce((s, l) => s + l.gain, 0));
+    const unrealizedLoss = round2(shortTermLoss + longTermLoss);
+    const losingCost = losing.reduce((s, l) => s + l.costBasis, 0);
 
-    const recentBuy = latestBuy.get(key);
-    const washSaleRisk = h.type === 'stock' && !!recentBuy && now.diff(moment(recentBuy), 'days') < WASH_SALE_DAYS;
-    const washSaleClearDate =
-      washSaleRisk && recentBuy
-        ? moment(recentBuy)
-            .add(WASH_SALE_DAYS + 1, 'days')
-            .format('YYYY-MM-DD')
-        : null;
+    const recentBuy = latestPurchase.get(holding.symbol.toUpperCase());
+    const washSaleRisk =
+      holding.type === 'stock' && !!recentBuy && now.diff(moment(recentBuy), 'days') < WASH_SALE_DAYS;
 
     candidates.push({
-      symbol: h.symbol,
-      name: h.name,
-      accountId: h.accountId,
-      type: h.type,
-      qty: h.qty,
-      averagePrice: h.averagePrice,
-      currentPrice: h.currentPrice,
-      marketValue: h.marketValue,
-      unrealizedLoss: +Math.abs(h.totalGL).toFixed(2),
-      lossPercent: h.totalGLPercent,
-      term,
+      symbol: holding.symbol,
+      name: holding.name,
+      accountId: holding.accountId,
+      type: holding.type,
+      qty: holding.qty,
+      averagePrice: holding.averagePrice,
+      currentPrice,
+      marketValue: round2(holding.qty * currentPrice),
+      harvestQty: roundQty(losing.reduce((s, l) => s + l.qty, 0)),
+      unrealizedLoss,
+      lossPercent: losingCost ? round2((-unrealizedLoss / losingCost) * 100) : 0,
+      shortTermLoss,
+      longTermLoss,
+      term: shortTermLoss && longTermLoss ? 'mixed' : longTermLoss ? 'long' : 'short',
       washSaleRisk,
-      washSaleClearDate,
+      washSaleClearDate:
+        washSaleRisk && recentBuy
+          ? moment(recentBuy)
+              .add(WASH_SALE_DAYS + 1, 'days')
+              .format('YYYY-MM-DD')
+          : null,
     });
   }
 
   candidates.sort((a, b) => b.unrealizedLoss - a.unrealizedLoss);
 
-  const totalUnrealizedLoss = +candidates.reduce((s, c) => s + c.unrealizedLoss, 0).toFixed(2);
-  const harvestableNow = +candidates
-    .filter((c) => !c.washSaleRisk)
-    .reduce((s, c) => s + c.unrealizedLoss, 0)
-    .toFixed(2);
-  const shortTermLoss = +candidates
-    .filter((c) => c.term === 'short')
-    .reduce((s, c) => s + c.unrealizedLoss, 0)
-    .toFixed(2);
-  const longTermLoss = +candidates
-    .filter((c) => c.term === 'long')
-    .reduce((s, c) => s + c.unrealizedLoss, 0)
-    .toFixed(2);
+  const sum = (list: HarvestCandidate[], pick: (c: HarvestCandidate) => number) =>
+    round2(list.reduce((s, c) => s + pick(c), 0));
 
-  return { candidates, totalUnrealizedLoss, harvestableNow, shortTermLoss, longTermLoss };
+  return {
+    candidates,
+    totalUnrealizedLoss: sum(candidates, (c) => c.unrealizedLoss),
+    harvestableNow: sum(
+      candidates.filter((c) => !c.washSaleRisk),
+      (c) => c.unrealizedLoss
+    ),
+    shortTermLoss: sum(candidates, (c) => c.shortTermLoss),
+    longTermLoss: sum(candidates, (c) => c.longTermLoss),
+  };
 };
