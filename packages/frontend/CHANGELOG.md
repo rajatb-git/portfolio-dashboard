@@ -20,6 +20,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - **Analytics returns are time-weighted.** Each day's buys and sells are netted out before the day's change is measured, so buying shares no longer counts as a gain. The performance chart now compares % returns from the start of the range against the benchmark, and the monthly grid and risk metrics use the same daily returns. Demo Mode history values holdings the same way the live tracker does.
 - Rebalance targets can only be saved when they add up to 100%, and saving replaces the whole set.
 - Deleting a buy or sell now undoes its effect on the holding's lots (or explains why it can't), and only a trade's date can be edited in place. Deleting an account deletes its holdings and transactions too. Grid deletes ask for confirmation.
+- Transaction imports (CSV, broker and AI) understand broker wording such as "YOU BOUGHT", "Sold" and "Reinvest Shares", and skip and list dividend, interest and transfer rows instead of rejecting the whole file.
 - Imported transactions are marked as history: editing or deleting one never touches a holding or the account's cash (an import never did either).
 - Sells can only relieve lots bought on or before the sale date; trades need a positive price; a buy or withdrawal that would overdraw a funded account asks first.
 - Notifications that fire with no channel configured are recorded in the history as "Not sent — no channel", and the page says nothing is being delivered. Watching an IPO tells you whether its reminder will reach you.

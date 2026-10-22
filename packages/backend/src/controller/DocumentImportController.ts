@@ -30,8 +30,6 @@ export type DocumentParseResult = {
   model: string;
 };
 
-const VALID_ACTIONS = ['buy', 'sell', 'deposit', 'withdraw'];
-
 const TRANSACTIONS_PROMPT = `You are a financial-document parser. You will be given the raw text of a brokerage or crypto-exchange document (a trade confirmation, account statement, or transaction history). Extract every individual buy, sell, deposit, or withdrawal it contains and return them as transaction rows.
 
 Rules:
@@ -71,15 +69,19 @@ Respond ONLY with valid JSON (no markdown, no code fences) matching this exact s
 }
 If the document contains no recognizable holdings, return { "rows": [] }.`;
 
-const normalizeAction = (raw: unknown): string => {
+// Brokers word the same action many ways ("YOU BOUGHT", "Sold", "Reinvest
+// Shares"). Returns null for anything that isn't a trade or a cash move —
+// dividends, interest, fees, journals — so callers can skip and report it.
+export const normalizeTradeAction = (raw: unknown): 'buy' | 'sell' | 'deposit' | 'withdraw' | null => {
   const s = String(raw ?? '')
     .toLowerCase()
     .trim();
-  if (s.includes('buy')) return 'buy';
-  if (s.includes('sell')) return 'sell';
-  if (s.includes('deposit') || s.includes('credit')) return 'deposit';
-  if (s.includes('withdraw') || s.includes('debit')) return 'withdraw';
-  return s;
+  if (/\b(buy|bought|purchased?|reinvest(ed|ment)?)\b/.test(s) || s === 'b' || s === 'bo') return 'buy';
+  if (/\b(sell|sold)\b/.test(s) || s === 's' || s === 'so') return 'sell';
+  if (/\b(dividend|interest|fee|tax|journal)/.test(s)) return null;
+  if (/\b(deposit|credit|contribution)/.test(s)) return 'deposit';
+  if (/\b(withdraw(al)?|debit)\b/.test(s)) return 'withdraw';
+  return null;
 };
 
 const toNumber = (value: unknown): number | undefined => {
@@ -90,8 +92,8 @@ const toNumber = (value: unknown): number | undefined => {
 
 const normalizeTransaction = (raw: any, index: number, skipped: string[]): ParsedTransaction | null => {
   const label = `Row ${index + 1}`;
-  const action = normalizeAction(raw.action);
-  if (!VALID_ACTIONS.includes(action)) {
+  const action = normalizeTradeAction(raw.action);
+  if (!action) {
     skipped.push(`${label}: unrecognized action "${raw.action ?? ''}"`);
     return null;
   }

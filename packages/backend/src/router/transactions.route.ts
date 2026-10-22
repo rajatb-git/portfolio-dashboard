@@ -1,6 +1,7 @@
 import Router from '@koa/router';
 import moment from 'moment';
 import { adjustCash, transactionCashImpact } from '../controller/CashController';
+import { normalizeTradeAction } from '../controller/DocumentImportController';
 import { applyTradeEdit, reverseTrade } from '../controller/TransactionController';
 import { AccountModel } from '../models/AccountModel';
 import { TransactionModel } from '../models/TransactionModel';
@@ -41,23 +42,28 @@ export const TransactionsRouter = () => {
         return;
       }
 
-      const rows = incoming.map((raw: any, i: number) => {
+      // Broker exports mix trades with dividends, interest and transfers. Those
+      // rows are skipped and listed rather than failing the whole file; a row
+      // that is malformed in any other way still rejects the import.
+      const skipped: string[] = [];
+      const rows = incoming.flatMap((raw: any, i: number) => {
         const row = `Row ${i + 1}`;
         const accountId = String(raw.accountId ?? '').trim();
         if (!accountId) throw new Error(`${row}: accountId is required`);
+
+        const action = normalizeTradeAction(raw.action);
+        if (!action) {
+          skipped.push(
+            `${row}: "${String(raw.action ?? '').trim() || 'no action'}" isn't a buy, sell, deposit or withdrawal`
+          );
+          return [];
+        }
 
         const type = String(raw.type ?? '')
           .trim()
           .toLowerCase();
         if (!VALID_TYPES.includes(type)) {
           throw new Error(`${row}: type must be one of ${VALID_TYPES.join(', ')}`);
-        }
-
-        const action = String(raw.action ?? '')
-          .trim()
-          .toLowerCase();
-        if (!VALID_ACTIONS.includes(action)) {
-          throw new Error(`${row}: action must be one of ${VALID_ACTIONS.join(', ')}`);
         }
 
         const qty = parseFloat(String(raw.qty));
@@ -67,22 +73,37 @@ export const TransactionsRouter = () => {
         const pnl = parseMoney(raw.pnl);
         const date = raw.date ? moment(String(raw.date)) : undefined;
 
-        return {
-          accountId,
-          type,
-          action,
-          qty,
-          imported: true,
-          ...(raw.symbol && { symbol: String(raw.symbol).trim().toUpperCase() }),
-          ...(price !== undefined && { price }),
-          ...(pnl !== undefined && { pnl }),
-          ...(date?.isValid() && { date: date.toISOString() }),
-        };
+        return [
+          {
+            accountId,
+            type,
+            action,
+            qty,
+            imported: true,
+            ...(raw.symbol && { symbol: String(raw.symbol).trim().toUpperCase() }),
+            ...(price !== undefined && { price }),
+            ...(pnl !== undefined && { pnl }),
+            ...(date?.isValid() && { date: date.toISOString() }),
+          },
+        ];
       });
+
+      if (rows.length === 0) {
+        ctx.status = 400;
+        ctx.body = errorBody(
+          'Nothing to import',
+          `No buys, sells, deposits or withdrawals found. ${skipped[0] ?? ''}`.trim()
+        );
+        return;
+      }
 
       const inserted = await transactionModel.insertMany(rows);
       ctx.status = 200;
-      ctx.body = { message: `Imported ${inserted.length} transaction(s)`, count: inserted.length };
+      ctx.body = {
+        message: `Imported ${inserted.length} transaction(s)${skipped.length ? `, skipped ${skipped.length} other row(s) (dividends, interest, transfers)` : ''}`,
+        count: inserted.length,
+        skipped,
+      };
     } catch (err: any) {
       logger.log({ level: 'error', message: err.message, label: 'Import transactions' });
       ctx.body = errorBody('Failed to import transactions', err.message);

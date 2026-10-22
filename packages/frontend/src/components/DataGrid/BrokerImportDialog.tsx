@@ -1,4 +1,3 @@
-import * as React from 'react';
 import {
   Alert,
   Box,
@@ -20,9 +19,10 @@ import {
   TableRow,
   Typography,
 } from '@mui/material';
-import { useDropzone } from 'react-dropzone';
 import { useTheme } from '@mui/material/styles';
 import csvtojson from 'csvtojson';
+import * as React from 'react';
+import { useDropzone } from 'react-dropzone';
 import { Iconify } from '@/components/Iconify';
 import type { IAccount } from '@/models/AccountsModel';
 import type { ITransaction } from '@/models/TransactionsModel';
@@ -58,13 +58,17 @@ type Props = {
   refreshPage: () => void;
 };
 
+// Mirrors the backend's normalizeTradeAction so the preview shows what will be
+// imported. Anything else (dividends, interest, transfers) keeps its original
+// wording; the backend skips those rows and lists them.
 function normalizeAction(raw: string): string {
   const s = (raw ?? '').toLowerCase().trim();
-  if (s.includes('buy') || s === 'b' || s === 'bo') return 'buy';
-  if (s.includes('sell') || s === 's' || s === 'so') return 'sell';
-  if (s.includes('deposit') || s.includes('credit')) return 'deposit';
-  if (s.includes('withdraw') || s.includes('debit')) return 'withdraw';
-  return s;
+  if (/\b(buy|bought|purchased?|reinvest(ed|ment)?)\b/.test(s) || s === 'b' || s === 'bo') return 'buy';
+  if (/\b(sell|sold)\b/.test(s) || s === 's' || s === 'so') return 'sell';
+  if (/\b(dividend|interest|fee|tax|journal)/.test(s)) return raw.trim();
+  if (/\b(deposit|credit|contribution)/.test(s)) return 'deposit';
+  if (/\b(withdraw(al)?|debit)\b/.test(s)) return 'withdraw';
+  return raw.trim();
 }
 
 function mapRow(row: Record<string, string>, preset: Preset, accountId: string): Partial<ITransaction> {
@@ -98,8 +102,7 @@ function mapRow(row: Record<string, string>, preset: Preset, accountId: string):
         symbol: (row['Symbol'] ?? '').trim().toUpperCase() || undefined,
         action: normalizeAction(row['Action'] ?? '') as any,
         qty: Math.abs(parseFloat((row['Quantity'] ?? '').replace(/,/g, ''))) || 0,
-        price:
-          Math.abs(parseFloat((row['Price ($)'] ?? row['Price'] ?? '').replace(/[$,]/g, ''))) || 0,
+        price: Math.abs(parseFloat((row['Price ($)'] ?? row['Price'] ?? '').replace(/[$,]/g, ''))) || 0,
         date: row['Settlement Date'] ?? row['Date'],
         type: 'stock',
       };
@@ -115,8 +118,7 @@ function mapRow(row: Record<string, string>, preset: Preset, accountId: string):
         symbol: (row['Asset'] ?? '').trim().toUpperCase() || undefined,
         action: action as any,
         qty: Math.abs(parseFloat(row['Quantity Transacted'] ?? '0')) || 0,
-        price:
-          Math.abs(parseFloat((row['Price at Transaction'] ?? '').replace(/[$,]/g, ''))) || 0,
+        price: Math.abs(parseFloat((row['Price at Transaction'] ?? '').replace(/[$,]/g, ''))) || 0,
         date: row['Timestamp'],
         type: 'crypto',
       };
@@ -178,8 +180,14 @@ export default function BrokerImportDialog({
 
   const handleImport = async () => {
     setError('');
-    if (!accountId) { setError('Account is required'); return; }
-    if (!file) { setError('Please select a file'); return; }
+    if (!accountId) {
+      setError('Account is required');
+      return;
+    }
+    if (!file) {
+      setError('Please select a file');
+      return;
+    }
     setImporting(true);
     try {
       const content = await file.text();
@@ -212,11 +220,7 @@ export default function BrokerImportDialog({
 
         <FormControl fullWidth size="small" sx={{ mb: 2 }}>
           <InputLabel>Broker Preset</InputLabel>
-          <Select
-            value={preset}
-            onChange={(e) => setPreset(e.target.value as Preset)}
-            label="Broker Preset"
-          >
+          <Select value={preset} onChange={(e) => setPreset(e.target.value as Preset)} label="Broker Preset">
             {PRESETS.map((p) => (
               <MenuItem key={p.value} value={p.value}>
                 <Box>
@@ -285,11 +289,7 @@ export default function BrokerImportDialog({
 
         <FormControl fullWidth size="small" required sx={{ mb: 2 }}>
           <InputLabel>Account</InputLabel>
-          <Select
-            value={accountId}
-            onChange={(e) => setAccountId(e.target.value)}
-            label="Account"
-          >
+          <Select value={accountId} onChange={(e) => setAccountId(e.target.value)} label="Account">
             {accountsData.map((a) => (
               <MenuItem key={a.id} value={a.id}>
                 {a.name}

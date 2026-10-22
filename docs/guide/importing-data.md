@@ -57,6 +57,11 @@ transaction history:
 
 Pick the broker, drop the file in, review the parsed rows, then confirm.
 
+Broker wording such as *YOU BOUGHT*, *Sold* or *Reinvest Shares* is understood.
+Rows that aren't a buy, sell, deposit or withdrawal — dividends, interest, fees,
+journals, and transfers whose direction the file doesn't say — are skipped and
+listed after the import instead of failing the whole file.
+
 ## 4. AI-assisted import (any format)
 
 **Database → Import with AI** accepts a PDF statement, CSV, TSV, plain text,
