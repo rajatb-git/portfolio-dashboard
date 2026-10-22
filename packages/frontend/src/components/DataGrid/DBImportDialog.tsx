@@ -188,6 +188,10 @@ export default function ImportDialog({
             </Typography>
 
             <Typography variant="caption" sx={{ fontStyle: 'italic', display: 'block' }}>
+              add a purchaseDate column (one row per lot) to record tax lots
+            </Typography>
+
+            <Typography variant="caption" sx={{ fontStyle: 'italic', display: 'block' }}>
               use a row with symbol CASH (qty = amount) to set a cash balance
             </Typography>
           </Box>

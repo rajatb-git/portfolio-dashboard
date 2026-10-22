@@ -80,7 +80,7 @@ The backend listens on `http://localhost:3001` by default; frontend reads `VITE_
 
 ## Domain types — know these
 
-- `IHoldings` (`frontend/src/models/HoldingsModel.ts`) — stored holding: `{ id, accountId, name, symbol, qty, averagePrice, type: 'stock' | 'crypto' }`
+- `IHoldings` (`frontend/src/models/HoldingsModel.ts`) — stored holding: `{ id, accountId, name, symbol, qty, averagePrice, type: 'stock' | 'crypto', lots? }`. `lots` (`ITaxLot`: `{ id, qty, price, date, estimated? }`) are the source of truth; `qty`/`averagePrice` are their aggregate and must be kept in sync on every write (`totalsFromLots`). Always read lots through `resolveLots` (`backend/src/controller/TaxLotController.ts`) — it rebuilds them from the transaction log for holdings that predate lot tracking.
 - `HoldingAggregate` (`frontend/src/api/dashboard.ts`) — holding enriched with live data (`currentPrice`, `percentChange`, `totalGL`, `marketValue`, analyst counts, …). **Has no `id` field** — key by `symbol` instead.
 - `IAccount` — brokerage account.
 - `ITransaction` — buy/sell/deposit log entry.
@@ -153,6 +153,7 @@ Use `react-toastify`'s `toast.error(...)` for failures and `toast.success(...)` 
 - The backend raw-body middleware for `/settings/db/import` must run BEFORE `koa-bodyparser`. Don't reorder `server.ts` middleware.
 - Model name in Ollama config defaults to `llama3.1`; other providers default to their latest (`claude-sonnet-4-6`, `gemini-2.0-flash`).
 - When adding a new route that takes a filename or path param, always validate against an allowlist.
+- Sells record the lots they relieved on the transaction (`lots`), and buys record `lotId`; `RealizedGainsController` matches those before falling back to FIFO. Tax lots, rates and simulations are personal financial data — never put them in an AI prompt.
 
 ## When adding a new feature
 

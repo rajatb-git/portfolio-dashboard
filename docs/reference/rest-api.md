@@ -63,8 +63,10 @@ and `GET /settings/lock` stay open.
 | `POST` | `/holdings` | Update / upsert a holding |
 | `DELETE` | `/holdings/:id` | Delete a holding |
 | `POST` | `/holdings/buy` | Record a buy — updates position, average price and account cash |
-| `POST` | `/holdings/sell` | Record a sell — updates position, realizes P&L and account cash |
-| `POST` | `/holdings/import` | Bulk import. A row with symbol `CASH` adjusts the account balance instead of creating a position |
+| `POST` | `/holdings/sell` | Record a sell — relieves tax lots (`lotMethod`: `fifo` default, `lifo`, `hifo`, `taxOptimal`, or `specific` with `lotIds`), realizes P&L and updates account cash |
+| `PUT` | `/holdings/:id/lots` | Replace a position's tax lots; quantity and average cost follow. No trade is recorded |
+| `POST` | `/holdings/simulate` | Mock buy/sell — tax, lot-method comparison, wash-sale and position/cash impact. Writes nothing |
+| `POST` | `/holdings/import` | Bulk import. Each row is a lot (optional `purchaseDate`); rows for the same account and symbol merge into one position. A row with symbol `CASH` adjusts the account balance instead of creating a position |
 
 ## Accounts
 
@@ -134,7 +136,9 @@ same flag works on `/live/market-news`, `/live/portfolio-news`,
 | `GET` | `/analytics/realized-gains` | Closed lots, short/long-term, by year |
 | `GET` | `/analytics/earnings-calendar` | Upcoming earnings for your holdings |
 | `GET` | `/analytics/dividends` | Income, yield, yield on cost, upcoming dates |
-| `GET` | `/analytics/tax-loss-harvesting` | Loss candidates with wash-sale flags |
+| `GET` | `/analytics/tax-loss-harvesting` | Losing tax lots per position, with wash-sale flags |
+| `GET` | `/analytics/tax-exposure` | Unrealized short/long-term gains, YTD realized, estimated tax, lots turning long-term soon |
+| `GET` / `POST` | `/analytics/tax/config` | Short-term, long-term and state tax rates (percent) used by every estimate |
 | `GET` | `/analytics/monthly-returns` | Year × month return grid |
 | `GET` | `/analytics/correlation` | Correlation matrix and diversification score |
 | `GET` | `/analytics/goal` | Progress against your portfolio goal |

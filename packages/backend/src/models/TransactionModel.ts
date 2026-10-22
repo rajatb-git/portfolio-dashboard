@@ -13,6 +13,16 @@ export interface ITransaction {
   // Actual trade date for imported history. createdAt always gets stamped with
   // the insert time, so imported rows carry the original date here instead.
   date?: string;
+  // Buys: id of the tax lot the purchase opened. Sells: the lots relieved.
+  lotId?: string;
+  lots?: IRelievedLot[];
+}
+
+export interface IRelievedLot {
+  lotId: string;
+  qty: number;
+  price: number;
+  date: string;
 }
 
 export const TransactionSchema: SchemaType = {
@@ -24,6 +34,8 @@ export const TransactionSchema: SchemaType = {
   action: { type: String, required: true },
   pnl: { type: Number, required: false },
   date: { type: String, required: false },
+  lotId: { type: String, required: false },
+  lots: { type: Array, required: false },
 };
 
 export interface ITransactionModel extends ITransaction, ISkewerModel {}

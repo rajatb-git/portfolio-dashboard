@@ -41,8 +41,22 @@ interface IHoldings {
   qty: number;
   averagePrice: number;
   type: 'stock' | 'crypto';
+  lots?: ITaxLot[];  // one per purchase; qty/averagePrice are their aggregate
+}
+
+interface ITaxLot {
+  id: string;
+  qty: number;
+  price: number;        // cost per share
+  date: string;         // acquisition date (ISO)
+  estimated?: boolean;  // date/cost inferred, not recorded from a trade
 }
 ```
+
+Holdings created before lot tracking have no `lots`; they are rebuilt from the
+transaction log (FIFO) on read and persisted on the next trade. When the log
+does not reconcile with the stored quantity, the position is shown as one
+`estimated` lot until you edit it on the Research page.
 
 ### Transaction
 
@@ -58,6 +72,8 @@ interface ITransaction {
   action: string;   // buy | sell | deposit | withdraw
   pnl?: number;
   date?: string;    // real trade date for imported history
+  lotId?: string;   // buys: the tax lot opened
+  lots?: Array<{ lotId: string; qty: number; price: number; date: string }>; // sells: lots relieved
 }
 ```
 

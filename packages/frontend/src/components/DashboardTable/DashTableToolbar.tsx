@@ -7,6 +7,7 @@ import Toolbar from '@mui/material/Toolbar';
 
 import CashDialog from '@/components/CashDialog';
 import { Iconify } from '@/components/Iconify';
+import MockTradeDialog from '@/components/Tax/MockTradeDialog';
 import { IAccount } from '@/models/AccountsModel';
 import { useToggle } from '@/utils/useToggle';
 
@@ -22,6 +23,7 @@ type TableToolbarProps = {
 export default function DashTableToolbar({ filterName, onFilterName, refreshData, accounts }: TableToolbarProps) {
   const { closeToggle, openToggle, toggleState } = useToggle();
   const cash = useToggle();
+  const mockTrade = useToggle();
   return (
     <Toolbar
       component={Stack}
@@ -78,6 +80,16 @@ export default function DashTableToolbar({ filterName, onFilterName, refreshData
         Trade
       </Button>
 
+      <Button
+        size="small"
+        variant="outlined"
+        onClick={mockTrade.openToggle}
+        sx={{ whiteSpace: 'nowrap', borderColor: 'divider', color: 'text.secondary' }}
+        startIcon={<Iconify icon="tabler:flask" width={14} />}
+      >
+        Mock trade
+      </Button>
+
       <IconButton aria-label="Refresh holdings" onClick={refreshData} size="small" sx={{ color: 'text.secondary' }}>
         <Iconify icon="mingcute:refresh-3-fill" width={18} />
       </IconButton>
@@ -90,6 +102,7 @@ export default function DashTableToolbar({ filterName, onFilterName, refreshData
         onClose={cash.closeToggle}
         onSaved={refreshData}
       />
+      <MockTradeDialog open={mockTrade.toggleState} onClose={mockTrade.closeToggle} accounts={accounts} />
     </Toolbar>
   );
 }

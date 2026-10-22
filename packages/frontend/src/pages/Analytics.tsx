@@ -30,7 +30,9 @@ import PortfolioPerformanceChart from '@/components/Analytics/PortfolioPerforman
 import RealizedGainsCard from '@/components/Analytics/RealizedGainsCard';
 import RiskMetricsCard from '@/components/Analytics/RiskMetricsCard';
 import SectorAllocationChart from '@/components/Analytics/SectorAllocationChart';
+import TaxExposureCard from '@/components/Analytics/TaxExposureCard';
 import TaxLossHarvestingCard from '@/components/Analytics/TaxLossHarvestingCard';
+import TaxRatesCard from '@/components/Analytics/TaxRatesCard';
 
 // Ten stacked cards is a scroll, not a structure. Grouping them by the question
 // the user is asking keeps each view to a single screen.
@@ -71,6 +73,8 @@ export default function Analytics() {
 
   const [realizedGains, setRealizedGains] = React.useState<RealizedGains | null>(null);
   const [isRealizedLoading, setIsRealizedLoading] = React.useState(true);
+
+  const [taxRatesVersion, setTaxRatesVersion] = React.useState(0);
 
   const [taxLoss, setTaxLoss] = React.useState<TaxLossHarvesting | null>(null);
   const [isTaxLossLoading, setIsTaxLossLoading] = React.useState(true);
@@ -243,8 +247,10 @@ export default function Analytics() {
 
         {tab === 'tax' && (
           <Stack spacing={2}>
+            <TaxExposureCard reloadKey={taxRatesVersion} />
             <RealizedGainsCard data={realizedGains} isLoading={isRealizedLoading} />
             <TaxLossHarvestingCard data={taxLoss} isLoading={isTaxLossLoading} />
+            <TaxRatesCard onSaved={() => setTaxRatesVersion((v) => v + 1)} />
           </Stack>
         )}
       </Box>

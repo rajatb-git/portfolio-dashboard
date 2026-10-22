@@ -1,9 +1,9 @@
 import moment from 'moment';
 
 import type { IAlert } from '../models/AlertModel';
-import type { IHoldings } from '../models/HoldingsModel';
+import type { IHoldings, ITaxLot } from '../models/HoldingsModel';
 import type { IPortfolioSnapshot } from '../models/PortfolioSnapshotModel';
-import type { ITransaction } from '../models/TransactionModel';
+import type { IRelievedLot, ITransaction } from '../models/TransactionModel';
 
 type AssetType = 'stock' | 'crypto';
 
@@ -34,11 +34,33 @@ const ACCOUNTS: SeedAccount[] = [
 // A chronological trade log per account (oldest first within each account).
 // `daysAgo` is relative to seed time rather than a fixed calendar date, so
 // the demo always looks current no matter when it's turned on. Replayed
-// through the same average-cost/cash-impact math the app itself uses (see
+// through the same lot/cash-impact math the app itself uses (see
 // buildMockDataset below) rather than hand-computing resulting positions,
 // so the seeded accounts/holdings/transactions can never drift out of sync.
 const EVENTS: SeedEvent[] = [
-  // Brokerage — taxable, individual growth names
+  // Brokerage — taxable, individual growth names. The early buys are already
+  // long-term; the MSFT lot crosses the one-year mark a couple of weeks out.
+  { accountId: 'brokerage-demo', kind: 'deposit', amount: 8000, daysAgo: 520 },
+  {
+    accountId: 'brokerage-demo',
+    kind: 'buy',
+    symbol: 'AAPL',
+    name: 'Apple Inc.',
+    assetType: 'stock',
+    qty: 25,
+    price: 172.4,
+    daysAgo: 515,
+  },
+  {
+    accountId: 'brokerage-demo',
+    kind: 'buy',
+    symbol: 'MSFT',
+    name: 'Microsoft Corp.',
+    assetType: 'stock',
+    qty: 5,
+    price: 405.0,
+    daysAgo: 352,
+  },
   { accountId: 'brokerage-demo', kind: 'deposit', amount: 50000, daysAgo: 330 },
   {
     accountId: 'brokerage-demo',
@@ -345,7 +367,7 @@ const buildSnapshots = (): Array<IPortfolioSnapshot & { id: string }> => {
 
 export const buildMockDataset = (): MockDataset => {
   const cash = new Map<string, number>(ACCOUNTS.map((a) => [a.id, 0]));
-  const positions = new Map<string, { name: string; assetType: AssetType; qty: number; averagePrice: number }>();
+  const positions = new Map<string, { name: string; assetType: AssetType; lots: ITaxLot[] }>();
   const transactions: ITransaction[] = [];
 
   const sorted = [...EVENTS].sort((a, b) => b.daysAgo - a.daysAgo);
@@ -366,13 +388,15 @@ export const buildMockDataset = (): MockDataset => {
     }
 
     const key = `${event.accountId}|${event.symbol}`;
+    const date = dateForDaysAgo(event.daysAgo);
     if (event.kind === 'buy') {
+      const lotId = `${key}|${event.daysAgo}`;
       const existing = positions.get(key);
-      const nextQty = roundQty((existing?.qty ?? 0) + event.qty);
-      const nextAvg = existing
-        ? (existing.qty * existing.averagePrice + event.qty * event.price) / nextQty
-        : event.price;
-      positions.set(key, { name: event.name, assetType: event.assetType, qty: nextQty, averagePrice: nextAvg });
+      positions.set(key, {
+        name: event.name,
+        assetType: event.assetType,
+        lots: [...(existing?.lots ?? []), { id: lotId, qty: event.qty, price: event.price, date }],
+      });
       cash.set(event.accountId, round2((cash.get(event.accountId) ?? 0) - event.qty * event.price));
       transactions.push({
         accountId: event.accountId,
@@ -381,13 +405,26 @@ export const buildMockDataset = (): MockDataset => {
         price: event.price,
         type: event.assetType,
         action: 'buy',
-        date: dateForDaysAgo(event.daysAgo),
+        date,
+        lotId,
       });
     } else {
       const existing = positions.get(key);
       if (!existing) throw new Error(`Mock dataset error: selling ${event.symbol} with no prior position`);
-      const pnl = round2((event.price - existing.averagePrice) * event.qty);
-      positions.set(key, { ...existing, qty: roundQty(existing.qty - event.qty) });
+      // FIFO, matching the app's default lot method.
+      const relieved: IRelievedLot[] = [];
+      let remaining = event.qty;
+      const lots = existing.lots.map((lot) => ({ ...lot }));
+      for (const lot of lots) {
+        if (remaining <= 0) break;
+        const taken = Math.min(remaining, lot.qty);
+        relieved.push({ lotId: lot.id, qty: taken, price: lot.price, date: lot.date });
+        lot.qty = roundQty(lot.qty - taken);
+        remaining = roundQty(remaining - taken);
+      }
+      if (remaining > 0) throw new Error(`Mock dataset error: selling more ${event.symbol} than held`);
+      const pnl = round2(relieved.reduce((sum, r) => sum + (event.price - r.price) * r.qty, 0));
+      positions.set(key, { ...existing, lots: lots.filter((l) => l.qty > 0) });
       cash.set(event.accountId, round2((cash.get(event.accountId) ?? 0) + event.qty * event.price));
       transactions.push({
         accountId: event.accountId,
@@ -397,7 +434,8 @@ export const buildMockDataset = (): MockDataset => {
         type: event.assetType,
         action: 'sell',
         pnl,
-        date: dateForDaysAgo(event.daysAgo),
+        date,
+        lots: relieved,
       });
     }
   }
@@ -406,16 +444,19 @@ export const buildMockDataset = (): MockDataset => {
 
   const holdings: IHoldings[] = [];
   for (const [key, pos] of positions) {
-    if (pos.qty <= 0) continue;
+    if (!pos.lots.length) continue;
     const accountId = key.slice(0, key.indexOf('|'));
     const symbol = key.slice(key.indexOf('|') + 1);
+    const qty = roundQty(pos.lots.reduce((sum, l) => sum + l.qty, 0));
+    const cost = pos.lots.reduce((sum, l) => sum + l.qty * l.price, 0);
     holdings.push({
       accountId,
       symbol,
       name: pos.name,
-      qty: pos.qty,
-      averagePrice: round2(pos.averagePrice),
+      qty,
+      averagePrice: cost / qty,
       type: pos.assetType,
+      lots: pos.lots,
     });
   }
 
