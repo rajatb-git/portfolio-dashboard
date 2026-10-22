@@ -203,8 +203,8 @@ function SessionBanner({ recap }: { recap: DailyRecap }) {
       color: theme.palette.warning.main,
       body: (
         <>
-          Pre-market trading is under way — the opening bell rings {countdown}. The figures below are{' '}
-          {strong(closeDay)}&apos;s close; pre-market moves are shown separately above.
+          Pre-market trading is under way — the opening bell rings {countdown}. The figures below are {strong(closeDay)}
+          &apos;s close; pre-market moves are shown separately above.
         </>
       ),
     },
@@ -213,8 +213,13 @@ function SessionBanner({ recap }: { recap: DailyRecap }) {
       color: theme.palette.warning.main,
       body: (
         <>
-          After-hours trading runs until {nextAt.format('h:mm A')}. The figures below are {strong(closeDay)}&apos;s
-          close; after-hours moves are shown separately above.
+          After-hours trading runs until{' '}
+          {nextAt.toDate().toLocaleTimeString('en-US', {
+            timeZone: 'America/New_York',
+            hour: 'numeric',
+            minute: '2-digit',
+          })}{' '}
+          ET. The figures below are {strong(closeDay)}&apos;s close; after-hours moves are shown separately above.
         </>
       ),
     },

@@ -125,9 +125,11 @@ export default function DashTableRow({
           ) : (
             fnCurrency(row.currentPrice)
           )}
-          <Typography variant="caption" noWrap>
-            {row.dayLow?.toFixed(2)} - {row.dayHigh?.toFixed(2)}
-          </Typography>
+          {!!row.dayLow && !!row.dayHigh && (
+            <Typography variant="caption" noWrap>
+              {fnCurrency(Math.min(row.dayLow, row.dayHigh))} – {fnCurrency(Math.max(row.dayLow, row.dayHigh))}
+            </Typography>
+          )}
         </Stack>
       </TableCell>
 
@@ -137,6 +139,7 @@ export default function DashTableRow({
             color={row.percentChange === 0 ? 'default' : row.percentChange! > 0 ? 'success' : 'error'}
             sx={{ fontSize: '0.9rem' }}
           >
+            {row.percentChange! > 0 ? '+' : ''}
             {row.percentChange?.toFixed(2)}%
           </Label>
 
@@ -170,7 +173,7 @@ export default function DashTableRow({
         <Stack direction="column" spacing={0} data-numeric="">
           {fnCurrency(row.averagePrice * row.qty)}
           <Typography variant="caption" noWrap>
-            {fnCurrency(row.averagePrice)} / Share
+            {fnCurrency(row.averagePrice)} / {row.type === 'crypto' ? 'Coin' : 'Share'}
           </Typography>
         </Stack>
       </TableCell>

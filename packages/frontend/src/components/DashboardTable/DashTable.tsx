@@ -140,14 +140,18 @@ export default function Table<T>({
     setFilterName(event.target.value);
   };
 
-  const handleTypeFilterChange = (event: any) => {
+  // Read the toggle's value, not the click target: a click on a button's label
+  // lands on the inner span, whose value is undefined, and cleared every filter.
+  const handleTypeFilterChange = (_event: unknown, value: string | null) => {
+    if (!value) return;
     setPage(0);
-    setFilterType(event.target.value);
+    setFilterType(value);
   };
 
-  const handleAccountFilterChange = (event: any) => {
+  const handleAccountFilterChange = (_event: unknown, value: string | null) => {
+    if (!value) return;
     setPage(0);
-    setFilterAccount(event.target.value);
+    setFilterAccount(value);
   };
 
   const handleViewModeChange = (_event: any, value: ViewMode | null) => {
@@ -174,6 +178,27 @@ export default function Table<T>({
   }, [rows]);
 
   const comparator = getComparator(order, orderBy);
+
+  // The headline tiles and account cards describe the whole portfolio; the type,
+  // account and text filters only narrow the table below them.
+  const { totals: portfolioTotals } = React.useMemo(
+    () =>
+      applyFilter({
+        inputData: enrichedRows,
+        comparator: () => 0,
+        filterName: '',
+        filterAccount: 'all',
+        filterType: 'all',
+        accounts,
+      }),
+    [enrichedRows, accounts]
+  );
+  const accountCards = React.useMemo(
+    () => [...portfolioTotals].sort((a, b) => b.totalValue - a.totalValue),
+    [portfolioTotals]
+  );
+  const accountNames = React.useMemo(() => new Map(accounts.map((a) => [a.id, a.name])), [accounts]);
+  const getAccountName = React.useCallback((id: string) => accountNames.get(id) ?? id, [accountNames]);
 
   const { dataFiltered, totals } = applyFilter({
     inputData: enrichedRows,
@@ -206,11 +231,25 @@ export default function Table<T>({
     return items;
   }, [dataFiltered, totals, viewMode, comparator]);
 
-  const pageItems = displayItems.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
-  // If pagination splits an account group, re-show its header at the top of the page.
-  if (viewMode === 'account' && pageItems[0]?.kind === 'holding') {
-    const total = totals.find((t) => t.accountId === (pageItems[0] as { row: EnrichedHolding }).row.accountId);
-    if (total) pageItems.unshift({ kind: 'accountHeader', key: `header-${total.accountId}-cont`, total });
+  // Pages count holdings, not the account header rows between them; each page
+  // re-inserts the headers for the groups it shows.
+  const rowItems = displayItems.filter((item) => item.kind !== 'accountHeader');
+  const pageRows = rowItems.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
+  const pageItems: Array<DisplayItem> = [];
+  if (viewMode === 'account') {
+    const totalsByAccount = new Map(totals.map((t) => [t.accountId, t]));
+    let lastAccount = '';
+    for (const item of pageRows) {
+      const accountId = (item as { row: EnrichedHolding }).row.accountId;
+      const total = totalsByAccount.get(accountId);
+      if (accountId !== lastAccount && total) {
+        pageItems.push({ kind: 'accountHeader', key: `header-${accountId}`, total });
+      }
+      lastAccount = accountId;
+      pageItems.push(item);
+    }
+  } else {
+    pageItems.push(...pageRows);
   }
 
   const handleManageCash = (accountId: string) => {
@@ -232,14 +271,14 @@ export default function Table<T>({
 
   const notFound = !dataFiltered.length;
 
-  const grandValue = totals.reduce((s, t) => s + t.totalValue, 0);
-  const grandInvested = totals.reduce((s, t) => s + t.totalInvestment, 0);
-  const grandGL = totals.reduce((s, t) => s + t.totalGL, 0);
+  const grandValue = portfolioTotals.reduce((s, t) => s + t.totalValue, 0);
+  const grandInvested = portfolioTotals.reduce((s, t) => s + t.totalInvestment, 0);
+  const grandGL = portfolioTotals.reduce((s, t) => s + t.totalGL, 0);
   const grandGLPercent = grandInvested > 0 ? grandGL / grandInvested : 0;
   const grandGLTone = useSentiment(grandGL);
 
-  const totalCash = totals.reduce((s, t) => s + (t.cashBalance ?? 0), 0);
-  const positionCount = viewMode === 'consolidated' ? displayItems.length : dataFiltered.length;
+  const totalCash = portfolioTotals.reduce((s, t) => s + (t.cashBalance ?? 0), 0);
+  const positionCount = new Set(enrichedRows.map((r) => r.symbol)).size;
 
   return (
     <>
@@ -288,8 +327,8 @@ export default function Table<T>({
             loading={isLoading}
             footer={
               <Typography sx={{ fontSize: FONT_SIZE.micro, color: 'text.disabled' }}>
-                {positionCount} position{positionCount === 1 ? '' : 's'} · {totals.length} account
-                {totals.length === 1 ? '' : 's'}
+                {positionCount} position{positionCount === 1 ? '' : 's'} · {portfolioTotals.length} account
+                {portfolioTotals.length === 1 ? '' : 's'}
               </Typography>
             }
           />
@@ -350,13 +389,13 @@ export default function Table<T>({
             By account
           </Typography>
           <Typography sx={{ fontSize: FONT_SIZE.micro, color: 'text.disabled' }}>
-            {totals.length} account{totals.length === 1 ? '' : 's'}
+            {accountCards.length} account{accountCards.length === 1 ? '' : 's'}
           </Typography>
         </Box>
 
         <Collapse in={!summaryCollapsed}>
           <Grid container spacing={1.5} id="account-summary-grid" sx={{ pt: 1 }}>
-            {totals.map((total) => (
+            {accountCards.map((total) => (
               <Grid key={total.accountId} size={{ xs: 12, sm: 6, md: 4, lg: 3, xl: 2 }}>
                 <TotalCard total={total} onManageCash={handleManageCash} />
               </Grid>
@@ -442,8 +481,9 @@ export default function Table<T>({
         <Divider />
 
         {/* The table is the one thing allowed to scroll horizontally; the page
-            body must never do so. */}
-        <Box sx={{ overflowX: 'auto' }}>
+            body must never do so. With nothing to list it gives way to the
+            empty state, which otherwise sat below a tall blank table. */}
+        <Box sx={{ overflowX: 'auto', display: notFound && !isLoading ? 'none' : 'block' }}>
           <TableContainer
             ref={tableContainerRef}
             sx={{ maxHeight: { xs: '65vh', lg: 'calc(100vh - 320px)' }, minHeight: 280 }}
@@ -480,6 +520,7 @@ export default function Table<T>({
                           onRowClick={goToResearchPage}
                           getAlertState={getAlertState}
                           onSetAlert={onSetAlert}
+                          getAccountName={getAccountName}
                         />
                       );
                     }
@@ -488,6 +529,7 @@ export default function Table<T>({
                         key={item.key}
                         row={item.row}
                         onRowClick={goToResearchPage}
+                        accountLabel={getAccountName(item.row.accountId)}
                         alertState={getAlertState(item.row.symbol)}
                         onSetAlert={onSetAlert}
                       />
@@ -508,7 +550,7 @@ export default function Table<T>({
         <TablePagination
           page={page}
           component="div"
-          count={displayItems.length}
+          count={rowItems.length}
           rowsPerPage={rowsPerPage}
           onPageChange={handleChangePage}
           rowsPerPageOptions={[50, 100, 200, 500]}

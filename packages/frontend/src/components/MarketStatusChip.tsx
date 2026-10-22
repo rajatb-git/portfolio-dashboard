@@ -31,17 +31,20 @@ export default function MarketStatusChip() {
   const theme = useTheme();
   const [status, setStatus] = React.useState<MarketStatus | null>(null);
   const [loading, setLoading] = React.useState(true);
+  const [failed, setFailed] = React.useState(false);
   const notified = React.useRef(false);
 
   React.useEffect(() => {
     let active = true;
 
     const load = (isInitial: boolean) => {
+      if (!isInitial && document.visibilityState !== 'visible') return;
       apis.live
         .getMarketStatus()
         .then((data) => {
           if (!active) return;
           setStatus(data);
+          setFailed(false);
         })
         .catch((err) => {
           if (!active) return;
@@ -50,7 +53,9 @@ export default function MarketStatusChip() {
             notified.current = true;
             toast.error(err.message || 'Failed to load market status');
           }
-          setStatus(null);
+          // Keep the last known status on screen, marked as not refreshed,
+          // rather than the chip vanishing without a word.
+          setFailed(true);
         })
         .finally(() => {
           if (active && isInitial) setLoading(false);
@@ -69,7 +74,17 @@ export default function MarketStatusChip() {
     return <Skeleton variant="rounded" width={132} height={30} sx={{ borderRadius: 999 }} />;
   }
 
-  if (!status) return null;
+  if (!status) {
+    return failed ? (
+      <Tooltip title="Couldn't reach the backend to check the market" arrow>
+        <Typography
+          sx={{ fontSize: '0.72rem', fontWeight: 700, color: 'text.disabled', whiteSpace: 'nowrap', px: 1.25 }}
+        >
+          Status unknown
+        </Typography>
+      </Tooltip>
+    ) : null;
+  }
 
   const meta = SESSION_META[status.session] ?? SESSION_META.closed;
   const color = meta.live
@@ -83,16 +98,15 @@ export default function MarketStatusChip() {
       <Typography sx={{ fontSize: '0.78rem', fontWeight: 600 }}>
         {status.exchange} market · {meta.label}
       </Typography>
-      {status.holiday && (
-        <Typography sx={{ fontSize: '0.72rem', opacity: 0.85 }}>Holiday: {status.holiday}</Typography>
-      )}
+      {status.holiday && <Typography sx={{ fontSize: '0.72rem', opacity: 0.85 }}>Holiday: {status.holiday}</Typography>}
       {status.nextChange && moment(status.nextChange.at).isAfter(moment()) && (
         <Typography sx={{ fontSize: '0.72rem', opacity: 0.85 }}>
           {NEXT_SESSION_COPY[status.nextChange.session]} {moment(status.nextChange.at).fromNow()}
         </Typography>
       )}
       <Typography sx={{ fontSize: '0.68rem', opacity: 0.7, mt: 0.25 }}>
-        Updated {moment(status.generatedAt).fromNow()}
+        {failed ? "Couldn't refresh — last known status from " : 'Updated '}
+        {moment(status.generatedAt).fromNow()}
       </Typography>
     </Box>
   );
@@ -131,9 +145,7 @@ export default function MarketStatusChip() {
             }),
           }}
         />
-        <Typography sx={{ fontSize: '0.72rem', fontWeight: 700, color, whiteSpace: 'nowrap' }}>
-          {meta.label}
-        </Typography>
+        <Typography sx={{ fontSize: '0.72rem', fontWeight: 700, color, whiteSpace: 'nowrap' }}>{meta.label}</Typography>
       </Stack>
     </Tooltip>
   );

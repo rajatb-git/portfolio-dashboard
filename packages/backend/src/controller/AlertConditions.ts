@@ -111,9 +111,12 @@ export function nextPeak(alert: IAlert, price: number): number | null {
 }
 
 // Human-readable description of what the alert watches, for the UI and messages.
+const usd = (n: number): string =>
+  `$${n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
 export function describeCondition(alert: IAlert, context: AlertContext = EMPTY_ALERT_CONTEXT): string {
   const target = resolveTarget(alert, context);
-  const level = target !== null ? ` ($${target})` : '';
+  const level = target !== null ? ` (${usd(target)})` : '';
   switch (conditionOf(alert)) {
     case 'trailing_stop':
       return `${alert.trailPercent ?? 0}% below its peak${level}`;
@@ -122,6 +125,6 @@ export function describeCondition(alert: IAlert, context: AlertContext = EMPTY_A
     case 'cost_basis':
       return `${alert.direction === 'above' ? 'at or above' : 'at or below'} cost basis${level}`;
     default:
-      return `${alert.direction === 'above' ? 'at or above' : 'at or below'} $${alert.targetPrice}`;
+      return `${alert.direction === 'above' ? 'at or above' : 'at or below'} ${usd(alert.targetPrice)}`;
   }
 }

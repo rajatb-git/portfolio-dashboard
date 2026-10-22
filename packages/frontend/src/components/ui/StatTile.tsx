@@ -91,8 +91,11 @@ export default function StatTile({
         <Typography
           data-numeric=""
           noWrap
+          title={typeof value === 'string' ? value : undefined}
           sx={{
-            fontSize: emphasis ? FONT_SIZE.hero : '1.25rem',
+            // The headline tile is a quarter of the row on a laptop; scale with
+            // the viewport there so a six-figure total isn't cut to "$147,20…".
+            fontSize: emphasis ? { xs: FONT_SIZE.hero, lg: `clamp(1.75rem, 2.2vw, ${FONT_SIZE.hero})` } : '1.25rem',
             fontWeight: emphasis ? 600 : 550,
             letterSpacing: emphasis ? '-0.04em' : '-0.02em',
             lineHeight: 1.05,

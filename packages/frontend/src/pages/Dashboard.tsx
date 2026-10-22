@@ -1,4 +1,5 @@
-import { Stack } from '@mui/material';
+import { Alert, Stack, Typography } from '@mui/material';
+import moment from 'moment';
 import * as React from 'react';
 
 import AlertDialog, { type DraftAlert, EMPTY_DRAFT } from '@/components/Alerts/AlertDialog';
@@ -19,6 +20,8 @@ export default function Dashboard() {
     earnings,
     earningsResults,
     alertStatuses,
+    lastUpdated,
+    connectionError,
     refresh,
     revalidate,
     loadAlerts,
@@ -75,15 +78,29 @@ export default function Dashboard() {
         title="Dashboard"
         subtitle="Every holding across every account, with live prices"
         actions={
-          <ToolbarButton
-            icon="tabler:refresh"
-            label="Refresh holdings and prices"
-            onClick={refresh}
-            busy={isLoading}
-            color="primary.main"
-          />
+          <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
+            {lastUpdated && (
+              <Typography variant="caption" color="text.secondary" sx={{ whiteSpace: 'nowrap' }}>
+                Updated {moment(lastUpdated).format('h:mm a')}
+              </Typography>
+            )}
+            <ToolbarButton
+              icon="tabler:refresh"
+              label="Refresh holdings and prices"
+              onClick={refresh}
+              busy={isLoading}
+              color="primary.main"
+            />
+          </Stack>
         }
       />
+
+      {connectionError && lastUpdated && (
+        <Alert severity="warning" sx={{ mb: 2, py: 0.5 }}>
+          Can't reach the backend ({connectionError}) — showing data from {moment(lastUpdated).format('h:mm a')}.
+          Retrying automatically.
+        </Alert>
+      )}
 
       <DashboardTable
         isLoading={isLoading}
