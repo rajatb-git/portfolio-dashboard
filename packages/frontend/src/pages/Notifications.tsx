@@ -119,7 +119,7 @@ export default function Notifications() {
           severity="warning"
           sx={{ mb: 2 }}
           action={
-            <Button component={RouterLink} to="/settings" color="inherit" size="small">
+            <Button component={RouterLink} to="/settings?tab=alerts" color="inherit" size="small">
               Settings
             </Button>
           }

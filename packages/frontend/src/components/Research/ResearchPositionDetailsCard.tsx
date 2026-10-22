@@ -1,5 +1,3 @@
-import * as React from 'react';
-
 import {
   Box,
   Button,
@@ -19,6 +17,7 @@ import {
   Typography,
 } from '@mui/material';
 import moment from 'moment';
+import * as React from 'react';
 
 import type { SymbolPosition } from '@/api/holdings';
 import { Iconify } from '@/components/Iconify';
@@ -174,6 +173,7 @@ export default function ResearchPositionDetailsCard({
                           size="small"
                           aria-label={isOpen ? 'Hide tax lots' : 'Show tax lots'}
                           onClick={() => toggle(pos.id)}
+                          sx={{ width: 32, height: 32 }}
                         >
                           <Iconify icon={isOpen ? 'mdi:chevron-up' : 'mdi:chevron-down'} width={18} />
                         </IconButton>

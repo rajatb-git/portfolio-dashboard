@@ -1,12 +1,3 @@
-import * as React from 'react';
-
-import apis from '@/api';
-import { IMarketNews } from '@/models/MarketNews';
-import { IPriceStore } from '@/models/PriceStoreModel';
-import { IRecommendation } from '@/models/RecommendationModel';
-import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
-import { CompanyProfile } from '@/models/CompanyProfileModel';
-import { fnCurrency } from '@/utils/formatNumber';
 import {
   Avatar,
   Box,
@@ -22,30 +13,38 @@ import {
   Typography,
 } from '@mui/material';
 import moment from 'moment';
+import * as React from 'react';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'react-toastify';
+import apis from '@/api';
+import type { SymbolPosition } from '@/api/holdings';
+import { AgentInsight, AiConfig } from '@/api/live';
+import { Iconify } from '@/components/Iconify';
+import { PriceHistoryGraph } from '@/components/PriceHistoryGraph';
+import RecommendationDonutGraphMui from '@/components/RecommendationDonutGraphMui';
+import AgentInsightsCard from '@/components/Research/AgentInsightsCard';
 import ResearchDetailsCard from '@/components/Research/ResearchDetailsCard';
-import ResearchNewsCard from '@/components/Research/ResearchNewsCard';
-import ResearchMetricsCard from '@/components/Research/ResearchMetricsCard';
-import ResearchPeersCard from '@/components/Research/ResearchPeersCard';
 import ResearchEarningsHistoryCard from '@/components/Research/ResearchEarningsHistoryCard';
 import ResearchInsiderCard from '@/components/Research/ResearchInsiderCard';
-import AgentInsightsCard from '@/components/Research/AgentInsightsCard';
+import ResearchMetricsCard from '@/components/Research/ResearchMetricsCard';
+import ResearchNewsCard from '@/components/Research/ResearchNewsCard';
 import ResearchNotesCard from '@/components/Research/ResearchNotesCard';
+import ResearchPeersCard from '@/components/Research/ResearchPeersCard';
 import ResearchPositionDetailsCard from '@/components/Research/ResearchPositionDetailsCard';
 import ResearchTransactionsCard from '@/components/Research/ResearchTransactionsCard';
-import { AgentInsight, AiConfig } from '@/api/live';
-import type { SymbolPosition } from '@/api/holdings';
 import MockTradeDialog, { type MockTradeInitial } from '@/components/Tax/MockTradeDialog';
-import { IAccount } from '@/models/AccountsModel';
-import { ITransaction } from '@/models/TransactionsModel';
-import { Iconify } from '@/components/Iconify';
 import { FONT_SIZE } from '@/components/ThemeRegistry/tokens';
 import Delta from '@/components/ui/Delta';
 import Metric from '@/components/ui/Metric';
 import StateView from '@/components/ui/StateView';
 import ToolbarButton from '@/components/ui/ToolbarButton';
-import RecommendationDonutGraphMui from '@/components/RecommendationDonutGraphMui';
-import { PriceHistoryGraph } from '@/components/PriceHistoryGraph';
+import { IAccount } from '@/models/AccountsModel';
+import { CompanyProfile } from '@/models/CompanyProfileModel';
+import { IMarketNews } from '@/models/MarketNews';
+import { IPriceStore } from '@/models/PriceStoreModel';
+import { IRecommendation } from '@/models/RecommendationModel';
+import { ITransaction } from '@/models/TransactionsModel';
+import { fnCurrency } from '@/utils/formatNumber';
 import LocalStorageArray from '@/utils/localStorageArray';
 
 function Research() {
@@ -579,7 +578,7 @@ function Research() {
             <Typography variant="body2" color="text.secondary" sx={{ flexGrow: 1 }}>
               AI insights are off. Turn them on to get an analysis of {searchText} from public market data.
             </Typography>
-            <Button size="small" onClick={() => navigate('/settings')} sx={{ textTransform: 'none' }}>
+            <Button size="small" onClick={() => navigate('/settings?tab=ai')} sx={{ textTransform: 'none' }}>
               Open Settings
             </Button>
           </Stack>

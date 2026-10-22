@@ -254,7 +254,7 @@ export default function PortfolioPerformanceChart({ points, isLoading }: Props) 
           </Select>
           <ToggleButtonGroup size="small" value={range} exclusive onChange={(_, v) => v && setRange(v)}>
             {RANGE_OPTIONS.map((r) => (
-              <ToggleButton key={r} value={r} sx={{ px: 1.5, fontSize: '0.72rem' }}>
+              <ToggleButton key={r} value={r} sx={{ px: 1.5, minHeight: 32, fontSize: '0.72rem' }}>
                 {r}
               </ToggleButton>
             ))}

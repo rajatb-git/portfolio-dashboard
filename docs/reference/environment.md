@@ -62,7 +62,7 @@ The frontend has one build-time variable:
 | `VITE_DB_HOST` | `http://localhost:3001` | Backend base URL, compiled into the bundle |
 
 Resolution order at runtime: `localStorage.api_host` (set under **Settings →
-Application → Backend URL**) → `VITE_DB_HOST` → `http://localhost:3001`.
+General → Backend URL**) → `VITE_DB_HOST` → `http://localhost:3001`.
 
 In Docker the frontend image is built with `VITE_DB_HOST=/api` and nginx proxies
 `/api/` to the backend service — see [Deploying with Docker](/guide/docker).

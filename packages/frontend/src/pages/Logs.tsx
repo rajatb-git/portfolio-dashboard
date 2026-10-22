@@ -1,5 +1,3 @@
-import * as React from 'react';
-
 import {
   Button,
   Dialog,
@@ -7,14 +5,18 @@ import {
   DialogContent,
   DialogContentText,
   DialogTitle,
+  InputAdornment,
   MenuItem,
   Select,
+  Stack,
+  TextField,
 } from '@mui/material';
+import * as React from 'react';
 import { toast } from 'react-toastify';
 
 import apis from '@/api';
 import { Iconify } from '@/components/Iconify';
-import { LogsViewer } from '@/components/LogViewer';
+import { type LogLevelFilter, LogsViewer } from '@/components/LogViewer';
 import PageHeader from '@/components/ui/PageHeader';
 import ToolbarButton from '@/components/ui/ToolbarButton';
 
@@ -25,6 +27,8 @@ export default function Logs() {
   const [file, setFile] = React.useState<File>('combined');
   const [logData, setLogData] = React.useState('');
   const [confirmClear, setConfirmClear] = React.useState(false);
+  const [level, setLevel] = React.useState<LogLevelFilter>('all');
+  const [query, setQuery] = React.useState('');
 
   const loadData = () => {
     setIsLoading(true);
@@ -105,7 +109,39 @@ export default function Logs() {
         }
       />
 
-      <LogsViewer data={logData} />
+      <Stack direction="row" sx={{ flexWrap: 'wrap', gap: 1, mb: 1.5 }}>
+        <Select
+          value={level}
+          onChange={(e) => setLevel(e.target.value as LogLevelFilter)}
+          size="small"
+          aria-label="Log level"
+          sx={{ minWidth: 130 }}
+        >
+          <MenuItem value="all">All levels</MenuItem>
+          <MenuItem value="error">Errors</MenuItem>
+          <MenuItem value="warn">Warnings</MenuItem>
+          <MenuItem value="info">Info</MenuItem>
+        </Select>
+        <TextField
+          size="small"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Filter by text, symbol or label"
+          aria-label="Filter log lines"
+          slotProps={{
+            input: {
+              startAdornment: (
+                <InputAdornment position="start">
+                  <Iconify icon="tabler:search" width={16} aria-hidden />
+                </InputAdornment>
+              ),
+            },
+          }}
+          sx={{ flex: '1 1 220px', maxWidth: 420 }}
+        />
+      </Stack>
+
+      <LogsViewer data={logData} level={level} query={query} />
 
       <Dialog open={confirmClear} onClose={() => setConfirmClear(false)}>
         <DialogTitle>Clear {file}.log?</DialogTitle>

@@ -52,7 +52,7 @@ requests to the wrong host.
 
 The frontend resolves the API URL as: `localStorage.api_host` →
 `VITE_DB_HOST` → `http://localhost:3001`. Fix it under **Settings →
-Application → Backend URL** — that value wins over the build-time one.
+General → Backend URL** — that value wins over the build-time one.
 
 In Docker the frontend is built with `VITE_DB_HOST=/api` and nginx proxies
 `/api/` to the backend service. If you changed the service name or port in

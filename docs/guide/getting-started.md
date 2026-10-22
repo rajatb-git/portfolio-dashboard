@@ -67,7 +67,7 @@ To run just one side: `pnpm dev:frontend` or `pnpm dev:backend`.
 
 The frontend finds the API through `VITE_DB_HOST` (defaulting to
 `http://localhost:3001`). You can also override it at runtime under
-**Settings → Application → Backend URL**, which is stored in `localStorage`
+**Settings → General → Backend URL**, which is stored in `localStorage`
 under `api_host` — handy when the API lives on another host on your LAN.
 
 ## 4. First-run checklist

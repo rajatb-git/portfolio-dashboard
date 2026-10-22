@@ -58,16 +58,18 @@ export const SURFACE = {
   },
 } as const;
 
+// The app uses "disabled" for captions and helper copy, not only for inert
+// controls, so it has to clear WCAG AA (4.5:1) on every surface it sits on.
 export const TEXT = {
   dark: {
     primary: '#f2f5fa',
     secondary: '#9aa4b5',
-    disabled: '#626c7d',
+    disabled: '#7f8a9b',
   },
   light: {
     primary: '#0f1b2d',
     secondary: '#4a5a70',
-    disabled: '#7d8b9e',
+    disabled: '#5f6d80',
   },
 } as const;
 

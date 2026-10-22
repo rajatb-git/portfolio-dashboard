@@ -1,7 +1,6 @@
-import axios from './axios';
-
 import { DB_HOST } from '@/config';
 import { catchCustomError } from './apiUtil';
+import axios from './axios';
 
 export type LockStatus = { enabled: boolean; idleTimeoutMinutes: number };
 
@@ -117,6 +116,13 @@ export type BackupFile = { file: string; size: number; createdAt: string };
 export type DemoModeStatus = { enabled: boolean };
 
 export default class SettingsAPI {
+  // Asks a candidate backend URL for its health check before Settings switches to it.
+  checkBackend = async (host: string): Promise<{ status: string }> =>
+    axios
+      .get(`${host}/health`, { timeout: 5000 })
+      .then((response) => response.data)
+      .catch(catchCustomError);
+
   getLock = async (): Promise<LockStatus> =>
     axios
       .get(DB_HOST + '/settings/lock')

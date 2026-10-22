@@ -1,6 +1,21 @@
 // API Config
 // ---------------------------------------------
-export const DB_HOST = import.meta.env.VITE_DB_HOST || 'http://localhost:3001';
+export const DEFAULT_DB_HOST = import.meta.env.VITE_DB_HOST || 'http://localhost:3001';
+export const API_HOST_KEY = 'api_host';
+
+// Settings → Backend URL stores an override here; it wins over the build-time
+// host. Read once at startup, which is why changing it reloads the page.
+const readApiHostOverride = (): string | null => {
+  try {
+    const raw = localStorage.getItem(API_HOST_KEY);
+    const value = raw ? JSON.parse(raw) : null;
+    return typeof value === 'string' && value.trim() ? value.trim().replace(/\/+$/, '') : null;
+  } catch {
+    return null;
+  }
+};
+
+export const DB_HOST = readApiHostOverride() ?? DEFAULT_DB_HOST;
 
 // NAV
 // ---------------------------------------------

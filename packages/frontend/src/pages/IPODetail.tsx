@@ -254,7 +254,7 @@ function IPODetail() {
             </Stack>
 
             <Typography sx={{ fontSize: '0.82rem', color: 'text.secondary' }}>
-              Expected {moment(ipo.date).format('MMMM D, YYYY')} ({moment(ipo.date).fromNow()})
+              {ipoDateLabel(ipo)}
               {ipo.exchange ? ` · ${ipo.exchange}` : ''}
             </Typography>
 
@@ -318,8 +318,8 @@ function IPODetail() {
             <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
               <Iconify icon="mdi:information-outline" width={18} sx={{ color: 'text.disabled' }} />
               <Typography sx={{ fontSize: '0.82rem', color: 'text.secondary' }}>
-                Company profile and news feeds become available once {ipo.name} begins trading. Until then, the AI
-                overview above is the best read on this offering.
+                Company profile and news feeds become available once {ipo.name} begins trading.
+                {agentEnabled ? ' Until then, the AI overview above is the best read on this offering.' : ''}
               </Typography>
             </Stack>
           </Card>
@@ -335,3 +335,14 @@ export default function IPODetailPage() {
     </React.Suspense>
   );
 }
+
+// A past date on an IPO that never priced means the listing slipped or was
+// pulled, not that it is still "expected".
+const ipoDateLabel = (ipo: IIPO) => {
+  const date = moment(ipo.date);
+  const day = date.format('MMMM D, YYYY');
+  if (ipo.status === 'priced') return `Priced ${day} (${date.fromNow()})`;
+  if (ipo.status === 'withdrawn') return `Withdrawn · was expected ${day}`;
+  if (date.isBefore(moment(), 'day')) return `Was expected ${day} — not priced yet`;
+  return `Expected ${day} (${date.fromNow()})`;
+};

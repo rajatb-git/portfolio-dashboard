@@ -1,25 +1,24 @@
-import * as React from 'react';
-
 import Box from '@mui/material/Box';
 import LinearProgress from '@mui/material/LinearProgress';
 import useMediaQuery from '@mui/material/useMediaQuery';
+import * as React from 'react';
 import { BrowserRouter, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { ToastContainer } from 'react-toastify';
 
 import AuthGate from '@/components/AuthGate';
 import ErrorBoundary from '@/components/ErrorBoundary';
-import StateView from '@/components/ui/StateView';
-import PWAInstallPrompt from '@/components/PWAInstallPrompt';
 import Sidebar from '@/components/Nav/Sidebar';
 import TopBar from '@/components/Nav/TopBar';
-import ThemeRegistry from '@/components/ThemeRegistry/ThemeRegistry';
+import PWAInstallPrompt from '@/components/PWAInstallPrompt';
 import { useThemeMode } from '@/components/ThemeRegistry/ThemeModeContext';
+import ThemeRegistry from '@/components/ThemeRegistry/ThemeRegistry';
 import { TOPBAR_HEIGHT } from '@/components/ThemeRegistry/tokens';
+import StateView from '@/components/ui/StateView';
+import { DRAWER_COLLAPSED_WIDTH, DRAWER_WIDTH, NAV_CONFIG, NAV_SETTINGS_CONFIG } from '@/config';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 import { DashboardDataProvider } from '@/contexts/DashboardDataContext';
 import { DemoModeProvider } from '@/contexts/DemoModeContext';
 import { useIdleLock } from '@/hooks/useIdleLock';
-import { DRAWER_COLLAPSED_WIDTH, DRAWER_WIDTH } from '@/config';
 
 const Dashboard = React.lazy(() => import('@/pages/Dashboard'));
 const Today = React.lazy(() => import('@/pages/Today'));
@@ -68,11 +67,28 @@ function NotFound() {
   );
 }
 
+const APP_NAME = 'Portfolio Dashboard';
+
+// Tabs, history and screen readers tell pages apart by the document title.
+function useDocumentTitle() {
+  const location = useLocation();
+  React.useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const page = [...NAV_CONFIG, NAV_SETTINGS_CONFIG].find(
+      (item) => location.pathname === item.href || location.pathname.startsWith(`${item.href}/`)
+    );
+    const symbol = location.pathname === '/research' ? params.get('searchText')?.toUpperCase() : null;
+    const title = symbol ? `${symbol} · Research` : (page?.text ?? 'Page not found');
+    document.title = `${title} · ${APP_NAME}`;
+  }, [location.pathname, location.search]);
+}
+
 function AppShell() {
   const [collapsed, setCollapsed] = React.useState(() => localStorage.getItem('nav_collapsed') === 'true');
   const [mobileOpen, setMobileOpen] = React.useState(false);
   const isMobile = useMediaQuery('(max-width: 899.95px)');
   const location = useLocation();
+  useDocumentTitle();
 
   const handleToggle = () => {
     setCollapsed((prev) => {

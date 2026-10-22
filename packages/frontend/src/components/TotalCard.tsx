@@ -84,7 +84,14 @@ export default function TotalCard({ total, onManageCash }: TotalCardProps) {
 
         <Stack
           direction="row"
-          sx={{ alignItems: 'center', justifyContent: 'space-between', gap: 1, pt: 0.5, borderTop: 1, borderColor: 'divider' }}
+          sx={{
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 1,
+            pt: 0.5,
+            borderTop: 1,
+            borderColor: 'divider',
+          }}
         >
           <Typography noWrap sx={{ fontSize: FONT_SIZE.micro, color: 'text.secondary', minWidth: 0 }}>
             <Box component="span" sx={{ color: 'text.disabled' }}>
@@ -99,11 +106,7 @@ export default function TotalCard({ total, onManageCash }: TotalCardProps) {
             <Box component="span" sx={{ color: 'text.disabled' }}>
               Cash
             </Box>{' '}
-            <Box
-              component="span"
-              data-numeric=""
-              sx={{ fontWeight: 600, color: cash < 0 ? cashTone.main : 'inherit' }}
-            >
+            <Box component="span" data-numeric="" sx={{ fontWeight: 600, color: cash < 0 ? cashTone.main : 'inherit' }}>
               {fnCurrency(cash)}
             </Box>
           </Typography>
@@ -113,8 +116,8 @@ export default function TotalCard({ total, onManageCash }: TotalCardProps) {
               icon="tabler:cash"
               label={`Deposit or withdraw cash — ${total.accountName ?? total.accountId}`}
               onClick={() => onManageCash(total.accountId)}
-              size={15}
-              sx={{ p: 0.375, color: 'text.disabled' }}
+              size={16}
+              sx={{ minWidth: 32, minHeight: 32, color: 'text.disabled' }}
             />
           )}
         </Stack>
