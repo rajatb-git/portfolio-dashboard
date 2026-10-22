@@ -126,7 +126,7 @@ class TradingSummaryService {
     }
 
     try {
-      const recap = await buildDailyRecap();
+      const recap = await buildDailyRecap({ waitForPendingMs: 30_000 });
       logger.log({
         level: 'info',
         label: LABEL,

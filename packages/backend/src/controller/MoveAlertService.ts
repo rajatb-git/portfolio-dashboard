@@ -172,7 +172,7 @@ class MoveAlertService {
       const scope = this.evalScope();
       if (!scope.stocks && !scope.crypto) return;
 
-      const recap = await buildDailyRecap();
+      const recap = await buildDailyRecap({ waitForPendingMs: 30_000 });
       const eligible = recap.holdings.filter((h) => (h.type === 'crypto' ? scope.crypto : scope.stocks));
 
       // The portfolio total is priced off the equity session's previous close, so

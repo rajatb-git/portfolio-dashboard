@@ -1,14 +1,7 @@
-import moment from 'moment';
-import { getStockMetrics } from '../externalApis/finnHub';
+import type { StockMetrics } from '../externalApis/finnHub';
+import { read } from '../marketData/store';
 import type { AlertCondition, IAlert } from '../models/AlertModel';
-import { CacheDBModel } from '../models/CacheModel';
 import { HoldingsModel } from '../models/HoldingsModel';
-import { logger } from '../utils/winston';
-
-const LABEL = 'AlertConditions';
-
-// A 52-week high moves at most once a day, so this only needs refreshing daily.
-const HIGH_CACHE_HOURS = 24;
 
 // Reference data the non-price conditions are measured against.
 export type AlertContext = {
@@ -21,33 +14,12 @@ export const EMPTY_ALERT_CONTEXT: AlertContext = { fiftyTwoWeekHigh: new Map(), 
 // Stored alerts predating the condition field are plain price targets.
 export const conditionOf = (alert: Pick<IAlert, 'condition'>): AlertCondition => alert.condition ?? 'price';
 
-const highCacheKey = (symbol: string): string => `alert_52w_high_${symbol.toUpperCase()}`;
-
+// From the stored stock metrics, which the scheduler keeps fresh for every
+// symbol with a %-from-high alert.
 async function fetch52WeekHigh(symbol: string): Promise<number | null> {
-  const cacheModel = await CacheDBModel().initialize();
-  const key = highCacheKey(symbol);
-  const cached = cacheModel.findById(key);
-
-  if (cached && moment().diff(moment(cached.updatedAt), 'hours') < HIGH_CACHE_HOURS) {
-    const value = Number(cached.value);
-    if (Number.isFinite(value) && value > 0) return value;
-  }
-
-  try {
-    const response = await getStockMetrics(symbol);
-    const high = Number(response?.metric?.['52WeekHigh']);
-    if (!Number.isFinite(high) || high <= 0) return null;
-    await cacheModel.insertOrUpdate({ key, value: String(high) }, key);
-    return high;
-  } catch (err: any) {
-    logger.log({ level: 'error', label: LABEL, message: `52-week high failed for ${symbol}: ${err.message}` });
-    // Serve a stale value rather than silently disarming the alert.
-    if (cached) {
-      const value = Number(cached.value);
-      if (Number.isFinite(value) && value > 0) return value;
-    }
-    return null;
-  }
+  const metrics = await read<StockMetrics>('metrics', symbol.toUpperCase(), { mode: 'fresh' });
+  const high = Number(metrics.value?.week52High);
+  return Number.isFinite(high) && high > 0 ? high : null;
 }
 
 // Weighted average cost per symbol across every account holding it.

@@ -226,8 +226,9 @@ export default function Table<T>({
   }).length;
 
   const unpricedSymbols = [
-    ...new Set((rows as HoldingAggregate[]).filter((r) => r.priceUnavailable).map((r) => r.symbol)),
+    ...new Set((rows as HoldingAggregate[]).filter((r) => r.priceUnavailable && !r.pricePending).map((r) => r.symbol)),
   ];
+  const pendingSymbols = [...new Set((rows as HoldingAggregate[]).filter((r) => r.pricePending).map((r) => r.symbol))];
 
   const notFound = !dataFiltered.length;
 
@@ -294,6 +295,12 @@ export default function Table<T>({
           />
         </Grid>
       </Grid>
+
+      {pendingSymbols.length > 0 && (
+        <Alert severity="info" sx={{ mb: 2, py: 0.5 }}>
+          Fetching first prices for {pendingSymbols.join(', ')} — valued at cost basis until they arrive
+        </Alert>
+      )}
 
       {unpricedSymbols.length > 0 && (
         <Alert severity="info" sx={{ mb: 2, py: 0.5 }}>

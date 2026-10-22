@@ -119,13 +119,15 @@ const bulkSnapshot = async (
   from: string,
   to: string,
   today: string
-): Promise<CalendarSnapshot> => bucketReleases(await getBulkEarningsCalendar(from, to), nameBySymbol, today);
+): Promise<CalendarSnapshot> =>
+  bucketReleases(await getBulkEarningsCalendar(from, to, { waitMs: 10_000 }), nameBySymbol, today);
 
 // One request per held symbol — the shape this used before the bulk call, kept
 // as a fallback because the unfiltered calendar is not served on every Finnhub
 // plan. Without it a plan that rejects the bulk request leaves the calendar
 // pinned to whatever was cached last, which silently stops every earnings
 // reminder. A symbol that fails is skipped; only a total wipeout is an error.
+// These go on the background lane so the fan-out never crowds out a page.
 const perSymbolSnapshot = async (
   nameBySymbol: Map<string, string>,
   from: string,
@@ -138,7 +140,7 @@ const perSymbolSnapshot = async (
   await Promise.all(
     [...nameBySymbol.keys()].map(async (symbol) => {
       try {
-        releases.push(...(await getSymbolEarningsCalendar(symbol, from, to)));
+        releases.push(...(await getSymbolEarningsCalendar(symbol, from, to, { lane: 'background', waitMs: 60_000 })));
       } catch {
         failed += 1;
       }

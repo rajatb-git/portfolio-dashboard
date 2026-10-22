@@ -1,4 +1,4 @@
-import { Chip, IconButton, Tooltip } from '@mui/material';
+import { Chip, IconButton, Skeleton, Tooltip } from '@mui/material';
 import Stack from '@mui/material/Stack';
 import { default as MuiTableRow } from '@mui/material/TableRow';
 import Typography from '@mui/material/Typography';
@@ -118,7 +118,13 @@ export default function DashTableRow({
 
       <TableCell align="right">
         <Stack direction="column" spacing={0} data-numeric="">
-          {row.priceUnavailable ? '—' : fnCurrency(row.currentPrice)}
+          {row.pricePending ? (
+            <Skeleton variant="text" width={64} sx={{ ml: 'auto' }} />
+          ) : row.priceUnavailable ? (
+            '—'
+          ) : (
+            fnCurrency(row.currentPrice)
+          )}
           <Typography variant="caption" noWrap>
             {row.dayLow?.toFixed(2)} - {row.dayHigh?.toFixed(2)}
           </Typography>

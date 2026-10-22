@@ -1,8 +1,7 @@
 import moment from 'moment';
-import { getMarketStatus } from '../externalApis/finnHub';
-import { CacheDBModel, ICacheModel } from '../models/CacheModel';
+import type { MarketStatusResponse } from '../externalApis/finnHub';
+import { read } from '../marketData/store';
 import { getMarketSession, getNextSessionChange, type MarketSession } from '../utils/marketCalendar';
-import { logger } from '../utils/winston';
 
 // US market open/closed/extended-hours status from Finnhub — public exchange
 // data, no personal holdings and no AI provider involved.
@@ -20,10 +19,6 @@ export type MarketStatus = {
   nextChange: { session: MarketSession; at: string };
   generatedAt: string;
 };
-
-const CACHE_KEY = 'market_status';
-const CACHE_MINUTES = 1;
-const LABEL = 'MarketStatus';
 
 // Finnhub's free tier sometimes returns a null session, and only ever says
 // "closed" for anything outside the regular bell — including pre-market, when
@@ -52,61 +47,24 @@ const localStatus = (): MarketStatus => {
   };
 };
 
-const parseCached = (cached: ICacheModel | undefined): MarketStatus | null => {
-  if (!cached) return null;
-  try {
-    return JSON.parse(cached.value);
-  } catch {
-    return null;
-  }
-};
-
+// The market data scheduler keeps the stored status fresh; a refresh click
+// fetches a new one. Without any stored status, the local calendar answers.
 export class MarketStatusController {
   getStatus = async (forceRefresh = false): Promise<MarketStatus> => {
-    const cacheModel = await CacheDBModel().initialize();
-    const cached = cacheModel.findById(CACHE_KEY);
-    const cachedStatus = parseCached(cached);
-    const isFresh = !!cached && moment().diff(moment(cached.updatedAt), 'minutes') < CACHE_MINUTES;
+    const result = await read<MarketStatusResponse>('marketStatus', 'US', {
+      mode: forceRefresh ? 'force' : 'fresh',
+    }).catch(() => read<MarketStatusResponse>('marketStatus', 'US'));
+    const raw = result.value;
+    if (!raw) return localStatus();
 
-    if (!forceRefresh && cachedStatus && isFresh) {
-      return { ...cachedStatus, nextChange: getNextSessionChange() };
-    }
-
-    try {
-      const raw = await getMarketStatus('US');
-      const status: MarketStatus = {
-        isOpen: !!raw.isOpen,
-        session: normalizeSession(raw.session, !!raw.isOpen),
-        holiday: raw.holiday ?? null,
-        exchange: raw.exchange || 'US',
-        timezone: raw.timezone || 'America/New_York',
-        nextChange: getNextSessionChange(),
-        generatedAt: moment().toISOString(),
-      };
-
-      await cacheModel.insertOrUpdate({ key: CACHE_KEY, value: JSON.stringify(status) }, CACHE_KEY);
-      logger.log({ level: 'info', label: LABEL, message: `Market ${status.session} (open=${status.isOpen})` });
-
-      return status;
-    } catch (err: any) {
-      // Finnhub call failed (rate limit, timeout, outage) — serve the last known-good
-      // status instead of failing the request, same as LiveQuoteController/
-      // LiveRecommendationController. MarketStatusService keeps this cache warm on its
-      // own schedule, so a usable value is almost always here even if slightly stale.
-      if (cachedStatus) {
-        logger.log({
-          level: 'warn',
-          label: LABEL,
-          message: `Live refresh failed, serving cached status: ${err.message}`,
-        });
-        return { ...cachedStatus, nextChange: getNextSessionChange() };
-      }
-      logger.log({
-        level: 'warn',
-        label: LABEL,
-        message: `Live refresh failed with no cache, serving calendar-derived status: ${err.message}`,
-      });
-      return localStatus();
-    }
+    return {
+      isOpen: !!raw.isOpen,
+      session: normalizeSession(raw.session, !!raw.isOpen),
+      holiday: raw.holiday ?? null,
+      exchange: raw.exchange || 'US',
+      timezone: raw.timezone || 'America/New_York',
+      nextChange: getNextSessionChange(),
+      generatedAt: result.fetchedAt ?? moment().toISOString(),
+    };
   };
 }

@@ -20,7 +20,7 @@ export class IPOController {
     if (await this.isIPOFetchRequired()) {
       await ipoModel.deleteAll();
 
-      const apiFetch = (await getUpcomingIPOs())?.ipoCalendar;
+      const apiFetch = (await getUpcomingIPOs({ waitMs: 10_000 }))?.ipoCalendar;
 
       apiFetch && (await ipoModel.insertMany(apiFetch));
 

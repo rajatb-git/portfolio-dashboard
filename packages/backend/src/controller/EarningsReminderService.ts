@@ -1,5 +1,5 @@
 import moment from 'moment';
-import { getEarningsHistory } from '../externalApis/finnHub';
+import { read } from '../marketData/store';
 import { DEFAULT_EARNINGS_REMINDER_CONFIG, type IEarningsReminderConfig } from '../models/EarningsReminderConfigModel';
 import { getJobState, setJobState } from '../models/JobRunStateModel';
 import { etDateAndMinutes } from '../utils/marketCalendar';
@@ -148,7 +148,15 @@ class EarningsReminderService {
   private async resultFromHistory(item: Pending): Promise<ResultFigures | null> {
     let history: any[];
     try {
-      history = await getEarningsHistory(item.symbol);
+      // Forced: a stored copy from before the release can't carry its result.
+      history =
+        (
+          await read<any[]>('earningsHistory', item.symbol.toUpperCase(), {
+            mode: 'force',
+            lane: 'background',
+            waitMs: 60_000,
+          })
+        ).value ?? [];
     } catch (err: any) {
       logger.log({
         level: 'error',

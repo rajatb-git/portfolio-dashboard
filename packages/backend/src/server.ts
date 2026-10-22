@@ -15,7 +15,6 @@ import { authMiddleware } from './middleware/auth';
 import { alertMonitorService } from './controller/AlertMonitorService';
 import { ipoAnnouncementService } from './controller/IpoAnnouncementService';
 import { ipoReminderService } from './controller/IpoReminderService';
-import { marketStatusService } from './controller/MarketStatusService';
 import { dividendWatchService } from './controller/DividendWatchService';
 import { earningsReminderService } from './controller/EarningsReminderService';
 import { moveAlertService } from './controller/MoveAlertService';
@@ -33,6 +32,7 @@ import { getMoveAlertConfig } from './models/MoveAlertConfigModel';
 import { getNewsWatchConfig } from './models/NewsWatchConfigModel';
 import { getScheduledBackupConfig } from './models/ScheduledBackupConfigModel';
 import { getTradingSummaryConfig } from './models/TradingSummaryConfigModel';
+import { startMarketDataScheduler } from './marketData/scheduler';
 import { getValueCalcConfig } from './models/ValueCalcConfigModel';
 import { AccountsRouter } from './router/accounts.route';
 import { AiImportRouter } from './router/aiImport.route';
@@ -97,7 +97,7 @@ app.use(DatabaseRouter().routes()).use(DatabaseRouter().allowedMethods());
 
 app.listen(port, () => {
   console.log('server started on port ' + port);
-  marketStatusService.start();
+  void startMarketDataScheduler();
   getValueCalcConfig().then((config) => portfolioValueCalcService.start(config));
   getAlertMonitorConfig().then((config) => alertMonitorService.start(config));
   getScheduledBackupConfig().then((config) => scheduledBackupService.start(config));

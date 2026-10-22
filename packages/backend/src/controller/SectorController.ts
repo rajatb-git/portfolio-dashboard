@@ -1,8 +1,7 @@
-import { LiveQuoteController } from '../controller/LiveQuoteController';
-import { getCompanyProfile } from '../externalApis/finnHub';
-import { CacheDBModel } from '../models/CacheModel';
+import type { CompanyProfile2Response } from '../externalApis/types';
+import { getCachedQuotes } from '../marketData/quotes';
+import { read } from '../marketData/store';
 import { HoldingsModel } from '../models/HoldingsModel';
-import { logger } from '../utils/winston';
 
 export type SectorAllocation = {
   sector: string;
@@ -10,64 +9,36 @@ export type SectorAllocation = {
   percentage: number;
 };
 
+// Sectors come from the company profile, which the scheduler keeps for every
+// held symbol; a symbol whose profile was never fetched gets one short wait
+// (all in parallel) before falling back to "Unknown".
+const PROFILE_WAIT_MS = 3000;
+
 export const getSectorAllocation = async (): Promise<SectorAllocation[]> => {
   const holdingsModel = await HoldingsModel().initialize();
-  const allHoldings = holdingsModel.getAllRecords();
-  const stockHoldings = allHoldings.filter((h) => h.type === 'stock');
+  const stockHoldings = holdingsModel.getAllRecords().filter((h) => h.type === 'stock');
 
   if (stockHoldings.length === 0) return [];
 
-  const uniqueSymbols = [...new Set(stockHoldings.map((h) => h.symbol))];
-  const cacheModel = await CacheDBModel().initialize();
-  const quoteController = new LiveQuoteController();
+  const uniqueSymbols = [...new Set(stockHoldings.map((h) => h.symbol.toUpperCase()))];
 
-  // Resolve sector for each symbol (using cache + company profile)
-  const sectorMap = new Map<string, string>();
-  for (const sym of uniqueSymbols) {
-    const cacheKey = `sector_${sym}`;
-    const cached = cacheModel.findById(cacheKey);
+  const [profiles, quotes] = await Promise.all([
+    Promise.all(
+      uniqueSymbols.map(async (sym) => {
+        const profile = await read<CompanyProfile2Response>('profile', sym, { mode: 'fresh', waitMs: PROFILE_WAIT_MS });
+        return [sym, profile.value?.finnhubIndustry || 'Unknown'] as const;
+      })
+    ),
+    getCachedQuotes(uniqueSymbols.map((symbol) => ({ symbol, isCrypto: false }))),
+  ]);
+  const sectorMap = new Map(profiles);
 
-    if (cached) {
-      sectorMap.set(sym, cached.value);
-      continue;
-    }
-
-    try {
-      const profile = await getCompanyProfile(sym);
-      const sector = profile.finnhubIndustry || 'Unknown';
-      sectorMap.set(sym, sector);
-      await cacheModel.insertOrUpdate({ key: cacheKey, value: sector }, cacheKey);
-    } catch (err: any) {
-      logger.log({ level: 'error', label: 'SectorController', message: `Failed to get sector for ${sym}: ${err}` });
-      sectorMap.set(sym, 'Unknown');
-    }
-  }
-
-  // Get current prices for market value calculation
-  const priceMap = new Map<string, number>();
-  for (const sym of uniqueSymbols) {
-    try {
-      const quote = await quoteController.getLiveQuote(sym, false);
-      priceMap.set(sym, quote.price);
-    } catch (err: any) {
-      // Use average price as fallback
-      logger.log({
-        level: 'warn',
-        label: 'SectorController',
-        message: `Live quote for ${sym} failed, falling back to average price: ${err.message}`,
-      });
-      const holding = stockHoldings.find((h) => h.symbol === sym);
-      priceMap.set(sym, holding?.averagePrice ?? 0);
-    }
-  }
-
-  // Aggregate market value by sector
   const sectorValues = new Map<string, number>();
   for (const holding of stockHoldings) {
-    const sector = sectorMap.get(holding.symbol) ?? 'Unknown';
-    const price = priceMap.get(holding.symbol) ?? holding.averagePrice;
-    const value = holding.qty * price;
-    sectorValues.set(sector, (sectorValues.get(sector) ?? 0) + value);
+    const symbol = holding.symbol.toUpperCase();
+    const sector = sectorMap.get(symbol) ?? 'Unknown';
+    const price = quotes.get(symbol)?.value?.price ?? holding.averagePrice;
+    sectorValues.set(sector, (sectorValues.get(sector) ?? 0) + holding.qty * price);
   }
 
   const totalValue = [...sectorValues.values()].reduce((s, v) => s + v, 0);

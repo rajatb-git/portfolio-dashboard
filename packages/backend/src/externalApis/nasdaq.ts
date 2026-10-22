@@ -21,8 +21,8 @@ const nasdaqAgent = new https.Agent({
 const nasdaqHeaders = { 'Content-Type': 'application/json', 'User-Agent': 'PostmanRuntime/7.26.8' };
 
 // NASDAQ's edge sometimes holds a connection open instead of refusing it. A quote
-// request that never settles pins LiveQuoteController's in-flight refresh for that
-// symbol, so every later refresh waits on it forever.
+// request that never settles pins the market data store's in-flight refresh for
+// that symbol, so every later refresh waits on it forever.
 const QUOTE_TIMEOUT_MS = 10_000;
 
 const parseDollarAmount = (raw: string | undefined | null): number => {

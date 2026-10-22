@@ -4,7 +4,7 @@ import Router from '@koa/router';
 import { buy } from '../controller/BuyController';
 import { adjustCash } from '../controller/CashController';
 import { sell } from '../controller/SellController';
-import { LiveQuoteController } from '../controller/LiveQuoteController';
+import { getQuote } from '../marketData/quotes';
 import {
   enrichLots,
   LOT_METHODS,
@@ -106,9 +106,8 @@ export const HoldingsRouter = () => {
       }
 
       const isCrypto = matching[0].type === 'crypto';
-      const quoteController = new LiveQuoteController();
       const [livePrice, txModel, taxConfig] = await Promise.all([
-        quoteController.getLiveQuote(upperSymbol, isCrypto).catch((err: any) => {
+        getQuote(upperSymbol, isCrypto).catch((err: any) => {
           logger.log({
             level: 'error',
             label: `holdings by symbol "${upperSymbol}"`,

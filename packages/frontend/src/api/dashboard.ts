@@ -27,6 +27,8 @@ export type HoldingAggregate = {
   strongBuy: number;
   strongSell: number;
   priceUnavailable?: boolean;
+  // The first quote for this symbol is still being fetched; valued at cost meanwhile.
+  pricePending?: boolean;
 };
 
 export type PortfolioSnapshot = {

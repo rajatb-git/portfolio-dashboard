@@ -48,6 +48,14 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
       });
   }, []);
 
+  // The backend answers right away and marks holdings whose first quote is
+  // still being fetched; poll quickly until those arrive rather than leaving
+  // them at cost basis for a full refresh interval.
+  const pendingTimer = React.useRef<number | null>(null);
+  const pendingPolls = React.useRef(0);
+  const PENDING_POLL_MS = 3000;
+  const MAX_PENDING_POLLS = 40;
+
   const fetchData = React.useCallback(
     (silent: boolean) => {
       if (!silent) setIsLoading(true);
@@ -56,6 +64,14 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
         .getDashboard()
         .then((response) => {
           setDashboardData(response);
+          if (pendingTimer.current) window.clearTimeout(pendingTimer.current);
+          pendingTimer.current = null;
+          if (response.some((row) => row.pricePending) && pendingPolls.current < MAX_PENDING_POLLS) {
+            pendingPolls.current += 1;
+            pendingTimer.current = window.setTimeout(() => fetchDataRef.current(true), PENDING_POLL_MS);
+          } else {
+            pendingPolls.current = 0;
+          }
         })
         .catch((err) => {
           // Stay quiet on background polls so a transient blip doesn't spam toasts.
@@ -96,6 +112,9 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
     [loadAlerts]
   );
 
+  const fetchDataRef = React.useRef(fetchData);
+  fetchDataRef.current = fetchData;
+
   const refresh = React.useCallback(() => fetchData(false), [fetchData]);
   const isLoadingRef = React.useRef(isLoading);
   isLoadingRef.current = isLoading;
@@ -119,6 +138,7 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
 
     return () => {
       window.clearInterval(timer);
+      if (pendingTimer.current) window.clearTimeout(pendingTimer.current);
       document.removeEventListener('visibilitychange', tick);
     };
   }, [fetchData]);

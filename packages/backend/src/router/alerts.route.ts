@@ -1,6 +1,6 @@
 import Router from '@koa/router';
 import { buildAlertContext, describeCondition, isTriggered, resolveTarget } from '../controller/AlertConditions';
-import { LiveQuoteController } from '../controller/LiveQuoteController';
+import { getCachedQuotes } from '../marketData/quotes';
 import { ALERT_CONDITIONS, type AlertCondition, AlertModel, type IAlert } from '../models/AlertModel';
 import { errorBody } from '../utils/error';
 import { logger } from '../utils/winston';
@@ -89,29 +89,14 @@ export const AlertsRouter = () => {
     try {
       const alertModel = await AlertModel().initialize();
       const alerts = alertModel.getAllRecords();
-      const quoteController = new LiveQuoteController();
-
-      // One quote per unique symbol (preserve crypto flag).
-      const symbolMeta = new Map<string, boolean>();
-      for (const a of alerts) if (!symbolMeta.has(a.symbol)) symbolMeta.set(a.symbol, a.type === 'crypto');
-
-      const symbols = [...symbolMeta.keys()];
-      const quotes = await Promise.all(
-        symbols.map((sym) =>
-          quoteController
-            .getLiveQuote(sym, symbolMeta.get(sym))
-            .then((q) => q)
-            .catch(() => null)
-        )
-      );
-      const priceMap = new Map(symbols.map((sym, i) => [sym, quotes[i]]));
+      const quotes = await getCachedQuotes(alerts.map((a) => ({ symbol: a.symbol, isCrypto: a.type === 'crypto' })));
 
       // Same reference data and evaluator the monitor uses, so the page can never
       // disagree with what actually fires.
       const context = await buildAlertContext(alerts);
 
       ctx.body = alerts.map((a) => {
-        const quote = priceMap.get(a.symbol);
+        const quote = quotes.get(a.symbol.toUpperCase())?.value;
         // Fall back to the monitor's last recorded price when a live quote isn't
         // available (e.g. market closed), so the UI still shows the latest known state.
         const currentPrice = quote ? +quote.price.toFixed(2) : (a.lastPrice ?? null);

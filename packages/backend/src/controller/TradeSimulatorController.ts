@@ -3,7 +3,7 @@ import { AccountModel } from '../models/AccountModel';
 import { ITaxLot } from '../models/HoldingsModel';
 import { getTaxConfig, ITaxConfig } from '../models/TaxConfigModel';
 import { roundQty } from '../utils';
-import { LiveQuoteController } from './LiveQuoteController';
+import { getQuote } from '../marketData/quotes';
 import { calculateRealizedGains } from './RealizedGainsController';
 import {
   enrichLots,
@@ -155,7 +155,7 @@ export const simulateTrade = async (input: SimulationInput): Promise<TradeSimula
 
   let price = input.price !== undefined && input.price !== null ? Number(input.price) : NaN;
   if (input.price === undefined || input.price === null) {
-    const quote = await new LiveQuoteController().getLiveQuote(symbol, type === 'crypto').catch(() => null);
+    const quote = await getQuote(symbol, type === 'crypto').catch(() => null);
     if (!quote) throw new Error(`No live quote is available for ${symbol} — enter a price to simulate`);
     price = quote.price;
   }
