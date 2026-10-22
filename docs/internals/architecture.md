@@ -29,6 +29,8 @@ models/        MongoDB wrappers (MongoModel, utils/mongoModel.ts) — one file p
                collection (Accounts, Holdings, Transactions, Alerts, AiConfig,
                PortfolioSnapshot, Cache, etc.)
 externalApis/  adapters for Finnhub and NASDAQ; all log-and-rethrow on failure
+marketData/    every Finnhub call: budget + lanes, the market data store, and the
+               refresh scheduler (see "Market data" below)
 aiProviders/   adapters with a common interface over Claude SDK / Gemini SDK /
                Ollama HTTP; chosen at runtime by AiConfig.provider
 middleware/    auth — verifies the app-lock session token when the lock is on
@@ -37,7 +39,41 @@ server.ts      composes middleware (CORS, raw-body for zip uploads, bodyparser,
                helmet, auth, routers) and starts the background services
 ```
 
-Every controller that wraps an external call caches aggressively — AI insights for 6h, company profiles and sectors for extended periods — to spare rate limits and keep the UI snappy.
+Public market data never comes straight from Finnhub on a request path — it is read from the market data store (below). AI insights are cached for 6h per symbol on top of that.
+
+## Market data
+
+Finnhub's free plan allows 60 calls a minute (and 30 a second) for the whole
+app, so every Finnhub call goes through one layer in `backend/src/marketData/`:
+
+```
+finnhubClient.ts  the budget. Two lanes share it: `user` (someone is waiting —
+                  always served first) and `background` (only while 20 calls of
+                  the minute stay unspent). Every request has a deadline and
+                  fails fast with FinnhubBusyError rather than queueing for a
+                  minute. Synced from Finnhub's x-ratelimit-* headers; a 429
+                  pauses every call until Finnhub's window resets.
+datasets.ts       each kind of data (quote, recommendation, profile, metrics,
+                  peers, next earnings, earnings history, insider, news, market
+                  status): its fetcher and how long a copy stays fresh.
+store.ts          read(dataset, key, { mode }) over the `market_data` collection,
+                  held in memory. `cached` never waits; `fresh` fetches on the
+                  user lane for at most ~3s, then serves what is stored; `force`
+                  is the refresh button. Market data is public, so it always
+                  lives in the real database and Demo Mode shares it.
+scheduler.ts      keeps what someone needs fresh, spending only the background
+                  lane: every held symbol (quote plus everything Research shows),
+                  alert symbols, index quotes, whatever was opened on Research in
+                  the last 15 minutes, and anything a read found missing.
+```
+
+A read that finds nothing stored answers *pending*: the dashboard marks those
+rows `pricePending` and polls every 3s until they fill; Research endpoints
+answer `202` and the frontend client (`getUntilReady`) asks again. Quote
+cadence scales with how many symbols are watched (about 20 quotes a minute, so
+~2 minutes for 30–40 symbols); outside every session a quote taken after the
+close is kept until the next pre-market. `GET /health/market-data` shows the
+budget, the scheduler backlog and anything failing.
 
 ## Frontend layers
 
@@ -69,7 +105,7 @@ MongoDB, reschedules itself when that config is saved (no restart needed), and
 records its last run in `job_run_state` so a restart does not replay alerts.
 
 ```
-MarketStatusService          which trading session is in effect (45s refresh)
+MarketDataScheduler          keeps held / viewed / alert market data fresh (see above)
 AlertMonitorService          evaluates saved price alerts
 MoveAlertService             day-change thresholds, escalation and spike windows
 NewsWatchService             breaking headlines for holdings and the market
@@ -128,8 +164,7 @@ portfolio insights and AI document import (personal data) construct
 ## Caching
 
 - AI insights: 6h per symbol, key `agent_insight_{SYMBOL}`.
-- Live quotes and recommendations: short TTL in `LiveQuoteController` / `LiveRecommendationController` backing stores.
+- Market data (quotes, recommendations, profiles, metrics, news, …): the `market_data` store, freshness per dataset in `marketData/datasets.ts`.
 - IPO calendar: refreshed periodically, gated by a `CacheDBModel` key.
-- Sectors and company profiles: cached per-symbol in the same cache model.
 
 Nothing in the app is real-time streaming — the Dashboard "refresh" button is the primary interaction pattern.

@@ -32,11 +32,13 @@ address. `localhost` inside the container resolves to the container itself.
 | `FINN_HUB_API_KEY` | ✅ | — | Free key from [finnhub.io](https://finnhub.io) |
 | `FINN_HUB_BURST_LIMIT` | — | `30` | Calls allowed in any rolling 1-second window |
 | `FINN_HUB_RATE_LIMIT` | — | `60` | Calls allowed in any rolling 60-second window |
+| `FINN_HUB_INTERACTIVE_RESERVE` | — | `20` | Calls per minute background refreshes always leave free for pages you open |
 
 The free tier enforces **both** limits at once — a per-second burst allowance
 and a sustained per-minute cap. The defaults match the free tier's actual
-numbers; raise them only if you are on a paid plan. The sustained limit is the
-one that bites when a dashboard refresh fans out across many holdings.
+numbers; raise them only if you are on a paid plan. The backend aims a little
+under both and also follows the `x-ratelimit-*` headers Finnhub returns, so
+another process using the same key is accounted for.
 
 Finnhub powers quotes, recommendations, news, metrics, peers, earnings, insider
 transactions, company profiles and the IPO calendar. **NASDAQ** supplies price
