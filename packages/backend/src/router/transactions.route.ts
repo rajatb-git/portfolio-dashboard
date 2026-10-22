@@ -1,6 +1,8 @@
 import Router from '@koa/router';
 import moment from 'moment';
 import { adjustCash, transactionCashImpact } from '../controller/CashController';
+import { applyTradeEdit, reverseTrade } from '../controller/TransactionController';
+import { AccountModel } from '../models/AccountModel';
 import { TransactionModel } from '../models/TransactionModel';
 import { normalizeTradeDate } from '../utils';
 import { errorBody } from '../utils/error';
@@ -187,8 +189,10 @@ export const TransactionsRouter = () => {
         return;
       }
       const previous = transactionModel.findById(body.id);
+      const next = withNormalizedDate(body);
+      if (previous) await applyTradeEdit(previous, next);
 
-      const saved = await transactionModel.insertOrUpdate(withNormalizedDate(body), body.id);
+      const saved = await transactionModel.insertOrUpdate(next, body.id);
 
       // Keep account cash in sync with manual edits to the transaction log:
       // undo the previous row's cash effect, then apply the saved row's effect.
@@ -217,10 +221,15 @@ export const TransactionsRouter = () => {
         return;
       }
       const previous = transactionModel.findById(body.id);
+      // Undo the trade on its holding first: if that is refused, nothing has
+      // been deleted yet.
+      if (previous) await reverseTrade(previous);
 
       ctx.body = await transactionModel.deleteById(body.id);
 
-      if (previous) {
+      // A row left behind by a deleted account has no cash to put back.
+      const accounts = await AccountModel().initialize();
+      if (previous && accounts.findById(previous.accountId)) {
         await adjustCash(previous.accountId, -transactionCashImpact(previous));
       }
       ctx.status = 200;

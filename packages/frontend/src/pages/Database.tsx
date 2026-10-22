@@ -31,10 +31,10 @@ import { toast } from 'react-toastify';
 import apis from '@/api';
 import CashDialog from '@/components/CashDialog';
 import GenericGrid from '@/components/DataGrid';
-import ImportDialog from '@/components/DataGrid/DBImportDialog';
-import BrokerImportDialog from '@/components/DataGrid/BrokerImportDialog';
-import BrokerHoldingsImportDialog from '@/components/DataGrid/BrokerHoldingsImportDialog';
 import AiImportDialog from '@/components/DataGrid/AiImportDialog';
+import BrokerHoldingsImportDialog from '@/components/DataGrid/BrokerHoldingsImportDialog';
+import BrokerImportDialog from '@/components/DataGrid/BrokerImportDialog';
+import ImportDialog from '@/components/DataGrid/DBImportDialog';
 import TransactionImportDialog from '@/components/DataGrid/TransactionImportDialog';
 import { Iconify } from '@/components/Iconify';
 import { FONT_SIZE } from '@/components/ThemeRegistry/tokens';
@@ -417,7 +417,7 @@ function AccountsManager({
             variant="contained"
             startIcon={<Iconify icon="mdi:plus" width={16} />}
             onClick={handleAdd}
-            disabled={adding}
+            disabled={adding || !newName.trim()}
             sx={{ fontSize: '0.78rem', textTransform: 'none' }}
           >
             {adding ? 'Adding...' : 'Add Account'}
@@ -545,8 +545,8 @@ function AccountsManager({
         <DialogTitle>Delete Account</DialogTitle>
         <DialogContent>
           <DialogContentText>
-            Are you sure you want to delete <strong>{deleteTarget?.name}</strong>? This will not remove any holdings
-            associated with this account.
+            Delete <strong>{deleteTarget?.name}</strong>? Its holdings and transaction history are deleted with it, and
+            this can't be undone. Export a backup first if you might need them.
           </DialogContentText>
         </DialogContent>
         <DialogActions>

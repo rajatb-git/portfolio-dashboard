@@ -16,6 +16,9 @@ export const normalizeTradeDate = (value: unknown): string | undefined => {
   return parsed.toISOString();
 };
 
+const MAX_TRADE_QTY = 100_000_000;
+const MAX_TRADE_PRICE = 10_000_000;
+
 // Crypto trades are fractional; rounding stops float residue (0.1 + 0.2) from leaving dust positions behind.
 export const roundQty = (qty: number): number => +qty.toFixed(8);
 
@@ -28,9 +31,17 @@ export const normalizeTrade = <T extends { symbol: string; qty: number; averageP
   if (!Number.isFinite(qty) || qty <= 0) {
     throw new Error('Quantity must be a positive number');
   }
+  // Bounds that no real trade reaches, so a slipped key (1,000,000,000 shares)
+  // is caught here instead of booking a nine-figure cash overdraft.
+  if (qty > MAX_TRADE_QTY) {
+    throw new Error(`Quantity can't exceed ${MAX_TRADE_QTY.toLocaleString('en-US')}`);
+  }
   const averagePrice = Number(trade.averagePrice);
-  if (!Number.isFinite(averagePrice) || averagePrice < 0) {
-    throw new Error('Price must be zero or a positive number');
+  if (!Number.isFinite(averagePrice) || averagePrice <= 0) {
+    throw new Error('Price must be a positive number');
+  }
+  if (averagePrice > MAX_TRADE_PRICE) {
+    throw new Error(`Price can't exceed $${MAX_TRADE_PRICE.toLocaleString('en-US')}`);
   }
   return { ...trade, symbol, qty: roundQty(qty), averagePrice };
 };

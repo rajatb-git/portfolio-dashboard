@@ -30,11 +30,11 @@ import type { AiConfig } from '@/api/live';
 import type {
   AlertMonitorConfig,
   BackupFile,
+  DividendWatchConfig,
+  EarningsReminderConfig,
   IpoAnnouncementConfig,
   IpoReminderConfig,
   LockStatus,
-  DividendWatchConfig,
-  EarningsReminderConfig,
   MoveAlertConfig,
   NewsWatchConfig,
   NotificationConfig,
@@ -43,13 +43,14 @@ import type {
   TradingSummaryConfig,
   ValueCalcConfig,
 } from '@/api/settings';
+import AccountEditDialog from '@/components/AccountEditDialog';
 import { Iconify } from '@/components/Iconify';
 import { useThemeMode } from '@/components/ThemeRegistry/ThemeModeContext';
 import PageHeader from '@/components/ui/PageHeader';
 import { DB_HOST } from '@/config';
 import { useAuth } from '@/contexts/AuthContext';
 import { useDemoMode } from '@/contexts/DemoModeContext';
-import type { IAccount } from '@/models/AccountsModel';
+import { ACCOUNT_TAX_TYPE_LABELS, type IAccount } from '@/models/AccountsModel';
 import LocalStorageUtil from '@/utils/localStorage';
 import {
   NOTIFICATIONS_ENABLED_KEY,
@@ -358,6 +359,7 @@ export default function Settings() {
   const [newAccountName, setNewAccountName] = React.useState('');
   const [addingAccount, setAddingAccount] = React.useState(false);
   const [deleteConfirm, setDeleteConfirm] = React.useState<IAccount | null>(null);
+  const [editAccount, setEditAccount] = React.useState<IAccount | null>(null);
 
   const isAiConfigDirty = !!aiConfig && !!draftAiConfig && JSON.stringify(aiConfig) !== JSON.stringify(draftAiConfig);
 
@@ -588,7 +590,7 @@ export default function Settings() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `portfolio-backup-${new Date().toISOString().slice(0, 10)}.zip`;
+      a.download = `portfolio-backup-${demoModeEnabled ? 'demo-' : ''}${new Date().toISOString().slice(0, 10)}.zip`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -1236,9 +1238,21 @@ export default function Settings() {
                           >
                             {account.name}
                           </Typography>
-                          <Typography sx={{ fontSize: '0.68rem', color: 'text.disabled' }}>{account.id}</Typography>
+                          <Typography sx={{ fontSize: '0.68rem', color: 'text.disabled' }}>
+                            {ACCOUNT_TAX_TYPE_LABELS[account.taxType ?? 'taxable']} · {account.id}
+                          </Typography>
                         </Box>
                       </Stack>
+                      <Tooltip title="Edit account">
+                        <IconButton
+                          size="small"
+                          aria-label={`Edit ${account.name}`}
+                          onClick={() => setEditAccount(account)}
+                          sx={{ color: 'text.disabled', '&:hover': { color: 'primary.main' } }}
+                        >
+                          <Iconify icon="mdi:pencil-outline" width={18} />
+                        </IconButton>
+                      </Tooltip>
                       <Tooltip title="Delete account">
                         <IconButton
                           size="small"
@@ -2767,8 +2781,8 @@ export default function Settings() {
         <DialogTitle>Delete Account</DialogTitle>
         <DialogContent>
           <DialogContentText>
-            Are you sure you want to delete <strong>{deleteConfirm?.name}</strong>? This will not remove any holdings
-            associated with this account.
+            Delete <strong>{deleteConfirm?.name}</strong>? Its holdings and transaction history are deleted with it, and
+            this can't be undone. Export a backup first if you might need them.
           </DialogContentText>
         </DialogContent>
         <DialogActions>
@@ -2801,6 +2815,11 @@ export default function Settings() {
           </Button>
         </DialogActions>
       </Dialog>
+      <AccountEditDialog
+        account={editAccount}
+        onClose={() => setEditAccount(null)}
+        onSaved={(saved) => setAccounts((prev) => prev.map((a) => (a.id === saved.id ? { ...a, ...saved } : a)))}
+      />
     </Box>
   );
 }

@@ -1,9 +1,9 @@
 import moment from 'moment';
-import { AccountModel } from '../models/AccountModel';
+import { getQuote } from '../marketData/quotes';
+import { AccountModel, isTaxableAccount } from '../models/AccountModel';
 import { ITaxLot } from '../models/HoldingsModel';
 import { getTaxConfig, ITaxConfig } from '../models/TaxConfigModel';
 import { roundQty } from '../utils';
-import { getQuote } from '../marketData/quotes';
 import { calculateRealizedGains } from './RealizedGainsController';
 import {
   enrichLots,
@@ -143,11 +143,15 @@ export const simulateTrade = async (input: SimulationInput): Promise<TradeSimula
   const account = accountsModel.findById(input.accountId);
   if (!account) throw new Error(`Account ${input.accountId} not found`);
 
-  const [config, realized, { positions, transactions }] = await Promise.all([
+  const [taxConfig, realized, { positions, transactions }] = await Promise.all([
     getTaxConfig(),
-    calculateRealizedGains(),
+    calculateRealizedGains({ taxableOnly: true }),
     loadPositionsWithLots(),
   ]);
+  // A sale inside a Roth, IRA or 401(k) isn't taxed, so every rate is zero there
+  // and lot choice or holding period can't change the bill.
+  const taxable = isTaxableAccount(account);
+  const config: ITaxConfig = taxable ? taxConfig : { ...taxConfig, shortTermRate: 0, longTermRate: 0, stateRate: 0 };
 
   const sameSymbol = positions.filter((p) => p.holding.symbol.toUpperCase() === symbol);
   const position = sameSymbol.find((p) => p.holding.accountId === input.accountId);
@@ -195,6 +199,13 @@ export const simulateTrade = async (input: SimulationInput): Promise<TradeSimula
     date: date.format('YYYY-MM-DD'),
     config,
   };
+
+  if (!taxable && input.action === 'sell') {
+    notes.push({
+      severity: 'info',
+      message: `${account.name} is a tax-advantaged account, so this sale isn't taxed — the lot choice and holding period don't change anything.`,
+    });
+  }
 
   if (date.isAfter(moment(), 'day')) {
     notes.push({

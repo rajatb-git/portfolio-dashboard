@@ -1,35 +1,35 @@
-import * as React from 'react';
-
-import { Alert, Button, Skeleton, Stack, Typography } from '@mui/material';
+import {
+  Alert,
+  Button,
+  DialogActions,
+  DialogContent,
+  DialogContentText,
+  DialogTitle,
+  Skeleton,
+  Stack,
+  Typography,
+} from '@mui/material';
 import Box from '@mui/material/Box';
 import Dialog from '@mui/material/Dialog';
 import MenuItem from '@mui/material/MenuItem';
-import { default as MuiSelect } from '@mui/material/Select';
 import { styled, Theme, useTheme } from '@mui/material/styles';
-import useMediaQuery from '@mui/material/useMediaQuery';
 import { default as MuiTextField } from '@mui/material/TextField';
+import useMediaQuery from '@mui/material/useMediaQuery';
 import Case from 'case';
 import debounce from 'lodash/debounce';
 import moment from 'moment';
+import * as React from 'react';
 import { toast } from 'react-toastify';
 
 import apis from '@/api';
 import { LOT_METHOD_LABELS, type LotMethod, type SimulationRequest, type TradeSimulation } from '@/api/holdings';
 import { useField } from '@/hooks/useField';
-import { fnCurrency } from '@/utils/formatNumber';
 import { HoldingTypesEnum } from '@/lib/enums';
-import { IHoldings } from '@/models/HoldingsModel';
 import { IAccount } from '@/models/AccountsModel';
+import { IHoldings } from '@/models/HoldingsModel';
+import { fnCurrency } from '@/utils/formatNumber';
 import { Iconify } from './Iconify';
 import { OverlayButton } from './OverlayButton';
-
-const Select = styled(MuiSelect)(({ theme }: { theme: Theme }) => ({
-  '& .MuiInputBase-input': {
-    borderRadius: 4,
-    position: 'relative',
-    backgroundColor: theme.palette.mode === 'light' ? '#F3F6F9' : theme.palette.background.default,
-  },
-}));
 
 const TextField = styled(MuiTextField)(({ theme }: { theme: Theme }) => ({
   '& .MuiInputBase-input': {
@@ -60,6 +60,16 @@ export default function BuySellDialog({ open, handleDialogClose, initialValues, 
   const [preview, setPreview] = React.useState<TradeSimulation | null>(null);
   const [isPreviewLoading, setIsPreviewLoading] = React.useState(false);
   const previewSeq = React.useRef(0);
+  const [holdings, setHoldings] = React.useState<IHoldings[]>([]);
+  const [overdraft, setOverdraft] = React.useState<{ account: IAccount; after: number } | null>(null);
+
+  React.useEffect(() => {
+    if (!open) return;
+    apis.holdings
+      .getAll()
+      .then((res) => setHoldings(res ?? []))
+      .catch((err) => toast.error(err.message || 'Failed to load holdings'));
+  }, [open]);
 
   const formFields = {
     buySell: useField({
@@ -95,7 +105,8 @@ export default function BuySellDialog({ open, handleDialogClose, initialValues, 
     }),
     averagePrice: useField({
       initValue: initialValues?.averagePrice?.toString() || '',
-      validate: (value: string) => !NUMERIC.test(value.trim()) && 'Price must be zero or a positive number',
+      validate: (value: string) =>
+        (!NUMERIC.test(value.trim()) || Number(value) <= 0) && 'Price must be a positive number',
       required: true,
     }),
     date: useField({
@@ -109,11 +120,36 @@ export default function BuySellDialog({ open, handleDialogClose, initialValues, 
     }),
   };
 
-  const isFormValid = () => (Object.values(formFields).find((x) => x.isValid() === false) === undefined ? true : false);
+  // Check every field (not stop at the first) so each problem is marked at once.
+  const isFormValid = () =>
+    Object.values(formFields)
+      .map((x) => x.isValid())
+      .every(Boolean);
 
-  const handleSubmit = async () => {
+  const symbolValue = formFields.symbol.value.trim().toUpperCase();
+  const heldQty = holdings
+    .filter((h) => h.accountId === formFields.accountId.value && h.symbol?.toUpperCase() === symbolValue)
+    .reduce((sum, h) => sum + h.qty, 0);
+  const tradeAccount = accounts.find((a) => a.id === formFields.accountId.value);
+  const tradeSummary = `${formFields.qty.value} ${symbolValue} @ ${fnCurrency(parseFloat(formFields.averagePrice.value))}${
+    tradeAccount ? ` in ${tradeAccount.name}` : ''
+  }`;
+
+  const handleSubmit = async (confirmedOverdraft = false) => {
     try {
       if (isFormValid()) {
+        // Ask before a buy takes an account that holds cash below zero; one that
+        // doesn't track cash (already at or below zero) isn't nagged every trade.
+        if (formFields.buySell.value === 'buy' && !confirmedOverdraft && tradeAccount) {
+          const after =
+            (tradeAccount.cashBalance ?? 0) -
+            parseFloat(formFields.qty.value) * parseFloat(formFields.averagePrice.value);
+          if ((tradeAccount.cashBalance ?? 0) > 0 && after < 0) {
+            setOverdraft({ account: tradeAccount, after });
+            return;
+          }
+        }
+        setOverdraft(null);
         setIsLoading(true);
         if (formFields.buySell.value === 'sell') {
           await apis.holdings.sellHolding({
@@ -127,11 +163,7 @@ export default function BuySellDialog({ open, handleDialogClose, initialValues, 
             lotMethod,
           });
 
-          toast('Sold!', {
-            autoClose: 5000,
-            pauseOnHover: true,
-            type: 'success',
-          });
+          toast.success(`Sold ${tradeSummary}`);
 
           closeAndResetDialog();
           refreshData();
@@ -146,11 +178,7 @@ export default function BuySellDialog({ open, handleDialogClose, initialValues, 
             date: formFields.date.value,
           });
 
-          toast('Bought!', {
-            autoClose: 5000,
-            pauseOnHover: true,
-            type: 'success',
-          });
+          toast.success(`Bought ${tradeSummary}`);
 
           closeAndResetDialog();
           refreshData();
@@ -228,68 +256,66 @@ export default function BuySellDialog({ open, handleDialogClose, initialValues, 
       <Box sx={{ m: 2, mt: 0 }}>
         <Box sx={{ display: 'flex', gap: '16px', direction: 'row', mt: '16px', flexWrap: 'wrap' }}>
           <Stack direction="column" spacing={0.5} sx={{ flexGrow: 1 }}>
-            {/* <FormLabel>Buy / Sell</FormLabel> */}
-            <Select
+            <TextField
+              select
+              label="Buy / Sell"
               value={formFields.buySell.value}
-              displayEmpty
-              onChange={formFields.buySell.onChange}
+              onChange={formFields.buySell.onChange as any}
               error={!!formFields.buySell.error}
+              helperText={formFields.buySell.error}
               size="small"
               disabled={isLoading}
+              sx={{ minWidth: 140 }}
             >
-              <MenuItem disabled value="">
-                Buy / Sell
-              </MenuItem>
-
               {['buy', 'sell'].map((x) => (
                 <MenuItem key={x} value={x}>
                   {Case.capital(x)}
                 </MenuItem>
               ))}
-            </Select>
+            </TextField>
           </Stack>
 
           <Stack direction="column" spacing={0.5} sx={{ flexGrow: 1 }}>
-            {/* <FormLabel>Type</FormLabel> */}
-            <Select
+            <TextField
+              select
+              label="Asset type"
               value={formFields.type.value}
-              displayEmpty
-              onChange={formFields.type.onChange}
+              onChange={formFields.type.onChange as any}
               error={!!formFields.type.error}
+              helperText={formFields.type.error}
               size="small"
               disabled={isLoading}
+              sx={{ minWidth: 140 }}
             >
-              <MenuItem disabled value="">
-                Type of asset
-              </MenuItem>
-
               {Object.values(HoldingTypesEnum).map((x) => (
                 <MenuItem key={x} value={x}>
                   {Case.capital(x)}
                 </MenuItem>
               ))}
-            </Select>
+            </TextField>
           </Stack>
 
           <Stack direction="column" spacing={0.5} sx={{ flexGrow: 1 }}>
-            {/* <FormLabel>Associated Account</FormLabel> */}
-            <Select
+            <TextField
+              select
+              label="Account"
               value={formFields.accountId.value}
-              displayEmpty
-              onChange={formFields.accountId.onChange}
+              onChange={formFields.accountId.onChange as any}
               error={!!formFields.accountId.error}
+              helperText={
+                formFields.accountId.error ||
+                (tradeAccount ? `Cash ${fnCurrency(tradeAccount.cashBalance ?? 0)}` : undefined)
+              }
               size="small"
               disabled={isLoading}
+              sx={{ minWidth: 160 }}
             >
-              <MenuItem disabled value="">
-                Owner
-              </MenuItem>
               {accounts.map((account) => (
                 <MenuItem value={account.id} key={account.id}>
                   {account.name}
                 </MenuItem>
               ))}
-            </Select>
+            </TextField>
           </Stack>
 
           {formFields.buySell.value === 'buy' && (
@@ -297,7 +323,7 @@ export default function BuySellDialog({ open, handleDialogClose, initialValues, 
               {/* <FormLabel>Name</FormLabel> */}
               <TextField
                 color="primary"
-                placeholder="Name"
+                label="Name (optional)"
                 id="name"
                 name="name"
                 variant="outlined"
@@ -314,14 +340,19 @@ export default function BuySellDialog({ open, handleDialogClose, initialValues, 
           <Stack direction="column" spacing={0.5} sx={{ flexGrow: 1 }}>
             {/* <FormLabel>Symbol</FormLabel> */}
             <TextField
-              placeholder="Symbol"
+              label="Symbol"
               id="symbol"
               name="symbol"
               variant="outlined"
               value={formFields.symbol.value}
               onChange={formFields.symbol.onChange}
               error={!!formFields.symbol.error}
-              helperText={formFields.symbol.error}
+              helperText={
+                formFields.symbol.error ||
+                (formFields.buySell.value === 'sell' && symbolValue && tradeAccount
+                  ? `You hold ${heldQty} ${symbolValue} here`
+                  : undefined)
+              }
               size="small"
               disabled={isLoading}
             />
@@ -330,7 +361,7 @@ export default function BuySellDialog({ open, handleDialogClose, initialValues, 
           <Stack direction="column" spacing={0.5} sx={{ flexGrow: 1 }}>
             {/* <FormLabel>Quantity</FormLabel> */}
             <TextField
-              placeholder="Quantity"
+              label="Quantity"
               id="qty"
               name="qty"
               variant="outlined"
@@ -346,7 +377,7 @@ export default function BuySellDialog({ open, handleDialogClose, initialValues, 
           <Stack direction="column" spacing={0.5} sx={{ flexGrow: 1 }}>
             {/* <FormLabel>Price</FormLabel> */}
             <TextField
-              placeholder="Average Price"
+              label={formFields.buySell.value === 'sell' ? 'Sale price per share' : 'Price per share'}
               id="averagePrice"
               name="averagePrice"
               variant="outlined"
@@ -377,7 +408,9 @@ export default function BuySellDialog({ open, handleDialogClose, initialValues, 
           </Stack>
           {formFields.buySell.value === 'sell' && (
             <Stack direction="column" spacing={0.5} sx={{ flexGrow: 1 }}>
-              <Select
+              <TextField
+                select
+                label="Lots to sell"
                 value={lotMethod}
                 onChange={(e) => setLotMethod(e.target.value as LotMethod)}
                 size="small"
@@ -385,10 +418,10 @@ export default function BuySellDialog({ open, handleDialogClose, initialValues, 
               >
                 {SELL_LOT_METHODS.map((m) => (
                   <MenuItem key={m} value={m}>
-                    Lots: {LOT_METHOD_LABELS[m]}
+                    {LOT_METHOD_LABELS[m]}
                   </MenuItem>
                 ))}
-              </Select>
+              </TextField>
             </Stack>
           )}
         </Box>
@@ -428,13 +461,29 @@ export default function BuySellDialog({ open, handleDialogClose, initialValues, 
         <OverlayButton
           type="submit"
           variant="contained"
-          onClick={handleSubmit}
+          onClick={() => handleSubmit()}
           disabled={isLoading}
           startIcon={<Iconify icon="lets-icons:send-duotone" />}
         >
           Submit
         </OverlayButton>
       </Box>
+
+      <Dialog open={!!overdraft} onClose={() => setOverdraft(null)}>
+        <DialogTitle>Not enough cash</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            This buy takes {overdraft?.account.name}&apos;s cash from {fnCurrency(overdraft?.account.cashBalance ?? 0)}{' '}
+            to <strong>{fnCurrency(overdraft?.after ?? 0)}</strong>. Record it anyway?
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOverdraft(null)}>Cancel</Button>
+          <Button variant="contained" color="warning" onClick={() => handleSubmit(true)}>
+            Record anyway
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Dialog>
   );
 }

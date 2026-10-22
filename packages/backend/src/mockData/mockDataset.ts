@@ -1,5 +1,6 @@
 import moment from 'moment';
 
+import type { AccountTaxType } from '../models/AccountModel';
 import type { IAlert } from '../models/AlertModel';
 import type { IHoldings, ITaxLot } from '../models/HoldingsModel';
 import type { IPortfolioSnapshot } from '../models/PortfolioSnapshotModel';
@@ -7,7 +8,7 @@ import type { IRelievedLot, ITransaction } from '../models/TransactionModel';
 
 type AssetType = 'stock' | 'crypto';
 
-type SeedAccount = { id: string; name: string };
+type SeedAccount = { id: string; name: string; taxType: AccountTaxType };
 
 type DepositEvent = { accountId: string; kind: 'deposit'; amount: number; daysAgo: number };
 type TradeEvent = {
@@ -25,10 +26,10 @@ type SeedEvent = DepositEvent | TradeEvent;
 // Four accounts spanning taxable, retirement and crypto, so the demo
 // exercises account grouping, allocation-by-type and risk analytics.
 const ACCOUNTS: SeedAccount[] = [
-  { id: 'brokerage-demo', name: 'Brokerage' },
-  { id: 'roth-ira-demo', name: 'Roth IRA' },
-  { id: '401k-demo', name: '401(k)' },
-  { id: 'crypto-wallet-demo', name: 'Crypto Wallet' },
+  { id: 'brokerage-demo', name: 'Brokerage', taxType: 'taxable' },
+  { id: 'roth-ira-demo', name: 'Roth IRA', taxType: 'taxFree' },
+  { id: '401k-demo', name: '401(k)', taxType: 'taxDeferred' },
+  { id: 'crypto-wallet-demo', name: 'Crypto Wallet', taxType: 'taxable' },
 ];
 
 // A chronological trade log per account (oldest first within each account).
@@ -337,7 +338,7 @@ const mulberry32 = (seed: number) => () => {
 };
 
 type MockDataset = {
-  accounts: Array<{ id: string; name: string; cashBalance: number }>;
+  accounts: Array<{ id: string; name: string; cashBalance: number; taxType: AccountTaxType }>;
   holdings: IHoldings[];
   transactions: ITransaction[];
   alerts: IAlert[];
@@ -440,7 +441,12 @@ export const buildMockDataset = (): MockDataset => {
     }
   }
 
-  const accounts = ACCOUNTS.map((a) => ({ id: a.id, name: a.name, cashBalance: round2(cash.get(a.id) ?? 0) }));
+  const accounts = ACCOUNTS.map((a) => ({
+    id: a.id,
+    name: a.name,
+    cashBalance: round2(cash.get(a.id) ?? 0),
+    taxType: a.taxType,
+  }));
 
   const holdings: IHoldings[] = [];
   for (const [key, pos] of positions) {
