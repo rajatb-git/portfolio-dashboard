@@ -16,6 +16,9 @@ export interface ITransaction {
   // Buys: id of the tax lot the purchase opened. Sells: the lots relieved.
   lotId?: string;
   lots?: IRelievedLot[];
+  // Rows brought in by an import are history only: importing never touched a
+  // holding or the account's cash, so editing or deleting them mustn't either.
+  imported?: boolean;
 }
 
 export interface IRelievedLot {
@@ -36,6 +39,7 @@ export const TransactionSchema: SchemaType = {
   date: { type: String, required: false },
   lotId: { type: String, required: false },
   lots: { type: Array, required: false },
+  imported: { type: Boolean, required: false },
 };
 
 export interface ITransactionModel extends ITransaction, ISkewerModel {}

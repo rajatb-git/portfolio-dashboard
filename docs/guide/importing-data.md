@@ -35,6 +35,14 @@ account's cash balance by `qty × averagePrice` instead.
 Transactions have their own importer (**Database → Transactions → Import**),
 requiring at least `qty` and `action` (`buy`, `sell`, `deposit` or `withdraw`).
 
+::: info Imported transactions are history, not trades
+Importing transactions (by CSV, broker export or AI) records them in the
+transaction log for realized gains, tax lots and analytics. It does **not**
+create holdings or change cash — import your current positions through the
+holdings importers for that. Because of this, an imported row can be edited or
+deleted freely without touching any holding or cash balance.
+:::
+
 ## 3. Broker CSV exports
 
 If you exported straight from your broker, use the **broker import** dialogs

@@ -19,8 +19,10 @@ const parseMoney = (value: unknown): number | undefined => {
 
 // A cleared date in the grid comes back as null/'' — drop the key entirely so the
 // row falls back to createdAt rather than storing an empty string.
+// `imported` is set by the import route alone; a create or edit can't flip a
+// row between "moved cash and shares" and "history only".
 const withNormalizedDate = (body: any) => {
-  const { date, ...rest } = body ?? {};
+  const { date, imported: _imported, ...rest } = body ?? {};
   const normalized = normalizeTradeDate(date);
   return { ...rest, ...(normalized && { date: normalized }) };
 };
@@ -70,6 +72,7 @@ export const TransactionsRouter = () => {
           type,
           action,
           qty,
+          imported: true,
           ...(raw.symbol && { symbol: String(raw.symbol).trim().toUpperCase() }),
           ...(price !== undefined && { price }),
           ...(pnl !== undefined && { pnl }),

@@ -2,7 +2,13 @@ import { AccountModel } from '../models/AccountModel';
 import { TransactionModel } from '../models/TransactionModel';
 import { logger } from '../utils/winston';
 
-export const transactionCashImpact = (tx: { action?: string; qty?: number; price?: number }): number => {
+export const transactionCashImpact = (tx: {
+  action?: string;
+  qty?: number;
+  price?: number;
+  imported?: boolean;
+}): number => {
+  if (tx.imported) return 0;
   const gross = (tx.qty ?? 0) * (tx.price ?? 0);
   switch (tx.action) {
     case 'sell':
