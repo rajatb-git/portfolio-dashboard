@@ -153,13 +153,17 @@ export const simulateTrade = async (input: SimulationInput): Promise<TradeSimula
   const position = sameSymbol.find((p) => p.holding.accountId === input.accountId);
   const type = position?.holding.type ?? sameSymbol[0]?.holding.type ?? input.type ?? 'stock';
 
+  const quote = await getQuote(symbol, type === 'crypto').catch(() => null);
   let price = input.price !== undefined && input.price !== null ? Number(input.price) : NaN;
   if (input.price === undefined || input.price === null) {
-    const quote = await getQuote(symbol, type === 'crypto').catch(() => null);
     if (!quote) throw new Error(`No live quote is available for ${symbol} — enter a price to simulate`);
     price = quote.price;
   }
   if (!Number.isFinite(price) || price < 0) throw new Error('Price must be zero or a positive number');
+  // The trade happens at `price`; what the position is worth before and after is
+  // still today's market price, or a hypothetical fill would revalue every share
+  // already held.
+  const marketPrice = quote?.price ?? price;
 
   const date = parseDate(input.date);
   const ytdRow = realized.byYear.find((y) => y.year === date.year());
@@ -167,7 +171,7 @@ export const simulateTrade = async (input: SimulationInput): Promise<TradeSimula
 
   const cashBalance = account.cashBalance ?? 0;
   const totalCash = accountsModel.getAllRecords().reduce((s, a) => s + (a.cashBalance ?? 0), 0);
-  const symbolValue = (lots: ITaxLot[]) => totalsFromLots(lots).qty * price;
+  const symbolValue = (lots: ITaxLot[]) => totalsFromLots(lots).qty * marketPrice;
   const otherValue = positions
     .filter((p) => p.holding.symbol.toUpperCase() !== symbol)
     .reduce((s, p) => s + p.holding.qty * (p.currentPrice ?? p.holding.averagePrice ?? 0), 0);
@@ -280,7 +284,10 @@ export const simulateTrade = async (input: SimulationInput): Promise<TradeSimula
       comparison: [],
       washSale,
       waitForLongTerm: null,
-      position: { before: positionState(currentLots, price, date), after: positionState(afterLots, price, date) },
+      position: {
+        before: positionState(currentLots, marketPrice, date),
+        after: positionState(afterLots, marketPrice, date),
+      },
       portfolioWeight: { before: weight(currentLots), after: weight(afterLots) },
       cash: { before: round2(cashBalance), after: round2(cashBalance - amount) },
       notes,
@@ -442,8 +449,8 @@ export const simulateTrade = async (input: SimulationInput): Promise<TradeSimula
     washSale: chosen.washSale,
     waitForLongTerm,
     position: {
-      before: positionState(currentLots, price, date),
-      after: positionState(chosen.selection.remaining, price, date),
+      before: positionState(currentLots, marketPrice, date),
+      after: positionState(chosen.selection.remaining, marketPrice, date),
     },
     portfolioWeight: { before: weight(currentLots), after: weight(chosen.selection.remaining) },
     cash: { before: round2(cashBalance), after: round2(cashBalance + amount) },

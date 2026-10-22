@@ -107,7 +107,7 @@ class EarningsReminderService {
 
   private async publishedResults(): Promise<HoldingEarningResult[]> {
     try {
-      return await getHoldingsEarningsResults();
+      return await getHoldingsEarningsResults({ waitForPendingMs: 30_000 });
     } catch (err: any) {
       logger.log({ level: 'error', label: LABEL, message: `Earnings results lookup failed: ${err.message}` });
       return [];
@@ -241,7 +241,7 @@ class EarningsReminderService {
     this.running = true;
     try {
       const today = etDateAndMinutes().dateStr;
-      const calendar = await getHoldingsEarningsCalendar();
+      const calendar = await getHoldingsEarningsCalendar({ waitForPendingMs: 30_000 });
       const published = this.config.notifyResults ? await this.publishedResults() : [];
       let pending = this.trackReports(await this.loadPending(), calendar, published);
       await this.sendReminders(calendar);

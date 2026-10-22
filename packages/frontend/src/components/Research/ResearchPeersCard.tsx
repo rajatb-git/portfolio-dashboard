@@ -69,7 +69,7 @@ export default function ResearchPeersCard({
                     fontWeight: 600,
                     cursor: 'pointer',
                     bgcolor: 'rgba(59,130,246,0.10)',
-                    color: '#93c5fd',
+                    color: 'primary.main',
                     border: '1px solid rgba(59,130,246,0.22)',
                     '&:hover': { bgcolor: 'rgba(59,130,246,0.22)' },
                   }}
@@ -152,7 +152,7 @@ export default function ResearchPeersCard({
                 >
                   In
                 </Typography>
-                <Typography sx={{ fontSize: '0.88rem', fontWeight: 600, color: '#93c5fd' }}>
+                <Typography sx={{ fontSize: '0.88rem', fontWeight: 600, color: 'primary.main' }}>
                   {moment(earnings.date).fromNow()}
                 </Typography>
               </Box>

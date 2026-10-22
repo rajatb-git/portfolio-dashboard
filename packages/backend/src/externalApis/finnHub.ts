@@ -149,7 +149,7 @@ export const searchSymbols = (query: string, options?: RequestOptions): Promise<
 // Finnhub does not document the order of earningsCalendar, so the first element
 // is not necessarily the next report — for a symbol with several scheduled
 // releases it can be a quarter further out. Pick by date, not by position.
-const nextUpcomingRelease = <T extends { date?: string }>(releases: T[] | undefined, from: string): T | null => {
+export const nextUpcomingRelease = <T extends { date?: string }>(releases: T[] | undefined, from: string): T | null => {
   let next: T | null = null;
   for (const release of releases ?? []) {
     if (!release?.date || release.date < from) continue;
@@ -170,18 +170,6 @@ export interface EarningsCalendarEntry {
   year: number;
 }
 
-// Fetch the whole earnings calendar for a window in ONE request (no symbol
-// filter). Callers that need earnings for many holdings must use this and filter
-// locally rather than fanning out one request per symbol.
-export const getBulkEarningsCalendar = (
-  fromDate: string,
-  toDate: string,
-  options?: RequestOptions
-): Promise<EarningsCalendarEntry[]> =>
-  call<any>('Earnings calendar request', `/calendar/earnings?from=${fromDate}&to=${toDate}`, options).then(
-    (data) => data?.earningsCalendar ?? []
-  );
-
 // One symbol's releases over a window. A window reaching into the past matters:
 // entries for reports that have already happened carry epsActual/revenueActual
 // once the numbers are published, which is how a release is resolved to a result.
@@ -196,15 +184,6 @@ export const getSymbolEarningsCalendar = (
     `/calendar/earnings?symbol=${encodeURIComponent(symbol)}&from=${fromDate}&to=${toDate}`,
     options
   ).then((data) => data?.earningsCalendar ?? []);
-
-export const getEarningsCalendar = (
-  symbol: string,
-  options?: RequestOptions
-): Promise<EarningsCalendarEntry | null> => {
-  const from = etDateAndMinutes().dateStr;
-  const to = moment(from, 'YYYY-MM-DD').add(12, 'M').format('YYYY-MM-DD');
-  return getSymbolEarningsCalendar(symbol, from, to, options).then((releases) => nextUpcomingRelease(releases, from));
-};
 
 export const getEarningsHistory = (symbol: string, options?: RequestOptions): Promise<any[]> =>
   call<any[]>(

@@ -54,12 +54,15 @@ const buildInterests = async (): Promise<Interest[]> => {
   ]);
 
   const stocks = new Set<string>();
+  const cryptos = new Set<string>();
   for (const h of holdings) {
     if (!h.symbol) continue;
-    if (h.type === 'crypto') want('quote', quoteKey(h.symbol, true));
-    else stocks.add(h.symbol.toUpperCase());
+    if (h.type === 'crypto') {
+      cryptos.add(h.symbol.toUpperCase());
+      want('quote', quoteKey(h.symbol, true));
+    } else stocks.add(h.symbol.toUpperCase());
   }
-  for (const symbol of viewedSymbols()) stocks.add(symbol);
+  for (const symbol of viewedSymbols()) if (!cryptos.has(symbol)) stocks.add(symbol);
 
   for (const symbol of stocks) for (const dataset of STOCK_DATASETS) want(dataset, symbol);
 

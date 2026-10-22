@@ -1,8 +1,9 @@
+import axios from 'axios';
 import moment from 'moment';
 import {
   getCompanyNews,
+  type EarningsCalendarEntry,
   getCompanyProfile,
-  getEarningsCalendar,
   getEarningsHistory,
   getInsiderTransactions,
   getMarketStatus,
@@ -10,10 +11,11 @@ import {
   getRecommendation,
   getStockMetrics,
   getStockPeers,
+  getSymbolEarningsCalendar,
 } from '../externalApis/finnHub';
 import { type ExtendedQuote, getQuoteFromNasdaq, type NasdaqQuote } from '../externalApis/nasdaq';
-import type { QuoteResponse } from '../externalApis/types';
-import { getMarketSession, isExtendedHoursSession } from '../utils/marketCalendar';
+import type { CompanyProfile2Response, QuoteResponse } from '../externalApis/types';
+import { etDateAndMinutes, getMarketSession, isExtendedHoursSession } from '../utils/marketCalendar';
 import type { RequestOptions } from './finnhubClient';
 
 // Every kind of public market data the app reads from Finnhub, how long a copy
@@ -30,7 +32,7 @@ export type DatasetName =
   | 'profile'
   | 'metrics'
   | 'peers'
-  | 'earningsNext'
+  | 'earnings'
   | 'earningsHistory'
   | 'insider'
   | 'news'
@@ -102,6 +104,7 @@ const QUOTES_PER_MINUTE = 20;
 const VIEWED_QUOTE_FRESH_MS = 30_000;
 const UNSUPPORTED_RECHECK_MS = 7 * DAY;
 const NEWS_LOOKBACK_DAYS = 7;
+export const EARNINGS_LOOKBACK_DAYS = 14;
 const NEWS_KEEP = 60;
 
 const CRYPTO_PREFIX = 'crypto:';
@@ -148,11 +151,14 @@ const fetchQuote = async (key: string, options: RequestOptions, entry: StoredEnt
       apiFetch = await getQuoteForSymbol(symbol, isCrypto, options);
     }
   } else {
-    apiFetch = await getQuoteForSymbol(symbol, isCrypto, options);
-
-    // Finnhub's free plan returns c=0 for symbols it doesn't cover (notably most
-    // US ETFs). NASDAQ can price those; if it can't either this throws and the
-    // symbol stays unpriced rather than cached at zero.
+    // Finnhub's free plan returns c=0 for symbols it doesn't cover (some US
+    // ETFs) and 403 for ones the key can't see. NASDAQ can price many of those;
+    // if it can't either this throws and the symbol stays unpriced rather than
+    // cached at zero.
+    apiFetch = await getQuoteForSymbol(symbol, isCrypto, options).catch((err) => {
+      if (isNoAccess(err) && !isCrypto) return { c: 0 } as QuoteResponse;
+      throw err;
+    });
     if (!isCrypto && (!apiFetch.c || apiFetch.c <= 0)) {
       apiFetch = await getQuoteFromNasdaq(symbol);
       unsupportedAt = new Date().toISOString();
@@ -160,6 +166,15 @@ const fetchQuote = async (key: string, options: RequestOptions, entry: StoredEnt
   }
 
   if (!apiFetch.c || apiFetch.c <= 0) throw new Error(`No price available for ${symbol}`);
+
+  // NASDAQ quotes carry no open; keep the one this session's earlier Finnhub
+  // quote recorded rather than showing none for the rest of the day.
+  const previous = entry?.value as Quote | undefined;
+  const today = etDateAndMinutes().dateStr;
+  const carriedOpen =
+    !apiFetch.o && previous?.open && etDateAndMinutes(new Date(previous.priceDate)).dateStr === today
+      ? previous.open
+      : 0;
 
   const extended: ExtendedQuote | null = ('extended' in apiFetch && apiFetch.extended) || null;
   return {
@@ -169,9 +184,11 @@ const fetchQuote = async (key: string, options: RequestOptions, entry: StoredEnt
     change: apiFetch.d,
     dayHigh: apiFetch.h,
     dayLow: apiFetch.l,
-    open: apiFetch.o,
+    open: apiFetch.o || carriedOpen,
     prevClose: apiFetch.pc,
-    priceDate: moment.unix(apiFetch.t).toISOString(),
+    // Finnhub stamps a crypto quote with the start of its daily candle; the
+    // price itself is live, so stamp it with when it was taken.
+    priceDate: isCrypto ? new Date().toISOString() : moment.unix(apiFetch.t).toISOString(),
     extendedPrice: extended?.price ?? 0,
     extendedChange: extended?.change ?? 0,
     extendedPercentChange: extended?.percentChange ?? 0,
@@ -180,6 +197,28 @@ const fetchQuote = async (key: string, options: RequestOptions, entry: StoredEnt
     ...(unsupportedAt && { finnhubUnsupportedAt: unsupportedAt }),
     updatedAt: new Date().toISOString(),
   };
+};
+
+// Finnhub answers 403 for a symbol the key can't see — most often one that
+// doesn't exist. That is "no data", not a failure worth retrying or toasting.
+const isNoAccess = (err: unknown): boolean => axios.isAxiosError(err) && err.response?.status === 403;
+const emptyOnNoAccess = async <T>(fetch: Promise<T>, empty: T): Promise<T> => {
+  try {
+    return await fetch;
+  } catch (err) {
+    if (isNoAccess(err)) return empty;
+    throw err;
+  }
+};
+
+const uniqueBy = <T>(items: T[], keyOf: (item: T) => string): T[] => {
+  const seen = new Set<string>();
+  return items.filter((item) => {
+    const key = keyOf(item);
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 };
 
 const finnhub = (): Source => 'finnhub';
@@ -216,7 +255,7 @@ export const DATASETS: Record<DatasetName, DatasetDef> = {
     fetch: async (key, options): Promise<NewsArticle[]> => {
       const from = moment().subtract(NEWS_LOOKBACK_DAYS, 'days').format('YYYY-MM-DD');
       const to = moment().format('YYYY-MM-DD');
-      const articles = await getCompanyNews(key, from, to, options);
+      const articles = await emptyOnNoAccess(getCompanyNews(key, from, to, options), []);
       return [...articles]
         .sort((a, b) => (b.datetime ?? 0) - (a.datetime ?? 0))
         .slice(0, NEWS_KEEP)
@@ -237,43 +276,56 @@ export const DATASETS: Record<DatasetName, DatasetDef> = {
     rank: 3,
     freshForMs: fixed(DAY),
     source: finnhub,
-    fetch: (key, options) => getRecommendation(key, options),
+    fetch: (key, options) => emptyOnNoAccess(getRecommendation(key, options), null),
   },
-  earningsNext: {
+  // A symbol's releases from two weeks back to a year ahead: the next report
+  // for Research and the countdowns, and recent ones whose actual numbers turn
+  // a release into a result. Fetched per symbol because Finnhub's unfiltered
+  // calendar is capped at 1,500 rows, which drops most companies in season.
+  earnings: {
     rank: 3,
-    freshForMs: fixed(6 * HOUR),
+    freshForMs: fixed(4 * HOUR),
     source: finnhub,
-    fetch: (key, options) => getEarningsCalendar(key, options),
+    fetch: async (key, options): Promise<EarningsCalendarEntry[]> => {
+      const today = etDateAndMinutes().dateStr;
+      const from = moment(today).subtract(EARNINGS_LOOKBACK_DAYS, 'days').format('YYYY-MM-DD');
+      const to = moment(today).add(12, 'months').format('YYYY-MM-DD');
+      const releases = await emptyOnNoAccess(getSymbolEarningsCalendar(key, from, to, options), []);
+      return [...releases].sort((a, b) => a.date.localeCompare(b.date));
+    },
   },
   metrics: {
     rank: 4,
     freshForMs: fixed(12 * HOUR),
     source: finnhub,
-    fetch: (key, options) => getStockMetrics(key, options),
+    fetch: (key, options) => emptyOnNoAccess(getStockMetrics(key, options), null),
   },
   insider: {
     rank: 4,
     freshForMs: fixed(12 * HOUR),
     source: finnhub,
-    fetch: (key, options) => getInsiderTransactions(key, options),
+    fetch: (key, options) => emptyOnNoAccess(getInsiderTransactions(key, options), []),
   },
   earningsHistory: {
     rank: 4,
     freshForMs: fixed(DAY),
     source: finnhub,
-    fetch: (key, options) => getEarningsHistory(key, options),
+    // Finnhub lists some quarters twice under different fiscal years.
+    fetch: async (key, options) =>
+      uniqueBy(await emptyOnNoAccess(getEarningsHistory(key, options), []), (row: any) => String(row?.period)),
   },
   profile: {
     rank: 5,
     freshForMs: fixed(7 * DAY),
     source: finnhub,
-    fetch: (key, options) => getCompanyProfile(key, options),
+    fetch: (key, options) => emptyOnNoAccess(getCompanyProfile(key, options), {} as CompanyProfile2Response),
   },
   peers: {
     rank: 5,
     freshForMs: fixed(7 * DAY),
     source: finnhub,
-    fetch: (key, options) => getStockPeers(key, options),
+    fetch: async (key, options) =>
+      uniqueBy(await emptyOnNoAccess(getStockPeers(key, options), []), (peer) => peer.toUpperCase()),
   },
 };
 
@@ -285,7 +337,7 @@ export const STOCK_DATASETS: DatasetName[] = [
   'profile',
   'metrics',
   'peers',
-  'earningsNext',
+  'earnings',
   'earningsHistory',
   'insider',
   'news',

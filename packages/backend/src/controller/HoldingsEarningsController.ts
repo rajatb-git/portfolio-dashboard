@@ -1,9 +1,9 @@
 import moment from 'moment';
-import { EarningsCalendarEntry, getBulkEarningsCalendar, getSymbolEarningsCalendar } from '../externalApis/finnHub';
-import { CacheDBModel } from '../models/CacheModel';
+import type { EarningsCalendarEntry } from '../externalApis/finnHub';
+import { EARNINGS_LOOKBACK_DAYS } from '../marketData/datasets';
+import { read } from '../marketData/store';
 import { HoldingsModel } from '../models/HoldingsModel';
 import { etDateAndMinutes } from '../utils/marketCalendar';
-import { logger } from '../utils/winston';
 
 export type HoldingEarning = {
   symbol: string;
@@ -27,24 +27,15 @@ export type HoldingEarningResult = {
   daysAgo: number;
 };
 
-// What the cache holds: the countdowns are derived per read, never stored, so a
-// cached calendar can't hand out a distance measured from the day it was written.
+// The countdowns are derived per read, never stored, so a snapshot can't hand
+// out a distance measured from the day it was built.
 type CachedEarning = Omit<HoldingEarning, 'daysAway'>;
 type CachedResult = Omit<HoldingEarningResult, 'daysAgo'>;
 type CalendarSnapshot = { upcoming: CachedEarning[]; reported: CachedResult[] };
 
-const CACHE_KEY = 'holdings_earnings_calendar';
-const CACHE_HOURS = 6;
-// A failed refresh falls back to the cached calendar, but not forever: past this
-// the dates are old enough that serving them would silently freeze the dashboard
-// and the earnings reminders on a quarter that has already reported.
-const STALE_FALLBACK_HOURS = 24;
-// How far back the window reaches. Reports land in it the moment their date
-// passes and gain their actual numbers hours later, which is what turns a
-// release into a result.
-const REPORTED_LOOKBACK_DAYS = 14;
-// Earnings are quarterly, so four months ahead covers every holding's next report.
-const UPCOMING_HORIZON_MONTHS = 4;
+// Reports land in the window the moment their date passes and gain their actual
+// numbers hours later, which is what turns a release into a result.
+const REPORTED_LOOKBACK_DAYS = EARNINGS_LOOKBACK_DAYS;
 
 const surpriseOf = (actual: number | null, estimate: number | null): number | null =>
   actual === null || estimate === null || estimate === 0 ? null : ((actual - estimate) / Math.abs(estimate)) * 100;
@@ -113,124 +104,53 @@ const bucketReleases = (
   };
 };
 
-// One request covering every holding at once.
-const bulkSnapshot = async (
-  nameBySymbol: Map<string, string>,
-  from: string,
-  to: string,
-  today: string
-): Promise<CalendarSnapshot> =>
-  bucketReleases(await getBulkEarningsCalendar(from, to, { waitMs: 10_000 }), nameBySymbol, today);
-
-// One request per held symbol — the shape this used before the bulk call, kept
-// as a fallback because the unfiltered calendar is not served on every Finnhub
-// plan. Without it a plan that rejects the bulk request leaves the calendar
-// pinned to whatever was cached last, which silently stops every earnings
-// reminder. A symbol that fails is skipped; only a total wipeout is an error.
-// These go on the background lane so the fan-out never crowds out a page.
-const perSymbolSnapshot = async (
-  nameBySymbol: Map<string, string>,
-  from: string,
-  to: string,
-  today: string
-): Promise<CalendarSnapshot> => {
-  const releases: EarningsCalendarEntry[] = [];
-  let failed = 0;
-
-  await Promise.all(
-    [...nameBySymbol.keys()].map(async (symbol) => {
-      try {
-        releases.push(...(await getSymbolEarningsCalendar(symbol, from, to, { lane: 'background', waitMs: 60_000 })));
-      } catch {
-        failed += 1;
-      }
-    })
-  );
-
-  if (failed === nameBySymbol.size) throw new Error('Earnings calendar lookups failed for every holding');
-  return bucketReleases(releases, nameBySymbol, today);
-};
-
-const getSnapshot = async (): Promise<{ snapshot: CalendarSnapshot; today: string }> => {
+// Each held stock's releases are stored per symbol and kept fresh by the
+// market data scheduler. A job that must not miss a symbol (the reminders) waits
+// for any that haven't been fetched yet; a page just shows what is there.
+const getSnapshot = async (
+  options: { waitForPendingMs?: number } = {}
+): Promise<{ snapshot: CalendarSnapshot; today: string }> => {
   // The market's day, not the server's: a UTC-hosted backend rolls over at 20:00
-  // ET and would drop a report still due that afternoon, skipping its reminder
-  // and jumping the dashboard to the next quarter.
+  // ET and would drop a report still due that afternoon.
   const today = etDateAndMinutes().dateStr;
 
-  const cacheModel = await CacheDBModel().initialize();
-  const cached = cacheModel.findById(CACHE_KEY);
-  const cachedAgeHours = cached ? moment().diff(moment(cached.updatedAt), 'hours') : Number.POSITIVE_INFINITY;
-  const readCache = (): CalendarSnapshot | null => {
-    try {
-      const parsed = JSON.parse(cached?.value ?? '');
-      return Array.isArray(parsed?.upcoming) && Array.isArray(parsed?.reported) ? parsed : null;
-    } catch {
-      return null;
-    }
-  };
-
-  if (cached && cachedAgeHours < CACHE_HOURS) {
-    const fresh = readCache();
-    if (fresh) return { snapshot: fresh, today };
-  }
-
   const holdingsModel = await HoldingsModel().initialize();
-  const holdings = holdingsModel.getAllRecords();
-
-  // Earnings only apply to equities; collapse to one lookup per unique symbol.
   const nameBySymbol = new Map<string, string>();
-  for (const h of holdings) {
+  for (const h of holdingsModel.getAllRecords()) {
     if (h.type === 'stock' && h.symbol) {
       const sym = h.symbol.toUpperCase();
       if (!nameBySymbol.has(sym)) nameBySymbol.set(sym, h.name);
     }
   }
 
-  const empty: CalendarSnapshot = { upcoming: [], reported: [] };
-  if (nameBySymbol.size === 0) {
-    await cacheModel.insertOrUpdate({ key: CACHE_KEY, value: JSON.stringify(empty) }, CACHE_KEY);
-    return { snapshot: empty, today };
-  }
+  const perSymbol = await Promise.all(
+    [...nameBySymbol.keys()].map(async (symbol) => {
+      let result = await read<EarningsCalendarEntry[]>('earnings', symbol);
+      if (result.pending && options.waitForPendingMs) {
+        result = await read<EarningsCalendarEntry[]>('earnings', symbol, {
+          mode: 'fresh',
+          lane: 'background',
+          waitMs: options.waitForPendingMs,
+        });
+      }
+      return (result.value ?? []).map((entry) => ({ ...entry, symbol }));
+    })
+  );
 
-  const from = moment(today, 'YYYY-MM-DD').subtract(REPORTED_LOOKBACK_DAYS, 'd').format('YYYY-MM-DD');
-  const to = moment(today, 'YYYY-MM-DD').add(UPCOMING_HORIZON_MONTHS, 'M').format('YYYY-MM-DD');
-
-  let snapshot: CalendarSnapshot;
-  try {
-    snapshot = await bulkSnapshot(nameBySymbol, from, to, today);
-    // A stock portfolio always has something reporting inside four months, so an
-    // empty result means the request was answered but not served — treat it like
-    // a failure rather than caching "nothing reports" for six hours.
-    if (snapshot.upcoming.length === 0) throw new Error('bulk calendar returned no reports for any holding');
-  } catch (bulkErr: any) {
-    logger.log({
-      level: 'warn',
-      message: `Bulk earnings calendar failed (${bulkErr.message}) — falling back to per-symbol lookups`,
-      label: 'Holdings earnings calendar',
-    });
-    try {
-      snapshot = await perSymbolSnapshot(nameBySymbol, from, to, today);
-    } catch (err: any) {
-      logger.log({ level: 'error', message: err.message, label: 'Holdings earnings calendar' });
-      // Don't overwrite the cache with an empty result on a transient failure —
-      // serve the last good calendar if it is still recent enough to be true.
-      const stale = cachedAgeHours < STALE_FALLBACK_HOURS ? readCache() : null;
-      if (stale) return { snapshot: stale, today };
-      throw err;
-    }
-  }
-
-  await cacheModel.insertOrUpdate({ key: CACHE_KEY, value: JSON.stringify(snapshot) }, CACHE_KEY);
-  return { snapshot, today };
+  return { snapshot: bucketReleases(perSymbol.flat(), nameBySymbol, today), today };
 };
 
-export const getHoldingsEarningsCalendar = async (): Promise<HoldingEarning[]> => {
-  const { snapshot, today } = await getSnapshot();
+export const getHoldingsEarningsCalendar = async (
+  options: { waitForPendingMs?: number } = {}
+): Promise<HoldingEarning[]> => {
+  const { snapshot, today } = await getSnapshot(options);
   return upcomingFrom(snapshot.upcoming, today);
 };
 
 // Reports from held symbols that have published their numbers, newest first.
-export const getHoldingsEarningsResults = async (): Promise<HoldingEarningResult[]> => {
-  const { snapshot, today } = await getSnapshot();
+export const getHoldingsEarningsResults = async (
+  options: { waitForPendingMs?: number } = {}
+): Promise<HoldingEarningResult[]> => {
+  const { snapshot, today } = await getSnapshot(options);
   return reportedFrom(snapshot.reported, today);
 };

@@ -32,6 +32,7 @@ type SearchTickerModalProps = {
 };
 
 type PageCommand = { label: string; href: string; icon: string };
+type HeldSymbol = { symbol: string; name: string; type: 'stock' | 'crypto' };
 
 const PAGE_COMMANDS: PageCommand[] = [
   ...NAV_CONFIG.map((n) => ({ label: n.text, href: n.href, icon: n.icon })),
@@ -45,9 +46,22 @@ export function SearchTickerModal({ refreshSearchHistory, searchHistory, isOpen,
   const [query, setQuery] = React.useState('');
   const [symbolResults, setSymbolResults] = React.useState<SymbolSearchResult[]>([]);
   const [isSearching, setIsSearching] = React.useState(false);
+  const [held, setHeld] = React.useState<HeldSymbol[]>([]);
 
   React.useEffect(() => {
-    if (isOpen) setQuery('');
+    if (!isOpen) return;
+    setQuery('');
+    apis.holdings
+      .getAll()
+      .then((holdings) => {
+        const bySymbol = new Map<string, HeldSymbol>();
+        for (const h of holdings ?? []) {
+          const symbol = h.symbol?.toUpperCase();
+          if (symbol && !bySymbol.has(symbol)) bySymbol.set(symbol, { symbol, name: h.name, type: h.type });
+        }
+        setHeld([...bySymbol.values()].sort((a, b) => a.symbol.localeCompare(b.symbol)));
+      })
+      .catch((err) => toast.error(err.message || 'Failed to load holdings for search'));
   }, [isOpen]);
 
   React.useEffect(() => {
@@ -89,9 +103,65 @@ export function SearchTickerModal({ refreshSearchHistory, searchHistory, isOpen,
     refreshSearchHistory();
   };
 
-  const matchingPages = query
-    ? PAGE_COMMANDS.filter((p) => p.label.toLowerCase().includes(query.trim().toLowerCase()))
-    : PAGE_COMMANDS;
+  const q = query.trim().toLowerCase();
+  const matchingPages = q ? PAGE_COMMANDS.filter((p) => p.label.toLowerCase().includes(q)) : PAGE_COMMANDS;
+
+  // Your own tickers first: Finnhub's lookup ranks exact tickers of unrelated
+  // funds above the stock you hold ("NVD" before NVDA) and knows no crypto.
+  const matchingHeld = q
+    ? held
+        .filter((h) => h.symbol.toLowerCase().startsWith(q) || h.name.toLowerCase().includes(q))
+        .sort((a, b) => Number(b.symbol.toLowerCase().startsWith(q)) - Number(a.symbol.toLowerCase().startsWith(q)))
+    : [];
+  const heldSymbols = new Set(held.map((h) => h.symbol));
+  const otherCompanies = symbolResults.filter((r) => !heldSymbols.has(r.symbol));
+  const pageFirst = !!q && matchingPages.some((p) => p.label.toLowerCase().startsWith(q));
+
+  const onEnter = () => {
+    if (matchingHeld.length > 0) return onSearchEnter(matchingHeld[0].symbol);
+    if (pageFirst) return goToPage(matchingPages[0].href);
+    onSearchEnter(otherCompanies.length > 0 ? otherCompanies[0].symbol : query);
+  };
+
+  const pagesSection = (
+    <>
+      <Typography
+        sx={{
+          fontSize: '0.62rem',
+          fontWeight: 700,
+          color: 'text.disabled',
+          textTransform: 'uppercase',
+          letterSpacing: '0.06em',
+          px: 1,
+          pt: 1,
+          pb: 0.5,
+        }}
+      >
+        Pages
+      </Typography>
+      <List dense sx={{ pt: 0 }}>
+        {matchingPages.map((p) => (
+          <ListItem key={p.href} sx={{ p: 0, mb: 0.5 }}>
+            <ListItemButton
+              onClick={() => goToPage(p.href)}
+              sx={{
+                borderRadius: '4px',
+                '&:hover': {
+                  border: `1px solid ${theme.palette.primary.dark}`,
+                  backgroundColor: alpha(theme.palette.primary.main, 0.2),
+                },
+              }}
+            >
+              <ListItemIcon sx={{ minWidth: 'auto', mr: 2 }}>
+                <Iconify icon={p.icon} />
+              </ListItemIcon>
+              <ListItemText primary={p.label} />
+            </ListItemButton>
+          </ListItem>
+        ))}
+      </List>
+    </>
+  );
 
   const sectionLabelSx = {
     fontSize: '0.62rem',
@@ -143,14 +213,14 @@ export function SearchTickerModal({ refreshSearchHistory, searchHistory, isOpen,
             },
           }}
           placeholder="Search company or ticker, or jump to a page…"
-          inputProps={{ 'aria-label': 'search' }}
+          inputProps={{ 'aria-label': 'search', spellCheck: false, autoComplete: 'off', autoCapitalize: 'off' }}
           autoFocus
           inputRef={(input) => input && input.focus()}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onKeyUp={(e) => {
             e.stopPropagation();
-            if (e.key === 'Enter') onSearchEnter(symbolResults.length > 0 ? symbolResults[0].symbol : query);
+            if (e.key === 'Enter') onEnter();
           }}
         />
 
@@ -169,23 +239,34 @@ export function SearchTickerModal({ refreshSearchHistory, searchHistory, isOpen,
       </Box>
 
       <DialogContent dividers sx={{ pr: 1, pl: 1 }}>
-        {query.trim() && (
+        {matchingHeld.length > 0 && (
           <>
-            <Typography sx={sectionLabelSx}>Search</Typography>
+            <Typography sx={sectionLabelSx}>Your holdings</Typography>
             <List dense sx={{ pt: 0 }}>
-              <ListItem sx={{ p: 0, mb: 1 }}>
-                <ListItemButton onClick={() => onSearchEnter(query)} sx={hoverItemSx}>
-                  <ListItemIcon sx={{ minWidth: 'auto', mr: 2 }}>
-                    <Iconify icon="mdi:chart-line" />
-                  </ListItemIcon>
-                  <ListItemText primary={`Research ${query.trim().toUpperCase()}`} />
-                </ListItemButton>
-              </ListItem>
+              {matchingHeld.map((h) => (
+                <ListItem key={h.symbol} sx={{ p: 0, mb: 0.5 }}>
+                  <ListItemButton onClick={() => onSearchEnter(h.symbol)} sx={hoverItemSx}>
+                    <ListItemIcon sx={{ minWidth: 'auto', mr: 2 }}>
+                      <Iconify icon={h.type === 'crypto' ? 'mdi:bitcoin' : 'mdi:briefcase-outline'} />
+                    </ListItemIcon>
+                    <ListItemText
+                      primary={h.symbol}
+                      secondary={h.name}
+                      slotProps={{
+                        primary: { sx: { fontWeight: 600 } },
+                        secondary: { sx: { fontSize: '0.72rem' } },
+                      }}
+                    />
+                  </ListItemButton>
+                </ListItem>
+              ))}
             </List>
           </>
         )}
 
-        {query.trim().length >= 2 && (
+        {pageFirst && pagesSection}
+
+        {q.length >= 2 && (
           <>
             <Typography sx={sectionLabelSx}>Companies</Typography>
             {isSearching ? (
@@ -194,9 +275,9 @@ export function SearchTickerModal({ refreshSearchHistory, searchHistory, isOpen,
                 <Skeleton height={34} sx={{ mb: 0.5 }} />
                 <Skeleton height={34} />
               </Box>
-            ) : symbolResults.length > 0 ? (
+            ) : otherCompanies.length > 0 ? (
               <List dense sx={{ pt: 0 }}>
-                {symbolResults.map((r) => (
+                {otherCompanies.map((r) => (
                   <ListItem key={r.symbol} sx={{ p: 0, mb: 0.5 }}>
                     <ListItemButton onClick={() => onSearchEnter(r.symbol)} sx={hoverItemSx}>
                       <ListItemIcon sx={{ minWidth: 'auto', mr: 2 }}>
@@ -216,29 +297,26 @@ export function SearchTickerModal({ refreshSearchHistory, searchHistory, isOpen,
               </List>
             ) : (
               <Typography sx={{ px: 1, py: 0.5, fontSize: '0.78rem', color: 'text.disabled' }}>
-                No matching companies.
+                No other matching companies.
               </Typography>
             )}
           </>
         )}
 
-        {matchingPages.length > 0 && (
-          <>
-            <Typography sx={sectionLabelSx}>Pages</Typography>
-            <List dense sx={{ pt: 0 }}>
-              {matchingPages.map((p) => (
-                <ListItem key={p.href} sx={{ p: 0, mb: 0.5 }}>
-                  <ListItemButton onClick={() => goToPage(p.href)} sx={hoverItemSx}>
-                    <ListItemIcon sx={{ minWidth: 'auto', mr: 2 }}>
-                      <Iconify icon={p.icon} />
-                    </ListItemIcon>
-                    <ListItemText primary={p.label} />
-                  </ListItemButton>
-                </ListItem>
-              ))}
-            </List>
-          </>
+        {q && (
+          <List dense sx={{ pt: 0 }}>
+            <ListItem sx={{ p: 0, mb: 1 }}>
+              <ListItemButton onClick={() => onSearchEnter(query)} sx={hoverItemSx}>
+                <ListItemIcon sx={{ minWidth: 'auto', mr: 2 }}>
+                  <Iconify icon="mdi:chart-line" />
+                </ListItemIcon>
+                <ListItemText primary={`Research ${query.trim().toUpperCase()}`} />
+              </ListItemButton>
+            </ListItem>
+          </List>
         )}
+
+        {q && !pageFirst && matchingPages.length > 0 && pagesSection}
 
         {!query.trim() && searchHistory && searchHistory.length > 0 && (
           <>
@@ -274,6 +352,7 @@ export function SearchTickerModal({ refreshSearchHistory, searchHistory, isOpen,
             </List>
           </>
         )}
+        {!q && pagesSection}
       </DialogContent>
     </Dialog>
   );

@@ -2,6 +2,7 @@ import https from 'node:https';
 import axios, { AxiosError } from 'axios';
 import moment from 'moment';
 import { QuoteResponse } from './types';
+import { etDateAndMinutes, etTimestamp, isTradingDay } from '../utils/marketCalendar';
 import { logger } from '../utils/winston';
 
 type Range = '1d' | '5d' | '1M' | '3M' | '6M' | '1y' | '2y' | '3y';
@@ -85,18 +86,29 @@ const extendedSessionFor = (marketStatus: string): 'pre-market' | 'post-market' 
 
 // "Aug 26, 2026 7:51 AM ET" / "Closed at Aug 25, 2026 4:00 PM ET" — the label is
 // free text, so fall back to now when it doesn't parse rather than dropping the quote.
+// The time is New York wall-clock; reading it in the server's zone put after-hours
+// prints four hours in the past on a UTC host.
 const parseNasdaqTimestamp = (raw: string | undefined | null): string => {
   const cleaned = String(raw ?? '')
     .replace(/^(closed at|last updated|as of)\s+/i, '')
     .replace(/\s*ET\b.*$/i, '')
     .trim();
-  const parsed = moment(cleaned, ['MMM D, YYYY h:mm A', 'MMM D, YYYY'], true);
-  return parsed.isValid() ? parsed.toISOString() : moment().toISOString();
+  const parsed = moment.utc(cleaned, ['MMM D, YYYY h:mm A', 'MMM D, YYYY'], true);
+  if (!parsed.isValid()) return moment().toISOString();
+  return etTimestamp(parsed.format('YYYY-MM-DD'), parsed.hours() * 60 + parsed.minutes());
 };
+
+// Which NASDAQ asset class a symbol answered as. NASDAQ rejects the wrong one, so
+// remembering it saves a failed round trip on every later quote, chart and
+// dividend lookup; unknown symbols try stocks first since most holdings are.
+type AssetClass = 'stocks' | 'etf';
+const knownAssetClass = new Map<string, AssetClass>();
+const assetClassOrder = (symbol: string): AssetClass[] =>
+  knownAssetClass.get(symbol) === 'etf' ? ['etf', 'stocks'] : ['stocks', 'etf'];
 
 const blockPrice = (block: PriceBlock | undefined): number => parseDollarAmount(block?.lastSalePrice);
 
-const fetchNasdaqQuote = async (symbol: string, assetclass: 'etf' | 'stocks'): Promise<NasdaqQuote | null> => {
+const fetchNasdaqQuote = async (symbol: string, assetclass: AssetClass): Promise<NasdaqQuote | null> => {
   const base = `https://api.nasdaq.com/api/quote/${symbol}`;
   const opts = { httpsAgent: nasdaqAgent, headers: nasdaqHeaders, timeout: QUOTE_TIMEOUT_MS };
 
@@ -149,8 +161,15 @@ const fetchNasdaqQuote = async (symbol: string, assetclass: 'etf' | 'stocks'): P
   // as the regular quote — using it directly would make prevClose === price.
   const derivedPrevClose = change ? +(price - change).toFixed(4) : 0;
   const prevClose = derivedPrevClose || parseDollarAmount(summary.PreviousClose?.value);
+  // TodayHighLow reads "high/low" and keyStats' range "low - high"; take the
+  // extremes rather than trusting either order.
   const dayRange: string = summary.TodayHighLow?.value ?? summary.DayRange?.value ?? '';
-  const [low, high] = dayRange.split(/\s*[-/]\s*/).map(parseDollarAmount);
+  const bounds = dayRange
+    .split(/\s*[-/]\s*/)
+    .map(parseDollarAmount)
+    .filter((n) => n > 0);
+  const high = bounds.length ? Math.max(...bounds) : 0;
+  const low = bounds.length ? Math.min(...bounds) : 0;
 
   // NASDAQ's own extended-hours change is quoted against the previous close, not
   // against the session it interrupts, so derive it from the regular close instead
@@ -181,9 +200,10 @@ const fetchNasdaqQuote = async (symbol: string, assetclass: 'etf' | 'stocks'): P
 };
 
 export const getQuoteFromNasdaq = async (symbol: string): Promise<NasdaqQuote> => {
-  for (const assetclass of ['etf', 'stocks'] as const) {
+  for (const assetclass of assetClassOrder(symbol)) {
     const quote = await fetchNasdaqQuote(symbol, assetclass);
     if (quote) {
+      knownAssetClass.set(symbol, assetclass);
       const extendedNote = quote.extended
         ? `, ${quote.extended.session} ${quote.extended.price} (${quote.extended.percentChange}%)`
         : '';
@@ -242,29 +262,32 @@ export const getMarketMovers = async (): Promise<{ gainers: NasdaqMover[]; loser
     });
 };
 
-// NASDAQ's historical endpoint 400s with "Symbol not exists." when the assetclass
-// is wrong, so try stocks first (individual holdings, the common case) and fall
-// through to etf — which is what the benchmark overlays (SPY/QQQ/DIA) and the beta
-// calculation need. Returns the raw NASDAQ rows; callers map to their own shape.
-const fetchHistoricalRows = async (symbol: string, range: Range): Promise<any[]> => {
-  const toDate = moment().format('YYYY-MM-DD');
-  const fromDate = moment()
-    .subtract(parseInt(range.substring(0, 1)), range.substring(1) as any)
-    .format('YYYY-MM-DD');
+const parseRowNumber = (raw: string | undefined): number => parseFloat(String(raw ?? '').replace(/\$|,/g, ''));
 
-  for (const assetclass of ['stocks', 'etf'] as const) {
+type Candle = { x: Date; y: [number, number, number, number] };
+
+// NASDAQ's historical endpoint 400s with "Symbol not exists." when the assetclass
+// is wrong, so try the remembered class first. Returns the raw daily rows, newest
+// first; callers map to their own shape.
+const fetchHistoricalRows = async (symbol: string, fromDate: string): Promise<any[]> => {
+  const toDate = moment().format('YYYY-MM-DD');
+
+  for (const assetclass of assetClassOrder(symbol)) {
     try {
       const response = await axios.get(
         `https://api.nasdaq.com/api/quote/${symbol}/historical?assetclass=${assetclass}&fromdate=${fromDate}&limit=1000&todate=${toDate}`,
-        { httpsAgent: nasdaqAgent, headers: nasdaqHeaders }
+        { httpsAgent: nasdaqAgent, headers: nasdaqHeaders, timeout: QUOTE_TIMEOUT_MS }
       );
       const rows = response.data?.data?.tradesTable?.rows;
-      if (rows?.length) return rows;
+      if (rows?.length) {
+        knownAssetClass.set(symbol, assetclass);
+        return rows;
+      }
     } catch (error: any) {
       // Expected when the symbol isn't in this assetclass — we retry the other.
       logger.log({
         level: 'warn',
-        label: `NASDAQ price history "${symbol}" (${range})`,
+        label: `NASDAQ price history "${symbol}"`,
         message: `fetch as ${assetclass} failed: ${error.message} (status ${error.response?.status ?? 'n/a'})`,
       });
     }
@@ -272,24 +295,120 @@ const fetchHistoricalRows = async (symbol: string, range: Range): Promise<any[]>
   return [];
 };
 
-export const getPriceHistoryAreaChart = async (symbol: string, range: Range): Promise<any> => {
-  const rows = await fetchHistoricalRows(symbol, range);
-  return rows.map((x: any) => [parseInt(moment(x.date).format('x')), parseFloat(x.close.replace(/\$|\,/g, ''))]);
+// Today's minute-by-minute prints (pre-market through after-hours). NASDAQ stamps
+// them with New York wall-clock time encoded as if it were UTC.
+const fetchIntradayPoints = async (
+  symbol: string
+): Promise<Array<{ at: number; etMinutes: number; price: number }>> => {
+  for (const assetclass of assetClassOrder(symbol)) {
+    try {
+      const response = await axios.get(`https://api.nasdaq.com/api/quote/${symbol}/chart?assetclass=${assetclass}`, {
+        httpsAgent: nasdaqAgent,
+        headers: nasdaqHeaders,
+        timeout: QUOTE_TIMEOUT_MS,
+      });
+      const points = response.data?.data?.chart;
+      if (Array.isArray(points) && points.length) {
+        knownAssetClass.set(symbol, assetclass);
+        return points
+          .filter((p: any) => Number.isFinite(p?.x) && Number(p?.y) > 0)
+          .map((p: any) => {
+            const wall = new Date(p.x);
+            const etMinutes = wall.getUTCHours() * 60 + wall.getUTCMinutes();
+            const dateStr = wall.toISOString().slice(0, 10);
+            return { at: new Date(etTimestamp(dateStr, etMinutes)).getTime(), etMinutes, price: Number(p.y) };
+          });
+      }
+    } catch (error: any) {
+      logger.log({
+        level: 'warn',
+        label: `NASDAQ intraday "${symbol}"`,
+        message: `fetch as ${assetclass} failed: ${error.message} (status ${error.response?.status ?? 'n/a'})`,
+      });
+    }
+  }
+  return [];
+};
+
+const REGULAR_OPEN_MIN = 9 * 60 + 30;
+const REGULAR_CLOSE_MIN = 16 * 60;
+const INTRADAY_BUCKET_MIN = 5;
+
+const candleOf = (x: Date, prices: number[]): Candle => ({
+  x,
+  y: [prices[0], Math.max(...prices), Math.min(...prices), prices[prices.length - 1]],
+});
+
+// Calendar days to ask for so a range covers its sessions; 5d means the last five
+// sessions, not five calendar days (which is three over a weekend).
+const RANGE_DAYS: Record<Exclude<Range, '1d'>, number> = {
+  '5d': 10,
+  '1M': 31,
+  '3M': 92,
+  '6M': 183,
+  '1y': 366,
+  '2y': 731,
+  '3y': 1096,
+};
+
+// Daily closes as [timestamp, close] pairs, oldest last, for the analytics maths.
+export const getPriceHistoryAreaChart = async (
+  symbol: string,
+  range: Exclude<Range, '1d'>
+): Promise<Array<[number, number]>> => {
+  const rows = await fetchHistoricalRows(symbol, moment().subtract(RANGE_DAYS[range], 'days').format('YYYY-MM-DD'));
+  return rows.map((x: any) => [parseInt(moment(x.date, 'MM/DD/YYYY').format('x')), parseRowNumber(x.close)]);
 };
 
 // open high low close
 // [ { x: new Date(1538778600000), y: [6629.81, 6650.5, 6623.04, 6633.33] } ]
-export const getPriceHistoryCandleStick = async (symbol: string, range: Range): Promise<any> => {
-  const rows = await fetchHistoricalRows(symbol, range);
-  return rows.map((x: any) => ({
-    x: new Date(x.date),
-    y: [
-      parseFloat(x.open.replace(/\$|\,/g, '')),
-      parseFloat(x.high.replace(/\$|\,/g, '')),
-      parseFloat(x.low.replace(/\$|\,/g, '')),
-      parseFloat(x.close.replace(/\$|\,/g, '')),
-    ],
-  }));
+export const getPriceHistoryCandleStick = async (symbol: string, range: Range): Promise<Candle[]> => {
+  if (range === '1d') {
+    // Five-minute candles across today's prints, extended hours included.
+    const points = await fetchIntradayPoints(symbol);
+    const buckets = new Map<number, number[]>();
+    for (const p of points) {
+      const bucket = Math.floor(p.at / (INTRADAY_BUCKET_MIN * 60_000)) * INTRADAY_BUCKET_MIN * 60_000;
+      buckets.set(bucket, [...(buckets.get(bucket) ?? []), p.price]);
+    }
+    return [...buckets.entries()].sort(([a], [b]) => a - b).map(([at, prices]) => candleOf(new Date(at), prices));
+  }
+
+  const fromDate = moment().subtract(RANGE_DAYS[range], 'days').format('YYYY-MM-DD');
+  const [rows, intraday] = await Promise.all([
+    fetchHistoricalRows(symbol, fromDate),
+    // The daily history only publishes a session the next day; build today's bar
+    // from the intraday prints so the chart ends where the quote is.
+    isTradingDay() && etDateAndMinutes().minutes >= REGULAR_OPEN_MIN
+      ? fetchIntradayPoints(symbol)
+      : Promise.resolve([]),
+  ]);
+
+  const daily: Candle[] = rows
+    .map((x: any) => ({
+      x: new Date(x.date),
+      y: [
+        parseRowNumber(x.open),
+        parseRowNumber(x.high),
+        parseRowNumber(x.low),
+        parseRowNumber(x.close),
+      ] as Candle['y'],
+    }))
+    .filter((c: Candle) => c.y.every((n) => Number.isFinite(n) && n > 0))
+    .sort((a: Candle, b: Candle) => a.x.getTime() - b.x.getTime());
+
+  const today = etDateAndMinutes().dateStr;
+  const session = intraday.filter((p) => p.etMinutes >= REGULAR_OPEN_MIN && p.etMinutes < REGULAR_CLOSE_MIN);
+  const hasToday = daily.some((c) => moment(c.x).format('YYYY-MM-DD') === today);
+  if (session.length && !hasToday)
+    daily.push(
+      candleOf(
+        new Date(`${today}T00:00:00`),
+        session.map((p) => p.price)
+      )
+    );
+
+  return range === '5d' ? daily.slice(-5) : daily;
 };
 
 export type NasdaqDividendRow = {
@@ -323,21 +442,30 @@ const parseNasdaqDate = (raw: string | undefined | null): string => {
 // Public dividend calendar and rate data for a ticker. Free, key-less, and the
 // same host the quote fallback already uses. Returns null when the symbol pays
 // no dividend or NASDAQ has no record of it.
+// NASDAQ publishes no distribution data for ETFs (every field is "N/A"), so an
+// ETF comes back null here; callers say so rather than counting it as a non-payer.
 export const getDividendsFromNasdaq = async (symbol: string): Promise<NasdaqDividends | null> => {
-  const url = `https://api.nasdaq.com/api/quote/${symbol}/dividends?assetclass=stocks`;
-
   let data: any;
-  try {
-    const res = await axios.get(url, { httpsAgent: nasdaqAgent, headers: nasdaqHeaders, timeout: 10000 });
-    data = res.data?.data;
-  } catch (error: any) {
-    const err = error as AxiosError;
-    logger.log({
-      level: 'warn',
-      label: `NASDAQ dividends ${symbol}`,
-      message: `${err.message} (status ${err.response?.status ?? 'n/a'})`,
-    });
-    return null;
+  for (const assetclass of assetClassOrder(symbol)) {
+    try {
+      const res = await axios.get(`https://api.nasdaq.com/api/quote/${symbol}/dividends?assetclass=${assetclass}`, {
+        httpsAgent: nasdaqAgent,
+        headers: nasdaqHeaders,
+        timeout: 10000,
+      });
+      data = res.data?.data;
+      if (data) {
+        knownAssetClass.set(symbol, assetclass);
+        break;
+      }
+    } catch (error: any) {
+      const err = error as AxiosError;
+      logger.log({
+        level: 'warn',
+        label: `NASDAQ dividends ${symbol}`,
+        message: `as ${assetclass}: ${err.message} (status ${err.response?.status ?? 'n/a'})`,
+      });
+    }
   }
 
   if (!data) return null;
@@ -354,16 +482,30 @@ export const getDividendsFromNasdaq = async (symbol: string): Promise<NasdaqDivi
     }))
     .filter((row: NasdaqDividendRow) => row.amount > 0);
 
-  const annualizedDividend = parseDollarAmount(data.annualizedDividend);
+  const listedAnnual = parseDollarAmount(data.annualizedDividend);
   const yieldPercent = parsePercent(data.yield);
 
   // A non-payer comes back with empty dates, a zero rate and no history.
-  if (!annualizedDividend && history.length === 0) return null;
+  if (!listedAnnual && history.length === 0) return null;
+
+  // NASDAQ's headline rate and ex-date lag a newly declared dividend that its own
+  // history already lists, so read both from the history: the latest regular
+  // payment times how often it paid over the last year, and the next ex-date
+  // that hasn't passed.
+  const today = moment().format('YYYY-MM-DD');
+  const regular = history.filter((row) => !/special/i.test(row.type) && row.exOrEffDate);
+  const yearAgo = moment().subtract(1, 'year').format('YYYY-MM-DD');
+  const paymentsPerYear = regular.filter((row) => row.exOrEffDate > yearAgo && row.exOrEffDate <= today).length;
+  const latest = regular[0];
+  const annualizedDividend =
+    latest && paymentsPerYear > 0 ? +(latest.amount * paymentsPerYear).toFixed(4) : listedAnnual;
+  const upcoming = [...regular].reverse().find((row) => row.exOrEffDate >= today);
+  const listedExDate = parseNasdaqDate(data.exDividendDate);
 
   return {
     symbol: symbol.toUpperCase(),
-    exDividendDate: parseNasdaqDate(data.exDividendDate),
-    dividendPaymentDate: parseNasdaqDate(data.dividendPaymentDate),
+    exDividendDate: upcoming?.exOrEffDate ?? (listedExDate >= today ? listedExDate : ''),
+    dividendPaymentDate: upcoming?.paymentDate ?? parseNasdaqDate(data.dividendPaymentDate),
     annualizedDividend,
     yieldPercent,
     payoutRatio: parsePercent(data.payoutRatio),
