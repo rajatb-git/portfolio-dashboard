@@ -24,7 +24,10 @@ type Props = {
   isLoading: boolean;
 };
 
-const loss = (v: number) => `-${fnCurrency(Math.abs(v))}`;
+const loss = (v: number) => {
+  const amount = fnCurrency(Math.abs(v));
+  return amount === '$0.00' ? amount : `-${amount}`;
+};
 
 function Metric({ label, value, color }: { label: string; value: string; color?: string }) {
   return (

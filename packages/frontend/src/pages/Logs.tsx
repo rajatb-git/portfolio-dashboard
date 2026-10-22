@@ -127,8 +127,8 @@ export default function Logs() {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Filter by text, symbol or label"
-          aria-label="Filter log lines"
           slotProps={{
+            htmlInput: { 'aria-label': 'Filter log lines' },
             input: {
               startAdornment: (
                 <InputAdornment position="start">
