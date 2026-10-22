@@ -1,11 +1,14 @@
-import axios from './axios';
-
 import { DB_HOST } from '@/config';
 import { IIPO } from '@/models/IPOModel';
 import { IMarketNews } from '@/models/MarketNews';
 import { IPriceStore } from '@/models/PriceStoreModel';
 import { IRecommendation } from '@/models/RecommendationModel';
 import { catchCustomError, getUntilReady } from './apiUtil';
+import axios from './axios';
+
+export type WatchIpoResult = {
+  reminder: { enabled: boolean; daysBefore: number; channelEnabled: boolean };
+};
 
 export type Range = '1d' | '5d' | '1M' | '3M' | '6M' | '1y' | '2y' | '3y';
 
@@ -126,7 +129,7 @@ export default class LiveAPI {
       })
       .catch(catchCustomError);
 
-  watchIpo = async (ipo: IIPO): Promise<IIPO> =>
+  watchIpo = async (ipo: IIPO): Promise<WatchIpoResult> =>
     axios
       .put(DB_HOST + `/live/ipos/${encodeURIComponent(ipo.symbol)}/watch`, { name: ipo.name, date: ipo.date })
       .then((response) => response.data)

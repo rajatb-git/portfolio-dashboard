@@ -1,8 +1,12 @@
 import moment from 'moment';
 import type { IAlert } from '../models/AlertModel';
 import type { IIPO } from '../models/IPOModel';
-import { type NotificationKind, recordNotification } from '../models/NotificationHistoryModel';
 import { getNotificationConfig } from '../models/NotificationConfigModel';
+import {
+  NotificationHistoryDBModel,
+  type NotificationKind,
+  recordNotification,
+} from '../models/NotificationHistoryModel';
 import { getQuietHoursConfig } from '../models/QuietHoursConfigModel';
 import { logger } from '../utils/winston';
 import { mqttPublisher } from './MqttPublisher';
@@ -82,11 +86,7 @@ export type AlertNotificationPayload = {
 // Only public market data — never holdings, quantities, P&L, or portfolio value.
 // A cost-basis alert names the condition without quoting the basis itself, so the
 // payload still carries nothing about the size or cost of the position.
-export function buildAlertPayload(
-  alert: IAlert,
-  price: number,
-  description?: string
-): AlertNotificationPayload {
+export function buildAlertPayload(alert: IAlert, price: number, description?: string): AlertNotificationPayload {
   const condition = description ?? `target ${alert.direction} ${alert.targetPrice}`;
   return {
     symbol: alert.symbol,
@@ -360,9 +360,27 @@ type DeliverInput = {
 // logged and reported through the boolean.
 async function deliver(input: DeliverInput): Promise<boolean> {
   const { kind, symbol = '', title, message, payload, topic, severityPercent } = input;
-  if (!mqttPublisher.isEnabled()) return false;
-
   const resolvedTopic = topic ?? '';
+
+  // Without a channel nothing is sent, but the history still shows what fired.
+  // Services that retry undelivered items ask again every cycle, so the same
+  // notification is recorded once rather than on every retry.
+  if (!mqttPublisher.isEnabled()) {
+    if (!(await hasNoChannelRecord(kind, symbol, title))) {
+      await safeRecord({
+        kind,
+        symbol,
+        title,
+        message,
+        topic: resolvedTopic,
+        delivered: false,
+        suppressed: false,
+        noChannel: true,
+      });
+    }
+    return false;
+  }
+
   const gate = quietHoursService.gate(kind, severityPercent);
 
   if (gate !== 'send') {
@@ -392,6 +410,17 @@ async function deliver(input: DeliverInput): Promise<boolean> {
 
   await safeRecord({ kind, symbol, title, message, topic: resolvedTopic, delivered: ok, suppressed: false });
   return ok;
+}
+
+async function hasNoChannelRecord(kind: NotificationKind, symbol: string, title: string): Promise<boolean> {
+  try {
+    const model = await NotificationHistoryDBModel().initialize();
+    return model
+      .getAllRecords()
+      .some((r) => r.noChannel && r.kind === kind && r.symbol === symbol && r.title === title);
+  } catch {
+    return false;
+  }
 }
 
 // History is a convenience, never a reason to fail a delivery.

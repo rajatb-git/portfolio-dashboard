@@ -1,5 +1,3 @@
-import * as React from 'react';
-
 import {
   Box,
   Card,
@@ -14,15 +12,17 @@ import {
   Typography,
 } from '@mui/material';
 import moment from 'moment';
+import * as React from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'react-toastify';
 
 import apis from '@/api';
 import { AgentInsight } from '@/api/live';
+import { Iconify } from '@/components/Iconify';
+import { toastWatchResult } from '@/components/IPO/watchToast';
 import AgentInsightsCard from '@/components/Research/AgentInsightsCard';
 import ResearchDetailsCard from '@/components/Research/ResearchDetailsCard';
 import ResearchNewsCard from '@/components/Research/ResearchNewsCard';
-import { Iconify } from '@/components/Iconify';
 import { CompanyProfile } from '@/models/CompanyProfileModel';
 import { IIPO } from '@/models/IPOModel';
 import { IMarketNews } from '@/models/MarketNews';
@@ -142,9 +142,10 @@ function IPODetail() {
     try {
       if (ipo.watched) {
         await apis.live.unwatchIpo(ipo.symbol);
+        toast.success(`Stopped watching ${ipo.symbol}`);
         setIpo((prev) => (prev ? { ...prev, watched: false } : prev));
       } else {
-        await apis.live.watchIpo(ipo);
+        toastWatchResult(ipo.symbol, await apis.live.watchIpo(ipo));
         setIpo((prev) => (prev ? { ...prev, watched: true } : prev));
       }
     } catch (err: any) {

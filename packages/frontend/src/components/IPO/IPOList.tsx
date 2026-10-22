@@ -1,5 +1,3 @@
-import React from 'react';
-
 import {
   Box,
   Card,
@@ -20,12 +18,14 @@ import {
   Typography,
 } from '@mui/material';
 import moment from 'moment';
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 
 import apis from '@/api';
 import { getComparator, visuallyHidden } from '@/components/DashboardTable/dashTableUtils';
 import { Iconify } from '@/components/Iconify';
+import { toastWatchResult } from '@/components/IPO/watchToast';
 import { IIPO } from '@/models/IPOModel';
 import { fnShortenCurrency, fnShortenNumber } from '@/utils/formatNumber';
 
@@ -75,9 +75,10 @@ export default function IPOList({ ipos, isLoading, error, onToggleWatch }: Props
     try {
       if (ipo.watched) {
         await apis.live.unwatchIpo(ipo.symbol);
+        toast.success(`Stopped watching ${ipo.symbol}`);
         onToggleWatch?.(ipo, false);
       } else {
-        await apis.live.watchIpo(ipo);
+        toastWatchResult(ipo.symbol, await apis.live.watchIpo(ipo));
         onToggleWatch?.(ipo, true);
       }
     } catch (err: any) {

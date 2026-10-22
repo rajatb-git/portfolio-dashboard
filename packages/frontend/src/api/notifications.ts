@@ -1,7 +1,6 @@
-import axios from './axios';
-
 import { DB_HOST } from '@/config';
 import { catchCustomError } from './apiUtil';
+import axios from './axios';
 
 export type NotificationRecord = {
   id: string;
@@ -12,10 +11,11 @@ export type NotificationRecord = {
   topic: string;
   delivered: boolean;
   suppressed: boolean;
+  noChannel?: boolean;
   createdAt: string;
 };
 
-export type NotificationHistory = { total: number; items: NotificationRecord[] };
+export type NotificationHistory = { total: number; items: NotificationRecord[]; channelEnabled: boolean };
 
 export default class NotificationsAPI {
   getHistory = async (limit = 100, kind = ''): Promise<NotificationHistory> =>

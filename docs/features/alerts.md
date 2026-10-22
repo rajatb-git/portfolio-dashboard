@@ -12,9 +12,13 @@ Create alerts per symbol on the **Alerts** page. Four condition types:
 | Condition | Triggers when |
 |---|---|
 | **Price** | The price crosses a fixed target, above or below |
-| **Trailing stop** | The price falls `trailPercent` from the highest price seen since the alert was armed |
+| **Trailing stop** | The price falls `trailPercent` from the highest price seen since the alert was created (the peak starts at the price on creation) |
 | **% from high** | The price falls `thresholdPercent` below the 52-week high |
-| **Cost basis** | The price crosses what the position actually cost you |
+| **Cost basis** | The price crosses what the position actually cost you (only for symbols you hold) |
+
+The table shows each alert's trigger price, what it is measured from (the
+peak, the 52-week high or your cost basis) and how far the price still has to
+move to reach it.
 
 Each alert records when it triggered, the last price seen and when it was last
 checked; the trigger clears itself when the condition stops holding, so an alert
@@ -91,9 +95,11 @@ be flushed manually.
 
 ## Notification history
 
-The **Notifications** page lists everything the app has sent, so you can see
-what fired while you were away — and confirm a service is working before you
-trust it. History can be cleared or pruned.
+The **Notifications** page lists everything that fired, so you can see what
+happened while you were away — and confirm a service is working before you
+trust it. Without MQTT set up nothing is sent, but alerts and reminders that
+fire are still recorded here as "Not sent — no channel", and the page says so.
+History can be cleared or pruned.
 
 ## Transport: MQTT
 

@@ -1,8 +1,6 @@
-import axios from './axios';
-
 import { DB_HOST } from '@/config';
-
 import { catchCustomError } from './apiUtil';
+import axios from './axios';
 import type { MarketSession } from './live';
 
 export type HoldingAggregate = {
@@ -31,10 +29,12 @@ export type HoldingAggregate = {
   pricePending?: boolean;
 };
 
-export type PortfolioSnapshot = {
-  timestamp: string; // ISO 8601, unique per calculation
-  date: string; // YYYY-MM-DD calendar day
-  totalValue: number;
+export type PerformancePoint = {
+  date: string; // YYYY-MM-DD
+  value: number; // holdings market value at that day's last snapshot
+  netFlow: number; // buys minus sells since the previous point
+  dailyReturn: number | null; // time-weighted, as a fraction
+  index: number; // growth of 1 since the first point
 };
 
 export type IndexMovement = {
@@ -140,9 +140,9 @@ export class DashboardAPI {
       })
       .catch(catchCustomError);
 
-  getSnapshots = async (): Promise<Array<PortfolioSnapshot>> =>
+  getPerformance = async (): Promise<Array<PerformancePoint>> =>
     axios
-      .get(DB_HOST + '/portfolio/snapshots')
+      .get(DB_HOST + '/portfolio/performance')
       .then((response) => response.data)
       .catch(catchCustomError);
 

@@ -23,7 +23,7 @@ async function fetch52WeekHigh(symbol: string): Promise<number | null> {
 }
 
 // Weighted average cost per symbol across every account holding it.
-async function loadCostBasis(symbols: Set<string>): Promise<Map<string, number>> {
+export async function loadCostBasis(symbols: Set<string>): Promise<Map<string, number>> {
   const out = new Map<string, number>();
   if (symbols.size === 0) return out;
 
@@ -88,6 +88,26 @@ export function resolveTarget(alert: IAlert, context: AlertContext): number | nu
       return context.costBasis.get(symbol) ?? null;
     default:
       return alert.targetPrice > 0 ? alert.targetPrice : null;
+  }
+}
+
+// The level a derived target is measured from, so the page can show what the
+// alert is anchored to and not just the computed trigger.
+export function referenceLevel(alert: IAlert, context: AlertContext): { label: string; value: number } | null {
+  const symbol = alert.symbol.toUpperCase();
+  switch (conditionOf(alert)) {
+    case 'trailing_stop':
+      return alert.peakPrice ? { label: 'Peak', value: alert.peakPrice } : null;
+    case 'pct_from_high': {
+      const high = context.fiftyTwoWeekHigh.get(symbol);
+      return high ? { label: '52-week high', value: high } : null;
+    }
+    case 'cost_basis': {
+      const basis = context.costBasis.get(symbol);
+      return basis ? { label: 'Cost basis', value: basis } : null;
+    }
+    default:
+      return null;
   }
 }
 

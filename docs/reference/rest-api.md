@@ -50,7 +50,7 @@ and `GET /settings/lock` stay open.
 | `GET` | `/dashboard` | Every holding enriched with live price, day change, market value, gain/loss and analyst counts |
 | `GET` | `/dashboard/daily-recap` | The day's summary for your portfolio |
 | `GET` | `/dashboard/brief` | Condensed portfolio brief |
-| `GET` | `/portfolio/snapshots` | Daily total-value points behind the performance chart |
+| `GET` | `/portfolio/performance` | Daily holdings value, net trade flow and time-weighted return index behind the performance chart |
 
 ## Holdings
 
@@ -152,7 +152,7 @@ same flag works on `/live/market-news`, `/live/portfolio-news`,
 |---|---|---|
 | `GET` | `/rebalance/plan` | Drift, actions, trade values and share counts |
 | `GET` | `/rebalance/targets` | Read target weights |
-| `POST` | `/rebalance/targets` | Save target weights |
+| `POST` | `/rebalance/targets` | Replace the target weights (must total 100%; an empty list clears them) |
 
 ## Alerts
 

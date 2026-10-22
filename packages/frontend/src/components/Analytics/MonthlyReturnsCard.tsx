@@ -1,4 +1,4 @@
-import { Box, Card, Divider, Skeleton, Stack, Typography } from '@mui/material';
+import { Box, Card, Divider, Skeleton, Stack, Tooltip, Typography } from '@mui/material';
 
 import type { MonthlyReturns } from '@/api/analytics';
 import { Iconify } from '@/components/Iconify';
@@ -39,7 +39,7 @@ export default function MonthlyReturnsCard({ data, isLoading }: Props) {
 
   return (
     <Card variant="outlined">
-      <Stack direction="row" sx={{ alignItems: 'center', px: 2, py: 1.25, gap: 1 }}>
+      <Stack direction="row" sx={{ alignItems: 'center', flexWrap: 'wrap', px: 2, py: 1.25, gap: 1 }}>
         <Iconify icon="mdi:calendar-month" width={16} sx={{ color: 'primary.main' }} />
         <Typography
           sx={{
@@ -54,12 +54,17 @@ export default function MonthlyReturnsCard({ data, isLoading }: Props) {
         </Typography>
         <Box sx={{ flexGrow: 1 }} />
         {hasData && data.bestMonth && data.worstMonth && (
-          <Stack direction="row" spacing={2}>
+          <Stack direction="row" sx={{ flexWrap: 'wrap', columnGap: 2 }}>
             <Typography sx={{ fontSize: '0.68rem', color: 'text.disabled' }}>
-              Best <strong style={{ color: 'var(--pd-up)' }}>+{data.bestMonth.return}%</strong>
+              Best ({MONTH_LABELS[data.bestMonth.month - 1]} {data.bestMonth.year}){' '}
+              <strong style={{ color: 'var(--pd-up)' }}>
+                {data.bestMonth.return >= 0 ? '+' : ''}
+                {data.bestMonth.return}%
+              </strong>
             </Typography>
             <Typography sx={{ fontSize: '0.68rem', color: 'text.disabled' }}>
-              Worst <strong style={{ color: 'var(--pd-down)' }}>{data.worstMonth.return}%</strong>
+              Worst ({MONTH_LABELS[data.worstMonth.month - 1]} {data.worstMonth.year}){' '}
+              <strong style={{ color: 'var(--pd-down)' }}>{data.worstMonth.return}%</strong>
             </Typography>
           </Stack>
         )}
@@ -104,20 +109,24 @@ export default function MonthlyReturnsCard({ data, isLoading }: Props) {
                     : null;
                   const style = cellStyle(value, maxAbs);
                   return (
-                    <Box
+                    <Tooltip
                       key={`${year}-${i}`}
-                      sx={{
-                        ...style,
-                        borderRadius: 0.75,
-                        py: 0.6,
-                        textAlign: 'center',
-                        fontSize: '0.6rem',
-                        fontWeight: 600,
-                        fontVariantNumeric: 'tabular-nums',
-                      }}
+                      title={`${MONTH_LABELS[i]} ${year}: ${value === null ? 'no data' : `${value >= 0 ? '+' : ''}${value.toFixed(2)}%`}`}
                     >
-                      {value === null ? '·' : `${value >= 0 ? '+' : ''}${value.toFixed(1)}`}
-                    </Box>
+                      <Box
+                        sx={{
+                          ...style,
+                          borderRadius: 0.75,
+                          py: 0.6,
+                          textAlign: 'center',
+                          fontSize: '0.6rem',
+                          fontWeight: 600,
+                          fontVariantNumeric: 'tabular-nums',
+                        }}
+                      >
+                        {value === null ? '·' : `${value >= 0 ? '+' : ''}${value.toFixed(1)}`}
+                      </Box>
+                    </Tooltip>
                   );
                 })}
                 <Box

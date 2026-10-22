@@ -7,12 +7,14 @@ import { IPOInsightsController } from '../controller/IPOInsightsController';
 import { MarketMoversController } from '../controller/MarketMoversController';
 import { MarketNewsController } from '../controller/MarketNewsController';
 import { MarketStatusController } from '../controller/MarketStatusController';
+import { mqttPublisher } from '../controller/MqttPublisher';
 import { NewsSentimentController } from '../controller/NewsSentimentController';
 import { ResearchController } from '../controller/ResearchController';
 import { WatchedIpoController } from '../controller/WatchedIpoController';
 import { searchSymbols } from '../externalApis/finnHub';
 import { getPriceHistoryCandleStick } from '../externalApis/nasdaq';
 import type { MarketRead } from '../marketData/store';
+import { getIpoReminderConfig } from '../models/IpoReminderConfigModel';
 import { errorBody } from '../utils/error';
 import { logger } from '../utils/winston';
 
@@ -146,7 +148,18 @@ export const LiveRouter = () => {
         return;
       }
 
-      ctx.body = await new WatchedIpoController().watch(symbol, name, date);
+      const [watched, reminders] = await Promise.all([
+        new WatchedIpoController().watch(symbol, name, date),
+        getIpoReminderConfig(),
+      ]);
+      ctx.body = {
+        ...watched,
+        reminder: {
+          enabled: reminders.enabled,
+          daysBefore: reminders.daysBefore,
+          channelEnabled: mqttPublisher.isEnabled(),
+        },
+      };
       ctx.status = 200;
     } catch (err: any) {
       logger.log({ level: 'error', message: err.message, label: 'Watch IPO' });

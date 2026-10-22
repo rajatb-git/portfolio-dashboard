@@ -26,6 +26,8 @@ export interface INotificationHistory {
   delivered: boolean;
   // True when quiet hours held or dropped it rather than publishing.
   suppressed: boolean;
+  // True when no notification channel was configured, so it was only recorded.
+  noChannel?: boolean;
   createdAt: string;
 }
 
@@ -37,6 +39,7 @@ export const NotificationHistorySchema: SchemaType = {
   topic: { type: String, required: false },
   delivered: { type: Boolean, required: false },
   suppressed: { type: Boolean, required: false },
+  noChannel: { type: Boolean, required: false },
   createdAt: { type: String, required: true },
 };
 

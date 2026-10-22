@@ -3,6 +3,11 @@ import {
   Button,
   Card,
   Chip,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogContentText,
+  DialogTitle,
   Grid,
   InputAdornment,
   Skeleton,
@@ -33,6 +38,8 @@ const isValidTarget = (v: string | undefined) =>
   v !== undefined && v.trim() !== '' && Number(v) >= 0 && Number(v) <= 100;
 
 const round2 = (n: number) => Math.round(n * 100) / 100;
+// Crypto trades in fractions, so two decimals would round a BTC order to nothing.
+const roundShares = (n: number, type: 'stock' | 'crypto') => (type === 'crypto' ? +n.toFixed(6) : round2(n));
 const HOLD_THRESHOLD = 0.5;
 
 export default function Rebalance() {
@@ -41,6 +48,7 @@ export default function Rebalance() {
   const [draft, setDraft] = React.useState<DraftTargets>({});
   const [loading, setLoading] = React.useState(true);
   const [saving, setSaving] = React.useState(false);
+  const [confirmClear, setConfirmClear] = React.useState(false);
 
   const applyPlan = React.useCallback((p: RebalancePlan) => {
     const targets: DraftTargets = {};
@@ -82,10 +90,21 @@ export default function Rebalance() {
         driftPercent,
         action,
         tradeValue: round2(Math.abs(deltaValue)),
-        shares: row.currentPrice > 0 ? round2(Math.abs(deltaValue) / row.currentPrice) : 0,
+        shares: row.currentPrice > 0 ? roundShares(Math.abs(deltaValue) / row.currentPrice, row.type) : 0,
       };
     });
   }, [plan, draft, totalValue]);
+
+  const totalBuys = rows.filter((r) => r.action === 'buy').reduce((s, r) => s + r.tradeValue, 0);
+  const totalSells = rows.filter((r) => r.action === 'sell').reduce((s, r) => s + r.tradeValue, 0);
+  const netCash = totalSells - totalBuys;
+
+  React.useEffect(() => {
+    if (!isDirty) return;
+    const warn = (e: BeforeUnloadEvent) => e.preventDefault();
+    window.addEventListener('beforeunload', warn);
+    return () => window.removeEventListener('beforeunload', warn);
+  }, [isDirty]);
 
   const setTarget = (symbol: string, value: string) => {
     setDraft((d) => ({ ...d, [symbol]: value }));
@@ -112,6 +131,10 @@ export default function Rebalance() {
       toast.error('Each target must be between 0 and 100%');
       return;
     }
+    if (totalOff) {
+      toast.error(`Targets add up to ${totalTarget.toFixed(2)}%; they must total 100%`);
+      return;
+    }
     setSaving(true);
     try {
       const targets = plan.rows.map((row) => ({ symbol: row.symbol, targetPercent: Number(draft[row.symbol] ?? 0) }));
@@ -123,6 +146,20 @@ export default function Rebalance() {
       toast.error(err.message || 'Failed to save target allocation');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleClear = async () => {
+    setSaving(true);
+    try {
+      await apis.rebalance.saveTargets([]);
+      applyPlan(await apis.rebalance.getPlan());
+      toast.success('Target allocation cleared');
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to clear target allocation');
+    } finally {
+      setSaving(false);
+      setConfirmClear(false);
     }
   };
 
@@ -149,11 +186,25 @@ export default function Rebalance() {
             <Button variant="outlined" size="small" onClick={handleUseCurrent}>
               Use current
             </Button>
+            {plan?.hasTargets && (
+              <Button
+                variant="outlined"
+                size="small"
+                color="error"
+                onClick={() => setConfirmClear(true)}
+                disabled={saving}
+              >
+                Clear targets
+              </Button>
+            )}
+            <Button variant="outlined" size="small" onClick={() => setDraft(saved)} disabled={!isDirty || saving}>
+              Reset
+            </Button>
             <Button
               variant="contained"
               size="small"
               onClick={handleSave}
-              disabled={!isDirty || saving || hasInvalidTarget}
+              disabled={!isDirty || saving || hasInvalidTarget || totalOff}
             >
               Save targets
             </Button>
@@ -162,10 +213,10 @@ export default function Rebalance() {
       />
 
       <Grid container spacing={1.5}>
-        <Grid size={{ xs: 12, sm: 4 }}>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <StatTile label="Portfolio value" value={fnCurrency(totalValue)} icon="tabler:wallet" loading={loading} />
         </Grid>
-        <Grid size={{ xs: 6, sm: 4 }}>
+        <Grid size={{ xs: 6, sm: 6, md: 3 }}>
           <StatTile
             label="Targets total"
             value={
@@ -180,19 +231,36 @@ export default function Rebalance() {
               totalOff ? (
                 <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center' }}>
                   <Iconify icon="tabler:alert-triangle" width={12} sx={{ color: 'warning.main' }} aria-hidden />
-                  <Typography sx={{ fontSize: '0.6875rem', color: 'warning.main' }}>Does not sum to 100%</Typography>
+                  <Typography sx={{ fontSize: '0.6875rem', color: 'warning.main' }}>
+                    Must total 100% to save ({totalTarget > 100 ? 'over' : 'under'} by{' '}
+                    {Math.abs(round2(totalTarget - 100)).toFixed(2)}%)
+                  </Typography>
                 </Stack>
               ) : undefined
             }
           />
         </Grid>
-        <Grid size={{ xs: 6, sm: 4 }}>
+        <Grid size={{ xs: 6, sm: 6, md: 3 }}>
           <StatTile
             label="Total drift"
             value={`${rows.reduce((s, r) => s + Math.abs(r.driftPercent), 0).toFixed(2)}%`}
             icon="tabler:arrows-diff"
             loading={loading}
             hint="Sum of the absolute gap between each holding's current and target weight."
+          />
+        </Grid>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+          <StatTile
+            label="Suggested trades"
+            value={`${netCash >= 0 ? '+' : '−'}${fnCurrency(Math.abs(netCash))}`}
+            icon="tabler:arrows-exchange"
+            loading={loading}
+            hint="Net cash from the suggested trades: sells minus buys. Holdings within 0.5% of target are left alone, so the two sides don't always cancel out."
+            footer={
+              <Typography sx={{ fontSize: '0.6875rem', color: 'text.secondary' }}>
+                Buy {fnCurrency(totalBuys)} · Sell {fnCurrency(totalSells)}
+              </Typography>
+            }
           />
         </Grid>
       </Grid>
@@ -306,9 +374,27 @@ export default function Rebalance() {
       </Card>
 
       <Typography sx={{ fontSize: '0.72rem', color: 'text.disabled' }}>
-        Suggested trades bring each position to its target weight at current prices. Share counts are approximate and do
-        not account for fractional-share limits, taxes, or trading fees.
+        Suggested trades bring each position to its target weight at current prices. Holdings within 0.5% of their
+        target are left as Hold. Account cash isn't part of the plan. Share counts are approximate and do not account
+        for fractional-share limits, taxes, or trading fees.
       </Typography>
+
+      <Dialog open={confirmClear} onClose={() => !saving && setConfirmClear(false)} maxWidth="xs" fullWidth>
+        <DialogTitle>Clear target allocation?</DialogTitle>
+        <DialogContent>
+          <DialogContentText sx={{ fontSize: '0.85rem' }}>
+            Every saved target is removed and each holding goes back to its current weight, so no trades are suggested.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setConfirmClear(false)} disabled={saving}>
+            Cancel
+          </Button>
+          <Button color="error" variant="contained" onClick={handleClear} disabled={saving}>
+            Clear targets
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Stack>
   );
 }

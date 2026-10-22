@@ -11,32 +11,43 @@ export type SectorAllocation = {
 
 // Sectors come from the company profile, which the scheduler keeps for every
 // held symbol; a symbol whose profile was never fetched gets one short wait
-// (all in parallel) before falling back to "Unknown".
+// (all in parallel) before falling back to "Unknown". Finnhub's free plan has
+// no profile for funds, so a stock symbol that answered with an empty profile
+// is grouped as a fund instead. Crypto gets its own slice.
 const PROFILE_WAIT_MS = 3000;
+const FUNDS = 'ETFs & funds';
+const CRYPTO = 'Crypto';
 
 export const getSectorAllocation = async (): Promise<SectorAllocation[]> => {
   const holdingsModel = await HoldingsModel().initialize();
-  const stockHoldings = holdingsModel.getAllRecords().filter((h) => h.type === 'stock');
+  const holdings = holdingsModel.getAllRecords();
 
-  if (stockHoldings.length === 0) return [];
+  if (holdings.length === 0) return [];
 
-  const uniqueSymbols = [...new Set(stockHoldings.map((h) => h.symbol.toUpperCase()))];
+  const stockSymbols = [...new Set(holdings.filter((h) => h.type === 'stock').map((h) => h.symbol.toUpperCase()))];
+  const cryptoSymbols = [...new Set(holdings.filter((h) => h.type === 'crypto').map((h) => h.symbol.toUpperCase()))];
 
   const [profiles, quotes] = await Promise.all([
     Promise.all(
-      uniqueSymbols.map(async (sym) => {
+      stockSymbols.map(async (sym) => {
         const profile = await read<CompanyProfile2Response>('profile', sym, { mode: 'fresh', waitMs: PROFILE_WAIT_MS });
-        return [sym, profile.value?.finnhubIndustry || 'Unknown'] as const;
+        const sector = profile.value
+          ? profile.value.finnhubIndustry || (profile.value.name ? 'Unknown' : FUNDS)
+          : 'Unknown';
+        return [sym, sector] as const;
       })
     ),
-    getCachedQuotes(uniqueSymbols.map((symbol) => ({ symbol, isCrypto: false }))),
+    getCachedQuotes([
+      ...stockSymbols.map((symbol) => ({ symbol, isCrypto: false })),
+      ...cryptoSymbols.map((symbol) => ({ symbol, isCrypto: true })),
+    ]),
   ]);
   const sectorMap = new Map(profiles);
 
   const sectorValues = new Map<string, number>();
-  for (const holding of stockHoldings) {
+  for (const holding of holdings) {
     const symbol = holding.symbol.toUpperCase();
-    const sector = sectorMap.get(symbol) ?? 'Unknown';
+    const sector = holding.type === 'crypto' ? CRYPTO : (sectorMap.get(symbol) ?? 'Unknown');
     const price = quotes.get(symbol)?.value?.price ?? holding.averagePrice;
     sectorValues.set(sector, (sectorValues.get(sector) ?? 0) + holding.qty * price);
   }

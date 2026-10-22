@@ -204,7 +204,8 @@ export default function TaxLossHarvestingCard({ data, isLoading }: Props) {
           <Typography sx={{ fontSize: '0.7rem', color: 'text.disabled', px: 2, py: 1 }}>
             Losses are measured per tax lot, so a position that is up overall can still have losing lots to harvest —
             sell just those with Specific lots in Mock trade or the Trade dialog's Highest cost method. Wash-sale flags
-            look at purchases in every account. Not tax advice — confirm with your broker's cost-basis records.
+            look at purchases in every account. Tax-deferred and tax-free accounts are left out (set an account's tax
+            treatment in Settings). Not tax advice — confirm with your broker's cost-basis records.
           </Typography>
         </>
       )}

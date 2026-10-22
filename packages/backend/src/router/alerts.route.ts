@@ -1,5 +1,12 @@
 import Router from '@koa/router';
-import { buildAlertContext, describeCondition, isTriggered, resolveTarget } from '../controller/AlertConditions';
+import {
+  buildAlertContext,
+  describeCondition,
+  isTriggered,
+  loadCostBasis,
+  referenceLevel,
+  resolveTarget,
+} from '../controller/AlertConditions';
 import { getCachedQuotes } from '../marketData/quotes';
 import { ALERT_CONDITIONS, type AlertCondition, AlertModel, type IAlert } from '../models/AlertModel';
 import { errorBody } from '../utils/error';
@@ -69,6 +76,27 @@ const parseAlertBody = (raw: any) => {
   return { ...base, targetPrice: 0 } as const;
 };
 
+// Checks that need live state rather than just the request body. A trailing
+// stop starts from today's price, so its trigger is known from the start
+// instead of only after the monitor's next run.
+const QUOTE_WAIT_MS = 5000;
+const withLiveState = async <T extends { symbol: string; type: string; condition: AlertCondition }>(
+  payload: T
+): Promise<T & { peakPrice?: number }> => {
+  if (payload.condition === 'cost_basis') {
+    const basis = await loadCostBasis(new Set([payload.symbol]));
+    if (!basis.has(payload.symbol)) {
+      throw new Error(`You don't hold ${payload.symbol}, so there's no cost basis to alert on`);
+    }
+  }
+  if (payload.condition !== 'trailing_stop') return payload;
+  const quotes = await getCachedQuotes([{ symbol: payload.symbol, isCrypto: payload.type === 'crypto' }], {
+    waitForPendingMs: QUOTE_WAIT_MS,
+  });
+  const price = quotes.get(payload.symbol)?.value?.price;
+  return price ? { ...payload, peakPrice: price } : payload;
+};
+
 export const AlertsRouter = () => {
   const router = new Router();
 
@@ -100,11 +128,18 @@ export const AlertsRouter = () => {
         // Fall back to the monitor's last recorded price when a live quote isn't
         // available (e.g. market closed), so the UI still shows the latest known state.
         const currentPrice = quote ? +quote.price.toFixed(2) : (a.lastPrice ?? null);
+        const resolvedTarget = resolveTarget(a, context);
         return {
           ...a,
           currentPrice,
           percentChange: quote ? +quote.percentChange.toFixed(2) : null,
-          resolvedTarget: resolveTarget(a, context),
+          resolvedTarget,
+          // How far the price has to move to reach the trigger, signed.
+          distancePercent:
+            currentPrice && resolvedTarget !== null
+              ? +(((resolvedTarget - currentPrice) / currentPrice) * 100).toFixed(2)
+              : null,
+          reference: referenceLevel(a, context),
           conditionLabel: describeCondition(a, context),
           triggered: currentPrice != null && isTriggered(a, currentPrice, context),
         };
@@ -120,7 +155,7 @@ export const AlertsRouter = () => {
   router.put('/alerts', async (ctx) => {
     try {
       const alertModel = await AlertModel().initialize();
-      const payload = parseAlertBody(ctx.request.body);
+      const payload = await withLiveState(parseAlertBody(ctx.request.body));
       ctx.body = await alertModel.insertOne(payload);
       ctx.status = 201;
     } catch (err: any) {
@@ -149,12 +184,13 @@ export const AlertsRouter = () => {
             ...(existing.triggeredAt && { triggeredAt: existing.triggeredAt }),
           }
         : {};
+      const seeded = sameCriteria ? payload : await withLiveState(payload as ReturnType<typeof parseAlertBody>);
       const carried = {
         ...(existing.symbol === payload.symbol &&
           existing.lastPrice !== undefined && { lastPrice: existing.lastPrice }),
         ...(existing.lastCheckedAt && { lastCheckedAt: existing.lastCheckedAt }),
       };
-      ctx.body = await alertModel.replaceById(id, { ...payload, ...carried, ...monitorState });
+      ctx.body = await alertModel.replaceById(id, { ...seeded, ...carried, ...monitorState });
       ctx.status = 200;
     } catch (err: any) {
       logger.log({ level: 'error', message: err.message, label: 'Update alert' });
