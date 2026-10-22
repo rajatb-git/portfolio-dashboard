@@ -53,6 +53,7 @@ The site is published to GitHub Pages automatically — see
 |---|---|
 | `pnpm --filter @portfolio/backend start` | Run the compiled server from `dist/` |
 | `pnpm --filter @portfolio/backend migrate:mongo` | Migrate a pre-MongoDB `storage/` directory into MongoDB. Only populates collections still empty, unless run with `--force` |
+| `pnpm --filter @portfolio/backend probe:finnhub-ws -- --minutes 15` | Measure Finnhub's WebSocket trade stream on your key (coverage, ETFs, extended hours, message rate, disconnects) and write a `finnhub-ws-probe-*.json` report. Flags: `--symbols A,B`, `--no-holdings`, `--no-rest`, `--limit-test` |
 
 ## Docker
 

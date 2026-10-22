@@ -55,3 +55,6 @@ ignore*
 
 # Claude Code harness state (worktrees, local settings)
 .claude/
+
+# Finnhub WebSocket probe reports (packages/backend/src/scripts/finnhubWsProbe.ts)
+finnhub-ws-probe-*.json
