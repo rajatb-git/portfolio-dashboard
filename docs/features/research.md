@@ -66,7 +66,7 @@ at all.
 
 Features that *do* need your positions — portfolio insights on
 [Analytics](/features/analytics), AI document import on
-[Database](/guide/importing-data) — are hard-locked to a local Ollama provider
+[Import](/guide/importing-data) — are hard-locked to a local Ollama provider
 and refuse to run against a hosted API.
 
 The full rule, and how it is enforced in code, is in

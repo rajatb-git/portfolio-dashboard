@@ -79,12 +79,15 @@ Once the app is open:
    database (`<MONGO_DB_NAME>_demo`), so you can click through every screen
    before entering anything real. Turn it off when you are done —
    [more on Demo Mode](/features/demo-mode-and-lock).
-2. **Create an account.** Go to **Database → Accounts** and add a brokerage
-   account (name plus an optional starting cash balance). Holdings and
-   transactions hang off accounts, so this comes first.
-3. **Add your holdings.** Either enter them by hand under **Database →
-   Holdings**, or import them — see
+2. **Import your portfolio.** With nothing imported yet, the Dashboard shows a
+   *Let’s bring in your portfolio* panel that leads to the **Import** page.
+   Pick what you have (current positions, transaction history or both),
+   create the account as part of the import, drop your broker's export and
+   review every row before it's saved — see
    [Importing your portfolio](/guide/importing-data).
+3. **Fix up anything estimated.** Positions imported without a purchase date
+   get an *estimated* tax lot; set the real date from the position's
+   Research page.
 4. **Check the dashboard.** Live prices, day change and gain/loss should
    populate for every symbol. If prices are missing, see
    [Troubleshooting](/guide/troubleshooting).

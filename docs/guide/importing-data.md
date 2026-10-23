@@ -1,86 +1,100 @@
 # Importing your portfolio
 
-There are four ways to get positions and history into the app, from most
-structured to most forgiving. All of them live on the **Database** page, and all
-of them attach rows to a brokerage **account** — so create the account first
-under **Database → Accounts**.
+Everything in the app — live values, tax lots, realized gains, analytics,
+alerts — builds on what you import, so the **Import** page (in the sidebar,
+and offered by the Dashboard until you have holdings) walks you through it
+one step at a time. Nothing is saved until you have reviewed every row.
 
-## 1. By hand
+## 1. Decide what to import
 
-**Database → Holdings → Add**. Symbol, name, quantity, average price, account
-and type (`stock` or `crypto`). Fine for a handful of positions, and the only
-way to fix a single bad row.
-
-Buys and sells afterwards go through the **Buy / Sell** dialog, which updates
-the position, adjusts the account's cash balance and writes a transaction.
-
-## 2. Generic CSV
-
-**Database → Holdings → Import** takes a plain CSV with these columns:
-
-```csv
-symbol,name,qty,averagePrice
-AAPL,Apple Inc,25,178.42
-BTC,Bitcoin,0.15,42150.00
-```
-
-`symbol`, `name`, `qty` and `averagePrice` are required. You pick the account
-and the holding type in the dialog, so those are not columns.
-
-::: tip A `CASH` row sets your opening balance
-A row whose symbol is `CASH` is not imported as a position — it adjusts the
-account's cash balance by `qty × averagePrice` instead.
-:::
-
-Transactions have their own importer (**Database → Transactions → Import**),
-requiring at least `qty` and `action` (`buy`, `sell`, `deposit` or `withdraw`).
-
-::: info Imported transactions are history, not trades
-Importing transactions (by CSV, broker export or AI) records them in the
-transaction log for realized gains, tax lots and analytics. It does **not**
-create holdings or change cash — import your current positions through the
-holdings importers for that. Because of this, an imported row can be edited or
-deleted freely without touching any holding or cash balance.
-:::
-
-## 3. Broker CSV exports
-
-If you exported straight from your broker, use the **broker import** dialogs
-instead — they know the column names each one uses, for both holdings and
-transaction history:
-
-| Broker | Holdings export | Transaction export |
+| You have | Import it as | You get |
 |---|---|---|
-| Robinhood | Symbol, Name, Shares, Average Cost | ✅ |
-| Charles Schwab | ✅ | ✅ |
-| Fidelity | ✅ | Settlement Date, Action, Symbol, Quantity, Price |
+| A **positions** export (what you hold today) | Current positions | One holding per symbol. If the file lists **tax lots** — a *date acquired* per purchase — each row becomes its own lot with that date and cost |
+| An **activity / history** export | Transaction history → *Build positions and tax lots* | Your buys and sells replayed oldest first: positions, open lots (sells relieve the oldest lots first, FIFO) and realized gains |
+| Both | Positions first, then history → *Record as history only* | Holdings and lots from the positions file, realized gains from the history, with nothing counted twice |
 
-Pick the broker, drop the file in, review the parsed rows, then confirm.
+Build from history only when the file goes back to your first purchase of
+each position; otherwise a sale shows up that the file never saw you buy, and
+the import says so rather than guessing.
 
-Broker wording such as *YOU BOUGHT*, *Sold* or *Reinvest Shares* is understood.
-Rows that aren't a buy, sell, deposit or withdrawal — dividends, interest, fees,
-journals, and transfers whose direction the file doesn't say — are skipped and
-listed after the import instead of failing the whole file.
+## 2. Pick the account
 
-## 4. AI-assisted import (any format)
+Each brokerage account is imported separately; you can create the account
+(with its tax treatment) right in the flow. If the account already has data
+you choose to **add** to it — rows already there are detected and skipped as
+duplicates — or to **start fresh**, which removes the account's positions and
+transactions first (a history-only import removes just the transactions).
 
-**Database → Import with AI** accepts a PDF statement, CSV, TSV, plain text,
-OFX/QFX — or text you paste in — and lets a local model work out the columns.
-Useful for a brokerage the built-in parsers do not cover, or for a PDF that was
-never meant to be machine-readable.
+## 3. Drop the file
+
+- **CSV / TSV exports** are read directly. The page finds the header row even
+  under an account banner or blank lines, ignores footers and disclaimers, and
+  matches columns automatically for Fidelity, Schwab, Robinhood, Vanguard,
+  Coinbase and most other brokers. You can change any match.
+- **PDF statements, OFX/QFX and pasted text** are read by your **local AI**
+  (see below) and land in the same review.
+
+A file with several accounts (an *Account Number* column) asks which one goes
+into this account; import the others into their own accounts afterwards.
+
+## 4. Review
+
+The review shows every row with its status and the reason for it:
+
+- **Ready** / **Check** — will be imported; *Check* explains anything to look
+  at, such as a lot without a purchase date (imported as *estimated*).
+- **Problem** — can't be imported as it is (no cost basis, a date that doesn't
+  read, a sale of more shares than held, …). Fix the file and choose it again,
+  or untick the row to import the rest.
+- **Skipped** — not a position or trade: totals, pending activity, options
+  contracts, dividends, interest, fees, transfers without a direction.
+- **Duplicate** — already in the account.
+
+Settings on the same screen update the plan as you change them: the date
+format (detected from the file when it can be), the asset type for rows that
+don't say, and whether cash rows / cash movements update the account's cash.
+The summary shows the positions and lots you will end up with, transactions,
+realized gain and cash before and after.
+
+Broker wording is understood — *YOU BOUGHT*, *Sold*, *Reinvest Shares*,
+*Electronic Funds Transfer Received*, *ACH* with a signed amount — as are
+`$1,234.56`, `(12.50)` negatives, `BTC-USD` style pairs, money-market lines
+such as `SPAXX**` (cash) and dates like `3/4/2026`, `2026-03-04` or
+`Mar 4, 2026`.
+
+## After importing
+
+- Undated lots are marked *estimated*: set their purchase dates on each
+  position's Research page so short- and long-term gains are right.
+- An imported trade that is history only can be edited or deleted freely; one
+  that built a position undoes its lots when deleted, just like a trade
+  entered in the app.
+- The performance chart skips the day of an import, because the portfolio
+  changed without a trade it could account for.
+- **Recent imports** on the Import page lists what was imported, when and into
+  which account.
+
+## AI-assisted reading (local only)
 
 ::: warning This feature is local-only, by design
-A brokerage statement is about as personal as data gets, so document import is
+A brokerage statement is about as personal as data gets, so document reading is
 **hard-locked to a local Ollama provider**. If your AI provider is set to Claude
 or Gemini, the app refuses the request rather than uploading your statement.
 Set **Settings → AI Agent → Provider** to *Ollama (Local)* to use it. See the
 [AI data-privacy rule](/internals/ai-privacy).
 :::
 
-The parser extracts text in the browser (PDFs included), sends the text to your
-Ollama host through the backend, and shows you a reviewable table of rows —
-plus anything it skipped — before anything is written. Documents are capped at
-200,000 characters.
+The browser extracts the text (PDFs included), and the backend sends it to
+your Ollama host a few pages at a time with a larger context window, so a
+long statement isn't silently cut off. Expect it to take a while on a CPU-only
+machine. A model can miss or misread lines, so compare the review with your
+statement before importing. Documents are capped at 200,000 characters.
+
+## Adding a position by hand
+
+**Database → Holdings → Add** still works for a single position, and buys and
+sells afterwards go through the **Buy / Sell** dialog, which updates the
+position, its lots and the account's cash.
 
 ## Restoring a full backup instead
 
