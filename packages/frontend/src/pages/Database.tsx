@@ -236,6 +236,16 @@ const columns: { [collection: string]: Array<GridColDef> } = {
       valueOptions: ['stock', 'crypto', 'cash'],
     },
     {
+      field: 'imported',
+      headerName: 'Source',
+      minWidth: 110,
+      editable: false,
+      // History-only imports never moved shares or cash; say so, since editing
+      // or deleting them doesn't either.
+      valueGetter: (_value: unknown, row: any) =>
+        row.imported ? (row.lotId || row.lots?.length ? 'Import' : 'Import (history)') : 'App',
+    },
+    {
       field: 'date',
       headerName: 'Trade Date',
       flex: 1,

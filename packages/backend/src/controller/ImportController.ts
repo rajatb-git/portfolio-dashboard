@@ -110,6 +110,8 @@ export type ImportPlan = {
     removedPositions: number;
     removedTransactions: number;
     replacedPositions: number;
+    // Positions already in the account that a built history adds trades to.
+    buildOverlap: number;
     missingCost: number;
     cashBefore: number;
     cashAfter: number;
@@ -234,6 +236,7 @@ const CASH_SYMBOLS = new Set(['CASH', 'USD', 'CORE', '$']);
 const CASH_NAME_RE = /^cash\b|money market|cash & cash investments|cash and cash|sweep|core position/i;
 const SUMMARY_RE = /^(account )?total|grand total|^subtotal/i;
 const PENDING_RE = /pending activity|pending transactions/i;
+const SPLIT_RE = /\bsplit\b|^spl$|distribution|stock dividend/i;
 const NON_TRADE_RE =
   /dividend|interest|\bfee|\btax|journal|split|merger|spinoff|spin-off|stock rewards?|staking|reward|airdrop/i;
 const OPTION_RE = /\b\d{1,2}\/\d{1,2}\/\d{2,4}\b.*\b\d+(\.\d+)?\s*[CP]\b|\b(call|put)\b/i;
@@ -249,10 +252,15 @@ const cleanSymbol = (raw: unknown): SymbolInfo => {
   return { symbol, crypto: !!pair, cashMarker, raw: rawText };
 };
 
-const assetTypeOf = (raw: unknown, symbol: SymbolInfo, fallback: AssetType): AssetType => {
+// Company and fund names: a row that says "crypto" but is named like one of
+// these was mislabelled (a local AI reading a statement does this).
+const SECURITY_NAME_RE =
+  /\b(inc|corp|corporation|company|co|etf|fund|trust|ishares|vanguard|spdr|class [a-c]|plc|ltd|holdings|group|index)\b/i;
+
+const assetTypeOf = (raw: unknown, symbol: SymbolInfo, fallback: AssetType, name = ''): AssetType => {
   if (symbol.crypto) return 'crypto';
   const s = String(raw ?? '').toLowerCase();
-  if (/crypto|digital|coin|token/.test(s)) return 'crypto';
+  if (/crypto|digital|coin|token/.test(s)) return SECURITY_NAME_RE.test(name) ? 'stock' : 'crypto';
   if (/stock|equity|etf|fund|share|security/.test(s)) return 'stock';
   return fallback;
 };
@@ -350,6 +358,7 @@ const buildWorkspace = async (request: ImportRequest): Promise<Workspace> => {
   const duplicatesAgainst = replace ? [] : accountTransactions;
   const num = (value: unknown) => parseNumber(value, options.decimalComma);
   const previousQty = new Map<string, number>();
+  const buildOverlap = new Set<string>();
   let missingCost = 0;
 
   if (request.kind === 'positions') {
@@ -452,7 +461,7 @@ const buildWorkspace = async (request: ImportRequest): Promise<Workspace> => {
         row.messages.push(`"${sym.raw}" isn't a ticker symbol`);
         return;
       }
-      row.type = assetTypeOf(raw.assetType, sym, options.defaultAssetType);
+      row.type = assetTypeOf(raw.assetType, sym, options.defaultAssetType, name);
 
       if (qty.invalid) {
         row.status = 'error';
@@ -591,7 +600,7 @@ const buildWorkspace = async (request: ImportRequest): Promise<Workspace> => {
       if (group.name && state.name === state.symbol) state.name = group.name;
     }
   } else {
-    type Event = { row: PlannedRow; action: 'buy' | 'sell'; type: AssetType; name: string };
+    type Event = { row: PlannedRow; action: 'buy' | 'split' | 'sell'; type: AssetType; name: string };
     const events: Event[] = [];
 
     // Each account transaction can match one row of the file: two identical
@@ -645,14 +654,38 @@ const buildWorkspace = async (request: ImportRequest): Promise<Workspace> => {
       const signedAmount = num(raw.amount).value;
       const action =
         normalizeTradeAction(rawAction) ?? (sym.symbol ? null : transferDirection(rawAction, signedAmount));
+      // A split adds (or, reversed, removes) shares at no cost: Fidelity calls
+      // it a DISTRIBUTION, Robinhood SPL. Only building positions needs it.
+      const splitShares = num(raw.qty).value;
+      if (!action && sym.symbol && SPLIT_RE.test(rawAction) && splitShares && !num(raw.price).value) {
+        row.action = 'split';
+        row.qty = splitShares;
+        const date = parseDate(raw.date, options.dateOrder);
+        if (recordOnly) {
+          row.status = 'skipped';
+          row.messages.push('Stock split — only used when building positions');
+          return;
+        }
+        if (!date.value) {
+          row.status = 'error';
+          row.messages.push(date.invalid ? `Couldn't read the date "${date.invalid}"` : 'No date for this split');
+          return;
+        }
+        row.date = date.value;
+        row.type = assetTypeOf(raw.assetType, sym, options.defaultAssetType, name);
+        events.push({ row, action: 'split', type: row.type, name });
+        return;
+      }
       if (!action) {
         row.status = 'skipped';
         row.messages.push(
-          NON_TRADE_RE.test(rawAction)
-            ? `"${rawAction}" isn't imported — dividends, interest, fees and rewards don't change your shares or cost`
-            : /\b(send|sent|receive|received|transfer|transferred)\b/i.test(rawAction) && sym.symbol
-              ? `"${rawAction}" moves ${sym.symbol} in or out without a price — shares or coins transferred in need their cost basis, so import them from a positions file`
-              : `"${rawAction}" isn't a buy, sell, deposit or withdrawal`
+          /\bshort\b|to cover/i.test(rawAction)
+            ? `"${rawAction}" isn't imported — short sales aren't tracked`
+            : NON_TRADE_RE.test(rawAction)
+              ? `"${rawAction}" isn't imported — dividends, interest, fees and rewards don't change your shares or cost`
+              : /\b(send|sent|receive|received|transfer|transferred)\b/i.test(rawAction) && sym.symbol
+                ? `"${rawAction}" moves ${sym.symbol} in or out without a price — shares or coins transferred in need their cost basis, so import them from a positions file`
+                : `"${rawAction}" isn't a buy, sell, deposit or withdrawal`
         );
         return;
       }
@@ -747,7 +780,7 @@ const buildWorkspace = async (request: ImportRequest): Promise<Workspace> => {
         row.messages.push(`"${sym.raw}" isn't a ticker symbol`);
         return;
       }
-      row.type = assetTypeOf(raw.assetType, sym, options.defaultAssetType);
+      row.type = assetTypeOf(raw.assetType, sym, options.defaultAssetType, name);
       if (qty.value === undefined || qty.value === 0) {
         row.status = 'error';
         row.messages.push('No quantity');
@@ -813,10 +846,11 @@ const buildWorkspace = async (request: ImportRequest): Promise<Workspace> => {
 
     // Cash rows above were planned in file order; trades replay oldest first,
     // buys before sells on the same day (a same-day sale needs the purchase).
+    const ORDER = { buy: 0, split: 1, sell: 2 };
     events.sort(
       (a, b) =>
         (a.row.date ?? '').localeCompare(b.row.date ?? '') ||
-        (a.action === b.action ? 0 : a.action === 'buy' ? -1 : 1) ||
+        ORDER[a.action] - ORDER[b.action] ||
         a.row.index - b.row.index
     );
 
@@ -850,6 +884,31 @@ const buildWorkspace = async (request: ImportRequest): Promise<Workspace> => {
       };
       if (event.name && state.name === state.symbol) state.name = event.name;
       positions.set(symbol, state);
+      if (state.existing && !state.touched && event.action !== 'split') buildOverlap.add(symbol);
+
+      // Undated (estimated) lots came from a positions file; when they were
+      // bought is unknown, so they count as held on any date.
+      const heldOn = (l: ITaxLot) => l.qty > QTY_EPS && (!!l.estimated || lotDay(l) <= (row.date as string));
+
+      if (event.action === 'split') {
+        const held = state.lots.filter(heldOn);
+        const before = held.reduce((sum, l) => sum + l.qty, 0);
+        if (before <= QTY_EPS || before + qty <= QTY_EPS) {
+          row.status = 'error';
+          row.messages.push(`Split of ${symbol} on ${row.date}, but the file shows no ${symbol} held then`);
+          continue;
+        }
+        const ratio = (before + qty) / before;
+        for (const lot of held) {
+          lot.qty = roundQty(lot.qty * ratio);
+          lot.price = +(lot.price / ratio).toFixed(6);
+        }
+        state.touched = true;
+        row.messages.push(
+          `Stock split: ${fmtQty(before)} → ${fmtQty(roundQty(before + qty))} shares; each lot keeps its cost and date`
+        );
+        continue;
+      }
 
       if (event.action === 'buy') {
         const lot: ITaxLot = { id: randomUUID(), qty, price, date: iso };
@@ -869,9 +928,7 @@ const buildWorkspace = async (request: ImportRequest): Promise<Workspace> => {
         continue;
       }
 
-      const eligible = state.lots
-        .filter((l) => l.qty > QTY_EPS && lotDay(l) <= (row.date as string))
-        .sort((a, b) => a.date.localeCompare(b.date));
+      const eligible = state.lots.filter(heldOn).sort((a, b) => a.date.localeCompare(b.date));
       const held = eligible.reduce((s, l) => s + l.qty, 0);
       if (held + QTY_EPS < qty) {
         row.status = 'error';
@@ -991,6 +1048,7 @@ const buildWorkspace = async (request: ImportRequest): Promise<Workspace> => {
     removedPositions: removeHoldings.length,
     removedTransactions: removeTransactionIds.length,
     replacedPositions: previousQty.size,
+    buildOverlap: buildOverlap.size,
     missingCost,
     cashBefore,
     cashAfter,

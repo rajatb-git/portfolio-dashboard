@@ -38,6 +38,7 @@ import apis from '@/api';
 import type { ImportKind, ImportOptions, ImportPlan, ImportRun, RawImportRow } from '@/api/import';
 import { Iconify } from '@/components/Iconify';
 import ImportReview from '@/components/Import/ImportReview';
+import RowEditDialog from '@/components/Import/RowEditDialog';
 import PageHeader from '@/components/ui/PageHeader';
 import Panel from '@/components/ui/Panel';
 import { ACCOUNT_TAX_TYPE_LABELS, type AccountTaxType, type IAccount } from '@/models/AccountsModel';
@@ -59,6 +60,7 @@ import {
   parseTable,
   REQUIRED_FOR,
   readFileText,
+  splitForAi,
   toImportRows,
 } from '@/utils/importFile';
 
@@ -115,6 +117,17 @@ export default function Import() {
   const [reading, setReading] = React.useState(false);
   const readAbort = React.useRef<AbortController | null>(null);
   const [aiReading, setAiReading] = React.useState(false);
+  const [aiProgress, setAiProgress] = React.useState<{ part: number; total: number; startedAt: number } | null>(null);
+  const [now, setNow] = React.useState(Date.now());
+  // Corrections typed into the review, by row index of the current source.
+  const [edits, setEdits] = React.useState<Record<number, RawImportRow>>({});
+  const [editing, setEditing] = React.useState<number | null>(null);
+
+  React.useEffect(() => {
+    if (!aiReading) return;
+    const timer = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(timer);
+  }, [aiReading]);
   const [readError, setReadError] = React.useState('');
   const [aiReady, setAiReady] = React.useState<boolean | null>(null);
 
@@ -178,10 +191,15 @@ export default function Import() {
 
   const built = React.useMemo((): { rows: RawImportRow[]; lineNumbers: number[] } => {
     if (!source) return { rows: [], lineNumbers: [] };
-    if (source.method === 'ai') return { rows: source.rows, lineNumbers: source.rows.map((_, i) => i + 1) };
-    const { rows, sourceRowNumbers } = toImportRows(source.table, mapping, sourceAccount || undefined);
-    return { rows, lineNumbers: sourceRowNumbers };
-  }, [source, mapping, sourceAccount]);
+    const base =
+      source.method === 'ai'
+        ? { rows: source.rows, lineNumbers: source.rows.map((_, i) => i + 1) }
+        : (() => {
+            const { rows, sourceRowNumbers } = toImportRows(source.table, mapping, sourceAccount || undefined);
+            return { rows, lineNumbers: sourceRowNumbers };
+          })();
+    return { rows: base.rows.map((r, i) => edits[i] ?? r), lineNumbers: base.lineNumbers };
+  }, [source, mapping, sourceAccount, edits]);
 
   const request = React.useMemo(
     () =>
@@ -276,6 +294,7 @@ export default function Import() {
       costFromMarket: kind === 'positions' && auto.price === undefined && auto.costBasis === undefined,
     }));
     setSource({ method: 'table', fileName, table });
+    setEdits({});
     setExcluded(new Set());
     setStep(3);
   };
@@ -288,13 +307,47 @@ export default function Import() {
       );
       return;
     }
-    readAbort.current = new AbortController();
+    const controller = new AbortController();
+    readAbort.current = controller;
     setAiReading(true);
-    const result = await apis.import.parseDocument(kind, text, readAbort.current.signal);
-    if (!result.rows.length) {
-      setReadError('The local AI found no rows in this document. Try a CSV export, or a clearer PDF.');
+    const parts = splitForAi(text);
+    const rows: RawImportRow[] = [];
+    const problems: string[] = [];
+    let model = '';
+    let cancelledAt: number | null = null;
+    for (const [i, part] of parts.entries()) {
+      setAiProgress({ part: i + 1, total: parts.length, startedAt: Date.now() });
+      try {
+        const result = await apis.import.parseDocument(kind, part, controller.signal);
+        rows.push(...result.rows);
+        problems.push(...result.skipped.map((m) => `Part ${i + 1}: ${m}`));
+        model = result.model;
+      } catch (err: any) {
+        if (controller.signal.aborted) {
+          cancelledAt = i;
+          break;
+        }
+        // One slow or unreadable part shouldn't lose the rest of the statement.
+        problems.push(
+          `Part ${i + 1} of ${parts.length} couldn't be read (${err.message || 'error'}) — check those rows`
+        );
+      }
+    }
+    setAiProgress(null);
+    if (cancelledAt !== null) {
+      problems.push(`Reading was cancelled after ${cancelledAt} of ${parts.length} part(s) — later rows are missing`);
+    }
+    if (!rows.length) {
+      setReadError(
+        cancelledAt !== null
+          ? 'Reading was cancelled.'
+          : problems.length
+            ? problems.join(' ')
+            : 'The local AI found no rows in this document. Try a CSV export, or a clearer PDF.'
+      );
       return;
     }
+    const result = { rows, model, skipped: problems };
     const dates = result.rows.map((r) => String(r.date ?? ''));
     const order = detectDateOrder(dates);
     setDateOrderDetected(!!order || dates.every((d) => !d || /^\d{4}-/.test(d)));
@@ -306,6 +359,7 @@ export default function Import() {
       costFromMarket: false,
     }));
     setSource({ method: 'ai', fileName, rows: result.rows, model: result.model, skipped: result.skipped });
+    setEdits({});
     setExcluded(new Set());
     setStep(4);
   };
@@ -324,8 +378,7 @@ export default function Import() {
       if (!forceAi && looksTabular(text)) applyTable(fileName, parseTable(text));
       else await readWithAi(fileName, text);
     } catch (err: any) {
-      if (readAbort.current?.signal.aborted) setReadError('Reading was cancelled.');
-      else setReadError(err.message || 'Could not read the file');
+      setReadError(err.message || 'Could not read the file');
     } finally {
       readAbort.current = null;
       setAiReading(false);
@@ -363,17 +416,18 @@ export default function Import() {
   const goToReview = () => {
     setPlan(null);
     setExcluded(new Set());
+    setEdits({});
     if (noCostColumn) setOptions((o) => ({ ...o, costFromMarket: true }));
     setStep(4);
   };
 
   // A reload loses the file and every choice made for it.
   React.useEffect(() => {
-    if (!source || step >= 5) return;
+    if ((!source && !reading) || step >= 5) return;
     const warn = (e: BeforeUnloadEvent) => e.preventDefault();
     window.addEventListener('beforeunload', warn);
     return () => window.removeEventListener('beforeunload', warn);
-  }, [source, step]);
+  }, [source, step, reading]);
 
   const commit = async () => {
     if (!request) return;
@@ -614,7 +668,9 @@ export default function Import() {
                 <LinearProgress />
                 <Stack direction="row" spacing={1} sx={{ alignItems: 'center', mt: 0.5 }}>
                   <Typography sx={{ fontSize: '0.78rem', color: 'text.secondary' }}>
-                    Reading… a statement read by the local AI can take a minute or two per page.
+                    {aiProgress
+                      ? `Local AI reading part ${aiProgress.part} of ${aiProgress.total} · ${Math.max(0, Math.round((now - aiProgress.startedAt) / 1000))} s — each part can take a minute or two on a CPU`
+                      : 'Reading…'}
                   </Typography>
                   {aiReading && (
                     <Button size="small" onClick={cancelReading}>
@@ -789,9 +845,10 @@ export default function Import() {
       {step === 4 && kind && source && (
         <Stack spacing={2}>
           {source.method === 'ai' && (
-            <Alert severity="info" icon={<Iconify icon="tabler:robot" />}>
-              Read by your local model ({source.model}). AI reading can miss or misread lines — compare the rows with
-              your statement before importing.
+            <Alert severity="warning" icon={<Iconify icon="tabler:robot" />}>
+              <strong>Check these rows against your statement.</strong> They were read by your local model (
+              {source.model}), which can miss lines or misread numbers, dates and types. Use the pencil on any row to
+              correct it.
               {source.skipped.length > 0 && ` ${source.skipped.join('. ')}.`}
             </Alert>
           )}
@@ -805,6 +862,8 @@ export default function Import() {
             excluded={excluded}
             onExcludedChange={setExcluded}
             lineNumbers={built.lineNumbers}
+            editedRows={new Set(Object.keys(edits).map(Number))}
+            onEditRow={setEditing}
             dateOrderDetected={dateOrderDetected}
           />
           <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
@@ -906,6 +965,24 @@ export default function Import() {
             </Table>
           </Box>
         </Panel>
+      )}
+
+      {editing !== null && kind && (
+        <RowEditDialog
+          kind={kind}
+          row={built.rows[editing] ?? {}}
+          line={built.lineNumbers[editing] ?? editing + 1}
+          onClose={() => setEditing(null)}
+          onSave={(row) => {
+            setEdits((e) => ({ ...e, [editing]: row }));
+            setExcluded((x) => {
+              const next = new Set(x);
+              next.delete(editing);
+              return next;
+            });
+            setEditing(null);
+          }}
+        />
       )}
 
       <Dialog open={confirmReplace} onClose={() => setConfirmReplace(false)} maxWidth="xs" fullWidth>

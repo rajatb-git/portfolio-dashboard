@@ -71,6 +71,11 @@ export const normalizeTradeAction = (raw: unknown): 'buy' | 'sell' | 'deposit' |
   const s = String(raw ?? '')
     .toLowerCase()
     .trim();
+  // Short sales and covers aren't long positions; the app doesn't track them.
+  if (/\bshort\b|to cover/.test(s)) return null;
+  // "Reinvest Dividend" / "Qual Div Reinvest" is the dividend's cash leg; the
+  // shares it bought come on a separate "Reinvest Shares" / "Reinvestment" row.
+  if (/\bdiv/.test(s) && /reinvest/.test(s) && !/shares?\b/.test(s)) return null;
   if (/\b(buy|bought|purchased?|reinvest(ed|ment)?)\b/.test(s) || s === 'b' || s === 'bo') return 'buy';
   if (/\b(sell|sold)\b/.test(s) || s === 's' || s === 'so') return 'sell';
   if (/\b(dividend|interest|fee|tax|journal)/.test(s)) return null;

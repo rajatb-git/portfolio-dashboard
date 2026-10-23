@@ -84,7 +84,7 @@ export default function BuySellDialog({ open, handleDialogClose, initialValues, 
     }),
     symbol: useField({
       initValue: initialValues?.symbol || '',
-      validate: (value: string) => value.length < 2 && 'Symbol has to be minimum 2 characters long',
+      validate: (value: string) => !value.trim() && 'Enter a symbol',
       required: true,
     }),
     accountId: useField({
@@ -131,6 +131,16 @@ export default function BuySellDialog({ open, handleDialogClose, initialValues, 
     .filter((h) => h.accountId === formFields.accountId.value && h.symbol?.toUpperCase() === symbolValue)
     .reduce((sum, h) => sum + h.qty, 0);
   const tradeAccount = accounts.find((a) => a.id === formFields.accountId.value);
+
+  // Trading something already held: its asset type is known, so don't ask.
+  const heldType = holdings.find(
+    (h) => h.accountId === formFields.accountId.value && h.symbol?.toUpperCase() === symbolValue
+  )?.type;
+  const typeField = React.useRef(formFields.type);
+  typeField.current = formFields.type;
+  React.useEffect(() => {
+    if (heldType) typeField.current.setValue(heldType);
+  }, [heldType]);
   const tradeSummary = `${formFields.qty.value} ${symbolValue} @ ${fnCurrency(parseFloat(formFields.averagePrice.value))}${
     tradeAccount ? ` in ${tradeAccount.name}` : ''
   }`;

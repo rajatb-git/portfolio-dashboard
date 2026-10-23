@@ -85,6 +85,7 @@ export type ImportPlan = {
     removedPositions: number;
     removedTransactions: number;
     replacedPositions: number;
+    buildOverlap: number;
     missingCost: number;
     cashBefore: number;
     cashAfter: number;

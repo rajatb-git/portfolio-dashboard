@@ -140,11 +140,26 @@ export const applyTradeEdit = async (previous: ITransactionModel, next: Partial<
     );
   }
   if (previous.action === 'buy' && previous.lotId && next.date && next.date !== previous.date) {
+    const lotId = previous.lotId;
+    const date = next.date;
     const { holdingsModel, holding } = await tradeHolding(previous);
     const lots = holding?.lots ?? [];
-    if (holding && lots.some((l) => l.id === previous.lotId)) {
-      const updated = lots.map((l) => (l.id === previous.lotId ? { ...l, date: next.date as string } : l));
+    if (holding && lots.some((l) => l.id === lotId)) {
+      const updated = lots.map((l) => (l.id === lotId ? { ...l, date } : l));
       await holdingsModel.updateById(holding.id, { lots: updated });
+    }
+    // Sells that already relieved part of this lot recorded its date; keep
+    // them in step so realized gains get the corrected holding period.
+    const txModel = await TransactionModel().initialize();
+    for (const sell of txModel.getAllRecords()) {
+      if (
+        sell.action !== 'sell' ||
+        sell.accountId !== previous.accountId ||
+        !sell.lots?.some((r) => r.lotId === lotId)
+      ) {
+        continue;
+      }
+      await txModel.updateById(sell.id, { lots: sell.lots.map((r) => (r.lotId === lotId ? { ...r, date } : r)) });
     }
   }
 };

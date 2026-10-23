@@ -27,10 +27,11 @@ export const getDailyPerformance = async (): Promise<PerformancePoint[]> => {
     ImportRunDBModel().initialize(),
   ]);
 
-  // An import changes the portfolio's value on the day it runs, but its trades
-  // are dated whenever they happened, often before any snapshot. Its trades
-  // therefore aren't flows, and the import day itself has no return.
-  const importDays = new Set(importRuns.getAllRecords().map((r) => moment(r.createdAt).format('YYYY-MM-DD')));
+  // An import changes the portfolio's value when it runs, but its trades are
+  // dated whenever they happened, often before any snapshot. Its trades
+  // therefore aren't flows, and the change between the last snapshot before
+  // an import and the first one after it has no return.
+  const importTimes = importRuns.getAllRecords().map((r) => r.createdAt);
 
   const byDay = new Map<string, IPortfolioSnapshotModel>();
   for (const s of snapshotModel.getAllRecords()) {
@@ -62,8 +63,10 @@ export const getDailyPerformance = async (): Promise<PerformancePoint[]> => {
     const netFlow = sortedFlowDays
       .filter((d) => d > prev.date && d <= date)
       .reduce((sum, d) => sum + (flowByDay.get(d) ?? 0), 0);
-    const dailyReturn =
-      prev.totalValue > 0 && !importDays.has(date) ? (totalValue - netFlow) / prev.totalValue - 1 : null;
+    const spansImport = importTimes.some(
+      (t) => t > (prev.timestamp ?? prev.date) && t <= (days[i].timestamp ?? days[i].date)
+    );
+    const dailyReturn = prev.totalValue > 0 && !spansImport ? (totalValue - netFlow) / prev.totalValue - 1 : null;
     if (dailyReturn !== null) index *= 1 + dailyReturn;
     points.push({ date, value: totalValue, netFlow: +netFlow.toFixed(2), dailyReturn, index });
   }

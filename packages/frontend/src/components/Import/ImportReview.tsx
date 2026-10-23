@@ -5,6 +5,7 @@ import {
   Checkbox,
   Chip,
   FormControlLabel,
+  IconButton,
   MenuItem,
   Radio,
   RadioGroup,
@@ -20,11 +21,13 @@ import {
   TableRow,
   Tabs,
   TextField,
+  Tooltip,
   Typography,
 } from '@mui/material';
 import * as React from 'react';
 
 import type { ImportKind, ImportOptions, ImportPlan, PlannedRow, RowStatus } from '@/api/import';
+import { Iconify } from '@/components/Iconify';
 import Panel from '@/components/ui/Panel';
 import { fnCurrency } from '@/utils/formatNumber';
 
@@ -38,7 +41,7 @@ const STATUS: Record<RowStatus, { label: string; color: 'success' | 'warning' | 
 };
 
 type Filter = 'all' | 'problems' | 'skipped';
-const PAGE_SIZE = 50;
+const PAGE_SIZES = [50, 200, 1000];
 
 type Props = {
   kind: ImportKind;
@@ -51,6 +54,8 @@ type Props = {
   // File line number for each row, so messages can be traced back to the file.
   lineNumbers: number[];
   dateOrderDetected: boolean;
+  editedRows: Set<number>;
+  onEditRow: (index: number) => void;
 };
 
 const qtyText = (n?: number) => (n === undefined ? '' : n.toLocaleString('en-US', { maximumFractionDigits: 8 }));
@@ -78,9 +83,12 @@ export default function ImportReview({
   onExcludedChange,
   lineNumbers,
   dateOrderDetected,
+  editedRows,
+  onEditRow,
 }: Props) {
   const [filter, setFilter] = React.useState<Filter>('all');
   const [page, setPage] = React.useState(0);
+  const [pageSize, setPageSize] = React.useState(PAGE_SIZES[0]);
   const set = (partial: Partial<ImportOptions>) => onOptionsChange({ ...options, ...partial });
 
   const rows = plan?.rows ?? [];
@@ -285,6 +293,13 @@ export default function ImportReview({
                 {s.duplicates} row(s) are already in this account and will be skipped.
               </Alert>
             )}
+            {s.buildOverlap > 0 && (
+              <Alert severity="warning" sx={{ py: 0 }}>
+                {s.buildOverlap} position(s) this account already holds get these trades added on top. If those
+                positions came from a positions file, choose “Record as history only” instead, or the shares are counted
+                twice.
+              </Alert>
+            )}
             {s.replacedPositions > 0 && (
               <Alert severity="info" sx={{ py: 0 }}>
                 {s.replacedPositions} position(s) this account already holds are replaced by the file’s lots — see the
@@ -397,6 +412,7 @@ export default function ImportReview({
                   'Price',
                   'Date',
                   'Note',
+                  '',
                 ].map((h) => (
                   <TableCell key={h} sx={{ fontSize: '0.72rem', fontWeight: 700 }}>
                     {h}
@@ -405,7 +421,7 @@ export default function ImportReview({
               </TableRow>
             </TableHead>
             <TableBody>
-              {visible.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE).map((r) => (
+              {visible.slice(page * pageSize, (page + 1) * pageSize).map((r) => (
                 <TableRow key={r.index} sx={{ opacity: r.status === 'excluded' || r.status === 'skipped' ? 0.65 : 1 }}>
                   <TableCell padding="checkbox">
                     <Checkbox
@@ -418,6 +434,11 @@ export default function ImportReview({
                   </TableCell>
                   <TableCell sx={{ fontSize: '0.75rem', color: 'text.secondary' }}>
                     {lineNumbers[r.index] ?? r.index + 1}
+                    {editedRows.has(r.index) && (
+                      <Typography component="span" sx={{ display: 'block', fontSize: '0.65rem', color: 'info.main' }}>
+                        edited
+                      </Typography>
+                    )}
                   </TableCell>
                   <TableCell>
                     <Chip
@@ -433,16 +454,29 @@ export default function ImportReview({
                   </TableCell>
                   <TableCell sx={{ fontSize: '0.78rem', fontWeight: 600 }}>{r.symbol ?? ''}</TableCell>
                   <TableCell sx={{ fontSize: '0.78rem' }}>{qtyText(r.qty)}</TableCell>
-                  <TableCell sx={{ fontSize: '0.78rem' }}>{r.price !== undefined ? fnCurrency(r.price) : ''}</TableCell>
+                  <TableCell sx={{ fontSize: '0.78rem' }}>
+                    {r.price !== undefined && r.type !== 'cash' ? fnCurrency(r.price) : ''}
+                  </TableCell>
                   <TableCell sx={{ fontSize: '0.78rem', whiteSpace: 'nowrap' }}>{r.date ?? ''}</TableCell>
                   <TableCell sx={{ fontSize: '0.75rem', color: 'text.secondary', minWidth: 220 }}>
                     {r.messages.join(' · ')}
+                  </TableCell>
+                  <TableCell padding="checkbox">
+                    <Tooltip title="Correct this row">
+                      <IconButton
+                        size="small"
+                        onClick={() => onEditRow(r.index)}
+                        aria-label={`Correct line ${lineNumbers[r.index] ?? r.index + 1}`}
+                      >
+                        <Iconify icon="tabler:pencil" width={16} />
+                      </IconButton>
+                    </Tooltip>
                   </TableCell>
                 </TableRow>
               ))}
               {visible.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={9} sx={{ textAlign: 'center', color: 'text.secondary', py: 3 }}>
+                  <TableCell colSpan={10} sx={{ textAlign: 'center', color: 'text.secondary', py: 3 }}>
                     Nothing here.
                   </TableCell>
                 </TableRow>
@@ -450,14 +484,18 @@ export default function ImportReview({
             </TableBody>
           </Table>
         </Box>
-        {visible.length > PAGE_SIZE && (
+        {visible.length > PAGE_SIZES[0] && (
           <TablePagination
             component="div"
             count={visible.length}
             page={page}
             onPageChange={(_, p) => setPage(p)}
-            rowsPerPage={PAGE_SIZE}
-            rowsPerPageOptions={[PAGE_SIZE]}
+            rowsPerPage={pageSize}
+            rowsPerPageOptions={PAGE_SIZES}
+            onRowsPerPageChange={(e) => {
+              setPageSize(Number(e.target.value));
+              setPage(0);
+            }}
           />
         )}
       </Panel>

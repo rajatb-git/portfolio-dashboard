@@ -281,7 +281,11 @@ export const detectDecimalComma = (values: string[]): boolean => {
 export const looksBinary = (text: string): boolean => {
   const sample = text.slice(0, 4000);
   if (sample.includes('\u0000')) return true;
-  const control = sample.match(/[\u0001-\u0008\u000e-\u001f\ufffd]/g)?.length ?? 0;
+  let control = 0;
+  for (let i = 0; i < sample.length; i++) {
+    const code = sample.charCodeAt(i);
+    if ((code < 32 && code !== 9 && code !== 10 && code !== 13) || code === 0xfffd) control++;
+  }
   return sample.length > 0 && control / sample.length > 0.02;
 };
 
@@ -312,6 +316,9 @@ export const toImportRows = (
   return { rows, sourceRowNumbers };
 };
 
+// Rebuilds the page's lines from each text item's position (pdf.js returns
+// items in drawing order, not reading order) and separates cells with " | ",
+// so a statement table reaches the local AI one row per line.
 const pdfText = async (file: File): Promise<string> => {
   // Loaded on demand so pdfjs (~1 MB) stays out of the main bundle.
   const pdfjsLib = await import('pdfjs-dist');
@@ -321,11 +328,72 @@ const pdfText = async (file: File): Promise<string> => {
   const pages: string[] = [];
   for (let i = 1; i <= pdf.numPages; i++) {
     const content = await (await pdf.getPage(i)).getTextContent();
-    pages.push(content.items.map((item: any) => ('str' in item ? item.str : '')).join(' '));
+    const lines: Array<{ y: number; items: Array<{ x: number; text: string }> }> = [];
+    for (const item of content.items as any[]) {
+      const text = typeof item.str === 'string' ? item.str.trim() : '';
+      if (!text) continue;
+      const [x, y] = [item.transform[4] as number, item.transform[5] as number];
+      const line = lines.find((l) => Math.abs(l.y - y) < 3);
+      if (line) line.items.push({ x, text });
+      else lines.push({ y, items: [{ x, text }] });
+    }
+    lines.sort((a, b) => b.y - a.y);
+    pages.push(
+      lines
+        .map((l) =>
+          l.items
+            .sort((a, b) => a.x - b.x)
+            .map((it) => it.text)
+            .join(' | ')
+        )
+        .join('\n')
+    );
   }
-  return pages.join('\n');
+  return pages.join('\n\n');
+};
+
+// Broker exports come as UTF-8, UTF-16 (Excel "Unicode text") or Windows-1252
+// (older Excel CSVs); reading the last as UTF-8 garbles accented names.
+const decodeText = async (file: File): Promise<string> => {
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  if (bytes[0] === 0xff && bytes[1] === 0xfe) return new TextDecoder('utf-16le').decode(bytes);
+  if (bytes[0] === 0xfe && bytes[1] === 0xff) return new TextDecoder('utf-16be').decode(bytes);
+  try {
+    return new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+  } catch {
+    return new TextDecoder('windows-1252').decode(bytes);
+  }
+};
+
+// A local model reads a few thousand characters well and loses track beyond
+// that, so the page sends a statement in parts and shows progress per part.
+// Every part after the first repeats the document's first lines so column
+// headings stay in view.
+const AI_PART_CHARS = 2500;
+const AI_HEADER_LINES = 4;
+
+export const splitForAi = (text: string): string[] => {
+  const lines = text.split(/\r?\n/);
+  const header = lines
+    .filter((l) => l.trim())
+    .slice(0, AI_HEADER_LINES)
+    .join('\n');
+  const parts: string[] = [];
+  let current: string[] = [];
+  let size = 0;
+  for (const line of lines) {
+    if (size + line.length > AI_PART_CHARS && current.length) {
+      parts.push(current.join('\n'));
+      current = [];
+      size = 0;
+    }
+    current.push(line);
+    size += line.length + 1;
+  }
+  if (current.join('').trim()) parts.push(current.join('\n'));
+  return parts.map((part, i) => (i === 0 ? part : `${header}\n(…continued)\n${part}`));
 };
 
 export const isPdf = (file: File) => file.type === 'application/pdf' || /\.pdf$/i.test(file.name);
 
-export const readFileText = (file: File): Promise<string> => (isPdf(file) ? pdfText(file) : file.text());
+export const readFileText = (file: File): Promise<string> => (isPdf(file) ? pdfText(file) : decodeText(file));
