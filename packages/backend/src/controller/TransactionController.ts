@@ -61,6 +61,10 @@ export const logBuyTransaction = async (
   }
 };
 
+// An imported trade that carries no lot never moved a holding, so there is
+// nothing to undo or keep in step when it is edited or deleted.
+const isRecordOnly = (tx: ITransactionModel): boolean => !!tx.imported && !tx.lotId && !tx.lots?.length;
+
 const tradeHolding = async (tx: ITransactionModel) => {
   const holdingsModel = await HoldingsModel().initialize();
   const symbol = (tx.symbol ?? '').toUpperCase();
@@ -75,7 +79,7 @@ const tradeHolding = async (tx: ITransactionModel) => {
 // job. Refuses rather than guessing when the lots have moved on since: a buy
 // whose shares were later sold, or a trade logged before lots were tracked.
 export const reverseTrade = async (tx: ITransactionModel): Promise<void> => {
-  if (tx.imported || (tx.action !== 'buy' && tx.action !== 'sell')) return;
+  if (isRecordOnly(tx) || (tx.action !== 'buy' && tx.action !== 'sell')) return;
   const { holdingsModel, holding, symbol } = await tradeHolding(tx);
   const txModel = await TransactionModel().initialize();
   const lots = holding ? resolveLots(holding, txModel.getAllRecords()) : [];
@@ -127,7 +131,7 @@ export const reverseTrade = async (tx: ITransactionModel): Promise<void> => {
 // cash, so only its date may be corrected in place; anything else is a delete
 // and re-record. A corrected buy date moves its lot's holding period with it.
 export const applyTradeEdit = async (previous: ITransactionModel, next: Partial<ITransactionModel>): Promise<void> => {
-  if (previous.imported || (previous.action !== 'buy' && previous.action !== 'sell')) return;
+  if (isRecordOnly(previous) || (previous.action !== 'buy' && previous.action !== 'sell')) return;
   const locked = ['qty', 'price', 'accountId', 'symbol', 'action', 'type'] as const;
   const changed = locked.filter((key) => next[key] !== undefined && String(next[key]) !== String(previous[key]));
   if (changed.length) {

@@ -24,6 +24,7 @@ const Dashboard = React.lazy(() => import('@/pages/Dashboard'));
 const Today = React.lazy(() => import('@/pages/Today'));
 const Analytics = React.lazy(() => import('@/pages/Analytics'));
 const Rebalance = React.lazy(() => import('@/pages/Rebalance'));
+const Import = React.lazy(() => import('@/pages/Import'));
 const Alerts = React.lazy(() => import('@/pages/Alerts'));
 const Database = React.lazy(() => import('@/pages/Database'));
 const IPOCalendar = React.lazy(() => import('@/pages/IPOCalendar'));
@@ -143,6 +144,7 @@ function AppShell() {
               <Route path="/analytics" element={<Analytics />} />
               <Route path="/rebalance" element={<Rebalance />} />
               <Route path="/alerts" element={<Alerts />} />
+              <Route path="/import" element={<Import />} />
               <Route path="/database" element={<Database />} />
               <Route path="/ipo-calendar" element={<IPOCalendar />} />
               <Route path="/ipo-calendar/:id" element={<IPODetail />} />

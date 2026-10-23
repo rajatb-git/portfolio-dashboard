@@ -26,16 +26,12 @@ import {
 import type { GridColDef } from '@mui/x-data-grid';
 import moment from 'moment';
 import * as React from 'react';
+import { Link as RouterLink } from 'react-router-dom';
 import { toast } from 'react-toastify';
 
 import apis from '@/api';
 import CashDialog from '@/components/CashDialog';
 import GenericGrid from '@/components/DataGrid';
-import AiImportDialog from '@/components/DataGrid/AiImportDialog';
-import BrokerHoldingsImportDialog from '@/components/DataGrid/BrokerHoldingsImportDialog';
-import BrokerImportDialog from '@/components/DataGrid/BrokerImportDialog';
-import ImportDialog from '@/components/DataGrid/DBImportDialog';
-import TransactionImportDialog from '@/components/DataGrid/TransactionImportDialog';
 import { Iconify } from '@/components/Iconify';
 import { FONT_SIZE } from '@/components/ThemeRegistry/tokens';
 import type { IAccount } from '@/models/AccountsModel';
@@ -564,12 +560,6 @@ export default function Database() {
   const [isLoading, setIsLoading] = React.useState(true);
   const [activeCollection, setActiveCollection] = React.useState<CollectionName>('holdings');
   const [records, setRecords] = React.useState<Array<IAccount | IHoldings | ITransaction>>([]);
-  const [importDialogOpen, setImportDialogOpen] = React.useState(false);
-  const [txnImportDialogOpen, setTxnImportDialogOpen] = React.useState(false);
-  const [brokerImportDialogOpen, setBrokerImportDialogOpen] = React.useState(false);
-  const [brokerHoldingsImportDialogOpen, setBrokerHoldingsImportDialogOpen] = React.useState(false);
-  const [aiImportDialogOpen, setAiImportDialogOpen] = React.useState(false);
-  const [accountsData, setAccountsData] = React.useState<Array<IAccount>>([]);
   const [flushDialogOpen, setFlushDialogOpen] = React.useState(false);
   const [flushing, setFlushing] = React.useState(false);
 
@@ -596,63 +586,12 @@ export default function Database() {
     }
   };
 
-  const loadAccountsForImport = async (): Promise<boolean> => {
-    try {
-      setAccountsData(await apis.accounts.getAll());
-      return true;
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to load accounts');
-      return false;
-    }
-  };
-
-  const openImportDialog = async () => {
-    if (!(await loadAccountsForImport())) return;
-
-    if (activeCollection === 'transactions') {
-      setTxnImportDialogOpen(true);
-    } else {
-      setImportDialogOpen(true);
-    }
-  };
-
-  const closeImportDialog = () => {
-    setImportDialogOpen(false);
-    setTxnImportDialogOpen(false);
-    setBrokerImportDialogOpen(false);
-    setBrokerHoldingsImportDialogOpen(false);
-    setAiImportDialogOpen(false);
-    setAccountsData([]);
-  };
-
   const insertOrUpdateRecord = async (record: IAccount | ITransaction | IHoldings) => {
     return apis[activeCollection as 'accounts' | 'holdings' | 'transactions'].insertOrUpdateById(record as any);
   };
 
   const createRecord = async (record: ITransaction | IHoldings) => {
     return apis[activeCollection as 'holdings' | 'transactions'].create(record as any);
-  };
-
-  const insertHoldingsData = async (newData: Array<IHoldings>): Promise<void> => {
-    await apis.holdings
-      .insertHoldings(newData)
-      .then(() => {
-        toast.success('Successfully imported holdings data!');
-      })
-      .catch((err) => {
-        toast.error(err.message);
-      });
-  };
-
-  const importTransactions = async (rows: Array<Partial<ITransaction>>): Promise<void> => {
-    await apis.transactions
-      .importTransactions(rows)
-      .then((res) => {
-        toast.success(res.message || 'Successfully imported transactions!');
-      })
-      .catch((err) => {
-        toast.error(err.message);
-      });
   };
 
   const loadData = async () => {
@@ -699,41 +638,13 @@ export default function Database() {
 
         <Stack direction="row" sx={{ gap: 1, flexWrap: 'wrap' }}>
           {(activeCollection === 'holdings' || activeCollection === 'transactions') && (
-            <Button color="primary" startIcon={<Iconify icon="mage:file-upload-fill" />} onClick={openImportDialog}>
-              {activeCollection === 'transactions' ? 'Import transactions' : 'Import holdings data'}
-            </Button>
-          )}
-          {activeCollection === 'transactions' && (
             <Button
-              color="secondary"
-              startIcon={<Iconify icon="mdi:bank-outline" />}
-              onClick={async () => {
-                if (await loadAccountsForImport()) setBrokerImportDialogOpen(true);
-              }}
+              color="primary"
+              startIcon={<Iconify icon="tabler:file-import" />}
+              component={RouterLink}
+              to="/import"
             >
-              Broker Import
-            </Button>
-          )}
-          {activeCollection === 'holdings' && (
-            <Button
-              color="secondary"
-              startIcon={<Iconify icon="mdi:bank-outline" />}
-              onClick={async () => {
-                if (await loadAccountsForImport()) setBrokerHoldingsImportDialogOpen(true);
-              }}
-            >
-              Broker Import
-            </Button>
-          )}
-          {(activeCollection === 'holdings' || activeCollection === 'transactions') && (
-            <Button
-              color="secondary"
-              startIcon={<Iconify icon="mdi:robot-happy-outline" />}
-              onClick={async () => {
-                if (await loadAccountsForImport()) setAiImportDialogOpen(true);
-              }}
-            >
-              AI Import
+              Import from your broker
             </Button>
           )}
           <Button
@@ -796,50 +707,6 @@ export default function Database() {
           </Button>
         </DialogActions>
       </Dialog>
-
-      <ImportDialog
-        open={importDialogOpen}
-        handleDialogClose={closeImportDialog}
-        insertHoldingsData={insertHoldingsData}
-        accountsData={accountsData}
-        refreshPage={loadData}
-      />
-
-      <TransactionImportDialog
-        open={txnImportDialogOpen}
-        handleDialogClose={closeImportDialog}
-        importTransactions={importTransactions}
-        accountsData={accountsData}
-        refreshPage={loadData}
-      />
-
-      <BrokerImportDialog
-        open={brokerImportDialogOpen}
-        handleDialogClose={closeImportDialog}
-        importTransactions={importTransactions}
-        accountsData={accountsData}
-        refreshPage={loadData}
-      />
-
-      <BrokerHoldingsImportDialog
-        open={brokerHoldingsImportDialogOpen}
-        handleDialogClose={closeImportDialog}
-        insertHoldingsData={insertHoldingsData}
-        accountsData={accountsData}
-        refreshPage={loadData}
-      />
-
-      {(activeCollection === 'holdings' || activeCollection === 'transactions') && (
-        <AiImportDialog
-          open={aiImportDialogOpen}
-          target={activeCollection}
-          handleDialogClose={closeImportDialog}
-          importTransactions={importTransactions}
-          insertHoldingsData={insertHoldingsData}
-          accountsData={accountsData}
-          refreshPage={loadData}
-        />
-      )}
     </>
   );
 }

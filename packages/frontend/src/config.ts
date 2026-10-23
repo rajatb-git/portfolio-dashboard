@@ -77,6 +77,13 @@ export const NAV_CONFIG: NavItemConfig[] = [
     description: 'Upcoming listings',
   },
   {
+    text: 'Import',
+    href: '/import',
+    icon: 'tabler:file-import',
+    section: 'Manage',
+    description: 'Positions, tax lots and history from your broker',
+  },
+  {
     text: 'Database',
     href: '/database',
     icon: 'tabler:database',

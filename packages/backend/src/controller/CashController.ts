@@ -7,8 +7,9 @@ export const transactionCashImpact = (tx: {
   qty?: number;
   price?: number;
   imported?: boolean;
+  cashApplied?: boolean;
 }): number => {
-  if (tx.imported) return 0;
+  if (tx.imported && !tx.cashApplied) return 0;
   const gross = (tx.qty ?? 0) * (tx.price ?? 0);
   switch (tx.action) {
     case 'sell':

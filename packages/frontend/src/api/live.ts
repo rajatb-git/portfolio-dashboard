@@ -76,14 +76,6 @@ export type MarketStatus = {
   generatedAt: string;
 };
 
-export type DocumentParseResult = {
-  target: 'transactions' | 'holdings';
-  rows: Array<Record<string, any>>;
-  skipped: string[];
-  provider: string;
-  model: string;
-};
-
 export type SymbolSearchResult = {
   symbol: string;
   description: string;
@@ -207,12 +199,6 @@ export default class LiveAPI {
   getMarketStatus = async (refresh = false): Promise<MarketStatus> =>
     axios(DB_HOST + `/live/market-status${refresh ? '?refresh=1' : ''}`)
       .then((r) => r.data)
-      .catch(catchCustomError);
-
-  parseImportDocument = async (target: 'transactions' | 'holdings', text: string): Promise<DocumentParseResult> =>
-    axios
-      .post(DB_HOST + '/ai-import/parse', { target, text })
-      .then((response) => response.data)
       .catch(catchCustomError);
 
   getAiConfig = async (): Promise<AiConfig> =>

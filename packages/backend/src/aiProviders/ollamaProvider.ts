@@ -27,7 +27,12 @@ function describeOllamaError(err: unknown, url: string, model: string): string {
         : undefined;
     return `Ollama request to ${url} failed with status ${status}${detail ? `: ${detail}` : ''}.`;
   }
-  if (err.code === 'ECONNREFUSED' || err.code === 'ECONNABORTED' || err.code === 'ETIMEDOUT' || err.code === 'ENOTFOUND') {
+  if (
+    err.code === 'ECONNREFUSED' ||
+    err.code === 'ECONNABORTED' ||
+    err.code === 'ETIMEDOUT' ||
+    err.code === 'ENOTFOUND'
+  ) {
     return `Could not reach Ollama at ${url} (${err.code}). Ensure Ollama is running and reachable from the server. When the app runs in Docker, use http://host.docker.internal:11434 instead of localhost.`;
   }
   return `Ollama request to ${url} failed: ${err.message}`;
@@ -47,7 +52,13 @@ export class OllamaProvider implements AiProvider {
     return this.host.length > 0;
   }
 
-  async generateInsight(systemPrompt: string, userPrompt: string): Promise<string> {
+  // `numCtx` raises Ollama's context window (2–4K tokens by default, beyond
+  // which input is silently cut) for long inputs such as statement imports.
+  async generateInsight(
+    systemPrompt: string,
+    userPrompt: string,
+    tuning: { numCtx?: number; timeoutMs?: number } = {}
+  ): Promise<string> {
     const url = `${this.host}/api/chat`;
 
     let text: string | undefined;
@@ -62,8 +73,9 @@ export class OllamaProvider implements AiProvider {
           ],
           stream: false,
           format: 'json',
+          ...(tuning.numCtx && { options: { num_ctx: tuning.numCtx } }),
         },
-        { timeout: 120000 }
+        { timeout: tuning.timeoutMs ?? 120000 }
       );
       text = response.data?.message?.content;
     } catch (err) {

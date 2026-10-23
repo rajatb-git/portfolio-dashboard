@@ -3,9 +3,10 @@ import moment from 'moment';
 import * as React from 'react';
 
 import AlertDialog, { type DraftAlert, EMPTY_DRAFT } from '@/components/Alerts/AlertDialog';
-import DashboardTable from '@/components/DashboardTable/DashTable';
 import ReportedEarningsCard from '@/components/Dashboard/ReportedEarningsCard';
 import UpcomingEarningsCard from '@/components/Dashboard/UpcomingEarningsCard';
+import DashboardTable from '@/components/DashboardTable/DashTable';
+import GetStartedCard from '@/components/Import/GetStartedCard';
 import PageHeader from '@/components/ui/PageHeader';
 import ToolbarButton from '@/components/ui/ToolbarButton';
 import { useDashboardData } from '@/contexts/DashboardDataContext';
@@ -62,6 +63,8 @@ export default function Dashboard() {
     { id: '', label: 'Recommendation' },
   ];
 
+  const isEmptyPortfolio = !isLoading && !connectionError && dashboardData.length === 0;
+
   const handleSetAlert = (symbol: string, type: 'stock' | 'crypto', currentPrice?: number) => {
     setAlertDraft({
       ...EMPTY_DRAFT,
@@ -102,17 +105,23 @@ export default function Dashboard() {
         </Alert>
       )}
 
-      <DashboardTable
-        isLoading={isLoading}
-        refreshData={refresh}
-        rows={dashboardData}
-        accounts={accounts}
-        columns={columns}
-        alertStatuses={alertStatuses}
-        onSetAlert={handleSetAlert}
-      />
-      <UpcomingEarningsCard earnings={earnings} isLoading={isEarningsLoading} />
-      <ReportedEarningsCard results={earningsResults} isLoading={isEarningsLoading} />
+      {isEmptyPortfolio ? (
+        <GetStartedCard hasAccounts={accounts.length > 0} />
+      ) : (
+        <>
+          <DashboardTable
+            isLoading={isLoading}
+            refreshData={refresh}
+            rows={dashboardData}
+            accounts={accounts}
+            columns={columns}
+            alertStatuses={alertStatuses}
+            onSetAlert={handleSetAlert}
+          />
+          <UpcomingEarningsCard earnings={earnings} isLoading={isEarningsLoading} />
+          <ReportedEarningsCard results={earningsResults} isLoading={isEarningsLoading} />
+        </>
+      )}
 
       <AlertDialog
         open={alertDialogOpen}
