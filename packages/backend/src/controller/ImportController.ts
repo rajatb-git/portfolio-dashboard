@@ -300,6 +300,7 @@ type Workspace = {
   removeHoldings: IHoldingsModel[];
   removeTransactionIds: string[];
   cashTarget: { mode: 'set' | 'adjust'; amount: number } | null;
+  splits: Array<{ symbol: string; date: string }>;
 };
 
 // Lot dates are stored as ISO instants; compare them as local calendar days.
@@ -319,10 +320,11 @@ const buildWorkspace = async (request: ImportRequest): Promise<Workspace> => {
   if (request.rows.length === 0) throw new Error('The file has no rows to import');
   if (request.rows.length > MAX_ROWS) throw new Error(`Files are limited to ${MAX_ROWS.toLocaleString()} rows`);
 
-  const [accounts, holdingsModel, txModel] = await Promise.all([
+  const [accounts, holdingsModel, txModel, runModel] = await Promise.all([
     AccountModel().initialize(),
     HoldingsModel().initialize(),
     TransactionModel().initialize(),
+    ImportRunDBModel().initialize(),
   ]);
   const account = accounts.findById(String(request.accountId ?? ''));
   if (!account) throw new Error('Choose an account to import into');
@@ -331,6 +333,15 @@ const buildWorkspace = async (request: ImportRequest): Promise<Workspace> => {
   const accountHoldings = holdingsModel.getAllRecords().filter((h) => h.accountId === account.id);
   const accountTransactions = allTransactions.filter((t) => t.accountId === account.id);
   const replace = options.mode === 'replace';
+  const appliedSplits = new Set(
+    replace
+      ? []
+      : runModel
+          .getAllRecords()
+          .filter((r) => r.accountId === account.id)
+          .flatMap((r) => (r.splits ?? []).map((sp) => `${sp.symbol}|${sp.date}`))
+  );
+  const splits: Workspace['splits'] = [];
   const recordOnly = request.kind === 'history' && options.historyMode === 'record';
   const touchesPositions = !recordOnly;
 
@@ -672,6 +683,11 @@ const buildWorkspace = async (request: ImportRequest): Promise<Workspace> => {
           return;
         }
         row.date = date.value;
+        if (appliedSplits.has(`${sym.symbol}|${date.value}`)) {
+          row.status = 'duplicate';
+          row.messages.push('This split was already applied by an earlier import');
+          return;
+        }
         row.type = assetTypeOf(raw.assetType, sym, options.defaultAssetType, name);
         events.push({ row, action: 'split', type: row.type, name });
         return;
@@ -904,6 +920,7 @@ const buildWorkspace = async (request: ImportRequest): Promise<Workspace> => {
           lot.price = +(lot.price / ratio).toFixed(6);
         }
         state.touched = true;
+        splits.push({ symbol, date: row.date as string });
         row.messages.push(
           `Stock split: ${fmtQty(before)} → ${fmtQty(roundQty(before + qty))} shares; each lot keeps its cost and date`
         );
@@ -1070,7 +1087,7 @@ const buildWorkspace = async (request: ImportRequest): Promise<Workspace> => {
     canCommit: errors === 0 && (summary.imported > 0 || cashTarget !== null),
   };
 
-  return { plan, positions, transactions, removeHoldings, removeTransactionIds, cashTarget };
+  return { plan, positions, transactions, removeHoldings, removeTransactionIds, cashTarget, splits };
 };
 
 export const previewImport = async (request: ImportRequest): Promise<ImportPlan> =>
@@ -1123,6 +1140,7 @@ export const commitImport = async (request: ImportRequest): Promise<ImportPlan> 
     transactions: plan.summary.transactions,
     skipped: plan.summary.skipped + plan.summary.duplicates + plan.summary.excluded,
     cashChange: +(plan.summary.cashAfter - plan.summary.cashBefore).toFixed(2),
+    ...(work.splits.length && { splits: work.splits }),
   });
 
   return plan;

@@ -15,6 +15,9 @@ export interface IImportRun {
   transactions: number;
   skipped: number;
   cashChange: number;
+  // Splits aren't transactions, so this is what stops re-importing the same
+  // history from splitting the shares again.
+  splits?: Array<{ symbol: string; date: string }>;
 }
 
 export const ImportRunSchema: SchemaType = {
@@ -28,6 +31,7 @@ export const ImportRunSchema: SchemaType = {
   transactions: { type: Number, required: true },
   skipped: { type: Number, required: true },
   cashChange: { type: Number, required: true },
+  splits: { type: Array, required: false },
 };
 
 export interface IImportRunModel extends IImportRun, ISkewerModel {}

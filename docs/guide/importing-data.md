@@ -21,9 +21,19 @@ the import says so rather than guessing.
 
 Each brokerage account is imported separately; you can create the account
 (with its tax treatment) right in the flow. If the account already has data
-you choose to **add** to it — rows already there are detected and skipped as
-duplicates — or to **start fresh**, which removes the account's positions and
-transactions first (a history-only import removes just the transactions).
+you choose to **add** to it or to **start fresh**, which removes the account's
+positions and transactions first (a history-only import removes just the
+transactions).
+
+Adding works so that importing the same file twice changes nothing:
+
+- A **positions** file is a snapshot of what you hold now. Each symbol it
+  lists replaces that symbol's lots in the account (the review shows the old
+  and new quantity), symbols it doesn't list are left alone, and its cash
+  line *sets* the cash balance rather than adding to it.
+- In a **history** file, trades, deposits and withdrawals already in the
+  account (same day, quantity and price) are skipped as duplicates, and a
+  stock split an earlier import already applied isn't applied again.
 
 ## 3. Drop the file
 
@@ -50,9 +60,16 @@ The review shows every row with its status and the reason for it:
   contracts, dividends, interest, fees, transfers without a direction.
 - **Duplicate** — already in the account.
 
+Click the pencil on any row to correct it — useful when the local AI misread
+a line — and it's checked again straight away. Unticked and corrected rows
+apply to this file only.
+
 Settings on the same screen update the plan as you change them: the date
 format (detected from the file when it can be), the asset type for rows that
-don't say, and whether cash rows / cash movements update the account's cash.
+don't say, **decimal commas** (`1.234,56`, detected for European exports),
+whether a positions file without a cost column uses today's price as an
+estimated cost, and whether cash rows / cash movements update the account's
+cash.
 The summary shows the positions and lots you will end up with, transactions,
 realized gain and cash before and after.
 
@@ -60,7 +77,15 @@ Broker wording is understood — *YOU BOUGHT*, *Sold*, *Reinvest Shares*,
 *Electronic Funds Transfer Received*, *ACH* with a signed amount — as are
 `$1,234.56`, `(12.50)` negatives, `BTC-USD` style pairs, money-market lines
 such as `SPAXX**` (cash) and dates like `3/4/2026`, `2026-03-04` or
-`Mar 4, 2026`.
+`Mar 4, 2026`. When building positions:
+
+- A trade's **fees** are included: a buy's cost and a sale's proceeds come
+  from the amount column when it's there.
+- **Stock splits** (*DISTRIBUTION*, *SPL*, *Stock Split*) multiply each held
+  lot's shares and divide its cost per share, keeping its date.
+- **Reinvested dividends** with a share quantity are buys; the matching cash
+  dividend line is skipped. Short sales and covers are skipped, since short
+  positions aren't tracked.
 
 ## After importing
 
@@ -69,6 +94,8 @@ such as `SPAXX**` (cash) and dates like `3/4/2026`, `2026-03-04` or
 - An imported trade that is history only can be edited or deleted freely; one
   that built a position undoes its lots when deleted, just like a trade
   entered in the app.
+- Changing an imported buy's date also moves that date on the sales that
+  relieved its lot, so holding periods stay right.
 - The performance chart skips the day of an import, because the portfolio
   changed without a trade it could account for.
 - **Recent imports** on the Import page lists what was imported, when and into
@@ -84,11 +111,15 @@ Set **Settings → AI Agent → Provider** to *Ollama (Local)* to use it. See th
 [AI data-privacy rule](/internals/ai-privacy).
 :::
 
-The browser extracts the text (PDFs included), and the backend sends it to
-your Ollama host a few pages at a time with a larger context window, so a
-long statement isn't silently cut off. Expect it to take a while on a CPU-only
-machine. A model can miss or misread lines, so compare the review with your
-statement before importing. Documents are capped at 200,000 characters.
+The browser extracts the text (PDFs keep their table rows together) and
+sends it to your Ollama host one part at a time, with a larger context
+window, so a long statement isn't silently cut off. The page shows which part
+it's on and how long it has taken; **Cancel** stops it and keeps the rows
+read so far, and a part that fails or times out is reported without losing
+the others. Expect a few minutes per page on a CPU-only machine. A model can
+miss or misread lines, so compare the review with your statement and correct
+rows with the pencil before importing. Documents are capped at 200,000
+characters.
 
 ## Adding a position by hand
 
