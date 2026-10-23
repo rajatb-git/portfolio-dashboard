@@ -183,6 +183,33 @@ export default function ImportReview({
                 </Box>
               }
             />
+            <FormControlLabel
+              control={<Switch checked={options.decimalComma} onChange={(_, v) => set({ decimalComma: v })} />}
+              label={
+                <Box>
+                  <Typography sx={{ fontSize: '0.82rem', fontWeight: 600 }}>Numbers use decimal commas</Typography>
+                  <Typography sx={{ fontSize: '0.72rem', color: 'text.secondary' }}>
+                    For files written as 1.234,56 instead of 1,234.56
+                  </Typography>
+                </Box>
+              }
+            />
+            {kind === 'positions' && (
+              <FormControlLabel
+                control={<Switch checked={options.costFromMarket} onChange={(_, v) => set({ costFromMarket: v })} />}
+                label={
+                  <Box>
+                    <Typography sx={{ fontSize: '0.82rem', fontWeight: 600 }}>
+                      Use today’s price when there’s no cost
+                    </Typography>
+                    <Typography sx={{ fontSize: '0.72rem', color: 'text.secondary' }}>
+                      Rows without a cost get an estimated cost at today’s price, so gains start at zero until you enter
+                      the real cost
+                    </Typography>
+                  </Box>
+                }
+              />
+            )}
           </Stack>
         </Stack>
       </Panel>
@@ -258,6 +285,25 @@ export default function ImportReview({
                 {s.duplicates} row(s) are already in this account and will be skipped.
               </Alert>
             )}
+            {s.replacedPositions > 0 && (
+              <Alert severity="info" sx={{ py: 0 }}>
+                {s.replacedPositions} position(s) this account already holds are replaced by the file’s lots — see the
+                quantities before and after below.
+              </Alert>
+            )}
+            {s.missingCost > 0 && (
+              <Alert severity="warning" sx={{ py: 0 }}>
+                {s.missingCost} lot(s) use today’s price as an estimated cost. Enter the real cost on each position’s
+                Research page so gains and taxes are right.
+              </Alert>
+            )}
+            {s.cashAfter < 0 && s.cashAfter !== s.cashBefore && (
+              <Alert severity="warning" sx={{ py: 0 }}>
+                Cash would end at {fnCurrency(s.cashAfter)}. The file probably doesn’t include every deposit (or the
+                dividends that paid for some buys) — consider turning off “Update cash from these rows” and setting the
+                balance yourself.
+              </Alert>
+            )}
           </Stack>
         )}
       </Panel>
@@ -281,7 +327,14 @@ export default function ImportReview({
                     <TableCell sx={{ fontWeight: 700, fontSize: '0.8rem' }}>{p.symbol}</TableCell>
                     <TableCell sx={{ fontSize: '0.78rem', color: 'text.secondary', maxWidth: 260 }}>{p.name}</TableCell>
                     <TableCell sx={{ fontSize: '0.78rem' }}>{p.type === 'crypto' ? 'Crypto' : 'Stock'}</TableCell>
-                    <TableCell sx={{ fontSize: '0.78rem' }}>{qtyText(p.qty)}</TableCell>
+                    <TableCell sx={{ fontSize: '0.78rem', whiteSpace: 'nowrap' }}>
+                      {p.previousQty !== undefined && (
+                        <Typography component="span" sx={{ fontSize: '0.75rem', color: 'text.secondary' }}>
+                          {qtyText(p.previousQty)} →{' '}
+                        </Typography>
+                      )}
+                      {qtyText(p.qty)}
+                    </TableCell>
                     <TableCell sx={{ fontSize: '0.78rem' }}>{fnCurrency(p.averagePrice)}</TableCell>
                     <TableCell sx={{ fontSize: '0.78rem' }}>
                       {p.lots}
@@ -294,7 +347,15 @@ export default function ImportReview({
                     <TableCell>
                       <Chip
                         size="small"
-                        label={{ new: 'New', updated: 'Updated', removed: 'Removed', closed: 'Sold out' }[p.change]}
+                        label={
+                          {
+                            new: 'New',
+                            updated: 'Updated',
+                            unchanged: 'No change',
+                            removed: 'Removed',
+                            closed: 'Sold out',
+                          }[p.change]
+                        }
                         color={p.change === 'new' ? 'success' : p.change === 'updated' ? 'info' : 'default'}
                         variant="outlined"
                         sx={{ height: 20, fontSize: '0.68rem' }}
@@ -349,7 +410,7 @@ export default function ImportReview({
                   <TableCell padding="checkbox">
                     <Checkbox
                       size="small"
-                      checked={!excluded.has(r.index)}
+                      checked={!excluded.has(r.index) && r.status !== 'skipped' && r.status !== 'duplicate'}
                       onChange={() => toggle(r)}
                       disabled={r.status === 'skipped' || r.status === 'duplicate'}
                       slotProps={{ input: { 'aria-label': `Import line ${lineNumbers[r.index] ?? r.index + 1}` } }}

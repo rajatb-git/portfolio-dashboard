@@ -264,6 +264,27 @@ export const detectDateOrder = (values: string[]): DateOrder | null => {
   return null;
 };
 
+// "1.234,56" / "185,20" style values mean the file uses decimal commas; a
+// thousands comma ("1,234") or a decimal point says it doesn't.
+export const detectDecimalComma = (values: string[]): boolean => {
+  let comma = 0;
+  let point = 0;
+  for (const raw of values) {
+    const v = raw.replace(/[$€£\s()+-]/g, '');
+    if (/^\d{1,3}(\.\d{3})*,\d{1,2}$|^\d+,\d{1,2}$/.test(v)) comma++;
+    else if (/^\d{1,3}(,\d{3})+(\.\d+)?$|^\d*\.\d+$/.test(v)) point++;
+  }
+  return comma > 0 && point === 0;
+};
+
+// NUL bytes or a high share of control characters mean the file isn't text.
+export const looksBinary = (text: string): boolean => {
+  const sample = text.slice(0, 4000);
+  if (sample.includes('\u0000')) return true;
+  const control = sample.match(/[\u0001-\u0008\u000e-\u001f\ufffd]/g)?.length ?? 0;
+  return sample.length > 0 && control / sample.length > 0.02;
+};
+
 export const accountValues = (table: ParsedTable, mapping: ColumnMapping): string[] => {
   if (mapping.account === undefined) return [];
   const values = new Set(table.rows.map((r) => r[mapping.account as number]).filter(Boolean));

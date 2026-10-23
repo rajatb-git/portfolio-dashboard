@@ -24,6 +24,8 @@ export type ImportOptions = {
   applyCash: boolean;
   dateOrder: DateOrder;
   defaultAssetType: 'stock' | 'crypto';
+  decimalComma: boolean;
+  costFromMarket: boolean;
 };
 
 export type ImportRequest = {
@@ -57,7 +59,8 @@ export type PlannedPosition = {
   averagePrice: number;
   lots: number;
   estimatedLots: number;
-  change: 'new' | 'updated' | 'removed' | 'closed';
+  previousQty?: number;
+  change: 'new' | 'updated' | 'unchanged' | 'removed' | 'closed';
 };
 
 export type ImportPlan = {
@@ -81,6 +84,8 @@ export type ImportPlan = {
     realizedGain: number;
     removedPositions: number;
     removedTransactions: number;
+    replacedPositions: number;
+    missingCost: number;
     cashBefore: number;
     cashAfter: number;
   };
@@ -130,9 +135,13 @@ export default class ImportAPI {
       .catch(catchCustomError);
 
   // Reads a document with the local AI (Ollama only — enforced server-side).
-  parseDocument = async (kind: ImportKind, text: string): Promise<DocumentParseResult> =>
+  parseDocument = async (kind: ImportKind, text: string, signal?: AbortSignal): Promise<DocumentParseResult> =>
     axios
-      .post(DB_HOST + '/ai-import/parse', { target: kind === 'positions' ? 'holdings' : 'transactions', text })
+      .post(
+        DB_HOST + '/ai-import/parse',
+        { target: kind === 'positions' ? 'holdings' : 'transactions', text },
+        { signal }
+      )
       .then((response) => response.data)
       .catch(catchCustomError);
 }

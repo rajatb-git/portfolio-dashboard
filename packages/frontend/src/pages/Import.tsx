@@ -47,11 +47,13 @@ import {
   autoMap,
   type ColumnMapping,
   detectDateOrder,
+  detectDecimalComma,
   FIELD_HELP,
   FIELD_LABELS,
   FIELDS_FOR,
   type ImportField,
   isPdf,
+  looksBinary,
   looksTabular,
   type ParsedTable,
   parseTable,
@@ -103,12 +105,16 @@ export default function Import() {
     applyCash: false,
     dateOrder: 'MDY',
     defaultAssetType: 'stock',
+    decimalComma: false,
+    costFromMarket: false,
   });
   const [dateOrderDetected, setDateOrderDetected] = React.useState(false);
 
   const [source, setSource] = React.useState<Source | null>(null);
   const [pasted, setPasted] = React.useState('');
   const [reading, setReading] = React.useState(false);
+  const readAbort = React.useRef<AbortController | null>(null);
+  const [aiReading, setAiReading] = React.useState(false);
   const [readError, setReadError] = React.useState('');
   const [aiReady, setAiReady] = React.useState<boolean | null>(null);
 
@@ -256,11 +262,18 @@ export default function Import() {
     const order = dateIndex !== undefined ? detectDateOrder(table.rows.map((r) => r[dateIndex])) : null;
     setDateOrderDetected(!!order);
     const symbolHeader = auto.symbol !== undefined ? table.headers[auto.symbol].toLowerCase() : '';
+    const numberColumns = (['qty', 'price', 'costBasis', 'amount'] as const)
+      .map((f) => auto[f])
+      .filter((i): i is number => i !== undefined);
+    // Everything that describes one file is set from that file, so nothing
+    // carries over from the previous import.
     setOptions((o) => ({
       ...o,
       ...(order && { dateOrder: order }),
       // Exchange exports name the symbol column "Asset" or "Currency".
-      defaultAssetType: /asset|coin|currency/.test(symbolHeader) ? 'crypto' : o.defaultAssetType,
+      defaultAssetType: /asset|coin|currency/.test(symbolHeader) ? 'crypto' : 'stock',
+      decimalComma: detectDecimalComma(table.rows.flatMap((r) => numberColumns.map((i) => r[i] ?? ''))),
+      costFromMarket: kind === 'positions' && auto.price === undefined && auto.costBasis === undefined,
     }));
     setSource({ method: 'table', fileName, table });
     setExcluded(new Set());
@@ -275,7 +288,9 @@ export default function Import() {
       );
       return;
     }
-    const result = await apis.import.parseDocument(kind, text);
+    readAbort.current = new AbortController();
+    setAiReading(true);
+    const result = await apis.import.parseDocument(kind, text, readAbort.current.signal);
     if (!result.rows.length) {
       setReadError('The local AI found no rows in this document. Try a CSV export, or a clearer PDF.');
       return;
@@ -283,7 +298,13 @@ export default function Import() {
     const dates = result.rows.map((r) => String(r.date ?? ''));
     const order = detectDateOrder(dates);
     setDateOrderDetected(!!order || dates.every((d) => !d || /^\d{4}-/.test(d)));
-    if (order) setOptions((o) => ({ ...o, dateOrder: order }));
+    setOptions((o) => ({
+      ...o,
+      ...(order && { dateOrder: order }),
+      defaultAssetType: 'stock',
+      decimalComma: false,
+      costFromMarket: false,
+    }));
     setSource({ method: 'ai', fileName, rows: result.rows, model: result.model, skipped: result.skipped });
     setExcluded(new Set());
     setStep(4);
@@ -295,14 +316,24 @@ export default function Import() {
     try {
       const text = await getText();
       if (!text.trim()) throw new Error('The file is empty');
+      if (looksBinary(text)) {
+        throw new Error(
+          "This doesn't look like a text file. Export a CSV from your broker, or choose the PDF statement itself."
+        );
+      }
       if (!forceAi && looksTabular(text)) applyTable(fileName, parseTable(text));
       else await readWithAi(fileName, text);
     } catch (err: any) {
-      setReadError(err.message || 'Could not read the file');
+      if (readAbort.current?.signal.aborted) setReadError('Reading was cancelled.');
+      else setReadError(err.message || 'Could not read the file');
     } finally {
+      readAbort.current = null;
+      setAiReading(false);
       setReading(false);
     }
   };
+
+  const cancelReading = () => readAbort.current?.abort();
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     multiple: false,
@@ -322,16 +353,27 @@ export default function Import() {
   });
 
   const missingRequired = kind ? REQUIRED_FOR[kind].filter((f) => mapping[f] === undefined) : [];
-  const needsCost = kind === 'positions' && mapping.price === undefined && mapping.costBasis === undefined;
+  const noCostColumn = kind === 'positions' && mapping.price === undefined && mapping.costBasis === undefined;
   const needsPrice = kind === 'history' && mapping.price === undefined && mapping.amount === undefined;
   const accountsInFile = source?.method === 'table' ? accountValues(source.table, mapping) : [];
-  const columnsReady =
-    !missingRequired.length && !needsCost && !needsPrice && (accountsInFile.length <= 1 || !!sourceAccount);
+  const columnsReady = !missingRequired.length && !needsPrice && (accountsInFile.length <= 1 || !!sourceAccount);
 
+  // Unticks are per row of what's being reviewed; after changing columns or
+  // the source account the rows are different, so they start ticked again.
   const goToReview = () => {
     setPlan(null);
+    setExcluded(new Set());
+    if (noCostColumn) setOptions((o) => ({ ...o, costFromMarket: true }));
     setStep(4);
   };
+
+  // A reload loses the file and every choice made for it.
+  React.useEffect(() => {
+    if (!source || step >= 5) return;
+    const warn = (e: BeforeUnloadEvent) => e.preventDefault();
+    window.addEventListener('beforeunload', warn);
+    return () => window.removeEventListener('beforeunload', warn);
+  }, [source, step]);
 
   const commit = async () => {
     if (!request) return;
@@ -386,6 +428,9 @@ export default function Import() {
           </Step>
         ))}
       </Stepper>
+      <Typography sx={{ display: { xs: 'block', sm: 'none' }, mb: 2, fontSize: '0.85rem', color: 'text.secondary' }}>
+        Step {step + 1} of {STEPS.length} · {STEPS[step]}
+      </Typography>
 
       {step === 0 && (
         <Stack spacing={2}>
@@ -501,7 +546,11 @@ export default function Import() {
                   <FormControlLabel
                     value="add"
                     control={<Radio />}
-                    label="Add to what’s there (rows already in the account are skipped as duplicates)"
+                    label={
+                      kind === 'positions'
+                        ? 'Update from this file — each symbol in the file replaces what this account holds for it; other positions stay'
+                        : 'Add to what’s there — trades and cash movements already in the account are skipped as duplicates'
+                    }
                   />
                   <FormControlLabel
                     value="replace"
@@ -563,9 +612,16 @@ export default function Import() {
             {reading && (
               <Box>
                 <LinearProgress />
-                <Typography sx={{ fontSize: '0.78rem', color: 'text.secondary', mt: 0.5 }}>
-                  Reading… a statement read by the local AI can take a minute or two per page.
-                </Typography>
+                <Stack direction="row" spacing={1} sx={{ alignItems: 'center', mt: 0.5 }}>
+                  <Typography sx={{ fontSize: '0.78rem', color: 'text.secondary' }}>
+                    Reading… a statement read by the local AI can take a minute or two per page.
+                  </Typography>
+                  {aiReading && (
+                    <Button size="small" onClick={cancelReading}>
+                      Cancel
+                    </Button>
+                  )}
+                </Stack>
               </Box>
             )}
             {readError && <Alert severity="error">{readError}</Alert>}
@@ -588,8 +644,13 @@ export default function Import() {
                 — statements are only ever read by a model on your own machine.
               </Alert>
             )}
-            <Stack direction="row" spacing={1}>
+            <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', gap: 1 }}>
               {back(1)}
+              {source && !reading && (
+                <Button variant="outlined" onClick={() => setStep(source.method === 'table' ? 3 : 4)}>
+                  Continue with {source.fileName}
+                </Button>
+              )}
               <Button
                 variant="contained"
                 disabled={!pasted.trim() || reading}
@@ -649,10 +710,12 @@ export default function Import() {
                 );
               })}
             </Grid>
-            {needsCost && (
+            {noCostColumn && (
               <Alert severity="warning">
-                Choose a column for <strong>Price per share</strong> (average cost) or <strong>Total cost</strong> — tax
-                lots need what you paid.
+                There’s no cost column. Choose one for <strong>Price per share</strong> (average cost) or{' '}
+                <strong>Total cost</strong> if the file has it — tax lots need what you paid. Otherwise each position
+                takes today’s price as an estimated cost (gains start at zero) that you can correct on its Research
+                page.
               </Alert>
             )}
             {needsPrice && (

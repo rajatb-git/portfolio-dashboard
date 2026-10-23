@@ -27,6 +27,10 @@ function describeOllamaError(err: unknown, url: string, model: string): string {
         : undefined;
     return `Ollama request to ${url} failed with status ${status}${detail ? `: ${detail}` : ''}.`;
   }
+  // A request that hit our own timeout reached Ollama; it was just slow.
+  if (err.code === 'ECONNABORTED' && /timeout/i.test(err.message)) {
+    return `The local model "${model}" took too long to answer (${err.message}). It may be too slow on this machine for the amount of text — try a smaller document or a faster model.`;
+  }
   if (
     err.code === 'ECONNREFUSED' ||
     err.code === 'ECONNABORTED' ||

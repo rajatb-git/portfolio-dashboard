@@ -2,13 +2,12 @@ import { Chip, IconButton, Skeleton, Tooltip } from '@mui/material';
 import Stack from '@mui/material/Stack';
 import { default as MuiTableRow } from '@mui/material/TableRow';
 import Typography from '@mui/material/Typography';
-
+import moment from 'moment';
 import { HoldingAggregate } from '@/api/dashboard';
 import { Iconify } from '@/components/Iconify';
 import Label from '@/components/Label';
-import AnalystBar from '@/components/ui/AnalystBar';
 import { TableCell } from '@/components/Table/TableCell';
-import moment from 'moment';
+import AnalystBar from '@/components/ui/AnalystBar';
 
 import { fnCurrency } from '@/utils/formatNumber';
 import type { AlertState } from './dashTableUtils';
@@ -110,7 +109,8 @@ export default function DashTableRow({
               )}
             </Stack>
             <Typography variant="caption" noWrap>
-              {row.qty} {row.type === 'crypto' ? 'coins' : 'shares'}
+              {(+row.qty.toFixed(8)).toLocaleString('en-US', { maximumFractionDigits: 8 })}{' '}
+              {row.type === 'crypto' ? 'coins' : 'shares'}
             </Typography>
           </Stack>
         </Stack>

@@ -16,7 +16,7 @@ import { getQuote } from '../marketData/quotes';
 import { HoldingsModel, ITaxLot } from '../models/HoldingsModel';
 import { getTaxConfig } from '../models/TaxConfigModel';
 import { TransactionModel } from '../models/TransactionModel';
-import { normalizeTradeDate, roundQty } from '../utils';
+import { calendarDayToIso, normalizeTradeDate, roundQty } from '../utils';
 import { errorBody } from '../utils/error';
 import { logger } from '../utils/winston';
 
@@ -51,7 +51,7 @@ const parseLots = (raw: unknown): ITaxLot[] => {
       id: typeof lot.id === 'string' && lot.id ? lot.id : randomUUID(),
       qty: roundQty(qty),
       price,
-      date: date.toISOString(),
+      date: /^\d{4}-\d{2}-\d{2}$/.test(String(lot.date)) ? calendarDayToIso(String(lot.date)) : date.toISOString(),
       ...(lot.estimated === true && { estimated: true }),
     };
   });

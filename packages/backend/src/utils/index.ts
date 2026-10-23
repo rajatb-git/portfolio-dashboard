@@ -1,11 +1,19 @@
 import moment from 'moment';
 
+// A calendar day with no time is stored at noon UTC, so it reads as the same
+// day for a server or browser anywhere from UTC-11 to UTC+11. (Midnight in the
+// server's zone showed as the previous day in browsers west of it.)
+export const calendarDayToIso = (day: string): string => `${day}T12:00:00.000Z`;
+
+const DATE_ONLY_RE = /^\d{4}-\d{2}-\d{2}$/;
+
 // Trade/event dates arrive from the UI as `YYYY-MM-DD` and from CSV imports in
 // assorted formats. Normalize to ISO so they sort against the stored record's createdAt.
 export const normalizeTradeDate = (value: unknown): string | undefined => {
   if (value === undefined || value === null || value === '') return undefined;
 
-  const parsed = moment(String(value));
+  const text = String(value).trim();
+  const parsed = moment(DATE_ONLY_RE.test(text) ? calendarDayToIso(text) : text);
   if (!parsed.isValid()) {
     throw new Error(`"${value}" is not a valid date`);
   }
