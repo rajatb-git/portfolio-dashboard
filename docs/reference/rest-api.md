@@ -50,7 +50,7 @@ and `GET /settings/lock` stay open.
 | `GET` | `/dashboard` | Every holding enriched with live price, day change, market value, gain/loss and analyst counts |
 | `GET` | `/dashboard/daily-recap` | The day's summary for your portfolio |
 | `GET` | `/dashboard/brief` | Condensed portfolio brief |
-| `GET` | `/portfolio/snapshots` | Daily total-value points behind the performance chart |
+| `GET` | `/portfolio/performance` | Daily holdings value, net trade flow and time-weighted return index behind the performance chart |
 
 ## Holdings
 
@@ -66,7 +66,6 @@ and `GET /settings/lock` stay open.
 | `POST` | `/holdings/sell` | Record a sell — relieves tax lots (`lotMethod`: `fifo` default, `lifo`, `hifo`, `taxOptimal`, or `specific` with `lotIds`), realizes P&L and updates account cash |
 | `PUT` | `/holdings/:id/lots` | Replace a position's tax lots; quantity and average cost follow. No trade is recorded |
 | `POST` | `/holdings/simulate` | Mock buy/sell — tax, lot-method comparison, wash-sale and position/cash impact. Writes nothing |
-| `POST` | `/holdings/import` | Bulk import. Each row is a lot (optional `purchaseDate`); rows for the same account and symbol merge into one position. A row with symbol `CASH` adjusts the account balance instead of creating a position |
 
 ## Accounts
 
@@ -88,7 +87,6 @@ and `GET /settings/lock` stay open.
 | `GET` | `/transactions/:id` | One transaction |
 | `GET` | `/transactions/symbol/:symbol` | Transactions for a symbol |
 | `POST` | `/transactions` | Update / upsert |
-| `POST` | `/transactions/import` | Bulk import. Requires `qty` and `action` (`buy`/`sell`/`deposit`/`withdraw`); validates every row before writing |
 | `DELETE` | `/transactions` | Delete by `id` in the body — also reverses the cash impact |
 
 ## Live market data
@@ -152,7 +150,7 @@ same flag works on `/live/market-news`, `/live/portfolio-news`,
 |---|---|---|
 | `GET` | `/rebalance/plan` | Drift, actions, trade values and share counts |
 | `GET` | `/rebalance/targets` | Read target weights |
-| `POST` | `/rebalance/targets` | Save target weights |
+| `POST` | `/rebalance/targets` | Replace the target weights (must total 100%; an empty list clears them) |
 
 ## Alerts
 
@@ -179,11 +177,21 @@ same flag works on `/live/market-news`, `/live/portfolio-news`,
 | `GET` | `/notes/:symbol` | Your notes for a ticker |
 | `POST` | `/notes/:symbol` | Save notes for a ticker |
 
-## AI document import
+## Import
+
+Every import is planned first and written second. Both calls take
+`{ accountId, kind: 'positions' | 'history', rows, options, excluded?, fileName? }`,
+where `rows` hold the file's raw values (`symbol`, `name`, `qty`, `price`,
+`costBasis`, `amount`, `date`, `action`, `assetType`) and `options` are
+`mode` (`add` | `replace`), `historyMode` (`build` | `record`), `applyCash`,
+`dateOrder` (`MDY` | `DMY` | `YMD`) and `defaultAssetType`.
 
 | Method | Path | Description |
 |---|---|---|
-| `POST` | `/ai-import/parse` | Parse a statement into holdings or transactions. `target` must be `holdings` or `transactions`; text is capped at 200,000 characters. **Local Ollama only** — refuses to run against a hosted provider |
+| `POST` | `/import/preview` | Dry run: each row's status (`ok`, `warning`, `error`, `skipped`, `duplicate`, `excluded`) with reasons, the resulting positions and lots, transactions, realized gain and cash before/after. Writes nothing |
+| `POST` | `/import/commit` | Re-plans the same request and writes it. Refused while any non-excluded row has an error |
+| `GET` | `/import/runs` | The last 50 imports |
+| `POST` | `/ai-import/parse` | Read a statement's text into import rows (`target` `holdings` or `transactions`, text capped at 200,000 characters, read in chunks). **Local Ollama only** — refuses to run against a hosted provider |
 
 ## Database
 

@@ -32,7 +32,7 @@ export default function TableNoData({ query, isFiltered = false }: TableNoDataPr
       state="empty"
       icon="tabler:wallet-off"
       title="No holdings yet"
-      message="Add holdings under Database, or import them from a broker statement, and they will appear here with live prices."
+      message="Import them from your broker on the Import page, and they will appear here with live prices."
       minHeight={220}
     />
   );

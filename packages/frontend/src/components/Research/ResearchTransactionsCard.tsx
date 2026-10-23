@@ -39,7 +39,14 @@ export default function ResearchTransactionsCard({ transactions, accounts, isLoa
   const accountMap = new Map(accounts.map((a) => [a.id, a.name]));
 
   const sorted = React.useMemo(
-    () => [...transactions].sort((a, b) => moment(b.createdAt).valueOf() - moment(a.createdAt).valueOf()),
+    // When the trade happened, not when it was entered — a back-dated or imported
+    // trade carries its real date in `date`.
+    () =>
+      [...transactions].sort(
+        (a, b) =>
+          moment(b.date ?? b.createdAt).valueOf() - moment(a.date ?? a.createdAt).valueOf() ||
+          moment(b.createdAt).valueOf() - moment(a.createdAt).valueOf()
+      ),
     [transactions]
   );
 
@@ -164,7 +171,11 @@ export default function ResearchTransactionsCard({ transactions, accounts, isLoa
                           whiteSpace: 'nowrap',
                         }}
                       >
-                        {t.createdAt ? moment(t.createdAt).format('MMM D, YYYY h:mm a') : '—'}
+                        {t.date
+                          ? moment(t.date).format('MMM D, YYYY')
+                          : t.createdAt
+                            ? moment(t.createdAt).format('MMM D, YYYY h:mm a')
+                            : '—'}
                       </TableCell>
                       <TableCell
                         sx={{

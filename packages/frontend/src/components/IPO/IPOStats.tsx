@@ -1,7 +1,6 @@
-import React from 'react';
-
 import { Card, Divider, Grid, Skeleton, Stack, Typography } from '@mui/material';
 import moment from 'moment';
+import React from 'react';
 
 import { IIPO } from '@/models/IPOModel';
 import { fnShortenCurrency } from '@/utils/formatNumber';
@@ -66,16 +65,20 @@ export default function IPOStats({ ipos, isLoading }: Props) {
             <MetricItem label="Total IPOs" value={`${stats.total}`} />
           </Grid>
           <Grid size={{ xs: 6, sm: 4, md: 2.4 }}>
-            <MetricItem label="Upcoming" value={`${stats.upcoming}`} color="#3b82f6" />
+            <MetricItem label="Upcoming (today on)" value={`${stats.upcoming}`} color="#3b82f6" />
           </Grid>
           <Grid size={{ xs: 6, sm: 4, md: 2.4 }}>
-            <MetricItem label="Expected Raise" value={fnShortenCurrency(stats.expectedRaise)} />
+            <MetricItem label="Upcoming raise" value={fnShortenCurrency(stats.expectedRaise)} />
           </Grid>
           <Grid size={{ xs: 6, sm: 4, md: 2.4 }}>
             <MetricItem label="Priced This Week" value={`${stats.pricedThisWeek}`} color="var(--pd-up)" />
           </Grid>
           <Grid size={{ xs: 6, sm: 4, md: 2.4 }}>
-            <MetricItem label="Withdrawn" value={`${stats.withdrawn}`} color={stats.withdrawn > 0 ? 'var(--pd-down)' : undefined} />
+            <MetricItem
+              label="Withdrawn"
+              value={`${stats.withdrawn}`}
+              color={stats.withdrawn > 0 ? 'var(--pd-down)' : undefined}
+            />
           </Grid>
         </Grid>
       )}

@@ -1,4 +1,5 @@
 import { Card, Chip, Divider, Grid, Skeleton, Stack, Typography } from '@mui/material';
+import moment from 'moment';
 
 import type { RiskMetrics } from '@/api/analytics';
 
@@ -13,6 +14,8 @@ function getDrawdownColor(value: number): string {
   if (value <= 15) return 'var(--pd-warn)';
   return 'var(--pd-down)';
 }
+
+const shortDate = (date: string) => moment(date).format('MMM D, YYYY');
 
 type MetricItemProps = {
   label: string;
@@ -34,7 +37,7 @@ function MetricItem({ label, value, subtext, color }: MetricItemProps) {
       >
         {label}
       </Typography>
-      <Stack direction="row" sx={{ alignItems: 'center' }} spacing={0.75}>
+      <Stack direction="row" sx={{ alignItems: 'center', flexWrap: 'wrap', columnGap: 0.75, rowGap: 0.5, minWidth: 0 }}>
         <Typography
           sx={{
             fontSize: '1.1rem',
@@ -44,7 +47,13 @@ function MetricItem({ label, value, subtext, color }: MetricItemProps) {
         >
           {value}
         </Typography>
-        {subtext && <Chip label={subtext} size="small" sx={{ height: 18, fontSize: '0.62rem', fontWeight: 600 }} />}
+        {subtext && (
+          <Chip
+            label={subtext}
+            size="small"
+            sx={{ height: 18, maxWidth: '100%', fontSize: '0.62rem', fontWeight: 600 }}
+          />
+        )}
       </Stack>
     </Stack>
   );
@@ -112,7 +121,7 @@ export default function RiskMetricsCard({ metrics, isLoading }: Props) {
               color={getDrawdownColor(metrics.maxDrawdown)}
               subtext={
                 metrics.maxDrawdownPeriod.from && metrics.maxDrawdownPeriod.to
-                  ? `${metrics.maxDrawdownPeriod.from} to ${metrics.maxDrawdownPeriod.to}`
+                  ? `${shortDate(metrics.maxDrawdownPeriod.from)} – ${shortDate(metrics.maxDrawdownPeriod.to)}`
                   : undefined
               }
             />
@@ -126,13 +135,13 @@ export default function RiskMetricsCard({ metrics, isLoading }: Props) {
                 label="Best Day"
                 value={`+${metrics.bestDay.return}%`}
                 color="var(--pd-up)"
-                subtext={metrics.bestDay.date}
+                subtext={shortDate(metrics.bestDay.date)}
               />
               <MetricItem
                 label="Worst Day"
                 value={`${metrics.worstDay.return}%`}
                 color="var(--pd-down)"
-                subtext={metrics.worstDay.date}
+                subtext={shortDate(metrics.worstDay.date)}
               />
             </Stack>
           </Grid>

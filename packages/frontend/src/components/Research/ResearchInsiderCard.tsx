@@ -18,12 +18,27 @@ type Props = {
   isLoading: boolean;
 };
 
+// SEC Form 4 transaction codes. Only P and S are open-market trades; the rest
+// (gifts, grants, option exercises, tax withholding) say nothing about whether
+// an insider is buying or selling, so they get a neutral label.
+const INSIDER_CODES: Record<string, string> = {
+  P: 'Buy',
+  S: 'Sell',
+  G: 'Gift',
+  A: 'Award',
+  M: 'Exercise',
+  X: 'Exercise',
+  F: 'Tax',
+  D: 'Disposed',
+  C: 'Conversion',
+};
+
 function formatValue(v: number | null): string {
   if (!v) return '—';
   if (v >= 1e9) return `$${(v / 1e9).toFixed(1)}B`;
   if (v >= 1e6) return `$${(v / 1e6).toFixed(1)}M`;
   if (v >= 1e3) return `$${(v / 1e3).toFixed(0)}K`;
-  return `$${v}`;
+  return `$${v.toFixed(0)}`;
 }
 
 export default function ResearchInsiderCard({ transactions, isLoading }: Props) {
@@ -75,8 +90,10 @@ export default function ResearchInsiderCard({ transactions, isLoading }: Props) 
             </TableHead>
             <TableBody>
               {rows.map((tx: any, i: number) => {
-                const isBuy = (tx.transactionType ?? tx.change ?? 0) > 0 || tx.transactionType === 'Buy';
-                const txLabel = isBuy ? 'Buy' : 'Sell';
+                const kind = INSIDER_CODES[tx.transactionCode] ?? (Number(tx.change) >= 0 ? 'Acquired' : 'Disposed');
+                const tone = kind === 'Buy' ? 'up' : kind === 'Sell' ? 'down' : 'neutral';
+                const traded = Number.isFinite(Number(tx.change)) ? Math.abs(Number(tx.change)) : null;
+                const value = traded && Number(tx.transactionPrice) > 0 ? traded * Number(tx.transactionPrice) : null;
                 return (
                   <TableRow key={i} sx={{ '&:last-child td': { border: 0 } }}>
                     <TableCell
@@ -95,15 +112,22 @@ export default function ResearchInsiderCard({ transactions, isLoading }: Props) 
                     </TableCell>
                     <TableCell sx={{ borderBottom: '1px solid', borderColor: 'divider' }}>
                       <Chip
-                        label={txLabel}
+                        label={kind}
                         size="small"
                         sx={{
                           height: 18,
                           fontSize: '0.68rem',
                           fontWeight: 700,
-                          bgcolor: isBuy ? 'var(--pd-up-bg)' : 'var(--pd-down-bg)',
-                          color: isBuy ? 'var(--pd-up)' : 'var(--pd-down)',
-                          border: `1px solid ${isBuy ? 'rgba(74,222,128,0.25)' : 'rgba(248,113,113,0.25)'}`,
+                          bgcolor:
+                            tone === 'up' ? 'var(--pd-up-bg)' : tone === 'down' ? 'var(--pd-down-bg)' : 'action.hover',
+                          color: tone === 'up' ? 'var(--pd-up)' : tone === 'down' ? 'var(--pd-down)' : 'text.secondary',
+                          border: '1px solid',
+                          borderColor:
+                            tone === 'up'
+                              ? 'rgba(74,222,128,0.25)'
+                              : tone === 'down'
+                                ? 'rgba(248,113,113,0.25)'
+                                : 'divider',
                           '& .MuiChip-label': { px: 0.75 },
                         }}
                       />
@@ -116,7 +140,7 @@ export default function ResearchInsiderCard({ transactions, isLoading }: Props) 
                         borderColor: 'divider',
                       }}
                     >
-                      {tx.share != null ? Math.abs(tx.share).toLocaleString() : '—'}
+                      {traded !== null ? traded.toLocaleString() : '—'}
                     </TableCell>
                     <TableCell
                       sx={{
@@ -126,7 +150,7 @@ export default function ResearchInsiderCard({ transactions, isLoading }: Props) 
                         borderColor: 'divider',
                       }}
                     >
-                      {formatValue(tx.value ?? null)}
+                      {formatValue(value)}
                     </TableCell>
                     <TableCell
                       sx={{
@@ -136,7 +160,9 @@ export default function ResearchInsiderCard({ transactions, isLoading }: Props) 
                         borderColor: 'divider',
                       }}
                     >
-                      {tx.filingDate ? moment(tx.filingDate).format('MMM D, YYYY') : '—'}
+                      {tx.transactionDate || tx.filingDate
+                        ? moment(tx.transactionDate || tx.filingDate).format('MMM D, YYYY')
+                        : '—'}
                     </TableCell>
                   </TableRow>
                 );

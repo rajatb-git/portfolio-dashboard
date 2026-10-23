@@ -55,11 +55,20 @@ export const RebalanceRouter = () => {
         }
         seen.add(symbol);
       }
-      // The page only sends symbols in today's plan; keep saved targets for any holding that
-      // dropped out of it (e.g. an unpriced quote) instead of wiping them.
-      const existing = await getRebalanceTargetConfig();
-      const kept = existing.targets.filter((t) => !seen.has(t.symbol));
-      ctx.body = await saveRebalanceTargetConfig({ targets: [...kept, ...(incoming as any)] });
+      // The payload is the whole target set: an empty list clears it, and a
+      // non-empty one has to add up, or every suggested trade is off by the gap.
+      const total = incoming.reduce((sum, t) => sum + Number(t.targetPercent), 0);
+      if (incoming.length && Math.abs(total - 100) > 0.1) {
+        ctx.body = errorBody('Invalid targets', `Targets add up to ${total.toFixed(2)}%; they must total 100%`);
+        ctx.status = 400;
+        return;
+      }
+      ctx.body = await saveRebalanceTargetConfig({
+        targets: incoming.map((t) => ({
+          symbol: (t.symbol as string).trim().toUpperCase(),
+          targetPercent: Number(t.targetPercent),
+        })),
+      });
       ctx.status = 200;
     } catch (error: any) {
       logger.log({ level: 'error', message: error.message, label: 'Save rebalance targets route' });

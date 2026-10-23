@@ -11,6 +11,8 @@ export type CorrelationResult = {
   mostCorrelated: { a: string; b: string; value: number } | null;
   leastCorrelated: { a: string; b: string; value: number } | null;
   skipped: string[]; // holdings without enough price history to include
+  omitted: string[]; // smaller positions beyond the matrix's size cap
+  crypto: string[]; // crypto holdings, which have no NASDAQ price history
 };
 
 // Fetching history fans out one NASDAQ request per symbol, so cap the universe to
@@ -56,13 +58,17 @@ export const calculateCorrelation = async (): Promise<CorrelationResult> => {
   // Aggregate market value per symbol (a symbol can span multiple accounts) and
   // take the largest positions.
   const valueBySymbol = new Map<string, number>();
+  const crypto = new Set<string>();
   for (const h of holdings) {
+    if (h.type === 'crypto') {
+      crypto.add(h.symbol);
+      continue;
+    }
     valueBySymbol.set(h.symbol, (valueBySymbol.get(h.symbol) ?? 0) + h.marketValue);
   }
-  const topSymbols = [...valueBySymbol.entries()]
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, MAX_SYMBOLS)
-    .map(([symbol]) => symbol);
+  const bySize = [...valueBySymbol.entries()].sort((a, b) => b[1] - a[1]).map(([symbol]) => symbol);
+  const topSymbols = bySize.slice(0, MAX_SYMBOLS);
+  const omitted = bySize.slice(MAX_SYMBOLS);
 
   const returnsBySymbol = new Map<string, Map<string, number>>();
   const skipped: string[] = [];
@@ -129,5 +135,7 @@ export const calculateCorrelation = async (): Promise<CorrelationResult> => {
     mostCorrelated,
     leastCorrelated,
     skipped,
+    omitted,
+    crypto: [...crypto],
   };
 };

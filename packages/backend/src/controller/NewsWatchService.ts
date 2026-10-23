@@ -1,7 +1,8 @@
 import { createHash } from 'node:crypto';
 import moment from 'moment';
-import { getCompanyNews } from '../externalApis/finnHub';
 import { getTopBusinessHeadlines } from '../externalApis/newsApi';
+import type { NewsArticle } from '../marketData/datasets';
+import { read } from '../marketData/store';
 import { HoldingsModel } from '../models/HoldingsModel';
 import { getJobState, setJobState } from '../models/JobRunStateModel';
 import {
@@ -26,10 +27,6 @@ const SEEDED_KEY = 'news_watch:seeded';
 // anything older can never be a duplicate candidate again.
 const SEEN_RETENTION_DAYS = 7;
 
-// Finnhub's free tier is rate limited, so holdings are polled a few at a time
-// rather than all at once.
-const SYMBOL_CONCURRENCY = 4;
-
 type Candidate = {
   symbol: string | null;
   headline: string;
@@ -44,22 +41,6 @@ const articleKey = (url: string, headline: string): string =>
     .update(url || headline)
     .digest('hex')
     .slice(0, 32);
-
-async function mapWithConcurrency<T, R>(
-  items: T[],
-  limit: number,
-  worker: (item: T) => Promise<R[]>
-): Promise<R[]> {
-  const out: R[] = [];
-  for (let i = 0; i < items.length; i += limit) {
-    const batch = items.slice(i, i + limit);
-    const results = await Promise.allSettled(batch.map(worker));
-    for (const result of results) {
-      if (result.status === 'fulfilled') out.push(...result.value);
-    }
-  }
-  return out;
-}
 
 class NewsWatchService {
   private readonly scheduler = new PersistentInterval('news_watch');
@@ -80,26 +61,23 @@ class NewsWatchService {
     return watched;
   }
 
-  private async holdingsNews(watched: Map<string, string>, since: moment.Moment): Promise<Candidate[]> {
-    const from = since.clone().subtract(1, 'day').format('YYYY-MM-DD');
-    const to = moment().format('YYYY-MM-DD');
-
-    return mapWithConcurrency([...watched.keys()], SYMBOL_CONCURRENCY, async (symbol) => {
-      try {
-        const articles = await getCompanyNews(symbol, from, to, 'bulk');
+  // Company news for every holding is stored and kept fresh by the market data
+  // scheduler; the caller drops anything older than the lookback window.
+  private async holdingsNews(watched: Map<string, string>): Promise<Candidate[]> {
+    const perSymbol = await Promise.all(
+      [...watched.keys()].map(async (symbol) => {
+        const articles = (await read<NewsArticle[]>('news', symbol.toUpperCase())).value ?? [];
         return articles.map((a) => ({
           symbol,
-          headline: a.headline ?? '',
-          summary: a.summary ?? '',
-          source: a.source ?? 'Finnhub',
-          url: a.url ?? '',
+          headline: a.headline,
+          summary: a.summary,
+          source: a.source || 'Finnhub',
+          url: a.url,
           publishedAt: a.datetime ? moment.unix(a.datetime).toISOString() : '',
         }));
-      } catch (err: any) {
-        logger.log({ level: 'error', label: LABEL, message: `Company news failed for ${symbol}: ${err.message}` });
-        return [];
-      }
-    });
+      })
+    );
+    return perSymbol.flat();
   }
 
   private async marketNews(watched: Map<string, string>): Promise<Candidate[]> {
@@ -152,7 +130,7 @@ class NewsWatchService {
 
     const collected: Candidate[] = [];
     if (config.watchHoldings && watched.size > 0) {
-      collected.push(...(await this.holdingsNews(watched, since)));
+      collected.push(...(await this.holdingsNews(watched)));
     }
     if (config.watchMarket) {
       collected.push(...(await this.marketNews(watched)));

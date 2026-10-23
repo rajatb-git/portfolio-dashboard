@@ -1,4 +1,4 @@
-import { Card, CardContent, ToggleButton, ToggleButtonGroup } from '@mui/material';
+import { Box, Card, CardContent, Skeleton, ToggleButton, ToggleButtonGroup } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
 import type { ApexOptions } from 'apexcharts';
 import React from 'react';
@@ -22,9 +22,11 @@ export const PriceHistoryGraph = ({ symbol }: Props) => {
   const theme = useTheme();
   const [series, setSeries] = React.useState<any>();
   const [range, setRange] = React.useState<Range>('6M');
+  const [isLoading, setIsLoading] = React.useState(false);
 
   const loadData = async () => {
     if (!symbol) return;
+    setIsLoading(true);
     await apis.live
       .getPriceHistory(symbol, range)
       .then((data) => {
@@ -38,7 +40,8 @@ export const PriceHistoryGraph = ({ symbol }: Props) => {
       .catch((err) => {
         setSeries(undefined);
         toast.error(err.message || 'Failed to load price history');
-      });
+      })
+      .finally(() => setIsLoading(false));
   };
 
   const options: ApexOptions = {
@@ -57,10 +60,11 @@ export const PriceHistoryGraph = ({ symbol }: Props) => {
     },
     xaxis: {
       type: 'datetime',
+      labels: { datetimeUTC: false },
     },
     tooltip: {
       x: {
-        format: 'dd MMM yyyy',
+        format: range === '1d' ? 'h:mm TT' : 'dd MMM yyyy',
       },
       style: {
         fontSize: '1rem',
@@ -107,10 +111,13 @@ export const PriceHistoryGraph = ({ symbol }: Props) => {
           ))}
         </ToggleButtonGroup>
 
+        {!series && isLoading && <Skeleton variant="rounded" height={450} sx={{ mt: 1 }} />}
         {series && (
-          <React.Suspense fallback={<div>Loading chart...</div>}>
-            <ReactApexChart options={options} series={series} type="candlestick" height={450} width="100%" />
-          </React.Suspense>
+          <Box sx={{ opacity: isLoading ? 0.45 : 1, transition: 'opacity 150ms' }} aria-busy={isLoading}>
+            <React.Suspense fallback={<Skeleton variant="rounded" height={450} sx={{ mt: 1 }} />}>
+              <ReactApexChart options={options} series={series} type="candlestick" height={450} width="100%" />
+            </React.Suspense>
+          </Box>
         )}
       </CardContent>
     </Card>

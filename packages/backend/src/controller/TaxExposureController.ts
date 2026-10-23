@@ -2,7 +2,7 @@ import moment from 'moment';
 import { getTaxConfig, ITaxConfig } from '../models/TaxConfigModel';
 import { roundQty } from '../utils';
 import { calculateRealizedGains } from './RealizedGainsController';
-import { enrichLots, estimateTax, loadPositionsWithLots, marginalTax } from './TaxLotController';
+import { enrichLots, estimateTax, loadPositionsWithLots, marginalTax, nonTaxableAccountIds } from './TaxLotController';
 
 export type UpcomingLongTerm = {
   symbol: string;
@@ -38,10 +38,13 @@ const UPCOMING_WINDOW_DAYS = 90;
 const round2 = (n: number) => +n.toFixed(2);
 
 export const getTaxExposure = async (): Promise<TaxExposure> => {
-  const [config, realized, { positions }] = await Promise.all([
+  // Only taxable accounts owe tax on a sale; a Roth or 401(k) position has no
+  // short/long-term distinction worth waiting for.
+  const [config, realized, { positions }, nonTaxable] = await Promise.all([
     getTaxConfig(),
-    calculateRealizedGains(),
+    calculateRealizedGains({ taxableOnly: true }),
     loadPositionsWithLots(),
+    nonTaxableAccountIds(),
   ]);
 
   const now = moment();
@@ -56,6 +59,7 @@ export const getTaxExposure = async (): Promise<TaxExposure> => {
   const upcomingLongTerm: UpcomingLongTerm[] = [];
 
   for (const { holding, lots, currentPrice } of positions) {
+    if (nonTaxable.has(holding.accountId)) continue;
     estimatedLots += lots.filter((l) => l.estimated).length;
     if (currentPrice === null) {
       unpricedPositions += 1;

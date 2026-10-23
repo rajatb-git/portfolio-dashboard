@@ -1,7 +1,7 @@
 import moment from 'moment';
-import { getCompanyNews } from '../externalApis/finnHub';
+import type { NewsArticle } from '../marketData/datasets';
+import { read } from '../marketData/store';
 import { HoldingsModel } from '../models/HoldingsModel';
-import { logger } from '../utils/winston';
 
 export type SymbolSentiment = {
   symbol: string;
@@ -49,33 +49,26 @@ export class NewsSentimentController {
     const allHoldings = holdingsModel.getAllRecords();
     const symbols = [...new Set(allHoldings.filter((h) => h.type === 'stock').map((h) => h.symbol))];
 
-    const fromDate = moment().subtract(7, 'days').format('YYYY-MM-DD');
-    const toDate = moment().format('YYYY-MM-DD');
-
     const results: SymbolSentiment[] = [];
 
+    // A week of company news per holding is already stored and kept fresh by
+    // the market data scheduler, so this never calls Finnhub itself.
     await Promise.all(
       symbols.map(async (symbol) => {
-        try {
-          // Fans out over every holding, so it yields to anything the user is
-          // waiting on rather than draining the shared Finnhub budget.
-          const news = await getCompanyNews(symbol, fromDate, toDate, 'bulk');
-          if (!news || news.length === 0) return;
+        const news = (await read<NewsArticle[]>('news', symbol.toUpperCase())).value;
+        if (!news || news.length === 0) return;
 
-          const scores = news.map((n: any) => scoreText(n.headline));
-          const avg = scores.reduce((a: number, b: number) => a + b, 0) / scores.length;
-          const normalized = Math.max(-1, Math.min(1, avg / 2));
+        const scores = news.map((n: any) => scoreText(n.headline));
+        const avg = scores.reduce((a: number, b: number) => a + b, 0) / scores.length;
+        const normalized = Math.max(-1, Math.min(1, avg / 2));
 
-          results.push({
-            symbol,
-            score: +normalized.toFixed(2),
-            sentiment: toBucket(normalized),
-            articleCount: news.length,
-            topHeadlines: news.slice(0, 3).map((n: any) => n.headline),
-          });
-        } catch (err: any) {
-          logger.log({ level: 'error', label: 'NewsSentiment', message: `${symbol}: ${err.message}` });
-        }
+        results.push({
+          symbol,
+          score: +normalized.toFixed(2),
+          sentiment: toBucket(normalized),
+          articleCount: news.length,
+          topHeadlines: news.slice(0, 3).map((n: any) => n.headline),
+        });
       })
     );
 

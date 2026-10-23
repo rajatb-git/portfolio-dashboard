@@ -1,5 +1,3 @@
-import React from 'react';
-
 import {
   Box,
   Card,
@@ -14,18 +12,21 @@ import {
   TableCell,
   TableContainer,
   TableHead,
+  TablePagination,
   TableRow,
   TableSortLabel,
   Tooltip,
   Typography,
 } from '@mui/material';
 import moment from 'moment';
-import { useNavigate } from 'react-router-dom';
+import React from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'react-toastify';
 
 import apis from '@/api';
-import { getComparator, visuallyHidden } from '@/components/DashboardTable/dashTableUtils';
+import { visuallyHidden } from '@/components/DashboardTable/dashTableUtils';
 import { Iconify } from '@/components/Iconify';
+import { toastWatchResult } from '@/components/IPO/watchToast';
 import { IIPO } from '@/models/IPOModel';
 import { fnShortenCurrency, fnShortenNumber } from '@/utils/formatNumber';
 
@@ -56,13 +57,41 @@ const STATUS_COLOR: Record<IIPO['status'], ChipProps['color']> = {
   withdrawn: 'error',
 };
 
+const ROWS_PER_PAGE = 25;
+
+// Names sort case-insensitively ("ADARx" next to "Accelevation"); empty values last.
+const compareIpos = (orderBy: keyof IIPO, order: 'asc' | 'desc') => (a: IIPO, b: IIPO) => {
+  const x = a[orderBy];
+  const y = b[orderBy];
+  if (x == null || x === '') return y == null || y === '' ? 0 : 1;
+  if (y == null || y === '') return -1;
+  const result =
+    typeof x === 'number' && typeof y === 'number'
+      ? x - y
+      : String(x).localeCompare(String(y), undefined, { sensitivity: 'base', numeric: true });
+  return order === 'asc' ? result : -result;
+};
+
 const capitalize = (s: string) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s);
 
 export default function IPOList({ ipos, isLoading, error, onToggleWatch }: Props) {
   const navigate = useNavigate();
   const [order, setOrder] = React.useState<'asc' | 'desc'>('desc');
   const [orderBy, setOrderBy] = React.useState<keyof IIPO>('date');
-  const [search, setSearch] = React.useState('');
+  // The search lives in the URL so Back from an IPO's page keeps it.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const search = searchParams.get('q') ?? '';
+  const setSearch = (value: string) =>
+    setSearchParams(
+      (prev) => {
+        const params = new URLSearchParams(prev);
+        if (value) params.set('q', value);
+        else params.delete('q');
+        return params;
+      },
+      { replace: true }
+    );
+  const [page, setPage] = React.useState(0);
 
   const handleSort = (id: keyof IIPO) => {
     const isAsc = orderBy === id && order === 'asc';
@@ -75,9 +104,10 @@ export default function IPOList({ ipos, isLoading, error, onToggleWatch }: Props
     try {
       if (ipo.watched) {
         await apis.live.unwatchIpo(ipo.symbol);
+        toast.success(`Stopped watching ${ipo.symbol}`);
         onToggleWatch?.(ipo, false);
       } else {
-        await apis.live.watchIpo(ipo);
+        toastWatchResult(ipo.symbol, await apis.live.watchIpo(ipo));
         onToggleWatch?.(ipo, true);
       }
     } catch (err: any) {
@@ -90,8 +120,13 @@ export default function IPOList({ ipos, isLoading, error, onToggleWatch }: Props
     const filtered = query
       ? ipos.filter((x) => x.name?.toLowerCase().includes(query) || x.symbol?.toLowerCase().includes(query))
       : ipos;
-    return [...filtered].sort(getComparator(order, orderBy));
+    return [...filtered].sort(compareIpos(orderBy, order));
   }, [ipos, order, orderBy, search]);
+
+  React.useEffect(() => setPage(0), [search, order, orderBy]);
+
+  const pageRows = sorted.slice(page * ROWS_PER_PAGE, (page + 1) * ROWS_PER_PAGE);
+  const openIpo = (ipo: IIPO) => navigate(`/ipo-calendar/${ipo.id}`, { state: { ipo } });
 
   if (isLoading) {
     return (
@@ -153,11 +188,15 @@ export default function IPOList({ ipos, isLoading, error, onToggleWatch }: Props
                 </TableCell>
               </TableRow>
             ) : (
-              sorted.map((ipo) => (
+              pageRows.map((ipo) => (
                 <TableRow
                   key={ipo.id}
                   hover
-                  onClick={() => navigate(`/ipo-calendar/${ipo.id}`, { state: { ipo } })}
+                  tabIndex={0}
+                  onClick={() => openIpo(ipo)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && e.target === e.currentTarget) openIpo(ipo);
+                  }}
                   sx={{ cursor: 'pointer' }}
                 >
                   <TableCell align="center">
@@ -202,6 +241,16 @@ export default function IPOList({ ipos, isLoading, error, onToggleWatch }: Props
           </TableBody>
         </Table>
       </TableContainer>
+      {sorted.length > ROWS_PER_PAGE && (
+        <TablePagination
+          component="div"
+          count={sorted.length}
+          page={page}
+          onPageChange={(_, next) => setPage(next)}
+          rowsPerPage={ROWS_PER_PAGE}
+          rowsPerPageOptions={[ROWS_PER_PAGE]}
+        />
+      )}
     </Card>
   );
 }

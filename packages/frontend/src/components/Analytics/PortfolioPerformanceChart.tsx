@@ -16,7 +16,8 @@ import React from 'react';
 import { toast } from 'react-toastify';
 
 import apis from '@/api';
-import type { PortfolioSnapshot } from '@/api/dashboard';
+import type { PerformancePoint } from '@/api/dashboard';
+import type { Range } from '@/api/live';
 import { useThemeMode } from '@/components/ThemeRegistry/ThemeModeContext';
 import { SERIES, TEXT } from '@/components/ThemeRegistry/tokens';
 import { fnCurrency } from '@/utils/formatNumber';
@@ -35,17 +36,18 @@ const RANGE_DAYS: Record<RangeKey, number> = {
   All: 99999,
 };
 
-// Map to backend-supported range values
-const SPY_RANGE: Record<RangeKey, string> = {
+// Benchmark history ranges the backend serves; 'All' takes the longest.
+const SPY_RANGE: Record<RangeKey, Range> = {
   '1M': '1M',
   '3M': '3M',
   '6M': '6M',
   '1Y': '1y',
-  All: '2y',
+  All: '3y',
 };
 
 type Props = {
-  snapshots: PortfolioSnapshot[];
+  points: PerformancePoint[];
+  isLoading: boolean;
 };
 
 const BENCHMARKS: Record<string, string> = {
@@ -55,7 +57,9 @@ const BENCHMARKS: Record<string, string> = {
   None: 'None',
 };
 
-export default function PortfolioPerformanceChart({ snapshots }: Props) {
+const fmtPct = (val: number) => `${val > 0 ? '+' : ''}${val.toFixed(2)}%`;
+
+export default function PortfolioPerformanceChart({ points, isLoading }: Props) {
   const { resolvedMode: mode } = useThemeMode();
   const [range, setRange] = React.useState<RangeKey>('6M');
   const [benchmark, setBenchmark] = React.useState<string>('SPY');
@@ -70,7 +74,7 @@ export default function PortfolioPerformanceChart({ snapshots }: Props) {
     }
     setIsSpyLoading(true);
     apis.live
-      .getPriceHistory(benchmark, SPY_RANGE[range] as any)
+      .getPriceHistory(benchmark, SPY_RANGE[range])
       .then((data) => setSpyRaw(data ?? []))
       .catch((err) => {
         setSpyRaw([]);
@@ -79,61 +83,66 @@ export default function PortfolioPerformanceChart({ snapshots }: Props) {
       .finally(() => setIsSpyLoading(false));
   }, [range, benchmark]);
 
-  // Filter snapshots to selected range
-  const cutoffMs = range === 'All' ? 0 : moment().subtract(RANGE_DAYS[range], 'days').valueOf();
-  const filteredSnapshots = snapshots.filter((s) => moment(s.timestamp ?? s.date).valueOf() >= cutoffMs);
+  const cutoff = range === 'All' ? '' : moment().subtract(RANGE_DAYS[range], 'days').format('YYYY-MM-DD');
+  const inRange = points.filter((p) => p.date >= cutoff);
+  const baseIndex = inRange[0]?.index ?? 1;
 
-  // Portfolio series: [{x: timestamp_ms, y: totalValue}]
-  const portfolioSeries = filteredSnapshots.map((s) => ({
-    x: moment(s.timestamp ?? s.date).valueOf(),
-    y: s.totalValue,
+  // Both lines start at 0% on the range's first day: the portfolio from its
+  // time-weighted index, so buys and sells don't move it.
+  const portfolioSeries = inRange.map((p) => ({
+    x: moment(p.date).valueOf(),
+    y: +((p.index / baseIndex - 1) * 100).toFixed(2),
   }));
 
-  // SPY series: normalize to portfolio start value so lines are on same scale
-  const buildSpySeries = (): { x: number; y: number }[] => {
-    if (!spyRaw.length || filteredSnapshots.length < 1) return [];
-    const portfolioStartValue = filteredSnapshots[0].totalValue;
-    const portfolioStartTs = moment(filteredSnapshots[0].timestamp ?? filteredSnapshots[0].date).valueOf();
-
-    // Parse OHLCV candlestick data — format can be [ts, o, h, l, c] arrays
-    // or {x: ts, y: [o, h, l, c]} objects
-    const spyPoints: { ts: number; close: number }[] = [];
+  // The benchmark is sampled on the portfolio's own dates (last close on or
+  // before each) so the two lines share x values and one tooltip shows both.
+  const buildBenchmarkSeries = (): { x: number; y: number }[] => {
+    if (!spyRaw.length || !inRange.length) return [];
     // Backend serializes each point's `x` as an ISO date string (Date → JSON),
     // so coerce to a numeric timestamp — downstream sort/filter do numeric math.
     const toTs = (v: unknown): number => (typeof v === 'number' ? v : moment(v as string).valueOf());
+    const closes: { date: string; close: number }[] = [];
     for (const d of spyRaw) {
+      let ts: number;
+      let close: number | undefined;
       if (Array.isArray(d)) {
-        const ts = toTs(d[0]);
-        const close = d[4] ?? d[3] ?? d[1];
-        if (!Number.isNaN(ts) && close != null) spyPoints.push({ ts, close });
+        ts = toTs(d[0]);
+        close = d[4] ?? d[3] ?? d[1];
       } else if (d && typeof d === 'object') {
-        const ts = toTs(d.x);
-        const close = Array.isArray(d.y) ? d.y[3] : d.y;
-        if (!Number.isNaN(ts) && close != null) spyPoints.push({ ts, close });
+        ts = toTs(d.x);
+        close = Array.isArray(d.y) ? d.y[3] : d.y;
+      } else {
+        continue;
       }
+      if (!Number.isNaN(ts) && close != null) closes.push({ date: moment(ts).format('YYYY-MM-DD'), close });
     }
-    if (!spyPoints.length) return [];
+    closes.sort((a, b) => a.date.localeCompare(b.date));
 
-    const sorted = [...spyPoints].sort((a, b) => a.ts - b.ts);
-
-    // Find SPY price at the portfolio's start date (±7 days)
-    const spyNearStart = sorted.find((p) => p.ts >= portfolioStartTs - 7 * 86400000) ?? sorted[0];
-    const spyStartClose = spyNearStart?.close;
-    if (!spyStartClose) return [];
-
-    const ratio = portfolioStartValue / spyStartClose;
-
-    return sorted
-      .filter((p) => p.ts >= portfolioStartTs - 86400000)
-      .map((p) => ({ x: p.ts, y: +(p.close * ratio).toFixed(2) }));
+    const closeOn = (date: string) => {
+      let found: number | undefined;
+      for (const c of closes) {
+        if (c.date > date) break;
+        found = c.close;
+      }
+      return found;
+    };
+    const base = closeOn(inRange[0].date);
+    if (!base) return [];
+    return inRange.flatMap((p) => {
+      const close = closeOn(p.date);
+      return close ? [{ x: moment(p.date).valueOf(), y: +((close / base - 1) * 100).toFixed(2) }] : [];
+    });
   };
 
-  const spySeries = buildSpySeries();
+  const benchmarkSeries = buildBenchmarkSeries();
 
   const series = [
     { name: 'Portfolio', data: portfolioSeries, type: 'area' },
-    ...(spySeries.length ? [{ name: BENCHMARKS[benchmark], data: spySeries, type: 'area' }] : []),
+    ...(benchmarkSeries.length ? [{ name: BENCHMARKS[benchmark], data: benchmarkSeries, type: 'area' }] : []),
   ];
+
+  const portfolioReturn = portfolioSeries.at(-1)?.y;
+  const benchmarkReturn = benchmarkSeries.at(-1)?.y;
 
   const axisColor = mode === 'light' ? TEXT.light.secondary : TEXT.dark.secondary;
   const gridColor = mode === 'light' ? 'rgba(15,23,42,0.12)' : 'rgba(148,163,184,0.16)';
@@ -169,15 +178,22 @@ export default function PortfolioPerformanceChart({ snapshots }: Props) {
     },
     yaxis: {
       labels: {
-        formatter: (val) => fnCurrency(val),
+        formatter: (val) => `${+val.toFixed(1)}%`,
         style: { colors: axisColor, fontSize: '11px' },
       },
       opposite: true,
     },
     tooltip: {
       theme: mode,
-      x: { format: 'MMM dd, yyyy HH:mm' },
-      y: { formatter: (val) => fnCurrency(val ?? undefined) },
+      shared: true,
+      intersect: false,
+      x: { format: 'MMM dd, yyyy' },
+      y: {
+        formatter: (val, opts) =>
+          opts?.seriesIndex === 0 && inRange[opts.dataPointIndex]
+            ? `${fmtPct(val)} · ${fnCurrency(inRange[opts.dataPointIndex].value)}`
+            : fmtPct(val),
+      },
     },
     legend: { show: true, position: 'top', horizontalAlign: 'left', labels: { colors: axisColor } },
     grid: {
@@ -187,23 +203,43 @@ export default function PortfolioPerformanceChart({ snapshots }: Props) {
     },
   };
 
-  const isEmpty = filteredSnapshots.length < 2;
+  const isEmpty = inRange.length < 2;
 
   return (
     <Card variant="outlined">
-      <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', px: 2, pt: 1.5, pb: 1 }}>
-        <Typography
-          sx={{
-            fontWeight: 700,
-            fontSize: '0.72rem',
-            color: 'text.secondary',
-            letterSpacing: '0.06em',
-            textTransform: 'uppercase',
-          }}
-        >
-          Portfolio Performance
-        </Typography>
-        <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
+      <Stack
+        direction="row"
+        sx={{
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: 1,
+          px: 2,
+          pt: 1.5,
+          pb: 1,
+        }}
+      >
+        <Stack>
+          <Typography
+            sx={{
+              fontWeight: 700,
+              fontSize: '0.72rem',
+              color: 'text.secondary',
+              letterSpacing: '0.06em',
+              textTransform: 'uppercase',
+            }}
+          >
+            Portfolio Performance
+          </Typography>
+          {!isLoading && !isEmpty && portfolioReturn !== undefined && (
+            <Typography sx={{ fontSize: '0.75rem', color: 'text.secondary' }}>
+              {range === 'All' ? 'Since first snapshot' : range}: portfolio {fmtPct(portfolioReturn)}
+              {benchmarkReturn !== undefined && ` · ${BENCHMARKS[benchmark]} ${fmtPct(benchmarkReturn)}`}
+              {' · time-weighted, holdings only'}
+            </Typography>
+          )}
+        </Stack>
+        <Stack direction="row" sx={{ alignItems: 'center', flexWrap: 'wrap', gap: 1 }}>
           <Select
             size="small"
             value={benchmark}
@@ -218,7 +254,7 @@ export default function PortfolioPerformanceChart({ snapshots }: Props) {
           </Select>
           <ToggleButtonGroup size="small" value={range} exclusive onChange={(_, v) => v && setRange(v)}>
             {RANGE_OPTIONS.map((r) => (
-              <ToggleButton key={r} value={r} sx={{ px: 1.5, fontSize: '0.72rem' }}>
+              <ToggleButton key={r} value={r} sx={{ px: 1.5, minHeight: 32, fontSize: '0.72rem' }}>
                 {r}
               </ToggleButton>
             ))}
@@ -227,7 +263,7 @@ export default function PortfolioPerformanceChart({ snapshots }: Props) {
       </Stack>
 
       <CardContent sx={{ pt: 0 }}>
-        {isSpyLoading || snapshots.length === 0 ? (
+        {isLoading || isSpyLoading ? (
           <Skeleton variant="rectangular" height={320} sx={{ borderRadius: 1 }} />
         ) : isEmpty ? (
           <Stack sx={{ alignItems: 'center', justifyContent: 'center', height: 320 }}>

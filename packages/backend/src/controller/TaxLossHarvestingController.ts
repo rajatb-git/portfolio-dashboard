@@ -1,6 +1,6 @@
 import moment from 'moment';
 import { roundQty } from '../utils';
-import { enrichLots, loadPositionsWithLots } from './TaxLotController';
+import { enrichLots, loadPositionsWithLots, nonTaxableAccountIds } from './TaxLotController';
 
 export type HarvestCandidate = {
   symbol: string;
@@ -37,7 +37,7 @@ const WASH_SALE_DAYS = 30;
 const round2 = (n: number) => +n.toFixed(2);
 
 export const findTaxLossHarvesting = async (): Promise<TaxLossHarvestingResult> => {
-  const { positions } = await loadPositionsWithLots();
+  const [{ positions }, nonTaxable] = await Promise.all([loadPositionsWithLots(), nonTaxableAccountIds()]);
 
   // The wash-sale rule looks across every account, so the most recent purchase
   // of a symbol anywhere taints a loss harvested in any of them.
@@ -55,7 +55,8 @@ export const findTaxLossHarvesting = async (): Promise<TaxLossHarvestingResult> 
   const candidates: HarvestCandidate[] = [];
 
   for (const { holding, lots, currentPrice } of positions) {
-    if (currentPrice === null) continue;
+    // A loss inside a Roth/IRA/401(k) isn't deductible, so there is nothing to harvest.
+    if (currentPrice === null || nonTaxable.has(holding.accountId)) continue;
     const losing = enrichLots(lots, currentPrice, now).filter((l) => l.gain < 0);
     if (!losing.length) continue;
 

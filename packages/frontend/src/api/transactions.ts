@@ -1,9 +1,7 @@
-import axios from './axios';
-
 import { DB_HOST } from '@/config';
 import { ITransaction } from '@/models/TransactionsModel';
-
 import { catchCustomError } from './apiUtil';
+import axios from './axios';
 
 export default class TransactionsAPI {
   create = async (transaction: ITransaction): Promise<ITransaction> =>
@@ -39,13 +37,6 @@ export default class TransactionsAPI {
   deleteById = async (id: string): Promise<ITransaction> =>
     axios
       .delete(DB_HOST + '/transactions', { data: { id } })
-      .then((response) => response.data)
-      .catch(catchCustomError);
-
-  // file import
-  importTransactions = async (rows: Array<Partial<ITransaction>>): Promise<{ message: string; count: number }> =>
-    axios
-      .post(DB_HOST + '/transactions/import', rows)
       .then((response) => response.data)
       .catch(catchCustomError);
 }

@@ -46,8 +46,8 @@ type DataCache<T> = { [id: string]: T };
 // getAllRecords/findById/find/countAll are synchronous reads against that
 // cache (never a live query — initialize() already fetched fresh data for
 // this call), and every write updates the cache in addition to persisting so
-// long-lived singletons (LiveQuoteController, LiveRecommendationController)
-// keep seeing their own writes without re-querying.
+// long-lived singletons (e.g. IPOController's module-level model) keep
+// seeing their own writes without re-querying.
 export class MongoModel<T extends ISkewerModel> {
   private dataCache: DataCache<T> = {};
   private collectionPromise: Promise<Collection<any>> | null = null;

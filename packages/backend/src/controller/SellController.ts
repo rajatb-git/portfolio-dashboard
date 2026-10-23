@@ -1,6 +1,6 @@
 import moment from 'moment';
 import { AccountModel } from '../models/AccountModel';
-import { IHoldings, IHoldingsModel, HoldingsModel } from '../models/HoldingsModel';
+import { HoldingsModel, IHoldings, IHoldingsModel } from '../models/HoldingsModel';
 import { getTaxConfig } from '../models/TaxConfigModel';
 import { TransactionModel } from '../models/TransactionModel';
 import { normalizeTrade } from '../utils';
@@ -34,12 +34,26 @@ export const sell = async (trade: IHoldings, date?: string, options: SellOptions
 
   const [txModel, config] = await Promise.all([TransactionModel().initialize(), getTaxConfig()]);
   const lots = resolveLots(existingHolding, txModel.getAllRecords());
-  const { relieved, remaining } = selectLots(lots, soldHolding.qty, options.lotMethod ?? 'fifo', {
+
+  // Only shares already bought by the sale date can be sold on it; a back-dated
+  // sell used to relieve a later lot and book a negative holding period.
+  const saleDate = date ? moment(date) : moment();
+  const ownedThen = lots.filter((lot) => !moment(lot.date).isAfter(saleDate, 'day'));
+  const acquiredLater = lots.filter((lot) => moment(lot.date).isAfter(saleDate, 'day'));
+  const heldThen = totalsFromLots(ownedThen).qty;
+  if (soldHolding.qty > heldThen + 1e-9) {
+    throw new Error(
+      `On ${saleDate.format('MMM D, YYYY')} you held ${heldThen} ${soldHolding.symbol} in this account — you can't sell ${soldHolding.qty}`
+    );
+  }
+
+  const { relieved, remaining: remainingOwned } = selectLots(ownedThen, soldHolding.qty, options.lotMethod ?? 'fifo', {
     salePrice: soldHolding.averagePrice,
-    saleDate: date ?? moment(),
+    saleDate,
     config,
     lotIds: options.lotIds,
   });
+  const remaining = [...remainingOwned, ...acquiredLater];
 
   const result = remaining.length
     ? await holdingsModel.updateById(existingHolding.id, { lots: remaining, ...totalsFromLots(remaining) })

@@ -24,17 +24,18 @@ import {
 } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
 import * as React from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import apis from '@/api';
 import type { AiConfig } from '@/api/live';
 import type {
   AlertMonitorConfig,
   BackupFile,
+  DividendWatchConfig,
+  EarningsReminderConfig,
   IpoAnnouncementConfig,
   IpoReminderConfig,
   LockStatus,
-  DividendWatchConfig,
-  EarningsReminderConfig,
   MoveAlertConfig,
   NewsWatchConfig,
   NotificationConfig,
@@ -43,13 +44,14 @@ import type {
   TradingSummaryConfig,
   ValueCalcConfig,
 } from '@/api/settings';
+import AccountEditDialog from '@/components/AccountEditDialog';
 import { Iconify } from '@/components/Iconify';
 import { useThemeMode } from '@/components/ThemeRegistry/ThemeModeContext';
 import PageHeader from '@/components/ui/PageHeader';
-import { DB_HOST } from '@/config';
+import { API_HOST_KEY, DB_HOST, DEFAULT_DB_HOST } from '@/config';
 import { useAuth } from '@/contexts/AuthContext';
 import { useDemoMode } from '@/contexts/DemoModeContext';
-import type { IAccount } from '@/models/AccountsModel';
+import { ACCOUNT_TAX_TYPE_LABELS, type IAccount } from '@/models/AccountsModel';
 import LocalStorageUtil from '@/utils/localStorage';
 import {
   NOTIFICATIONS_ENABLED_KEY,
@@ -93,6 +95,7 @@ function SettingRow({
       sx={{
         alignItems: { xs: 'flex-start', sm: 'center' },
         justifyContent: 'space-between',
+        columnGap: 2,
         px: 2,
         py: 1.5,
         borderBottom: '1px solid',
@@ -102,10 +105,10 @@ function SettingRow({
       <Box>
         <Typography sx={{ fontSize: '0.85rem', fontWeight: 500, color: 'text.primary' }}>{label}</Typography>
         {description && (
-          <Typography sx={{ fontSize: '0.75rem', color: 'text.disabled', mt: 0.25 }}>{description}</Typography>
+          <Typography sx={{ fontSize: '0.75rem', color: 'text.secondary', mt: 0.25 }}>{description}</Typography>
         )}
       </Box>
-      <Box sx={{ mt: { xs: 1, sm: 0 }, width: { xs: '100%', sm: 'auto' } }}>{children}</Box>
+      <Box sx={{ mt: { xs: 1, sm: 0 }, width: { xs: '100%', sm: 'auto' }, flexShrink: 0 }}>{children}</Box>
     </Stack>
   );
 }
@@ -147,11 +150,20 @@ export default function Settings() {
   const [resettingDemoData, setResettingDemoData] = React.useState(false);
   const theme = useTheme();
   const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
-  const [category, setCategory] = React.useState<CategoryId>('general');
-  const [savedApiHost, setSavedApiHost] = React.useState(LocalStorageUtil.getItem<string>('api_host') ?? DB_HOST);
-  const [apiHost, setApiHost] = React.useState(savedApiHost);
-  const [apiHostSaved, setApiHostSaved] = React.useState(false);
-  const isApiHostDirty = apiHost.trim() !== savedApiHost;
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tabParam = searchParams.get('tab');
+  const category: CategoryId = CATEGORIES.some((c) => c.id === tabParam) ? (tabParam as CategoryId) : 'general';
+  const setCategory = (id: CategoryId) => setSearchParams({ tab: id }, { replace: true });
+  const apiHostOverridden = LocalStorageUtil.getItem<string>(API_HOST_KEY) !== null;
+  const [apiHost, setApiHost] = React.useState(DB_HOST);
+  const [checkingApiHost, setCheckingApiHost] = React.useState(false);
+  const normalizedApiHost = apiHost.trim().replace(/\/+$/, '');
+  const isApiHostDirty = normalizedApiHost !== DB_HOST;
+  const apiHostError = !normalizedApiHost
+    ? 'Enter a URL'
+    : /^https?:\/\/[^\s/]+(\/\S*)?$/i.test(normalizedApiHost) || /^\/\S*$/.test(normalizedApiHost)
+      ? ''
+      : 'Use a full http(s):// address or a path like /api';
   const [aiConfig, setAiConfig] = React.useState<AiConfig | null>(null);
   const [draftAiConfig, setDraftAiConfig] = React.useState<AiConfig | null>(null);
   const [saving, setSaving] = React.useState(false);
@@ -358,6 +370,7 @@ export default function Settings() {
   const [newAccountName, setNewAccountName] = React.useState('');
   const [addingAccount, setAddingAccount] = React.useState(false);
   const [deleteConfirm, setDeleteConfirm] = React.useState<IAccount | null>(null);
+  const [editAccount, setEditAccount] = React.useState<IAccount | null>(null);
 
   const isAiConfigDirty = !!aiConfig && !!draftAiConfig && JSON.stringify(aiConfig) !== JSON.stringify(draftAiConfig);
 
@@ -544,14 +557,27 @@ export default function Settings() {
     setLockConfirmCode('');
   };
 
-  const handleApiHostSave = () => {
-    if (!apiHost.trim() || !isApiHostDirty) return;
-    LocalStorageUtil.setItem('api_host', apiHost.trim());
-    setSavedApiHost(apiHost.trim());
-    setApiHost(apiHost.trim());
-    setApiHostSaved(true);
-    setTimeout(() => setApiHostSaved(false), 2000);
-    toast.success('Backend URL saved — reload the page to apply');
+  // The API host is read once at startup, so a change only applies after a reload.
+  const handleApiHostSave = async () => {
+    if (!isApiHostDirty || apiHostError) return;
+    setCheckingApiHost(true);
+    try {
+      await apis.settings.checkBackend(normalizedApiHost);
+    } catch (err: any) {
+      toast.error(`No Portfolio Dashboard backend answered at ${normalizedApiHost} (${err.message || 'unreachable'})`);
+      setCheckingApiHost(false);
+      return;
+    }
+    if (normalizedApiHost === DEFAULT_DB_HOST) LocalStorageUtil.removeItem(API_HOST_KEY);
+    else LocalStorageUtil.setItem(API_HOST_KEY, normalizedApiHost);
+    toast.success('Backend URL saved — reloading');
+    window.location.reload();
+  };
+
+  const handleApiHostUseDefault = () => {
+    LocalStorageUtil.removeItem(API_HOST_KEY);
+    toast.success('Back to the default backend URL — reloading');
+    window.location.reload();
   };
 
   const handleToggleDemoMode = async (checked: boolean) => {
@@ -588,7 +614,7 @@ export default function Settings() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `portfolio-backup-${new Date().toISOString().slice(0, 10)}.zip`;
+      a.download = `portfolio-backup-${demoModeEnabled ? 'demo-' : ''}${new Date().toISOString().slice(0, 10)}.zip`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -1088,20 +1114,21 @@ export default function Settings() {
                   label="Price Alert Threshold"
                   description="Show 'Near Target' badge when price is within this % of target"
                 >
-                  <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
-                    {isThresholdDirty && (
-                      <Typography sx={{ fontSize: '0.72rem', color: 'warning.main' }}>Unsaved changes</Typography>
-                    )}
+                  <Stack direction="row" spacing={1} sx={{ alignItems: 'flex-start' }}>
                     <TextField
                       size="small"
                       type="number"
                       value={draftThreshold}
                       onChange={(e) => setDraftThreshold(e.target.value)}
                       error={!isThresholdValid}
-                      slotProps={{ htmlInput: { min: 1, max: 50 } }}
+                      helperText={!isThresholdValid ? '1–50' : isThresholdDirty ? 'Unsaved' : undefined}
+                      slotProps={{
+                        htmlInput: { min: 1, max: 50 },
+                        formHelperText: { sx: { mx: 0, color: isThresholdValid ? 'warning.main' : undefined } },
+                      }}
                       sx={{ width: 80, '& input': { fontSize: '0.82rem' } }}
                     />
-                    <Typography sx={{ fontSize: '0.82rem', color: 'text.secondary' }}>%</Typography>
+                    <Typography sx={{ fontSize: '0.82rem', color: 'text.secondary', pt: 1 }}>%</Typography>
                     <Button
                       size="small"
                       onClick={() => setDraftThreshold(savedThresholdVal)}
@@ -1129,52 +1156,52 @@ export default function Settings() {
                     <Switch checked={notificationsOn} onChange={(_, checked) => handleToggleNotifications(checked)} />
                   </SettingRow>
                 )}
-                <SettingRow label="Default Rows Per Page" description="Number of holdings shown per page">
-                  <Typography
-                    sx={{
-                      fontSize: '0.82rem',
-                      color: 'text.secondary',
-                      fontWeight: 600,
-                    }}
-                  >
-                    50
-                  </Typography>
-                </SettingRow>
               </SettingsSection>
 
               <SettingsSection title="API">
                 <SettingRow
                   label="Backend URL"
-                  description="Override the backend API host. Requires page reload to take effect."
+                  description={`Where this browser sends API requests. Saving checks the address answers, then reloads the page. Default: ${DEFAULT_DB_HOST}`}
                 >
-                  <Stack direction="row" spacing={1} useFlexGap sx={{ alignItems: 'center', flexWrap: 'wrap' }}>
-                    {apiHostSaved && <Typography sx={{ fontSize: '0.72rem', color: 'success.main' }}>Saved</Typography>}
-                    {isApiHostDirty && (
-                      <Typography sx={{ fontSize: '0.72rem', color: 'warning.main' }}>Unsaved changes</Typography>
-                    )}
+                  <Stack spacing={1} sx={{ alignItems: { xs: 'stretch', sm: 'flex-end' } }}>
                     <TextField
                       size="small"
                       value={apiHost}
                       onChange={(e) => setApiHost(e.target.value)}
-                      sx={{ width: { xs: '100%', sm: 240 }, '& input': { fontSize: '0.78rem' } }}
+                      error={!!apiHostError}
+                      helperText={apiHostError || (isApiHostDirty ? 'Unsaved changes' : undefined)}
+                      disabled={checkingApiHost}
+                      sx={{ width: { xs: '100%', sm: 280 }, '& input': { fontSize: '0.78rem' } }}
                     />
-                    <Button
-                      size="small"
-                      onClick={() => setApiHost(savedApiHost)}
-                      disabled={!isApiHostDirty}
-                      sx={{ fontSize: '0.78rem', textTransform: 'none' }}
-                    >
-                      Reset
-                    </Button>
-                    <Button
-                      size="small"
-                      variant="contained"
-                      onClick={handleApiHostSave}
-                      disabled={!isApiHostDirty || !apiHost.trim()}
-                      sx={{ fontSize: '0.78rem', textTransform: 'none' }}
-                    >
-                      Save
-                    </Button>
+                    <Stack direction="row" spacing={1} sx={{ justifyContent: 'flex-end' }}>
+                      {apiHostOverridden && (
+                        <Button
+                          size="small"
+                          onClick={handleApiHostUseDefault}
+                          disabled={checkingApiHost}
+                          sx={{ fontSize: '0.78rem', textTransform: 'none' }}
+                        >
+                          Use default
+                        </Button>
+                      )}
+                      <Button
+                        size="small"
+                        onClick={() => setApiHost(DB_HOST)}
+                        disabled={!isApiHostDirty || checkingApiHost}
+                        sx={{ fontSize: '0.78rem', textTransform: 'none' }}
+                      >
+                        Reset
+                      </Button>
+                      <Button
+                        size="small"
+                        variant="contained"
+                        onClick={handleApiHostSave}
+                        disabled={!isApiHostDirty || !!apiHostError || checkingApiHost}
+                        sx={{ fontSize: '0.78rem', textTransform: 'none' }}
+                      >
+                        {checkingApiHost ? 'Checking…' : 'Save'}
+                      </Button>
+                    </Stack>
                   </Stack>
                 </SettingRow>
               </SettingsSection>
@@ -1236,9 +1263,21 @@ export default function Settings() {
                           >
                             {account.name}
                           </Typography>
-                          <Typography sx={{ fontSize: '0.68rem', color: 'text.disabled' }}>{account.id}</Typography>
+                          <Typography sx={{ fontSize: '0.68rem', color: 'text.disabled' }}>
+                            {ACCOUNT_TAX_TYPE_LABELS[account.taxType ?? 'taxable']} · {account.id}
+                          </Typography>
                         </Box>
                       </Stack>
+                      <Tooltip title="Edit account">
+                        <IconButton
+                          size="small"
+                          aria-label={`Edit ${account.name}`}
+                          onClick={() => setEditAccount(account)}
+                          sx={{ color: 'text.disabled', '&:hover': { color: 'primary.main' } }}
+                        >
+                          <Iconify icon="mdi:pencil-outline" width={18} />
+                        </IconButton>
+                      </Tooltip>
                       <Tooltip title="Delete account">
                         <IconButton
                           size="small"
@@ -2506,7 +2545,10 @@ export default function Settings() {
           {category === 'ai' && (
             <>
               <SettingsSection title="AI Agent">
-                <SettingRow label="Enable AI Insights" description="Show AI-powered analysis on the Research page">
+                <SettingRow
+                  label="Enable AI Insights"
+                  description="Show AI-written analysis of public market data on Research and IPO detail pages"
+                >
                   <Switch
                     checked={draftAiConfig?.enabled ?? false}
                     onChange={(_, checked) => updateDraft({ enabled: checked })}
@@ -2767,8 +2809,8 @@ export default function Settings() {
         <DialogTitle>Delete Account</DialogTitle>
         <DialogContent>
           <DialogContentText>
-            Are you sure you want to delete <strong>{deleteConfirm?.name}</strong>? This will not remove any holdings
-            associated with this account.
+            Delete <strong>{deleteConfirm?.name}</strong>? Its holdings and transaction history are deleted with it, and
+            this can't be undone. Export a backup first if you might need them.
           </DialogContentText>
         </DialogContent>
         <DialogActions>
@@ -2801,6 +2843,11 @@ export default function Settings() {
           </Button>
         </DialogActions>
       </Dialog>
+      <AccountEditDialog
+        account={editAccount}
+        onClose={() => setEditAccount(null)}
+        onSaved={(saved) => setAccounts((prev) => prev.map((a) => (a.id === saved.id ? { ...a, ...saved } : a)))}
+      />
     </Box>
   );
 }

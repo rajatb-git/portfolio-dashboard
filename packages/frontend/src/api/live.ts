@@ -1,11 +1,14 @@
-import axios from './axios';
-
 import { DB_HOST } from '@/config';
 import { IIPO } from '@/models/IPOModel';
 import { IMarketNews } from '@/models/MarketNews';
 import { IPriceStore } from '@/models/PriceStoreModel';
 import { IRecommendation } from '@/models/RecommendationModel';
-import { catchCustomError } from './apiUtil';
+import { catchCustomError, getUntilReady } from './apiUtil';
+import axios from './axios';
+
+export type WatchIpoResult = {
+  reminder: { enabled: boolean; daysBefore: number; channelEnabled: boolean };
+};
 
 export type Range = '1d' | '5d' | '1M' | '3M' | '6M' | '1y' | '2y' | '3y';
 
@@ -73,14 +76,6 @@ export type MarketStatus = {
   generatedAt: string;
 };
 
-export type DocumentParseResult = {
-  target: 'transactions' | 'holdings';
-  rows: Array<Record<string, any>>;
-  skipped: string[];
-  provider: string;
-  model: string;
-};
-
 export type SymbolSearchResult = {
   symbol: string;
   description: string;
@@ -100,23 +95,17 @@ export type AiConfig = {
 
 export default class LiveAPI {
   getLivePrice = async (symbol: string, refresh = false): Promise<IPriceStore> =>
-    axios(DB_HOST + `/live/quote/${symbol}${refresh ? '?refresh=1' : ''}`)
-      .then((response) => {
-        return response.data;
-      })
-      .catch(catchCustomError);
+    getUntilReady<IPriceStore>(DB_HOST + `/live/quote/${symbol}${refresh ? '?refresh=1' : ''}`).catch(catchCustomError);
 
   getLiveRecommendation = async (symbol: string, refresh = false): Promise<IRecommendation> =>
-    axios(DB_HOST + `/live/recommendation/${symbol}${refresh ? '?refresh=1' : ''}`).then((response) => {
-      return response.data;
-    });
+    getUntilReady<IRecommendation>(DB_HOST + `/live/recommendation/${symbol}${refresh ? '?refresh=1' : ''}`).catch(
+      catchCustomError
+    );
 
   getLiveNews = async (symbol: string, refresh = false): Promise<Array<IMarketNews>> =>
-    axios(DB_HOST + `/live/news/${symbol}${refresh ? '?refresh=1' : ''}`)
-      .then((response) => {
-        return response.data;
-      })
-      .catch(catchCustomError);
+    getUntilReady<Array<IMarketNews>>(DB_HOST + `/live/news/${symbol}${refresh ? '?refresh=1' : ''}`).catch(
+      catchCustomError
+    );
 
   getPriceHistory = async (symbol: string, timePeriod: Range): Promise<Array<[number, number]>> =>
     axios(DB_HOST + `/live/history/${symbol}?range=${timePeriod}`)
@@ -132,7 +121,7 @@ export default class LiveAPI {
       })
       .catch(catchCustomError);
 
-  watchIpo = async (ipo: IIPO): Promise<IIPO> =>
+  watchIpo = async (ipo: IIPO): Promise<WatchIpoResult> =>
     axios
       .put(DB_HOST + `/live/ipos/${encodeURIComponent(ipo.symbol)}/watch`, { name: ipo.name, date: ipo.date })
       .then((response) => response.data)
@@ -145,21 +134,15 @@ export default class LiveAPI {
       .catch(catchCustomError);
 
   getCompanyProfile = async (symbol: string, refresh = false): Promise<any> =>
-    axios(DB_HOST + `/live/company-profile/${symbol}${refresh ? '?refresh=1' : ''}`)
-      .then((response) => {
-        return response.data;
-      })
-      .catch(catchCustomError);
+    getUntilReady<any>(DB_HOST + `/live/company-profile/${symbol}${refresh ? '?refresh=1' : ''}`).catch(
+      catchCustomError
+    );
 
   getStockMetrics = async (symbol: string, refresh = false): Promise<any> =>
-    axios(DB_HOST + `/live/metrics/${symbol}${refresh ? '?refresh=1' : ''}`)
-      .then((response) => response.data)
-      .catch(catchCustomError);
+    getUntilReady<any>(DB_HOST + `/live/metrics/${symbol}${refresh ? '?refresh=1' : ''}`).catch(catchCustomError);
 
   getStockPeers = async (symbol: string, refresh = false): Promise<string[]> =>
-    axios(DB_HOST + `/live/peers/${symbol}${refresh ? '?refresh=1' : ''}`)
-      .then((response) => response.data)
-      .catch(catchCustomError);
+    getUntilReady<string[]>(DB_HOST + `/live/peers/${symbol}${refresh ? '?refresh=1' : ''}`).catch(catchCustomError);
 
   searchSymbols = async (query: string): Promise<SymbolSearchResult[]> =>
     axios(DB_HOST + `/live/search?q=${encodeURIComponent(query)}`)
@@ -167,19 +150,15 @@ export default class LiveAPI {
       .catch(catchCustomError);
 
   getEarnings = async (symbol: string, refresh = false): Promise<any> =>
-    axios(DB_HOST + `/live/earnings/${symbol}${refresh ? '?refresh=1' : ''}`)
-      .then((response) => response.data)
-      .catch(catchCustomError);
+    getUntilReady<any>(DB_HOST + `/live/earnings/${symbol}${refresh ? '?refresh=1' : ''}`).catch(catchCustomError);
 
   getEarningsHistory = async (symbol: string, refresh = false): Promise<any[]> =>
-    axios(DB_HOST + `/live/earnings-history/${symbol}${refresh ? '?refresh=1' : ''}`)
-      .then((response) => response.data)
-      .catch(catchCustomError);
+    getUntilReady<any[]>(DB_HOST + `/live/earnings-history/${symbol}${refresh ? '?refresh=1' : ''}`).catch(
+      catchCustomError
+    );
 
   getInsiderTransactions = async (symbol: string, refresh = false): Promise<any[]> =>
-    axios(DB_HOST + `/live/insider/${symbol}${refresh ? '?refresh=1' : ''}`)
-      .then((response) => response.data)
-      .catch(catchCustomError);
+    getUntilReady<any[]>(DB_HOST + `/live/insider/${symbol}${refresh ? '?refresh=1' : ''}`).catch(catchCustomError);
 
   getAgentInsights = async (symbol: string): Promise<AgentInsight> =>
     axios(DB_HOST + `/live/agent-insights/${symbol}`)
@@ -220,12 +199,6 @@ export default class LiveAPI {
   getMarketStatus = async (refresh = false): Promise<MarketStatus> =>
     axios(DB_HOST + `/live/market-status${refresh ? '?refresh=1' : ''}`)
       .then((r) => r.data)
-      .catch(catchCustomError);
-
-  parseImportDocument = async (target: 'transactions' | 'holdings', text: string): Promise<DocumentParseResult> =>
-    axios
-      .post(DB_HOST + '/ai-import/parse', { target, text })
-      .then((response) => response.data)
       .catch(catchCustomError);
 
   getAiConfig = async (): Promise<AiConfig> =>

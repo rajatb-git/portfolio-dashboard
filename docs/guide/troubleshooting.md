@@ -31,12 +31,17 @@ blank, or rows disappear.
 
 - **Check the Finnhub key.** `FINN_HUB_API_KEY` must be set and valid.
   `error.log` shows the rejection from Finnhub verbatim.
+- **Check the market data health.** `GET /health/market-data` shows how much
+  of the Finnhub budget the last minute used per lane, whether calls are paused
+  after a `429`, how old the oldest held quote is, and which symbols are failing
+  and why.
 - **Check the rate limit.** The free tier allows a burst per second *and* a
-  sustained per-minute cap. With many holdings, a full dashboard refresh can hit
-  it. The defaults (`FINN_HUB_BURST_LIMIT=30`, `FINN_HUB_RATE_LIMIT=60`) match
-  the free tier — raise them only if you are on a paid plan.
-- Holdings whose live fetch fails are **skipped** rather than failing the whole
-  response, which is why a partial dashboard usually means partial rate-limiting.
+  sustained per-minute cap. The defaults (`FINN_HUB_BURST_LIMIT=30`,
+  `FINN_HUB_RATE_LIMIT=60`) match the free tier — raise them only if you are on
+  a paid plan. Another app or backend using the same key shares that budget.
+- A holding with no stored price yet shows a skeleton while its first quote is
+  fetched (usually seconds); one Finnhub and NASDAQ both can't price stays at
+  cost basis with a "prices unavailable" notice.
 - Crypto symbols must be entered the way Finnhub expects them; a symbol it does
   not recognise returns no quote.
 
@@ -47,7 +52,7 @@ requests to the wrong host.
 
 The frontend resolves the API URL as: `localStorage.api_host` →
 `VITE_DB_HOST` → `http://localhost:3001`. Fix it under **Settings →
-Application → Backend URL** — that value wins over the build-time one.
+General → Backend URL** — that value wins over the build-time one.
 
 In Docker the frontend is built with `VITE_DB_HOST=/api` and nginx proxies
 `/api/` to the backend service. If you changed the service name or port in

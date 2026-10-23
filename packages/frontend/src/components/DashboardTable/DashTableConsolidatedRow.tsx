@@ -8,9 +8,16 @@ type Props = {
   onRowClick: (symbol: string) => void;
   getAlertState?: (symbol: string) => AlertState | undefined;
   onSetAlert?: (symbol: string, type: 'stock' | 'crypto', currentPrice?: number) => void;
+  getAccountName: (accountId: string) => string;
 };
 
-export default function DashTableConsolidatedRow({ row, onRowClick, getAlertState, onSetAlert }: Props) {
+export default function DashTableConsolidatedRow({
+  row,
+  onRowClick,
+  getAlertState,
+  onSetAlert,
+  getAccountName,
+}: Props) {
   const [expanded, setExpanded] = useState(false);
 
   return (
@@ -29,6 +36,7 @@ export default function DashTableConsolidatedRow({ row, onRowClick, getAlertStat
             key={`${sub.accountId}-${sub.symbol}`}
             row={sub}
             onRowClick={onRowClick}
+            accountLabel={getAccountName(sub.accountId)}
             subRow
             alertState={getAlertState?.(sub.symbol)}
           />

@@ -1,5 +1,4 @@
-import moment from 'moment';
-import { IPortfolioSnapshotModel, PortfolioSnapshotDBModel } from '../models/PortfolioSnapshotModel';
+import { getDailyPerformance } from './PortfolioPerformanceController';
 
 export type MonthlyReturn = {
   year: number;
@@ -16,11 +15,10 @@ export type MonthlyReturnsResult = {
   lastYear: number | null;
 };
 
-// Collapse intraday snapshots to the last recorded value of each calendar month,
-// then chain month-end values into month-over-month percentage returns.
+// Chain each month's daily time-weighted returns, so a month with buys or
+// sells reports what the holdings earned, not how much money moved.
 export const calculateMonthlyReturns = async (): Promise<MonthlyReturnsResult> => {
-  const snapshotModel = await PortfolioSnapshotDBModel().initialize();
-  const all = snapshotModel.getAllRecords();
+  const points = await getDailyPerformance();
 
   const empty: MonthlyReturnsResult = {
     months: [],
@@ -30,28 +28,26 @@ export const calculateMonthlyReturns = async (): Promise<MonthlyReturnsResult> =
     firstYear: null,
     lastYear: null,
   };
-  if (all.length < 2) return empty;
+  if (points.length < 2) return empty;
 
-  // Last snapshot of each calendar month (keyed YYYY-MM).
-  const monthEnd = new Map<string, IPortfolioSnapshotModel>();
-  for (const s of all) {
-    const key = s.date.slice(0, 7);
-    const existing = monthEnd.get(key);
-    if (!existing || (s.timestamp ?? s.date) > (existing.timestamp ?? existing.date)) {
-      monthEnd.set(key, s);
+  // The first month starts from its first close, so it is a partial month.
+  const growthByMonth = new Map<string, number | null>();
+  for (const p of points) {
+    const key = p.date.slice(0, 7);
+    const growth = growthByMonth.get(key) ?? null;
+    if (p.dailyReturn === null) {
+      growthByMonth.set(key, growth);
+      continue;
     }
+    growthByMonth.set(key, (growth ?? 1) * (1 + p.dailyReturn));
   }
 
-  const sortedKeys = [...monthEnd.keys()].sort();
-  if (sortedKeys.length < 2) return empty;
-
-  const months: MonthlyReturn[] = [];
-  for (let i = 1; i < sortedKeys.length; i++) {
-    const prev = monthEnd.get(sortedKeys[i - 1])!.totalValue;
-    const curr = monthEnd.get(sortedKeys[i])!.totalValue;
-    const [y, m] = sortedKeys[i].split('-').map(Number);
-    months.push({ year: y, month: m, return: prev > 0 ? +(((curr - prev) / prev) * 100).toFixed(2) : null });
-  }
+  const sortedKeys = [...growthByMonth.keys()].sort();
+  const months: MonthlyReturn[] = sortedKeys.map((key) => {
+    const [y, m] = key.split('-').map(Number);
+    const growth = growthByMonth.get(key) ?? null;
+    return { year: y, month: m, return: growth === null ? null : +((growth - 1) * 100).toFixed(2) };
+  });
 
   // Yearly return chains every month within the year (compounded).
   const byYear = new Map<number, number>();

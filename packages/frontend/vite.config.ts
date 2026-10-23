@@ -1,15 +1,20 @@
-import fs from 'fs';
-import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
-import path from 'path';
-import { VitePWA } from 'vite-plugin-pwa';
+import fs from 'fs';
 import { createRequire } from 'module';
+import path from 'path';
+import { defineConfig } from 'vite';
+import { VitePWA } from 'vite-plugin-pwa';
 
 const require = createRequire(import.meta.url);
 const { version } = require('./package.json');
-// Docker builds this package with context ./packages/frontend (see docker-compose.yml), so the
-// root CHANGELOG.md is out of reach — this is a synced copy, not an independent changelog.
-const changelog = fs.readFileSync(path.resolve(__dirname, 'CHANGELOG.md'), 'utf8');
+// The root CHANGELOG.md is the source. Docker builds this package with context
+// ./packages/frontend (see docker-compose.yml), where the root is out of reach,
+// so it falls back to the synced copy next to this file.
+const rootChangelog = path.resolve(__dirname, '../../CHANGELOG.md');
+const changelog = fs.readFileSync(
+  fs.existsSync(rootChangelog) ? rootChangelog : path.resolve(__dirname, 'CHANGELOG.md'),
+  'utf8'
+);
 
 // https://vite.dev/config/
 export default defineConfig({

@@ -1,10 +1,8 @@
 import { randomUUID } from 'node:crypto';
-import moment from 'moment';
 import Router from '@koa/router';
+import moment from 'moment';
 import { buy } from '../controller/BuyController';
-import { adjustCash } from '../controller/CashController';
 import { sell } from '../controller/SellController';
-import { LiveQuoteController } from '../controller/LiveQuoteController';
 import {
   enrichLots,
   LOT_METHODS,
@@ -14,10 +12,11 @@ import {
   totalsFromLots,
 } from '../controller/TaxLotController';
 import { simulateTrade } from '../controller/TradeSimulatorController';
+import { getQuote } from '../marketData/quotes';
 import { HoldingsModel, ITaxLot } from '../models/HoldingsModel';
 import { getTaxConfig } from '../models/TaxConfigModel';
 import { TransactionModel } from '../models/TransactionModel';
-import { normalizeTradeDate, roundQty } from '../utils';
+import { calendarDayToIso, normalizeTradeDate, roundQty } from '../utils';
 import { errorBody } from '../utils/error';
 import { logger } from '../utils/winston';
 
@@ -52,7 +51,7 @@ const parseLots = (raw: unknown): ITaxLot[] => {
       id: typeof lot.id === 'string' && lot.id ? lot.id : randomUUID(),
       qty: roundQty(qty),
       price,
-      date: date.toISOString(),
+      date: /^\d{4}-\d{2}-\d{2}$/.test(String(lot.date)) ? calendarDayToIso(String(lot.date)) : date.toISOString(),
       ...(lot.estimated === true && { estimated: true }),
     };
   });
@@ -106,9 +105,8 @@ export const HoldingsRouter = () => {
       }
 
       const isCrypto = matching[0].type === 'crypto';
-      const quoteController = new LiveQuoteController();
       const [livePrice, txModel, taxConfig] = await Promise.all([
-        quoteController.getLiveQuote(upperSymbol, isCrypto).catch((err: any) => {
+        getQuote(upperSymbol, isCrypto).catch((err: any) => {
           logger.log({
             level: 'error',
             label: `holdings by symbol "${upperSymbol}"`,
@@ -318,91 +316,6 @@ export const HoldingsRouter = () => {
     } else {
       ctx.status = 406;
       ctx.body = errorBody('Failed to sell', 'Input data missing');
-    }
-  });
-
-  // file import
-  router.post('/holdings/import', async (ctx) => {
-    try {
-      const holdingsModel = await HoldingsModel().initialize();
-      const incomingArr = ctx.request.body as Array<any>;
-
-      const isCashRow = (x: any) =>
-        String(x['symbol'] ?? '')
-          .trim()
-          .toUpperCase() === 'CASH';
-      const parseMoney = (value: any) => parseFloat(String(value ?? '').replace(/\$/g, ''));
-
-      // Each row is one lot; rows for the same account and symbol (and any
-      // position already held there) merge into a single holding.
-      type ImportGroup = { accountId: string; symbol: string; name: string; type: any; lots: ITaxLot[] };
-      const groups = new Map<string, ImportGroup>();
-      incomingArr
-        .filter((x) => !isCashRow(x))
-        .forEach((x, i) => {
-          const symbol = String(x['symbol'] ?? '')
-            .trim()
-            .toUpperCase();
-          const qty = parseFloat(x['qty']);
-          if (!symbol) throw new Error(`Row ${i + 1}: symbol is required`);
-          if (!Number.isFinite(qty) || qty <= 0) throw new Error(`Row ${i + 1}: qty must be a positive number`);
-          const price = parseMoney(x['averagePrice']);
-          const purchased = x['purchaseDate'] ? moment(String(x['purchaseDate'])) : null;
-          const hasDate = !!purchased?.isValid() && !purchased.isAfter(moment(), 'day');
-
-          const key = `${x.accountId}|${symbol}`;
-          const group: ImportGroup = groups.get(key) ?? {
-            accountId: x.accountId,
-            symbol,
-            name: x['name'] || symbol,
-            type: x.type,
-            lots: [],
-          };
-          group.lots.push({
-            id: randomUUID(),
-            qty: roundQty(qty),
-            price: Number.isFinite(price) ? price : 0,
-            date: hasDate ? (purchased as moment.Moment).toISOString() : moment().toISOString(),
-            ...(!hasDate && { estimated: true }),
-          });
-          groups.set(key, group);
-        });
-
-      if (groups.size > 0) {
-        const transactions = (await TransactionModel().initialize()).getAllRecords();
-        for (const group of groups.values()) {
-          const existing = holdingsModel.find({ symbol: group.symbol, accountId: group.accountId })[0];
-          if (existing) {
-            const lots = [...resolveLots(existing, transactions), ...group.lots];
-            await holdingsModel.updateById(existing.id, { lots, ...totalsFromLots(lots) });
-          } else {
-            await holdingsModel.insertOne({
-              accountId: group.accountId,
-              name: group.name,
-              symbol: group.symbol,
-              type: group.type,
-              lots: group.lots,
-              ...totalsFromLots(group.lots),
-            });
-          }
-        }
-      }
-
-      // A row with symbol CASH sets an opening cash balance rather than a position.
-      for (const row of incomingArr.filter(isCashRow)) {
-        const qty = parseFloat(row['qty']);
-        const price = parseMoney(row['averagePrice']);
-        const amount = (Number.isFinite(qty) ? qty : 0) * (Number.isFinite(price) ? price : 1);
-        if (amount !== 0) {
-          await adjustCash(row.accountId, amount);
-        }
-      }
-
-      ctx.status = 200;
-    } catch (error: any) {
-      logger.log({ level: 'error', message: error.message, label: 'Import holdings' });
-      ctx.status = 500;
-      ctx.body = errorBody('Failed to import', error.message);
     }
   });
 

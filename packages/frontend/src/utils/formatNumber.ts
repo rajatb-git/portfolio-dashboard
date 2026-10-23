@@ -1,6 +1,7 @@
 import numeral from 'numeral';
 
-export const fnCurrency = (value = 0) => numeral(value).format('$0,0.00');
+// Rounds first so a tiny negative (a float residue) shows as $0.00, not -$0.00.
+export const fnCurrency = (value = 0) => numeral(Math.round(value * 100) / 100 || 0).format('$0,0.00');
 
 export const fnShortenCurrency = (value = 0) => numeral(value).format('$0,0.00a');
 

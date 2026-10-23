@@ -1,9 +1,11 @@
 import Router from '@koa/router';
 import { recordCashMovement } from '../controller/CashController';
-import { AccountModel } from '../models/AccountModel';
-import { DuplicateIdError, RecordNotFoundError } from '../utils/mongoModel';
+import { ACCOUNT_TAX_TYPES, AccountModel } from '../models/AccountModel';
+import { HoldingsModel } from '../models/HoldingsModel';
+import { TransactionModel } from '../models/TransactionModel';
 import { normalizeTradeDate } from '../utils';
 import { errorBody } from '../utils/error';
+import { DuplicateIdError, RecordNotFoundError } from '../utils/mongoModel';
 import { logger } from '../utils/winston';
 
 const MAX_ACCOUNT_NAME = 50;
@@ -89,6 +91,19 @@ export const AccountsRouter = () => {
         ctx.body = errorBody('Account ID is required', 'Account ID is required');
         return;
       }
+      if (body.name !== undefined) {
+        body.name = String(body.name).trim();
+        if (!body.name || body.name.length > MAX_ACCOUNT_NAME) {
+          ctx.status = 400;
+          ctx.body = errorBody('Invalid account name', `Name must be 1-${MAX_ACCOUNT_NAME} characters`);
+          return;
+        }
+      }
+      if (body.taxType !== undefined && !ACCOUNT_TAX_TYPES.includes(body.taxType)) {
+        ctx.status = 400;
+        ctx.body = errorBody('Invalid tax type', `taxType must be one of ${ACCOUNT_TAX_TYPES.join(', ')}`);
+        return;
+      }
       ctx.body = await accountsModel.insertOrUpdate(body, body.id);
       ctx.status = 200;
     } catch (error: any) {
@@ -132,8 +147,20 @@ export const AccountsRouter = () => {
       const accountsModel = await AccountModel().initialize();
       if (ctx.params.id) {
         await accountsModel.deleteById(ctx.params.id);
+        // Its holdings and history go with it: left behind they still counted in
+        // every total, under an account nothing could trade into or remove.
+        const [holdingsModel, txModel] = await Promise.all([
+          HoldingsModel().initialize(),
+          TransactionModel().initialize(),
+        ]);
+        const holdings = holdingsModel.find({ accountId: ctx.params.id });
+        const transactions = txModel.find({ accountId: ctx.params.id });
+        for (const h of holdings) await holdingsModel.deleteById(h.id);
+        for (const t of transactions) await txModel.deleteById(t.id);
         ctx.status = 200;
-        ctx.body = { message: 'Account record deleted successfully' };
+        ctx.body = {
+          message: `Account deleted with ${holdings.length} holding(s) and ${transactions.length} transaction(s)`,
+        };
         return;
       }
       ctx.status = 400;
