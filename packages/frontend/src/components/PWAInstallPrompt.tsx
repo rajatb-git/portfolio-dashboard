@@ -1,15 +1,17 @@
-import * as React from 'react';
-import Snackbar from '@mui/material/Snackbar';
+import { Icon } from '@iconify/react';
+import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import IconButton from '@mui/material/IconButton';
-import Box from '@mui/material/Box';
+import Snackbar from '@mui/material/Snackbar';
 import Typography from '@mui/material/Typography';
-import { Icon } from '@iconify/react';
+import * as React from 'react';
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
 }
+
+const DISMISSED_KEY = 'pwa_install_dismissed';
 
 export default function PWAInstallPrompt() {
   const [deferredPrompt, setDeferredPrompt] = React.useState<BeforeInstallPromptEvent | null>(null);
@@ -19,7 +21,8 @@ export default function PWAInstallPrompt() {
     const handler = (e: Event) => {
       e.preventDefault();
       setDeferredPrompt(e as BeforeInstallPromptEvent);
-      setOpen(true);
+      // Once dismissed it stays dismissed; it used to return on every visit.
+      if (localStorage.getItem(DISMISSED_KEY) !== 'true') setOpen(true);
     };
     window.addEventListener('beforeinstallprompt', handler);
     return () => window.removeEventListener('beforeinstallprompt', handler);
@@ -35,12 +38,15 @@ export default function PWAInstallPrompt() {
     setOpen(false);
   };
 
-  const handleClose = () => setOpen(false);
+  const handleClose = () => {
+    localStorage.setItem(DISMISSED_KEY, 'true');
+    setOpen(false);
+  };
 
   return (
     <Snackbar
       open={open}
-      anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+      anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
       sx={{ mb: 1 }}
       message={
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>

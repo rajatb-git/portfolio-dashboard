@@ -1,6 +1,7 @@
 import moment from 'moment';
-import { getCompanyNews } from '../externalApis/finnHub';
 import { getTopBusinessHeadlines, type NewsCategory, NEWS_CATEGORIES } from '../externalApis/newsApi';
+import type { NewsArticle } from '../marketData/datasets';
+import { read } from '../marketData/store';
 import { CacheDBModel } from '../models/CacheModel';
 import { HoldingsModel } from '../models/HoldingsModel';
 import { matchedPatterns, normalizeCompanyName, relatedSymbol } from '../utils/newsRelevance';
@@ -41,18 +42,7 @@ const LABEL = 'MarketNews';
 
 const TOP_LIMIT = 12;
 const PORTFOLIO_LIMIT = 20;
-const SYMBOL_CONCURRENCY = 4;
 const COMPANY_NEWS_LOOKBACK_DAYS = 3;
-
-// Finnhub's free tier allows 60 calls a minute across the whole app, so a
-// refresh may only spend a slice of it: one call per holding would drain the
-// window and leave a page the user is actually looking at queueing behind this.
-// Each refresh takes the next few symbols and merges the result with what
-// earlier refreshes already found, so a large portfolio is covered over an hour
-// or so rather than all at once. The RSS matching below is free and covers every
-// holding on every refresh regardless.
-const PORTFOLIO_SYMBOL_BUDGET = 12;
-const CURSOR_CACHE_KEY = 'market_news_portfolio_cursor';
 
 const isValidCategory = (value: string): value is NewsCategory => (NEWS_CATEGORIES as string[]).includes(value);
 
@@ -88,35 +78,6 @@ export class MarketNewsController {
       // stale/corrupt cache, refetch
       return null;
     }
-  };
-
-  // The last digest regardless of age, so a refresh can merge in what earlier
-  // refreshes found for symbols outside this refresh's budget.
-  private readStale = async (key: string): Promise<MarketNewsDigest | null> => {
-    const cacheModel = await CacheDBModel().initialize();
-    const cached = cacheModel.findById(key);
-    if (!cached) return null;
-    try {
-      return JSON.parse(cached.value);
-    } catch {
-      return null;
-    }
-  };
-
-  // Symbols this refresh will spend Finnhub calls on, walking a persisted cursor
-  // through the (stable, sorted) holdings list so every position comes round.
-  private nextSymbolBatch = async (symbols: string[]): Promise<string[]> => {
-    if (symbols.length <= PORTFOLIO_SYMBOL_BUDGET) return symbols;
-
-    const cacheModel = await CacheDBModel().initialize();
-    const start = Number(cacheModel.findById(CURSOR_CACHE_KEY)?.value ?? 0) % symbols.length;
-    const rotated = [...symbols.slice(start), ...symbols.slice(0, start)];
-    const batch = rotated.slice(0, PORTFOLIO_SYMBOL_BUDGET);
-
-    const next = (start + batch.length) % symbols.length;
-    await cacheModel.insertOrUpdate({ key: CURSOR_CACHE_KEY, value: String(next) }, CURSOR_CACHE_KEY);
-
-    return batch;
   };
 
   private writeCache = async (key: string, digest: MarketNewsDigest): Promise<void> => {
@@ -172,10 +133,9 @@ export class MarketNewsController {
     }
 
     const symbols = [...watched.keys()].sort();
-    const batch = await this.nextSymbolBatch(symbols);
 
-    const [companyArticles, marketArticles, previous] = await Promise.all([
-      this.companyNews(batch),
+    const [companyArticles, marketArticles] = await Promise.all([
+      this.companyNews(symbols),
       getTopBusinessHeadlines(TOP_LIMIT * 2)
         .then((headlines) =>
           headlines
@@ -187,18 +147,10 @@ export class MarketNewsController {
           logger.log({ level: 'error', label: LABEL, message: `Market headlines failed: ${err.message}` });
           return [] as MarketNewsArticle[];
         }),
-      this.readStale(PORTFOLIO_CACHE_KEY),
     ]);
 
-    // Carry forward what earlier refreshes found for the symbols outside this
-    // batch, dropping anything that has aged out or belongs to a sold position.
-    const cutoff = moment().subtract(COMPANY_NEWS_LOOKBACK_DAYS, 'days');
-    const carried = (previous?.articles ?? []).filter(
-      (a) => (!a.symbol || watched.has(a.symbol)) && moment(a.publishedAt).isAfter(cutoff)
-    );
-
     const seen = new Set<string>();
-    const articles = [...companyArticles, ...marketArticles, ...carried]
+    const articles = [...companyArticles, ...marketArticles]
       .filter((a) => {
         const key = (a.url || a.headline).toLowerCase();
         if (seen.has(key)) return false;
@@ -219,54 +171,39 @@ export class MarketNewsController {
     logger.log({
       level: 'info',
       label: LABEL,
-      message: `Fetched ${articles.length} article(s); polled ${batch.length}/${symbols.length} held symbol(s)`,
+      message: `Built ${articles.length} article(s) across ${symbols.length} held symbol(s)`,
     });
 
     return digest;
   };
 
+  // Stored company news, kept fresh for every holding by the market data
+  // scheduler — reading it costs no Finnhub calls.
   private companyNews = async (symbols: string[]): Promise<MarketNewsArticle[]> => {
-    const from = moment().subtract(COMPANY_NEWS_LOOKBACK_DAYS, 'days').format('YYYY-MM-DD');
-    const to = moment().format('YYYY-MM-DD');
-    const out: MarketNewsArticle[] = [];
-
-    for (let i = 0; i < symbols.length; i += SYMBOL_CONCURRENCY) {
-      const batch = symbols.slice(i, i + SYMBOL_CONCURRENCY);
-      const results = await Promise.allSettled(
-        batch.map(async (symbol) => {
-          const articles = await getCompanyNews(symbol, from, to, 'bulk');
-          // Finnhub returns the whole window newest-first; a couple per holding is
-          // plenty once every position contributes.
-          return articles.slice(0, 3).map((a) =>
+    const cutoff = moment().subtract(COMPANY_NEWS_LOOKBACK_DAYS, 'days').unix();
+    const perSymbol = await Promise.all(
+      symbols.map(async (symbol) => {
+        const articles = (await read<NewsArticle[]>('news', symbol.toUpperCase())).value ?? [];
+        // A couple per holding is plenty once every position contributes.
+        return articles
+          .filter((a) => a.headline && a.datetime >= cutoff)
+          .slice(0, 3)
+          .map((a) =>
             tag(
               {
-                headline: a.headline ?? '',
-                summary: a.summary ?? '',
+                headline: a.headline,
+                summary: a.summary,
                 source: a.source || 'Finnhub',
-                url: a.url ?? '',
-                imageUrl: a.image ?? '',
-                publishedAt: a.datetime ? moment.unix(a.datetime).toISOString() : '',
+                url: a.url,
+                imageUrl: a.image,
+                publishedAt: moment.unix(a.datetime).toISOString(),
                 category: 'holdings',
               },
               symbol
             )
           );
-        })
-      );
-
-      results.forEach((result, idx) => {
-        if (result.status === 'fulfilled') {
-          out.push(...result.value.filter((a) => a.headline));
-        } else {
-          logger.log({
-            level: 'error',
-            label: LABEL,
-            message: `Company news failed for ${batch[idx]}: ${result.reason?.message ?? result.reason}`,
-          });
-        }
-      });
-    }
-
-    return out;
+      })
+    );
+    return perSymbol.flat();
   };
 }

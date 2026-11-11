@@ -85,7 +85,8 @@ export default function PortfolioGoalCard() {
     }
   };
 
-  const onTrackColor = progress?.onTrack === true ? 'var(--pd-up)' : progress?.onTrack === false ? 'var(--pd-down)' : 'var(--pd-warn)';
+  const onTrackColor =
+    progress?.onTrack === true ? 'var(--pd-up)' : progress?.onTrack === false ? 'var(--pd-down)' : 'var(--pd-warn)';
 
   return (
     <Card variant="outlined">
@@ -104,7 +105,9 @@ export default function PortfolioGoalCard() {
         </Typography>
         <Box sx={{ flexGrow: 1 }} />
         {isDirty && (
-          <Typography sx={{ fontSize: '0.68rem', color: 'var(--pd-warn)', fontWeight: 600 }}>Unsaved changes</Typography>
+          <Typography sx={{ fontSize: '0.68rem', color: 'var(--pd-warn)', fontWeight: 600 }}>
+            Unsaved changes
+          </Typography>
         )}
       </Stack>
       <Divider />
@@ -142,15 +145,6 @@ export default function PortfolioGoalCard() {
             />
             <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
               <Button
-                variant="contained"
-                size="small"
-                onClick={handleSave}
-                disabled={!isDirty || saving}
-                sx={{ textTransform: 'none' }}
-              >
-                Save
-              </Button>
-              <Button
                 variant="outlined"
                 size="small"
                 onClick={() => setDraft(saved)}
@@ -158,6 +152,15 @@ export default function PortfolioGoalCard() {
                 sx={{ textTransform: 'none' }}
               >
                 Reset
+              </Button>
+              <Button
+                variant="contained"
+                size="small"
+                onClick={handleSave}
+                disabled={!isDirty || saving}
+                sx={{ textTransform: 'none' }}
+              >
+                Save
               </Button>
             </Stack>
           </Stack>

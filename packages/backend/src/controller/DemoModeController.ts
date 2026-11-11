@@ -21,7 +21,10 @@ const seedMockData = async (): Promise<void> => {
   const snapshots = await PortfolioSnapshotDBModel().initialize();
 
   for (const account of dataset.accounts) {
-    await accounts.insertOne({ name: account.name, cashBalance: account.cashBalance }, account.id);
+    await accounts.insertOne(
+      { name: account.name, cashBalance: account.cashBalance, taxType: account.taxType },
+      account.id
+    );
   }
   if (dataset.holdings.length) await holdings.insertMany(dataset.holdings);
   if (dataset.transactions.length) await transactions.insertMany(dataset.transactions);

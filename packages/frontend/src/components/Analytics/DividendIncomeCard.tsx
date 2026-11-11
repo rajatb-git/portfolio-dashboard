@@ -1,4 +1,5 @@
 import {
+  Alert,
   Box,
   Chip,
   Divider,
@@ -24,6 +25,16 @@ type Props = {
   error: string | null;
 };
 
+function FundsNotCovered({ symbols }: { symbols: string[] }) {
+  if (!symbols.length) return null;
+  return (
+    <Alert severity="info" variant="outlined" sx={{ fontSize: '0.78rem' }}>
+      Not included: {symbols.join(', ')}. No free data source publishes ETF and fund distributions, so their income is
+      missing from these totals.
+    </Alert>
+  );
+}
+
 export default function DividendIncomeCard({ data, isLoading, error }: Props) {
   if (isLoading) {
     return (
@@ -43,21 +54,29 @@ export default function DividendIncomeCard({ data, isLoading, error }: Props) {
 
   if (!data || data.holdings.length === 0) {
     return (
-      <Panel title="Dividend income" icon="tabler:cash" flush>
-        <StateView
-          state="empty"
-          title="No dividend payers"
-          message="None of your stock holdings currently pay a dividend, or the payment data isn't available yet."
-          icon="tabler:cash-off"
-          minHeight={200}
-        />
-      </Panel>
+      <Stack spacing={2}>
+        <Panel title="Dividend income" icon="tabler:cash" flush>
+          <StateView
+            state="empty"
+            title="No dividend payers"
+            message="None of your stock holdings currently pay a dividend, or the payment data isn't available yet."
+            icon="tabler:cash-off"
+            minHeight={200}
+          />
+        </Panel>
+        <FundsNotCovered symbols={data?.fundsNotCovered ?? []} />
+      </Stack>
     );
   }
 
   return (
     <Stack spacing={2}>
-      <Panel title="Dividend income" subtitle={`${data.payerCount} paying position${data.payerCount === 1 ? '' : 's'}`} icon="tabler:cash" flush>
+      <Panel
+        title="Dividend income"
+        subtitle={`${data.payerCount} paying position${data.payerCount === 1 ? '' : 's'}`}
+        icon="tabler:cash"
+        flush
+      >
         <Stack direction={{ xs: 'column', sm: 'row' }} divider={<Divider flexItem />}>
           <Box sx={{ flex: 1, p: 2 }}>
             <Metric label="Projected annual income" value={fnCurrency(data.totalAnnualIncome)} />
@@ -66,10 +85,12 @@ export default function DividendIncomeCard({ data, isLoading, error }: Props) {
             <Metric label="Average per month" value={fnCurrency(data.averageMonthlyIncome)} />
           </Box>
           <Box sx={{ flex: 1, p: 2 }}>
-            <Metric label="Yield on cost" value={`${data.portfolioYieldOnCostPercent}%`} />
+            <Metric label="Yield on cost (paying positions)" value={`${data.portfolioYieldOnCostPercent}%`} />
           </Box>
         </Stack>
       </Panel>
+
+      <FundsNotCovered symbols={data.fundsNotCovered} />
 
       {data.upcoming.length > 0 && (
         <Panel title="Upcoming dates" icon="tabler:calendar-dollar" flush>

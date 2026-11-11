@@ -35,7 +35,10 @@ export const buy = async (trade: IHoldings, date?: string): Promise<IHoldingsMod
     // lot tracking is rebuilt from its history without counting this trade twice.
     const txModel = await TransactionModel().initialize();
     const lots = [...resolveLots(existingHolding, txModel.getAllRecords()), lot];
-    result = await holdingsModel.updateById(existingHolding.id, { lots, ...totalsFromLots(lots) });
+    // A first buy with no name stored the ticker; take the name a later buy gives.
+    const name =
+      existingHolding.name === existingHolding.symbol && trade.name?.trim() ? trade.name.trim() : existingHolding.name;
+    result = await holdingsModel.updateById(existingHolding.id, { lots, name, ...totalsFromLots(lots) });
   } else {
     result = await holdingsModel.insertOne({
       accountId: newHolding.accountId,

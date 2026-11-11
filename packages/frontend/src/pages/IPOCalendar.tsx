@@ -1,6 +1,6 @@
-import * as React from 'react';
-
 import { Box, Stack, ToggleButton, ToggleButtonGroup } from '@mui/material';
+import * as React from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { toast } from 'react-toastify';
 
 import apis from '@/api';
@@ -9,7 +9,7 @@ import { ICalendarEvent } from '@/components/Calendar/types';
 import { Iconify } from '@/components/Iconify';
 import IPOList from '@/components/IPO/IPOList';
 import IPOStats from '@/components/IPO/IPOStats';
-import { ERROR, PRIMARY, SECONDARY, WARNING } from '@/components/ThemeRegistry/tokens';
+import { ERROR, INFO, SECONDARY, SUCCESS, WARNING } from '@/components/ThemeRegistry/tokens';
 import PageHeader from '@/components/ui/PageHeader';
 import ToolbarButton from '@/components/ui/ToolbarButton';
 import { IIPO } from '@/models/IPOModel';
@@ -20,7 +20,19 @@ export default function IPOCalendar() {
   const [isLoading, setIsLoading] = React.useState(true);
   const [ipos, setIpos] = React.useState<Array<IIPO>>([]);
   const [loadError, setLoadError] = React.useState<string | null>(null);
-  const [view, setView] = React.useState<ViewMode>('list');
+  // Kept in the URL so Back from an IPO's page returns to the same view.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const view: ViewMode = searchParams.get('view') === 'calendar' ? 'calendar' : 'list';
+  const setView = (next: ViewMode) =>
+    setSearchParams(
+      (prev) => {
+        const params = new URLSearchParams(prev);
+        if (next === 'calendar') params.set('view', next);
+        else params.delete('view');
+        return params;
+      },
+      { replace: true }
+    );
 
   const loadData = () => {
     setIsLoading(true);
@@ -116,24 +128,25 @@ export default function IPOCalendar() {
             }
           />
         ) : (
-          <Calendar events={events} />
+          <Calendar events={events} legend={STATUS_LEGEND} />
         )}
       </Box>
     </Stack>
   );
 }
 
-const getEventColor = (event: ICalendarEvent | IIPO) => {
-  switch (event.status) {
-    case 'expected':
-      return WARNING.main;
-    case 'priced':
-      return PRIMARY.main;
-    case 'withdrawn':
-      return ERROR.main;
-    case 'filed':
-      return WARNING.main;
-    default:
-      return SECONDARY.main;
-  }
+const STATUS_COLORS: Record<IIPO['status'], string> = {
+  expected: WARNING.main,
+  filed: INFO.main,
+  priced: SUCCESS.main,
+  withdrawn: ERROR.main,
 };
+
+const STATUS_LEGEND = [
+  { label: 'Expected', color: STATUS_COLORS.expected },
+  { label: 'Filed', color: STATUS_COLORS.filed },
+  { label: 'Priced', color: STATUS_COLORS.priced },
+  { label: 'Withdrawn', color: STATUS_COLORS.withdrawn },
+];
+
+const getEventColor = (event: ICalendarEvent | IIPO) => (event.status && STATUS_COLORS[event.status]) || SECONDARY.main;

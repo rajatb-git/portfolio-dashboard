@@ -10,25 +10,24 @@ import cors from '@koa/cors';
 import Koa from 'koa';
 import KoaBodyParser from 'koa-bodyparser';
 import KoaHelmet from 'koa-helmet';
-
-import { authMiddleware } from './middleware/auth';
 import { alertMonitorService } from './controller/AlertMonitorService';
-import { ipoAnnouncementService } from './controller/IpoAnnouncementService';
-import { ipoReminderService } from './controller/IpoReminderService';
-import { marketStatusService } from './controller/MarketStatusService';
 import { dividendWatchService } from './controller/DividendWatchService';
 import { earningsReminderService } from './controller/EarningsReminderService';
+import { ipoAnnouncementService } from './controller/IpoAnnouncementService';
+import { ipoReminderService } from './controller/IpoReminderService';
 import { moveAlertService } from './controller/MoveAlertService';
 import { newsWatchService } from './controller/NewsWatchService';
 import { configureFromSaved } from './controller/NotificationDispatcher';
 import { portfolioValueCalcService } from './controller/PortfolioValueCalcService';
 import { scheduledBackupService } from './controller/ScheduledBackupService';
 import { tradingSummaryService } from './controller/TradingSummaryService';
+import { startMarketDataScheduler } from './marketData/scheduler';
+import { authMiddleware } from './middleware/auth';
 import { getAlertMonitorConfig } from './models/AlertMonitorConfigModel';
-import { getIpoAnnouncementConfig } from './models/IpoAnnouncementConfigModel';
-import { getIpoReminderConfig } from './models/IpoReminderConfigModel';
 import { getDividendWatchConfig } from './models/DividendWatchConfigModel';
 import { getEarningsReminderConfig } from './models/EarningsReminderConfigModel';
+import { getIpoAnnouncementConfig } from './models/IpoAnnouncementConfigModel';
+import { getIpoReminderConfig } from './models/IpoReminderConfigModel';
 import { getMoveAlertConfig } from './models/MoveAlertConfigModel';
 import { getNewsWatchConfig } from './models/NewsWatchConfigModel';
 import { getScheduledBackupConfig } from './models/ScheduledBackupConfigModel';
@@ -43,6 +42,7 @@ import { DashboardRouter } from './router/dashboard.route';
 import { DatabaseRouter } from './router/database.route';
 import { HealthRouter } from './router/health.route';
 import { HoldingsRouter } from './router/holdings.route';
+import { ImportRouter } from './router/import.route';
 import { LiveRouter } from './router/live.route';
 import { LogsRouter } from './router/logs.route';
 import { NotesRouter } from './router/notes.route';
@@ -65,7 +65,8 @@ app.use(async (ctx, next) => {
   }
   return next();
 });
-app.use(KoaBodyParser());
+// Imports post a whole brokerage history as JSON rows; the 1 MB default is too small.
+app.use(KoaBodyParser({ jsonLimit: '20mb' }));
 app.use(KoaHelmet());
 app.use(authMiddleware);
 
@@ -93,11 +94,12 @@ app.use(NotesRouter().routes()).use(NotesRouter().allowedMethods());
 app.use(AlertsRouter().routes()).use(AlertsRouter().allowedMethods());
 app.use(NotificationsRouter().routes()).use(NotificationsRouter().allowedMethods());
 app.use(AiImportRouter().routes()).use(AiImportRouter().allowedMethods());
+app.use(ImportRouter().routes()).use(ImportRouter().allowedMethods());
 app.use(DatabaseRouter().routes()).use(DatabaseRouter().allowedMethods());
 
 app.listen(port, () => {
   console.log('server started on port ' + port);
-  marketStatusService.start();
+  void startMarketDataScheduler();
   getValueCalcConfig().then((config) => portfolioValueCalcService.start(config));
   getAlertMonitorConfig().then((config) => alertMonitorService.start(config));
   getScheduledBackupConfig().then((config) => scheduledBackupService.start(config));

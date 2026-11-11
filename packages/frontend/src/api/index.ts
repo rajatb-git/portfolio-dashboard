@@ -1,17 +1,18 @@
+import AccountsAPI from './account';
+import AlertsAPI from './alerts';
+import AnalyticsAPI from './analytics';
+import AuthAPI from './auth';
 import { DashboardAPI } from './dashboard';
+import DatabaseAPI from './database';
 import HoldingsAPI from './holdings';
+import ImportAPI from './import';
 import LiveAPI from './live';
 import LogsAPI from './logs';
-import TransactionsAPI from './transactions';
-import AccountsAPI from './account';
-import AnalyticsAPI from './analytics';
-import DatabaseAPI from './database';
-import AuthAPI from './auth';
-import AlertsAPI from './alerts';
 import NotesAPI from './notes';
 import NotificationsAPI from './notifications';
 import RebalanceAPI from './rebalance';
 import SettingsAPI from './settings';
+import TransactionsAPI from './transactions';
 
 const apis = {
   dashboard: new DashboardAPI(),
@@ -28,6 +29,7 @@ const apis = {
   alerts: new AlertsAPI(),
   notifications: new NotificationsAPI(),
   rebalance: new RebalanceAPI(),
+  import: new ImportAPI(),
 };
 
 export default apis;

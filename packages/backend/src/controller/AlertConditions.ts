@@ -1,14 +1,7 @@
-import moment from 'moment';
-import { getStockMetrics } from '../externalApis/finnHub';
+import type { StockMetrics } from '../externalApis/finnHub';
+import { read } from '../marketData/store';
 import type { AlertCondition, IAlert } from '../models/AlertModel';
-import { CacheDBModel } from '../models/CacheModel';
 import { HoldingsModel } from '../models/HoldingsModel';
-import { logger } from '../utils/winston';
-
-const LABEL = 'AlertConditions';
-
-// A 52-week high moves at most once a day, so this only needs refreshing daily.
-const HIGH_CACHE_HOURS = 24;
 
 // Reference data the non-price conditions are measured against.
 export type AlertContext = {
@@ -21,37 +14,16 @@ export const EMPTY_ALERT_CONTEXT: AlertContext = { fiftyTwoWeekHigh: new Map(), 
 // Stored alerts predating the condition field are plain price targets.
 export const conditionOf = (alert: Pick<IAlert, 'condition'>): AlertCondition => alert.condition ?? 'price';
 
-const highCacheKey = (symbol: string): string => `alert_52w_high_${symbol.toUpperCase()}`;
-
+// From the stored stock metrics, which the scheduler keeps fresh for every
+// symbol with a %-from-high alert.
 async function fetch52WeekHigh(symbol: string): Promise<number | null> {
-  const cacheModel = await CacheDBModel().initialize();
-  const key = highCacheKey(symbol);
-  const cached = cacheModel.findById(key);
-
-  if (cached && moment().diff(moment(cached.updatedAt), 'hours') < HIGH_CACHE_HOURS) {
-    const value = Number(cached.value);
-    if (Number.isFinite(value) && value > 0) return value;
-  }
-
-  try {
-    const response = await getStockMetrics(symbol);
-    const high = Number(response?.metric?.['52WeekHigh']);
-    if (!Number.isFinite(high) || high <= 0) return null;
-    await cacheModel.insertOrUpdate({ key, value: String(high) }, key);
-    return high;
-  } catch (err: any) {
-    logger.log({ level: 'error', label: LABEL, message: `52-week high failed for ${symbol}: ${err.message}` });
-    // Serve a stale value rather than silently disarming the alert.
-    if (cached) {
-      const value = Number(cached.value);
-      if (Number.isFinite(value) && value > 0) return value;
-    }
-    return null;
-  }
+  const metrics = await read<StockMetrics>('metrics', symbol.toUpperCase(), { mode: 'fresh' });
+  const high = Number(metrics.value?.week52High);
+  return Number.isFinite(high) && high > 0 ? high : null;
 }
 
 // Weighted average cost per symbol across every account holding it.
-async function loadCostBasis(symbols: Set<string>): Promise<Map<string, number>> {
+export async function loadCostBasis(symbols: Set<string>): Promise<Map<string, number>> {
   const out = new Map<string, number>();
   if (symbols.size === 0) return out;
 
@@ -119,6 +91,26 @@ export function resolveTarget(alert: IAlert, context: AlertContext): number | nu
   }
 }
 
+// The level a derived target is measured from, so the page can show what the
+// alert is anchored to and not just the computed trigger.
+export function referenceLevel(alert: IAlert, context: AlertContext): { label: string; value: number } | null {
+  const symbol = alert.symbol.toUpperCase();
+  switch (conditionOf(alert)) {
+    case 'trailing_stop':
+      return alert.peakPrice ? { label: 'Peak', value: alert.peakPrice } : null;
+    case 'pct_from_high': {
+      const high = context.fiftyTwoWeekHigh.get(symbol);
+      return high ? { label: '52-week high', value: high } : null;
+    }
+    case 'cost_basis': {
+      const basis = context.costBasis.get(symbol);
+      return basis ? { label: 'Cost basis', value: basis } : null;
+    }
+    default:
+      return null;
+  }
+}
+
 // Trailing stops and drawdowns only ever fire downward; the other two follow the
 // alert's own direction.
 export function isTriggered(alert: IAlert, price: number, context: AlertContext): boolean {
@@ -139,9 +131,12 @@ export function nextPeak(alert: IAlert, price: number): number | null {
 }
 
 // Human-readable description of what the alert watches, for the UI and messages.
+const usd = (n: number): string =>
+  `$${n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
 export function describeCondition(alert: IAlert, context: AlertContext = EMPTY_ALERT_CONTEXT): string {
   const target = resolveTarget(alert, context);
-  const level = target !== null ? ` ($${target})` : '';
+  const level = target !== null ? ` (${usd(target)})` : '';
   switch (conditionOf(alert)) {
     case 'trailing_stop':
       return `${alert.trailPercent ?? 0}% below its peak${level}`;
@@ -150,6 +145,6 @@ export function describeCondition(alert: IAlert, context: AlertContext = EMPTY_A
     case 'cost_basis':
       return `${alert.direction === 'above' ? 'at or above' : 'at or below'} cost basis${level}`;
     default:
-      return `${alert.direction === 'above' ? 'at or above' : 'at or below'} $${alert.targetPrice}`;
+      return `${alert.direction === 'above' ? 'at or above' : 'at or below'} ${usd(alert.targetPrice)}`;
   }
 }

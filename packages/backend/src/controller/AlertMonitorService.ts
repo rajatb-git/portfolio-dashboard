@@ -4,7 +4,7 @@ import { buildAlertContext, describeCondition, isTriggered, nextPeak } from './A
 import { isStockMarketOpen } from '../utils/marketCalendar';
 import { PersistentInterval } from '../utils/PersistentInterval';
 import { logger } from '../utils/winston';
-import { LiveQuoteController } from './LiveQuoteController';
+import { getCachedQuotes } from '../marketData/quotes';
 import { dispatchAlertTriggered } from './NotificationDispatcher';
 
 const LABEL = 'AlertMonitorService';
@@ -29,22 +29,17 @@ class AlertMonitorService {
       const toEval = alerts.filter((a) => a.type === 'crypto' || (a.type === 'stock' && stockOpen));
       if (toEval.length === 0) return;
 
-      const quoteController = new LiveQuoteController();
-      const symbolMeta = new Map<string, boolean>();
-      for (const a of toEval) if (!symbolMeta.has(a.symbol)) symbolMeta.set(a.symbol, a.type === 'crypto');
-      const symbols = [...symbolMeta.keys()];
-
-      const quotes = await Promise.all(
-        symbols.map((sym) => quoteController.getLiveQuote(sym, symbolMeta.get(sym)).catch((): null => null))
+      const quotes = await getCachedQuotes(
+        toEval.map((a) => ({ symbol: a.symbol, isCrypto: a.type === 'crypto' })),
+        { waitForPendingMs: 30_000 }
       );
-      const priceMap = new Map(symbols.map((sym, i) => [sym, quotes[i]]));
 
       // Reference data for the conditions that need it (52-week highs, cost basis).
       const context = await buildAlertContext(toEval);
 
       const now = new Date().toISOString();
       for (const alert of toEval) {
-        const quote = priceMap.get(alert.symbol);
+        const quote = quotes.get(alert.symbol.toUpperCase())?.value;
         if (!quote) continue; // leave state untouched on a fetch failure
 
         const price = +quote.price.toFixed(2);

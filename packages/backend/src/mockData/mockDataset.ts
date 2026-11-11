@@ -1,5 +1,6 @@
 import moment from 'moment';
 
+import type { AccountTaxType } from '../models/AccountModel';
 import type { IAlert } from '../models/AlertModel';
 import type { IHoldings, ITaxLot } from '../models/HoldingsModel';
 import type { IPortfolioSnapshot } from '../models/PortfolioSnapshotModel';
@@ -7,7 +8,7 @@ import type { IRelievedLot, ITransaction } from '../models/TransactionModel';
 
 type AssetType = 'stock' | 'crypto';
 
-type SeedAccount = { id: string; name: string };
+type SeedAccount = { id: string; name: string; taxType: AccountTaxType };
 
 type DepositEvent = { accountId: string; kind: 'deposit'; amount: number; daysAgo: number };
 type TradeEvent = {
@@ -25,10 +26,10 @@ type SeedEvent = DepositEvent | TradeEvent;
 // Four accounts spanning taxable, retirement and crypto, so the demo
 // exercises account grouping, allocation-by-type and risk analytics.
 const ACCOUNTS: SeedAccount[] = [
-  { id: 'brokerage-demo', name: 'Brokerage' },
-  { id: 'roth-ira-demo', name: 'Roth IRA' },
-  { id: '401k-demo', name: '401(k)' },
-  { id: 'crypto-wallet-demo', name: 'Crypto Wallet' },
+  { id: 'brokerage-demo', name: 'Brokerage', taxType: 'taxable' },
+  { id: 'roth-ira-demo', name: 'Roth IRA', taxType: 'taxFree' },
+  { id: '401k-demo', name: '401(k)', taxType: 'taxDeferred' },
+  { id: 'crypto-wallet-demo', name: 'Crypto Wallet', taxType: 'taxable' },
 ];
 
 // A chronological trade log per account (oldest first within each account).
@@ -337,32 +338,55 @@ const mulberry32 = (seed: number) => () => {
 };
 
 type MockDataset = {
-  accounts: Array<{ id: string; name: string; cashBalance: number }>;
+  accounts: Array<{ id: string; name: string; cashBalance: number; taxType: AccountTaxType }>;
   holdings: IHoldings[];
   transactions: ITransaction[];
   alerts: IAlert[];
   snapshots: Array<IPortfolioSnapshot & { id: string }>;
 };
 
-const buildSnapshots = (): Array<IPortfolioSnapshot & { id: string }> => {
-  const deposits = EVENTS.filter((e): e is DepositEvent => e.kind === 'deposit');
+// Snapshots value holdings only (as the live tracker does), so each day the
+// value earns a small random return and then takes on that day's buys and
+// sells at cost. The daily drift is solved for so the history ends near what
+// the demo holdings are worth at market (about 20% over their cost); ending
+// anywhere else would show up as a one-day jump on the first live snapshot.
+const MARKET_OVER_COST = 1.2;
+
+const buildSnapshots = (endValue: number): Array<IPortfolioSnapshot & { id: string }> => {
+  const trades = EVENTS.filter((e): e is TradeEvent => e.kind !== 'deposit');
   const startDaysAgo = Math.max(...EVENTS.map((e) => e.daysAgo));
   const rand = mulberry32(20260809);
-
-  const snapshots: Array<IPortfolioSnapshot & { id: string }> = [];
-  for (let d = startDaysAgo; d >= 1; d--) {
-    const invested = deposits.filter((e) => e.daysAgo >= d).reduce((sum, e) => sum + e.amount, 0);
-    if (invested <= 0) continue;
-
-    const progress = 1 - d / startDaysAgo;
-    const drift = 1 + 0.16 * progress;
-    const noise = 1 + (rand() - 0.5) * 0.024;
-    const totalValue = round2(invested * drift * noise);
-
-    const timestamp = dateForDaysAgo(d);
-    snapshots.push({ id: timestamp, timestamp, date: timestamp.slice(0, 10), totalValue });
+  const noise = Array.from({ length: startDaysAgo + 1 }, () => (rand() - 0.5) * 0.024);
+  const flowOn = new Map<number, number>();
+  for (const e of trades) {
+    flowOn.set(e.daysAgo, (flowOn.get(e.daysAgo) ?? 0) + (e.kind === 'buy' ? 1 : -1) * e.qty * e.price);
   }
-  return snapshots;
+
+  const simulate = (drift: number) => {
+    const values: Array<{ daysAgo: number; value: number }> = [];
+    let value = 0;
+    for (let d = startDaysAgo; d >= 1; d--) {
+      value = value * (1 + drift + noise[d]) + (flowOn.get(d) ?? 0);
+      values.push({ daysAgo: d, value });
+    }
+    return values;
+  };
+
+  let low = -0.01;
+  let high = 0.01;
+  for (let i = 0; i < 60; i++) {
+    const mid = (low + high) / 2;
+    const values = simulate(mid);
+    if ((values[values.length - 1]?.value ?? 0) < endValue) low = mid;
+    else high = mid;
+  }
+
+  return simulate((low + high) / 2)
+    .filter(({ value }) => value > 0)
+    .map(({ daysAgo, value }) => {
+      const timestamp = dateForDaysAgo(daysAgo);
+      return { id: timestamp, timestamp, date: timestamp.slice(0, 10), totalValue: round2(value) };
+    });
 };
 
 export const buildMockDataset = (): MockDataset => {
@@ -440,7 +464,12 @@ export const buildMockDataset = (): MockDataset => {
     }
   }
 
-  const accounts = ACCOUNTS.map((a) => ({ id: a.id, name: a.name, cashBalance: round2(cash.get(a.id) ?? 0) }));
+  const accounts = ACCOUNTS.map((a) => ({
+    id: a.id,
+    name: a.name,
+    cashBalance: round2(cash.get(a.id) ?? 0),
+    taxType: a.taxType,
+  }));
 
   const holdings: IHoldings[] = [];
   for (const [key, pos] of positions) {
@@ -460,5 +489,12 @@ export const buildMockDataset = (): MockDataset => {
     });
   }
 
-  return { accounts, holdings, transactions, alerts: ALERTS, snapshots: buildSnapshots() };
+  const costBasis = holdings.reduce((sum, h) => sum + h.qty * h.averagePrice, 0);
+  return {
+    accounts,
+    holdings,
+    transactions,
+    alerts: ALERTS,
+    snapshots: buildSnapshots(costBasis * MARKET_OVER_COST),
+  };
 };

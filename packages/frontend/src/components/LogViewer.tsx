@@ -1,18 +1,15 @@
 'use client';
 
-import * as React from 'react';
-
 import { Box } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
-
-type Props = { data: string };
+import * as React from 'react';
 
 const LogLine = ({ splitLine }: any) => {
   const theme = useTheme();
   const [, timestamp, level, label, message, rest] = splitLine;
 
   const timestampStyling = { color: theme.palette.success.main };
-  const labelStyling = { color: theme.palette.text.disabled };
+  const labelStyling = { color: theme.palette.text.secondary };
   const messageStyling = { color: theme.palette.warning.main };
 
   let levelStyling: any;
@@ -46,12 +43,26 @@ const LogLine = ({ splitLine }: any) => {
   );
 };
 
-export const LogsViewer = ({ data }: Props) => {
+export type LogLevelFilter = 'all' | 'error' | 'warn' | 'info';
+
+type ViewerProps = { data: string; level: LogLevelFilter; query: string };
+
+// Mirrors the backend winston format: `<timestamp> <LEVEL> [<label>] (<message>): <meta>`.
+const LINE_RE = /^(\S+)\s+(\w+)\s+\[(.*?)\]\s+\((.*)\):\s?(.*)$/;
+
+export const LogsViewer = ({ data, level, query }: ViewerProps) => {
   const theme = useTheme();
   const isLight = theme.palette.mode === 'light';
 
-  // Mirrors the backend winston format: `<timestamp> <LEVEL> [<label>] (<message>): <meta>`.
-  const regex = /^(\S+)\s+(\w+)\s+\[(.*?)\]\s+\((.*)\):\s?(.*)$/;
+  const needle = query.trim().toLowerCase();
+  const lines = data
+    .trim()
+    .split('\n')
+    .map((text, i) => ({ text, number: i + 1, parts: text ? text.match(LINE_RE) : null }))
+    .filter(({ text, parts }) => {
+      if (level !== 'all' && parts?.[2]?.toLowerCase() !== level) return false;
+      return !needle || text.toLowerCase().includes(needle);
+    });
 
   return (
     <Box
@@ -60,38 +71,39 @@ export const LogsViewer = ({ data }: Props) => {
         borderTop: `1px solid ${theme.palette.divider}`,
         borderBottom: `1px solid ${theme.palette.divider}`,
         overflow: 'auto',
-        whiteSpace: 'pre',
-        fontSize: '0.9rem',
+        fontSize: { xs: '0.75rem', sm: '0.85rem' },
         p: 2,
         pl: 0,
-        lineHeight: 1.75,
+        lineHeight: 1.6,
         maxHeight: '85vh',
         backgroundColor: isLight ? theme.palette.grey[100] : theme.palette.grey[900],
       }}
     >
-      {data
-        .trim()
-        .split('\n')
-        .map((x, i) => {
-          const parts = x ? x.match(regex) : null;
-          return (
-            <div key={i}>
-              <Box
-                sx={{
-                  minWidth: '25px',
-                  pl: 1,
-                  display: 'inline-block',
-                  textAlign: 'right',
-                  color: theme.palette.text.disabled,
-                }}
-              >
-                {i + 1}
-              </Box>
-              <Box sx={{ display: 'inline-block', px: 0.5 }}></Box>
-              <Box sx={{ display: 'inline-block' }}>{parts ? <LogLine splitLine={parts} /> : x}</Box>
-            </div>
-          );
-        })}
+      {lines.length === 0 ? (
+        <Box sx={{ pl: 2, color: theme.palette.text.secondary }}>
+          {data.trim() ? 'No lines match these filters.' : 'This log is empty.'}
+        </Box>
+      ) : (
+        lines.map(({ text, number, parts }) => (
+          <Box key={number} sx={{ display: 'flex', gap: 1, py: 0.25 }}>
+            <Box
+              sx={{
+                flexShrink: 0,
+                minWidth: 36,
+                pl: 1,
+                textAlign: 'right',
+                color: theme.palette.text.disabled,
+                userSelect: 'none',
+              }}
+            >
+              {number}
+            </Box>
+            <Box sx={{ minWidth: 0, whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>
+              {parts ? <LogLine splitLine={parts} /> : text}
+            </Box>
+          </Box>
+        ))
+      )}
     </Box>
   );
 };

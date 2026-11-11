@@ -138,21 +138,24 @@ export default function ResearchMetricsCard({ metrics, currentPrice, isLoading }
             value={metrics.avgVolume10Day ? `${metrics.avgVolume10Day.toFixed(2)}M` : '—'}
             tooltip="10-day average trading volume (millions)"
           />
-          <MetricRow
-            label="Short Interest"
-            value={metrics.shortInterest ? `${metrics.shortInterest.toFixed(2)}M` : '—'}
-            tooltip="Number of shares sold short (millions)"
-          />
-          <MetricRow
-            label="Short Ratio (Days)"
-            value={metrics.shortRatio?.toFixed(2) ?? '—'}
-            tooltip="Days to cover short interest at average daily volume"
-          />
+          {/* Not in Finnhub's free metrics for most symbols; a row that can only ever read "—" is noise. */}
+          {!!metrics.shortInterest && (
+            <MetricRow
+              label="Short Interest"
+              value={`${metrics.shortInterest.toFixed(2)}M`}
+              tooltip="Number of shares sold short (millions)"
+            />
+          )}
+          {metrics.shortRatio != null && (
+            <MetricRow
+              label="Short Ratio (Days)"
+              value={metrics.shortRatio.toFixed(2)}
+              tooltip="Days to cover short interest at average daily volume"
+            />
+          )}
         </Box>
       ) : (
-        <Typography sx={{ p: 2, fontSize: '0.78rem', color: 'text.disabled' }}>
-          No key statistics available.
-        </Typography>
+        <Typography sx={{ p: 2, fontSize: '0.78rem', color: 'text.disabled' }}>No key statistics available.</Typography>
       )}
     </Card>
   );

@@ -1,5 +1,3 @@
-import * as React from 'react';
-
 import {
   Box,
   Card,
@@ -15,6 +13,7 @@ import {
   Typography,
 } from '@mui/material';
 import moment from 'moment';
+import * as React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 
@@ -158,8 +157,8 @@ export default function TaxExposureCard({ reloadKey }: Props) {
               No gaining lots cross the one-year mark in the next 90 days.
             </Typography>
           ) : (
-            <Box sx={{ maxHeight: 320, overflow: 'auto' }}>
-              <Table stickyHeader size="small">
+            <Box sx={{ overflowX: 'auto' }}>
+              <Table size="small">
                 <TableHead>
                   <TableRow>
                     {['Symbol', 'Account', 'Qty', 'Acquired', 'Long-term on', 'Gain', 'Tax saved by waiting'].map(
@@ -217,8 +216,9 @@ export default function TaxExposureCard({ reloadKey }: Props) {
               `${data.estimatedLots} lot${data.estimatedLots === 1 ? ' has' : 's have'} an estimated purchase date or cost — set them from the position on its Research page. `}
             {data.unpricedPositions > 0 &&
               `${data.unpricedPositions} position${data.unpricedPositions === 1 ? '' : 's'} without a live price ${data.unpricedPositions === 1 ? 'is' : 'are'} left out. `}
-            Simplified US federal + state estimate at short-term {data.config.shortTermRate}%, long-term{' '}
-            {data.config.longTermRate}%, state {data.config.stateRate}%. Not tax advice.
+            Tax-deferred and tax-free accounts are left out. Simplified US federal + state estimate at short-term{' '}
+            {data.config.shortTermRate}%, long-term {data.config.longTermRate}%, state {data.config.stateRate}%. Not tax
+            advice.
           </Typography>
         </>
       )}

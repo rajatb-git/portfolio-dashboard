@@ -1,5 +1,7 @@
 import {
+  Alert,
   Box,
+  Button,
   Chip,
   MenuItem,
   Select,
@@ -13,6 +15,7 @@ import {
 } from '@mui/material';
 import moment from 'moment';
 import * as React from 'react';
+import { Link as RouterLink } from 'react-router-dom';
 import { toast } from 'react-toastify';
 
 import apis from '@/api';
@@ -47,6 +50,7 @@ export default function Notifications() {
   const [items, setItems] = React.useState<NotificationRecord[]>([]);
   const [total, setTotal] = React.useState(0);
   const [kind, setKind] = React.useState('');
+  const [channelEnabled, setChannelEnabled] = React.useState(true);
 
   const load = React.useCallback(
     (quiet: boolean) => {
@@ -56,6 +60,7 @@ export default function Notifications() {
         .then((data) => {
           setItems(data.items ?? []);
           setTotal(data.total ?? 0);
+          setChannelEnabled(data.channelEnabled);
           setState((data.items ?? []).length === 0 ? 'empty' : 'ready');
         })
         .catch((err) => {
@@ -86,7 +91,7 @@ export default function Notifications() {
     <Box>
       <PageHeader
         title="Notifications"
-        subtitle="Everything the app has sent you, so you can tune thresholds against what actually fired"
+        subtitle="Everything that fired, sent or not, so you can tune thresholds against what actually happened"
         actions={
           <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
             <Select
@@ -109,6 +114,21 @@ export default function Notifications() {
         }
       />
 
+      {!channelEnabled && (
+        <Alert
+          severity="warning"
+          sx={{ mb: 2 }}
+          action={
+            <Button component={RouterLink} to="/settings?tab=alerts" color="inherit" size="small">
+              Settings
+            </Button>
+          }
+        >
+          No notification channel is set up, so nothing is being sent to you. Alerts and reminders that fire are still
+          listed here. Turn on MQTT in Settings to get them on your phone.
+        </Alert>
+      )}
+
       <Panel
         title="History"
         subtitle={total > 0 ? `${total} record${total === 1 ? '' : 's'} kept for 30 days` : undefined}
@@ -119,7 +139,7 @@ export default function Notifications() {
           <StateView
             state={state}
             message={error}
-            title={state === 'empty' ? 'Nothing sent yet' : undefined}
+            title={state === 'empty' ? 'Nothing has fired yet' : undefined}
             icon="tabler:bell-off"
             minHeight={220}
           />
@@ -166,7 +186,14 @@ export default function Notifications() {
                         <Typography sx={{ fontSize: '0.7rem', color: 'text.secondary' }}>{item.message}</Typography>
                       </TableCell>
                       <TableCell>
-                        {item.suppressed ? (
+                        {item.noChannel ? (
+                          <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center' }}>
+                            <Iconify icon="tabler:bell-off" width={14} sx={{ color: 'text.secondary' }} />
+                            <Typography sx={{ fontSize: '0.68rem', color: 'text.secondary' }}>
+                              Not sent — no channel
+                            </Typography>
+                          </Stack>
+                        ) : item.suppressed ? (
                           <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center' }}>
                             <Iconify icon="tabler:moon" width={14} sx={{ color: 'text.disabled' }} />
                             <Typography sx={{ fontSize: '0.68rem', color: 'text.disabled' }}>Quiet hours</Typography>

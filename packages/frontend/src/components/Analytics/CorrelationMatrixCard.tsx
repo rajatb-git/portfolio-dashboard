@@ -20,7 +20,8 @@ const cellStyle = (value: number, diagonal: boolean) => {
   };
 };
 
-const scoreColor = (score: number) => (score >= 66 ? 'var(--pd-up)' : score >= 40 ? 'var(--pd-warn)' : 'var(--pd-down)');
+const scoreColor = (score: number) =>
+  score >= 66 ? 'var(--pd-up)' : score >= 40 ? 'var(--pd-warn)' : 'var(--pd-down)';
 
 export default function CorrelationMatrixCard({ data, isLoading }: Props) {
   const hasData = data && data.symbols.length >= 2;
@@ -51,8 +52,8 @@ export default function CorrelationMatrixCard({ data, isLoading }: Props) {
         <Stack sx={{ alignItems: 'center', justifyContent: 'center', py: 5, px: 2 }}>
           <Iconify icon="mdi:grid-off" width={28} sx={{ color: 'text.disabled', mb: 1 }} />
           <Typography sx={{ fontSize: '0.82rem', color: 'text.disabled', textAlign: 'center' }}>
-            Need at least two holdings with sufficient price history to compute correlations. Crypto and thinly-traded
-            symbols may be excluded.
+            Need at least two stock or ETF holdings with sufficient price history to compute correlations. Crypto and
+            thinly-traded symbols may be excluded.
           </Typography>
         </Stack>
       ) : (
@@ -151,10 +152,22 @@ export default function CorrelationMatrixCard({ data, isLoading }: Props) {
           </Box>
 
           {data.skipped.length > 0 && (
-            <Typography sx={{ fontSize: '0.7rem', color: 'text.disabled', px: 2, py: 1 }}>
+            <Typography sx={{ fontSize: '0.7rem', color: 'text.disabled', px: 2, pt: 1 }}>
               Excluded (insufficient price history): {data.skipped.join(', ')}
             </Typography>
           )}
+          {data.omitted.length > 0 && (
+            <Typography sx={{ fontSize: '0.7rem', color: 'text.disabled', px: 2, pt: 1 }}>
+              Showing your {data.symbols.length + data.skipped.length} largest positions; not shown:{' '}
+              {data.omitted.join(', ')}
+            </Typography>
+          )}
+          {data.crypto.length > 0 && (
+            <Typography sx={{ fontSize: '0.7rem', color: 'text.disabled', px: 2, pt: 1 }}>
+              Crypto isn't included (no daily price history source): {data.crypto.join(', ')}
+            </Typography>
+          )}
+          <Box sx={{ pb: 1 }} />
         </>
       )}
     </Card>

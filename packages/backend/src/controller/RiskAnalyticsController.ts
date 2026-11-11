@@ -1,7 +1,7 @@
 import moment from 'moment';
 import { getPriceHistoryAreaChart } from '../externalApis/nasdaq';
-import { IPortfolioSnapshotModel, PortfolioSnapshotDBModel } from '../models/PortfolioSnapshotModel';
 import { logger } from '../utils/winston';
+import { getDailyPerformance, type PerformancePoint } from './PortfolioPerformanceController';
 
 export type RiskMetrics = {
   annualizedReturn: number;
@@ -31,44 +31,24 @@ const emptyMetrics = (totalDataDays: number): RiskMetrics => ({
 });
 
 export const calculateRiskMetrics = async (): Promise<RiskMetrics> => {
-  const snapshotModel = await PortfolioSnapshotDBModel().initialize();
-  const allSnapshots = snapshotModel.getAllRecords();
+  const points = await getDailyPerformance();
 
-  // Snapshots are recorded intraday (every N minutes), but the risk math is
-  // daily — collapse to the last (closing) value of each calendar day.
-  const byDay = new Map<string, IPortfolioSnapshotModel>();
-  for (const s of allSnapshots) {
-    const existing = byDay.get(s.date);
-    if (!existing || (s.timestamp ?? s.date) > (existing.timestamp ?? existing.date)) {
-      byDay.set(s.date, s);
-    }
-  }
-  const sorted = [...byDay.values()].sort((a, b) => a.date.localeCompare(b.date));
-
-  if (sorted.length < 2) {
-    return emptyMetrics(sorted.length);
+  if (points.length < 2) {
+    return emptyMetrics(points.length);
   }
 
-  // Calculate daily returns
-  const dailyReturns: Array<{ date: string; return: number }> = [];
-  for (let i = 1; i < sorted.length; i++) {
-    const prev = sorted[i - 1].totalValue;
-    const curr = sorted[i].totalValue;
-    if (prev > 0) {
-      dailyReturns.push({
-        date: sorted[i].date,
-        return: (curr - prev) / prev,
-      });
-    }
-  }
+  const dailyReturns = points
+    .filter((p): p is PerformancePoint & { dailyReturn: number } => p.dailyReturn !== null)
+    .map((p) => ({ date: p.date, return: p.dailyReturn }));
 
   if (dailyReturns.length === 0) {
-    return emptyMetrics(sorted.length);
+    return emptyMetrics(points.length);
   }
 
-  // Annualized return
-  const totalReturn = (sorted[sorted.length - 1].totalValue - sorted[0].totalValue) / sorted[0].totalValue;
-  const daySpan = moment(sorted[sorted.length - 1].date).diff(moment(sorted[0].date), 'days');
+  const first = points[0];
+  const last = points[points.length - 1];
+  const totalReturn = last.index / first.index - 1;
+  const daySpan = moment(last.date).diff(moment(first.date), 'days');
   const annualizedReturn = daySpan > 0 ? (1 + totalReturn) ** (365 / daySpan) - 1 : 0;
 
   // Volatility (annualized std dev of daily returns)
@@ -80,21 +60,21 @@ export const calculateRiskMetrics = async (): Promise<RiskMetrics> => {
   // Sharpe Ratio
   const sharpeRatio = volatility > 0 ? (annualizedReturn - RISK_FREE_RATE) / volatility : 0;
 
-  // Max Drawdown
-  let peak = sorted[0].totalValue;
+  // Max Drawdown, on the return index so a sell isn't mistaken for a loss
+  let peak = first.index;
   let maxDrawdown = 0;
-  let maxDrawdownPeriod = { from: sorted[0].date, to: sorted[0].date };
-  let currentDrawdownStart = sorted[0].date;
+  let maxDrawdownPeriod = { from: first.date, to: first.date };
+  let currentDrawdownStart = first.date;
 
-  for (const snap of sorted) {
-    if (snap.totalValue > peak) {
-      peak = snap.totalValue;
-      currentDrawdownStart = snap.date;
+  for (const point of points) {
+    if (point.index > peak) {
+      peak = point.index;
+      currentDrawdownStart = point.date;
     }
-    const drawdown = (peak - snap.totalValue) / peak;
+    const drawdown = (peak - point.index) / peak;
     if (drawdown > maxDrawdown) {
       maxDrawdown = drawdown;
-      maxDrawdownPeriod = { from: currentDrawdownStart, to: snap.date };
+      maxDrawdownPeriod = { from: currentDrawdownStart, to: point.date };
     }
   }
 
@@ -157,6 +137,6 @@ export const calculateRiskMetrics = async (): Promise<RiskMetrics> => {
       date: worstDay.date,
       return: +(worstDay.return * 100).toFixed(2),
     },
-    totalDataDays: sorted.length,
+    totalDataDays: points.length,
   };
 };

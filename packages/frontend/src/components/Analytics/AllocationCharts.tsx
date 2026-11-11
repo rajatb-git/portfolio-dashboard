@@ -1,11 +1,14 @@
-import * as React from 'react';
-
-import { PieChart } from '@mui/x-charts/PieChart';
 import { Box, Card, Divider, Grid, Skeleton, Stack, Typography } from '@mui/material';
 
+import { PieChart } from '@mui/x-charts/PieChart';
+import * as React from 'react';
+
+import { toast } from 'react-toastify';
+
+import apis from '@/api';
 import { HoldingAggregate } from '@/api/dashboard';
-import { fnCurrency } from '@/utils/formatNumber';
 import { SERIES } from '@/components/ThemeRegistry/tokens';
+import { fnCurrency } from '@/utils/formatNumber';
 
 // Sector/category hues deliberately exclude green and red: those two
 // colours already mean gain and loss everywhere else in the app.
@@ -104,6 +107,15 @@ type Props = {
 };
 
 export default function AllocationCharts({ dashboardData, isLoading }: Props) {
+  const [accountNames, setAccountNames] = React.useState<Map<string, string>>(new Map());
+
+  React.useEffect(() => {
+    apis.accounts
+      .getAll()
+      .then((accounts) => setAccountNames(new Map(accounts.map((a) => [a.id, a.name]))))
+      .catch((err) => toast.error(err.message || 'Failed to load account names'));
+  }, []);
+
   // Group by asset type
   const byType: Record<string, number> = {};
   for (const h of dashboardData) {
@@ -117,7 +129,8 @@ export default function AllocationCharts({ dashboardData, isLoading }: Props) {
   // Group by account
   const byAccount: Record<string, number> = {};
   for (const h of dashboardData) {
-    byAccount[h.accountId] = (byAccount[h.accountId] ?? 0) + h.marketValue;
+    const label = accountNames.get(h.accountId) ?? h.accountId;
+    byAccount[label] = (byAccount[label] ?? 0) + h.marketValue;
   }
   const accountData: DonutData[] = Object.entries(byAccount)
     .map(([label, value]) => ({ label, value: +value.toFixed(2) }))

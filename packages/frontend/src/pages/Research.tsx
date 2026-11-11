@@ -1,12 +1,3 @@
-import * as React from 'react';
-
-import apis from '@/api';
-import { IMarketNews } from '@/models/MarketNews';
-import { IPriceStore } from '@/models/PriceStoreModel';
-import { IRecommendation } from '@/models/RecommendationModel';
-import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
-import { CompanyProfile } from '@/models/CompanyProfileModel';
-import { fnCurrency } from '@/utils/formatNumber';
 import {
   Avatar,
   Box,
@@ -22,30 +13,38 @@ import {
   Typography,
 } from '@mui/material';
 import moment from 'moment';
+import * as React from 'react';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'react-toastify';
+import apis from '@/api';
+import type { SymbolPosition } from '@/api/holdings';
+import { AgentInsight, AiConfig } from '@/api/live';
+import { Iconify } from '@/components/Iconify';
+import { PriceHistoryGraph } from '@/components/PriceHistoryGraph';
+import RecommendationDonutGraphMui from '@/components/RecommendationDonutGraphMui';
+import AgentInsightsCard from '@/components/Research/AgentInsightsCard';
 import ResearchDetailsCard from '@/components/Research/ResearchDetailsCard';
-import ResearchNewsCard from '@/components/Research/ResearchNewsCard';
-import ResearchMetricsCard from '@/components/Research/ResearchMetricsCard';
-import ResearchPeersCard from '@/components/Research/ResearchPeersCard';
 import ResearchEarningsHistoryCard from '@/components/Research/ResearchEarningsHistoryCard';
 import ResearchInsiderCard from '@/components/Research/ResearchInsiderCard';
-import AgentInsightsCard from '@/components/Research/AgentInsightsCard';
+import ResearchMetricsCard from '@/components/Research/ResearchMetricsCard';
+import ResearchNewsCard from '@/components/Research/ResearchNewsCard';
 import ResearchNotesCard from '@/components/Research/ResearchNotesCard';
+import ResearchPeersCard from '@/components/Research/ResearchPeersCard';
 import ResearchPositionDetailsCard from '@/components/Research/ResearchPositionDetailsCard';
 import ResearchTransactionsCard from '@/components/Research/ResearchTransactionsCard';
-import { AgentInsight, AiConfig } from '@/api/live';
-import type { SymbolPosition } from '@/api/holdings';
 import MockTradeDialog, { type MockTradeInitial } from '@/components/Tax/MockTradeDialog';
-import { IAccount } from '@/models/AccountsModel';
-import { ITransaction } from '@/models/TransactionsModel';
-import { Iconify } from '@/components/Iconify';
 import { FONT_SIZE } from '@/components/ThemeRegistry/tokens';
 import Delta from '@/components/ui/Delta';
 import Metric from '@/components/ui/Metric';
 import StateView from '@/components/ui/StateView';
 import ToolbarButton from '@/components/ui/ToolbarButton';
-import RecommendationDonutGraphMui from '@/components/RecommendationDonutGraphMui';
-import { PriceHistoryGraph } from '@/components/PriceHistoryGraph';
+import { IAccount } from '@/models/AccountsModel';
+import { CompanyProfile } from '@/models/CompanyProfileModel';
+import { IMarketNews } from '@/models/MarketNews';
+import { IPriceStore } from '@/models/PriceStoreModel';
+import { IRecommendation } from '@/models/RecommendationModel';
+import { ITransaction } from '@/models/TransactionsModel';
+import { fnCurrency } from '@/utils/formatNumber';
 import LocalStorageArray from '@/utils/localStorageArray';
 
 function Research() {
@@ -58,7 +57,7 @@ function Research() {
   const origin = location.state as { from?: string; fromLabel?: string } | null;
   const backTo = origin?.from;
 
-  const [_isPriceLoading, setIsPriceLoading] = React.useState(true);
+  const [isPriceLoading, setIsPriceLoading] = React.useState(true);
   const [isRecommendationLoading, setIsRecommendationLoading] = React.useState(true);
   const [isNewsLoading, setIsNewsLoading] = React.useState(true);
   const [isCompanyProfileLoading, setIsCompanyProfileLoading] = React.useState(true);
@@ -119,10 +118,14 @@ function Research() {
       .finally(() => setIsNewsLoading(false));
 
     setIsPriceLoading(true);
+    if (!force) setPrice(undefined);
     const priceFetch = apis.live
       .getLivePrice(searchTicker, force)
       .then((res) => setPrice(res))
-      .catch((err) => toast.error(err.message, { toastId: err.message }))
+      .catch((err) => {
+        if (!force) setPrice(undefined);
+        toast.error(err.message, { toastId: err.message });
+      })
       .finally(() => setIsPriceLoading(false));
 
     setIsRecommendationLoading(true);
@@ -286,7 +289,18 @@ function Research() {
   }, []);
 
   const isPositive = (price?.percentChange ?? 0) >= 0;
-  const notFound = !!searchText && !isCompanyProfileLoading && !companyProfileError && !companyProfile?.name;
+  // ETFs and crypto have no company profile, so "not found" means nothing at all
+  // came back: no profile, no price and no position.
+  const notFound =
+    !!searchText &&
+    !isCompanyProfileLoading &&
+    !isPriceLoading &&
+    !isPositionsLoading &&
+    !companyProfileError &&
+    !companyProfile?.name &&
+    !price?.price &&
+    positions.length === 0;
+  const displayName = companyProfile?.name || positions[0]?.name || searchText;
 
   const backLink = backTo ? (
     <Box>
@@ -387,7 +401,7 @@ function Research() {
               <>
                 <Stack direction="row" spacing={1} sx={{ alignItems: 'center', flexWrap: 'wrap', mb: 0.75 }}>
                   <Typography variant="h6" sx={{ fontWeight: 700 }} noWrap>
-                    {companyProfile?.name}
+                    {displayName}
                   </Typography>
                   {companyProfile?.ticker && (
                     <Chip
@@ -436,28 +450,38 @@ function Research() {
                   )}
                 </Stack>
 
-                <Stack direction="row" spacing={1.5} sx={{ alignItems: 'baseline', flexWrap: 'wrap' }}>
+                {isPriceLoading && !price ? (
+                  <Skeleton width={200} height={44} />
+                ) : !price ? (
                   <Typography
-                    data-numeric=""
-                    sx={{ fontSize: FONT_SIZE.display, fontWeight: 700, lineHeight: 1, letterSpacing: '-0.03em' }}
+                    sx={{ fontSize: FONT_SIZE.display, fontWeight: 700, lineHeight: 1, color: 'text.disabled' }}
                   >
-                    {fnCurrency(price?.price)}
+                    —
                   </Typography>
-                  <Delta
-                    value={price?.percentChange}
-                    display={`${isPositive ? '+' : ''}${price?.percentChange?.toFixed(2)}%`}
-                    variant="chip"
-                    size="medium"
-                  />
-                  {!!price?.change && (
+                ) : (
+                  <Stack direction="row" spacing={1.5} sx={{ alignItems: 'baseline', flexWrap: 'wrap' }}>
+                    <Typography
+                      data-numeric=""
+                      sx={{ fontSize: FONT_SIZE.display, fontWeight: 700, lineHeight: 1, letterSpacing: '-0.03em' }}
+                    >
+                      {fnCurrency(price.price)}
+                    </Typography>
                     <Delta
-                      value={price.change}
-                      display={`(${isPositive ? '+' : ''}${fnCurrency(price.change)})`}
-                      size="small"
-                      showIcon={false}
+                      value={price.percentChange}
+                      display={`${isPositive ? '+' : ''}${price.percentChange?.toFixed(2)}%`}
+                      variant="chip"
+                      size="medium"
                     />
-                  )}
-                </Stack>
+                    {!!price.change && (
+                      <Delta
+                        value={price.change}
+                        display={`(${isPositive ? '+' : ''}${fnCurrency(price.change)})`}
+                        size="small"
+                        showIcon={false}
+                      />
+                    )}
+                  </Stack>
+                )}
               </>
             )}
           </Box>
@@ -474,11 +498,13 @@ function Research() {
                 size={19}
               />
             </Stack>
-            <Tooltip title={price ? `Last checked ${moment(price.updatedAt).format('MMM D, h:mm:ss a')}` : ''}>
-              <Typography variant="caption" color="text.disabled" sx={{ textAlign: 'right' }}>
-                as of {moment(price?.priceDate).format('MMM D, h:mm a')}
-              </Typography>
-            </Tooltip>
+            {price && (
+              <Tooltip title={`Last checked ${moment(price.updatedAt).format('MMM D, h:mm:ss a')}`}>
+                <Typography variant="caption" color="text.disabled" sx={{ textAlign: 'right' }}>
+                  as of {moment(price.priceDate).format('MMM D, h:mm a')}
+                </Typography>
+              </Tooltip>
+            )}
           </Stack>
         </Stack>
 
@@ -501,6 +527,9 @@ function Research() {
           </>
         )}
       </Card>
+
+      {/* ── Price chart (full width) ── */}
+      <PriceHistoryGraph symbol={searchText} />
 
       {/* ── Position Details ── */}
       {searchText && (
@@ -542,6 +571,19 @@ function Research() {
           onRefresh={() => fetchAgentInsights(searchText)}
         />
       )}
+      {!agentEnabled && searchText && (
+        <Card variant="outlined" sx={{ px: 2, py: 1.25 }}>
+          <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
+            <Iconify icon="tabler:sparkles" width={16} sx={{ color: 'text.secondary' }} />
+            <Typography variant="body2" color="text.secondary" sx={{ flexGrow: 1 }}>
+              AI insights are off. Turn them on to get an analysis of {searchText} from public market data.
+            </Typography>
+            <Button size="small" onClick={() => navigate('/settings?tab=ai')} sx={{ textTransform: 'none' }}>
+              Open Settings
+            </Button>
+          </Stack>
+        </Card>
+      )}
 
       {/* ── Row 1: Details + Recommendations | News ── */}
       <Grid container spacing={2} sx={{ alignItems: 'stretch' }}>
@@ -581,9 +623,6 @@ function Research() {
           <ResearchInsiderCard transactions={insiderTransactions} isLoading={isInsiderLoading} />
         </Grid>
       </Grid>
-
-      {/* ── Price chart (full width) ── */}
-      <PriceHistoryGraph symbol={searchText} />
     </Stack>
   );
 }

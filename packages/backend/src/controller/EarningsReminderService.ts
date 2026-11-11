@@ -1,5 +1,5 @@
 import moment from 'moment';
-import { getEarningsHistory } from '../externalApis/finnHub';
+import { read } from '../marketData/store';
 import { DEFAULT_EARNINGS_REMINDER_CONFIG, type IEarningsReminderConfig } from '../models/EarningsReminderConfigModel';
 import { getJobState, setJobState } from '../models/JobRunStateModel';
 import { etDateAndMinutes } from '../utils/marketCalendar';
@@ -107,7 +107,7 @@ class EarningsReminderService {
 
   private async publishedResults(): Promise<HoldingEarningResult[]> {
     try {
-      return await getHoldingsEarningsResults();
+      return await getHoldingsEarningsResults({ waitForPendingMs: 30_000 });
     } catch (err: any) {
       logger.log({ level: 'error', label: LABEL, message: `Earnings results lookup failed: ${err.message}` });
       return [];
@@ -148,7 +148,15 @@ class EarningsReminderService {
   private async resultFromHistory(item: Pending): Promise<ResultFigures | null> {
     let history: any[];
     try {
-      history = await getEarningsHistory(item.symbol);
+      // Forced: a stored copy from before the release can't carry its result.
+      history =
+        (
+          await read<any[]>('earningsHistory', item.symbol.toUpperCase(), {
+            mode: 'force',
+            lane: 'background',
+            waitMs: 60_000,
+          })
+        ).value ?? [];
     } catch (err: any) {
       logger.log({
         level: 'error',
@@ -233,7 +241,7 @@ class EarningsReminderService {
     this.running = true;
     try {
       const today = etDateAndMinutes().dateStr;
-      const calendar = await getHoldingsEarningsCalendar();
+      const calendar = await getHoldingsEarningsCalendar({ waitForPendingMs: 30_000 });
       const published = this.config.notifyResults ? await this.publishedResults() : [];
       let pending = this.trackReports(await this.loadPending(), calendar, published);
       await this.sendReminders(calendar);

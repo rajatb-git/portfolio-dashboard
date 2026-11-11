@@ -9,9 +9,11 @@ Assign a **target percentage** per symbol. Symbols you never touch default to
 their *current* weight, so an untouched portfolio starts at zero drift rather
 than screaming that everything is wrong.
 
-Targets are saved with an explicit **Save** button and stored in MongoDB
-(`rebalance_target_config`), so they travel with your
-[backups](/guide/backups).
+Targets are saved with an explicit **Save** button (with **Reset** to discard
+edits) and stored in MongoDB (`rebalance_target_config`), so they travel with
+your [backups](/guide/backups). They can only be saved when they add up to
+100%. **Clear targets** removes them all and puts every holding back at its
+current weight.
 
 ## The plan
 
@@ -27,8 +29,11 @@ For each symbol the page shows:
 | Shares | Approximate share count for that trade at the current price |
 
 Plus portfolio-level figures: total value, total target percentage (so you can
-see whether your targets add up to 100), and **total drift** — the sum of
-absolute drift, a single "how far off am I" number.
+see whether your targets add up to 100), **total drift** — the sum of
+absolute drift, a single "how far off am I" number — and the suggested trades'
+total buys, total sells and net cash. Because small drifts are left as `hold`,
+buys and sells don't always cancel out exactly. Account cash isn't part of the
+plan.
 
 ::: tip Drift under 0.5% is treated as noise
 Anything inside half a percent is reported as `hold` rather than generating a

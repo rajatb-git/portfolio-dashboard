@@ -137,7 +137,7 @@ function etOffsetMinutes(utcMs: number): number {
 // An ET wall-clock date + minutes-since-midnight as a real UTC instant. The
 // offset is resolved twice so a timestamp that lands on a DST changeover still
 // converts against the offset actually in force at that moment.
-function etTimestamp(dateStr: string, minutes: number): string {
+export function etTimestamp(dateStr: string, minutes: number): string {
   const [y, m, d] = dateStr.split('-').map(Number);
   const naive = Date.UTC(y, m - 1, d, 0, minutes);
   const firstPass = naive - etOffsetMinutes(naive) * 60_000;

@@ -1,17 +1,10 @@
 import moment from 'moment';
 import { getActiveProvider, SYSTEM_PROMPT } from '../aiProviders';
-import {
-  getCompanyNews,
-  getEarningsHistory,
-  getInsiderTransactions,
-  getStockMetrics,
-  getStockPeers,
-} from '../externalApis/finnHub';
+import type { StockMetrics } from '../externalApis/finnHub';
+import { read } from '../marketData/store';
 import { CacheDBModel } from '../models/CacheModel';
 import { logger } from '../utils/winston';
-import { CompanyProfileController } from './CompanyProfileController';
-import { LiveQuoteController } from './LiveQuoteController';
-import { LiveRecommendationController } from './LiveRecommendationController';
+import { ResearchController } from './ResearchController';
 
 export type AgentInsight = {
   summary: string;
@@ -46,9 +39,13 @@ const avg = (values: Array<number | null | undefined>): number | null => {
   return +(nums.reduce((sum, v) => sum + v, 0) / nums.length).toFixed(2);
 };
 
+// Public market data only — the same reads the Research page makes, so a
+// symbol the user holds (kept warm by the scheduler) costs no extra calls.
+const research = new ResearchController();
+
 export class AgentInsightsController {
   private getPeerComparison = async (symbol: string): Promise<PeerComparison | null> => {
-    const peers = (await getStockPeers(symbol))
+    const peers = ((await research.getPeers(symbol)).value ?? [])
       .filter((p) => p && p.toUpperCase() !== symbol.toUpperCase())
       .slice(0, 5);
 
@@ -57,9 +54,7 @@ export class AgentInsightsController {
     }
 
     const peerMetrics = await Promise.all(
-      peers.map((p) =>
-        getStockMetrics(p).catch(() => null)
-      )
+      peers.map(async (p) => (await read<StockMetrics>('metrics', p.toUpperCase(), { mode: 'fresh' })).value)
     );
 
     const valid = peerMetrics.filter((m): m is NonNullable<typeof m> => m !== null);
@@ -81,26 +76,13 @@ export class AgentInsightsController {
     const results: Record<string, any> = {};
 
     const tasks = [
-      {
-        key: 'quote',
-        fn: () => new LiveQuoteController().getLiveQuote(symbol),
-      },
-      {
-        key: 'profile',
-        fn: () => new CompanyProfileController().getCompanyProfile2(symbol),
-      },
-      {
-        key: 'recommendation',
-        fn: () => new LiveRecommendationController().getLiveRecommendation(symbol),
-      },
-      { key: 'metrics', fn: () => getStockMetrics(symbol) },
-      {
-        key: 'news',
-        fn: () =>
-          getCompanyNews(symbol, moment().subtract(7, 'days').format('YYYY-MM-DD'), moment().format('YYYY-MM-DD')),
-      },
-      { key: 'earnings', fn: () => getEarningsHistory(symbol) },
-      { key: 'insider', fn: () => getInsiderTransactions(symbol) },
+      { key: 'quote', fn: async () => (await research.getQuote(symbol)).value },
+      { key: 'profile', fn: async () => (await research.getProfile(symbol)).value },
+      { key: 'recommendation', fn: async () => (await research.getRecommendation(symbol)).value },
+      { key: 'metrics', fn: async () => (await research.getMetrics(symbol)).value },
+      { key: 'news', fn: async () => (await read('news', symbol, { mode: 'fresh', view: true })).value },
+      { key: 'earnings', fn: async () => (await research.getEarningsHistory(symbol)).value },
+      { key: 'insider', fn: async () => (await research.getInsiderTransactions(symbol)).value },
       { key: 'peers', fn: () => this.getPeerComparison(symbol) },
     ];
 
@@ -124,7 +106,7 @@ export class AgentInsightsController {
 
     if (data.profile) {
       sections.push(
-        `\nCOMPANY PROFILE:\nName: ${data.profile.name}\nIndustry: ${data.profile.finnhubIndustry}\nCountry: ${data.profile.country}\nMarket Cap: ${data.profile.marketCapitalization}M\nShares Outstanding: ${data.profile.shareOutstanding}M`
+        `\nCOMPANY PROFILE:\nName: ${data.profile.name}\nIndustry: ${data.profile.industry}\nCountry: ${data.profile.country}\nMarket Cap: ${data.profile.marketCap}M\nShares Outstanding: ${data.profile.shareOutstanding}M`
       );
     }
 

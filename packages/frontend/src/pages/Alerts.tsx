@@ -101,7 +101,7 @@ export default function Alerts() {
   const triggeredCount = statuses.filter((s) => s.triggered).length;
 
   return (
-    <Box sx={{ maxWidth: 920 }}>
+    <Box sx={{ maxWidth: 1200 }}>
       <PageHeader
         title="Alerts"
         subtitle={
@@ -240,6 +240,11 @@ export default function Alerts() {
                           {a.condition === 'pct_from_high' && a.thresholdPercent ? ` · ${a.thresholdPercent}%` : ''}
                         </Typography>
                       )}
+                      {a.reference && (
+                        <Typography sx={{ fontSize: '0.62rem', color: 'text.disabled' }} noWrap>
+                          {a.reference.label} {fnCurrency(a.reference.value)}
+                        </Typography>
+                      )}
                     </TableCell>
                     <TableCell>
                       <Chip
@@ -254,10 +259,18 @@ export default function Alerts() {
                           border: `1px solid ${a.triggered ? 'rgba(34,197,94,0.3)' : 'rgba(100,116,139,0.2)'}`,
                         }}
                       />
-                      {a.triggeredAt && (
+                      {a.triggered ? (
                         <Typography sx={{ fontSize: '0.62rem', color: 'text.disabled', mt: 0.25 }}>
-                          {moment(a.triggeredAt).fromNow()}
+                          {a.triggeredAt
+                            ? moment(a.triggeredAt).fromNow()
+                            : 'Target reached — the monitor records it on its next check'}
                         </Typography>
+                      ) : (
+                        a.distancePercent !== null && (
+                          <Typography sx={{ fontSize: '0.62rem', color: 'text.secondary', mt: 0.25 }}>
+                            {Math.abs(a.distancePercent).toFixed(2)}% {a.distancePercent >= 0 ? 'rise' : 'drop'} to go
+                          </Typography>
+                        )
                       )}
                     </TableCell>
                     <TableCell align="right">
@@ -302,7 +315,9 @@ export default function Alerts() {
         <DialogTitle>Delete alert</DialogTitle>
         <DialogContent>
           <Typography>
-            Delete the alert for <strong>{deleteTarget?.symbol}</strong>?
+            Delete the <strong>{deleteTarget?.symbol}</strong> alert{' '}
+            {deleteTarget?.conditionLabel ? `(${deleteTarget.conditionLabel})` : ''}
+            {deleteTarget?.note ? ` — “${deleteTarget.note}”` : ''}?
           </Typography>
         </DialogContent>
         <DialogActions>

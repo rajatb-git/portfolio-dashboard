@@ -1,10 +1,9 @@
-import axios from './axios';
-
 import { DB_HOST } from '@/config';
 import { IHoldings, ITaxLot } from '@/models/HoldingsModel';
-import { HoldingAggregate } from './dashboard';
-import { catchCustomError } from './apiUtil';
 import type { TaxConfig } from './analytics';
+import { catchCustomError } from './apiUtil';
+import axios from './axios';
+import { HoldingAggregate } from './dashboard';
 
 export type LotMethod = 'fifo' | 'lifo' | 'hifo' | 'taxOptimal' | 'specific';
 
@@ -191,14 +190,4 @@ export default class HoldingsAPI {
       .post(DB_HOST + '/holdings/simulate', request)
       .then((response) => response.data)
       .catch(catchCustomError);
-
-  // file import
-  insertHoldings = async (holdingsArray: Array<IHoldings>): Promise<string> => {
-    return axios
-      .post(DB_HOST + '/holdings/import', holdingsArray)
-      .then((response) => {
-        return response.data;
-      })
-      .catch(catchCustomError);
-  };
 }

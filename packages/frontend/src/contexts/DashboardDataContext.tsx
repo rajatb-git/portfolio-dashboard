@@ -17,12 +17,20 @@ type DashboardDataContextValue = {
   earnings: Array<HoldingEarning>;
   earningsResults: Array<HoldingEarningResult>;
   alertStatuses: Array<IAlertStatus>;
+  // When the holdings last loaded, and why the latest attempt failed (if it did)
+  // — so the page can say it is showing stale numbers instead of looking live.
+  lastUpdated: Date | null;
+  connectionError: string | null;
   refresh: () => void;
   revalidate: () => void;
   loadAlerts: () => void;
 };
 
 const DashboardDataContext = React.createContext<DashboardDataContextValue | null>(null);
+
+// One refresh hits five endpoints; when the backend is down they all fail the
+// same way, so they share one toast rather than stacking five.
+const REFRESH_TOAST = 'dashboard-refresh-error';
 
 // Lives above the router so dashboard data survives navigation: returning to the
 // page renders the last-known values instantly while a silent poll revalidates in
@@ -35,6 +43,8 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
   const [earnings, setEarnings] = React.useState<Array<HoldingEarning>>([]);
   const [earningsResults, setEarningsResults] = React.useState<Array<HoldingEarningResult>>([]);
   const [isEarningsLoading, setIsEarningsLoading] = React.useState(true);
+  const [lastUpdated, setLastUpdated] = React.useState<Date | null>(null);
+  const [connectionError, setConnectionError] = React.useState<string | null>(null);
 
   const loadAlerts = React.useCallback((silent = false) => {
     apis.alerts
@@ -44,9 +54,17 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
         notifyTriggeredAlerts(data ?? []);
       })
       .catch((err) => {
-        if (!silent) toast.error(err.message || 'Failed to load alert statuses');
+        if (!silent) toast.error(err.message || 'Failed to load alert statuses', { toastId: REFRESH_TOAST });
       });
   }, []);
+
+  // The backend answers right away and marks holdings whose first quote is
+  // still being fetched; poll quickly until those arrive rather than leaving
+  // them at cost basis for a full refresh interval.
+  const pendingTimer = React.useRef<number | null>(null);
+  const pendingPolls = React.useRef(0);
+  const PENDING_POLL_MS = 3000;
+  const MAX_PENDING_POLLS = 40;
 
   const fetchData = React.useCallback(
     (silent: boolean) => {
@@ -56,10 +74,22 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
         .getDashboard()
         .then((response) => {
           setDashboardData(response);
+          setLastUpdated(new Date());
+          setConnectionError(null);
+          if (pendingTimer.current) window.clearTimeout(pendingTimer.current);
+          pendingTimer.current = null;
+          if (response.some((row) => row.pricePending) && pendingPolls.current < MAX_PENDING_POLLS) {
+            pendingPolls.current += 1;
+            pendingTimer.current = window.setTimeout(() => fetchDataRef.current(true), PENDING_POLL_MS);
+          } else {
+            pendingPolls.current = 0;
+          }
         })
         .catch((err) => {
-          // Stay quiet on background polls so a transient blip doesn't spam toasts.
-          if (!silent) toast.error(err.message);
+          setConnectionError(err.message || 'Failed to load holdings');
+          // Stay quiet on background polls so a transient blip doesn't spam toasts;
+          // the page shows a stale-data banner instead.
+          if (!silent) toast.error(err.message, { toastId: REFRESH_TOAST });
         })
         .finally(() => {
           if (!silent) setIsLoading(false);
@@ -73,7 +103,7 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
         .getEarningsCalendar()
         .then((response) => setEarnings(response ?? []))
         .catch((err) => {
-          if (!silent) toast.error(err.message || 'Failed to load earnings calendar');
+          if (!silent) toast.error(err.message || 'Failed to load earnings calendar', { toastId: REFRESH_TOAST });
         })
         .finally(() => {
           if (!silent) setIsEarningsLoading(false);
@@ -83,18 +113,21 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
         .getEarningsResults()
         .then((response) => setEarningsResults(response ?? []))
         .catch((err) => {
-          if (!silent) toast.error(err.message || 'Failed to load earnings results');
+          if (!silent) toast.error(err.message || 'Failed to load earnings results', { toastId: REFRESH_TOAST });
         });
 
       apis.accounts
         .getAll()
         .then((response) => setAccounts(response))
         .catch((err) => {
-          if (!silent) toast.error(err.message);
+          if (!silent) toast.error(err.message, { toastId: REFRESH_TOAST });
         });
     },
     [loadAlerts]
   );
+
+  const fetchDataRef = React.useRef(fetchData);
+  fetchDataRef.current = fetchData;
 
   const refresh = React.useCallback(() => fetchData(false), [fetchData]);
   const isLoadingRef = React.useRef(isLoading);
@@ -119,6 +152,7 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
 
     return () => {
       window.clearInterval(timer);
+      if (pendingTimer.current) window.clearTimeout(pendingTimer.current);
       document.removeEventListener('visibilitychange', tick);
     };
   }, [fetchData]);
@@ -132,11 +166,15 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
       earnings,
       earningsResults,
       alertStatuses,
+      lastUpdated,
+      connectionError,
       refresh,
       revalidate,
       loadAlerts,
     }),
     [
+      lastUpdated,
+      connectionError,
       isLoading,
       isEarningsLoading,
       dashboardData,

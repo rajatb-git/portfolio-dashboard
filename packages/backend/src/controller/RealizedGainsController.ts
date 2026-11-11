@@ -1,9 +1,10 @@
 import moment from 'moment';
 import { TransactionModel } from '../models/TransactionModel';
-import { lotTerm, tradeDate } from './TaxLotController';
+import { lotTerm, nonTaxableAccountIds, tradeDate } from './TaxLotController';
 
 export type RealizedLot = {
   symbol: string;
+  accountId: string;
   acquiredDate: string;
   soldDate: string;
   qty: number;
@@ -35,13 +36,20 @@ const round = (n: number) => +n.toFixed(2);
 
 type OpenLot = { id: string; qty: number; price: number; date: string };
 
-export const calculateRealizedGains = async (): Promise<RealizedGainsResult> => {
+// `taxableOnly` leaves out sales inside Roth/IRA/401(k) accounts, for tax
+// estimates; the realized-gains history itself lists every account.
+export const calculateRealizedGains = async (options: { taxableOnly?: boolean } = {}): Promise<RealizedGainsResult> => {
   const model = await TransactionModel().initialize();
   const all = model.getAllRecords();
+  const excluded = options.taxableOnly ? await nonTaxableAccountIds() : new Set<string>();
 
   const trades = all
     .filter(
-      (t) => (t.type === 'stock' || t.type === 'crypto') && (t.action === 'buy' || t.action === 'sell') && t.symbol
+      (t) =>
+        (t.type === 'stock' || t.type === 'crypto') &&
+        (t.action === 'buy' || t.action === 'sell') &&
+        t.symbol &&
+        !excluded.has(t.accountId)
     )
     .sort((a, b) => tradeDate(a).localeCompare(tradeDate(b)));
 
@@ -53,7 +61,8 @@ export const calculateRealizedGains = async (): Promise<RealizedGainsResult> => 
 
   for (const t of trades) {
     const symbol = (t.symbol as string).toUpperCase();
-    const queue = (lotsBySymbol[symbol] ??= []);
+    // Lots never cross accounts: a sale in one account can't relieve a lot bought in another.
+    const queue = (lotsBySymbol[`${t.accountId}:${symbol}`] ??= []);
     const price = t.price ?? 0;
 
     if (t.action === 'buy') {
@@ -67,6 +76,7 @@ export const calculateRealizedGains = async (): Promise<RealizedGainsResult> => 
       const costBasis = qty * costPrice;
       realized.push({
         symbol,
+        accountId: t.accountId,
         acquiredDate,
         soldDate,
         qty: round(qty),

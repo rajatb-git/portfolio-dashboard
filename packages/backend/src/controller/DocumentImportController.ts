@@ -1,152 +1,141 @@
-import moment from 'moment';
 import { OllamaProvider } from '../aiProviders/ollamaProvider';
 import { getAiConfig } from '../models/AiConfigModel';
 import { logger } from '../utils/winston';
 
 export type ImportTarget = 'transactions' | 'holdings';
 
-type ParsedTransaction = {
+// Rows come back in the import engine's own shape (see ImportController's
+// RawImportRow), so they go through the same review and validation as a CSV.
+type ParsedRow = {
   symbol?: string;
-  qty: number;
-  price?: number;
-  action: string;
-  type: 'stock' | 'crypto' | 'cash';
+  name?: string;
+  qty?: unknown;
+  price?: unknown;
+  costBasis?: unknown;
+  amount?: unknown;
   date?: string;
-};
-
-type ParsedHolding = {
-  symbol: string;
-  name: string;
-  qty: number;
-  averagePrice?: number;
-  type: 'stock' | 'crypto';
+  action?: string;
+  assetType?: string;
 };
 
 export type DocumentParseResult = {
   target: ImportTarget;
-  rows: Array<ParsedTransaction | ParsedHolding>;
+  rows: ParsedRow[];
   skipped: string[];
   provider: string;
   model: string;
+  chunks: number;
 };
 
-const VALID_ACTIONS = ['buy', 'sell', 'deposit', 'withdraw'];
-
-const TRANSACTIONS_PROMPT = `You are a financial-document parser. You will be given the raw text of a brokerage or crypto-exchange document (a trade confirmation, account statement, or transaction history). Extract every individual buy, sell, deposit, or withdrawal it contains and return them as transaction rows.
+const TRANSACTIONS_PROMPT = `You are a financial-document parser. You will be given part of the raw text of a brokerage or crypto-exchange document (a trade confirmation, account statement, or transaction history). Extract every individual transaction line in this part and return them as rows.
 
 Rules:
-- Use ONLY data present in the document. Never invent symbols, prices, quantities, or dates. If a field is absent, omit it.
-- "symbol" is the ticker (e.g. AAPL, BTC), uppercase. For cash deposits/withdrawals with no security, omit symbol and set type to "cash".
-- "qty" is the number of shares/units as a positive number.
-- "price" is the per-unit execution price as a positive number (no currency symbols).
-- "action" must be exactly one of: buy, sell, deposit, withdraw.
-- "type" must be exactly one of: stock, crypto, cash.
-- "date" is the trade/settlement date in YYYY-MM-DD format if present.
-- Do NOT include account numbers, names, balances, fees, or totals as rows.
+- Use ONLY data present in the text. Never invent symbols, prices, quantities, or dates. If a field is absent, omit it.
+- One row per transaction line. Include dividends, interest and transfers too, with their action text as written — the app decides what to keep.
+- "symbol": the ticker (e.g. AAPL, BTC), uppercase. Omit for pure cash movements.
+- "action": the action as written in the document (e.g. "YOU BOUGHT", "Sell", "Deposit", "Dividend").
+- "qty": number of shares/units as a positive number.
+- "price": per-unit execution price as a number, no currency symbols.
+- "amount": the total cash amount of the line as a number, if shown.
+- "date": the trade date in YYYY-MM-DD.
+- "assetType": "crypto" for cryptocurrencies, otherwise "stock".
+- Do NOT include account numbers, account names, running balances or totals as rows.
 
-Respond ONLY with valid JSON (no markdown, no code fences) matching this exact schema:
-{
-  "rows": [
-    { "symbol": "AAPL", "qty": 10, "price": 150.25, "action": "buy", "type": "stock", "date": "2024-03-15" }
-  ]
-}
-If the document contains no recognizable transactions, return { "rows": [] }.`;
+Respond ONLY with JSON (no markdown):
+{ "rows": [ { "symbol": "AAPL", "action": "Buy", "qty": 10, "price": 150.25, "amount": 1502.5, "date": "2024-03-15", "assetType": "stock" } ] }
+If this part contains no transaction lines, return { "rows": [] }.`;
 
-const HOLDINGS_PROMPT = `You are a financial-document parser. You will be given the raw text of a brokerage or crypto-exchange document (a positions statement or portfolio summary). Extract every current holding/position it contains and return them as holding rows.
+const HOLDINGS_PROMPT = `You are a financial-document parser. You will be given part of the raw text of a brokerage or crypto-exchange document (a positions statement, portfolio summary, or unrealized gain / tax lot report). Extract every holding in this part.
 
 Rules:
-- Use ONLY data present in the document. Never invent symbols, prices, or quantities. If a field is absent, omit it.
-- "symbol" is the ticker (e.g. AAPL, BTC), uppercase.
-- "name" is the security/company name if present, otherwise repeat the symbol.
-- "qty" is the number of shares/units held as a positive number.
-- "averagePrice" is the average cost basis per unit as a positive number (no currency symbols). If only market price is shown and cost basis is absent, omit averagePrice.
-- "type" must be exactly one of: stock, crypto.
-- Do NOT include cash balances, account totals, or summary rows.
+- Use ONLY data present in the text. Never invent symbols, prices, quantities, or dates. If a field is absent, omit it.
+- If the document lists individual tax lots (acquisition date per purchase), return ONE ROW PER LOT with that lot's quantity, cost and "date". Otherwise one row per position.
+- "symbol": the ticker (e.g. AAPL, BTC), uppercase.
+- "name": the security name if present.
+- "qty": shares/units of the row as a positive number.
+- "price": average cost per unit (cost basis per share) as a number. Never use the current market price here.
+- "costBasis": total cost of the row as a number, if shown.
+- "amount": current market value of the row, if shown.
+- "date": acquisition / purchase date of the lot in YYYY-MM-DD, if shown.
+- "assetType": "crypto" for cryptocurrencies, otherwise "stock".
+- Include a cash or money-market line as a row with symbol "CASH" and its value in "amount". Do NOT include account totals.
 
-Respond ONLY with valid JSON (no markdown, no code fences) matching this exact schema:
-{
-  "rows": [
-    { "symbol": "AAPL", "name": "Apple Inc", "qty": 10, "averagePrice": 150.25, "type": "stock" }
-  ]
-}
-If the document contains no recognizable holdings, return { "rows": [] }.`;
+Respond ONLY with JSON (no markdown):
+{ "rows": [ { "symbol": "AAPL", "name": "Apple Inc", "qty": 10, "price": 150.25, "costBasis": 1502.5, "date": "2023-06-01", "assetType": "stock" } ] }
+If this part contains no holdings, return { "rows": [] }.`;
 
-const normalizeAction = (raw: unknown): string => {
+// Brokers word the same action many ways ("YOU BOUGHT", "Sold", "Reinvest
+// Shares"). Returns null for anything that isn't a trade or a cash move —
+// dividends, interest, fees, journals — so callers can skip and report it.
+export const normalizeTradeAction = (raw: unknown): 'buy' | 'sell' | 'deposit' | 'withdraw' | null => {
   const s = String(raw ?? '')
     .toLowerCase()
     .trim();
-  if (s.includes('buy')) return 'buy';
-  if (s.includes('sell')) return 'sell';
-  if (s.includes('deposit') || s.includes('credit')) return 'deposit';
-  if (s.includes('withdraw') || s.includes('debit')) return 'withdraw';
-  return s;
+  // Short sales and covers aren't long positions; the app doesn't track them.
+  if (/\bshort\b|to cover/.test(s)) return null;
+  // "Reinvest Dividend" / "Qual Div Reinvest" is the dividend's cash leg; the
+  // shares it bought come on a separate "Reinvest Shares" / "Reinvestment" row.
+  if (/\bdiv/.test(s) && /reinvest/.test(s) && !/shares?\b/.test(s)) return null;
+  if (/\b(buy|bought|purchased?|reinvest(ed|ment)?)\b/.test(s) || s === 'b' || s === 'bo') return 'buy';
+  if (/\b(sell|sold)\b/.test(s) || s === 's' || s === 'so') return 'sell';
+  if (/\b(dividend|interest|fee|tax|journal)/.test(s)) return null;
+  if (/\b(deposit|credit|contribution)/.test(s)) return 'deposit';
+  if (/\b(withdraw(al)?|debit)\b/.test(s)) return 'withdraw';
+  return null;
 };
 
-const toNumber = (value: unknown): number | undefined => {
-  if (value === undefined || value === null || value === '') return undefined;
-  const parsed = parseFloat(String(value).replace(/[$,\s]/g, ''));
-  return Number.isFinite(parsed) ? Math.abs(parsed) : undefined;
+// Long statements go to the model a piece at a time: a local model's context
+// is small, and anything past it is dropped without an error. Each piece keeps
+// the document's first lines so column headers stay in view.
+const CHUNK_CHARS = 6000;
+const HEADER_LINES = 4;
+const NUM_CTX = 8192;
+const CHUNK_TIMEOUT_MS = 300_000;
+
+const splitDocument = (text: string): string[] => {
+  const lines = text.split(/\r?\n/);
+  const header = lines
+    .filter((l) => l.trim())
+    .slice(0, HEADER_LINES)
+    .join('\n');
+  const chunks: string[] = [];
+  let current: string[] = [];
+  let size = 0;
+  for (const line of lines) {
+    if (size + line.length > CHUNK_CHARS && current.length) {
+      chunks.push(current.join('\n'));
+      current = [];
+      size = 0;
+    }
+    current.push(line);
+    size += line.length + 1;
+  }
+  if (current.join('').trim()) chunks.push(current.join('\n'));
+  return chunks.map((chunk, i) =>
+    i === 0 ? chunk : `(Continued. The document begins with:)\n${header}\n(…)\n${chunk}`
+  );
 };
 
-const normalizeTransaction = (raw: any, index: number, skipped: string[]): ParsedTransaction | null => {
-  const label = `Row ${index + 1}`;
-  const action = normalizeAction(raw.action);
-  if (!VALID_ACTIONS.includes(action)) {
-    skipped.push(`${label}: unrecognized action "${raw.action ?? ''}"`);
-    return null;
-  }
+const str = (v: unknown): string | undefined => {
+  if (v === undefined || v === null) return undefined;
+  const s = String(v).trim();
+  return s ? s : undefined;
+};
 
-  const qty = toNumber(raw.qty);
-  if (qty === undefined && action !== 'deposit' && action !== 'withdraw') {
-    skipped.push(`${label}: missing quantity`);
-    return null;
-  }
-
-  const type = String(raw.type ?? '')
-    .toLowerCase()
-    .trim();
-  const resolvedType: ParsedTransaction['type'] = type === 'crypto' ? 'crypto' : type === 'cash' ? 'cash' : 'stock';
-
-  const price = toNumber(raw.price);
-  const date = raw.date ? moment(String(raw.date)) : undefined;
-  const symbol = raw.symbol ? String(raw.symbol).trim().toUpperCase() : undefined;
-
-  return {
-    ...(symbol && { symbol }),
-    qty: qty ?? 0,
-    action,
-    type: resolvedType,
-    ...(price !== undefined && { price }),
-    ...(date?.isValid() && { date: date.format('YYYY-MM-DD') }),
+const toRow = (raw: any): ParsedRow | null => {
+  if (!raw || typeof raw !== 'object') return null;
+  const row: ParsedRow = {
+    symbol: str(raw.symbol)?.toUpperCase(),
+    name: str(raw.name),
+    qty: raw.qty,
+    price: raw.price ?? raw.averagePrice,
+    costBasis: raw.costBasis,
+    amount: raw.amount,
+    date: str(raw.date),
+    action: str(raw.action),
+    assetType: str(raw.assetType ?? raw.type),
   };
-};
-
-const normalizeHolding = (raw: any, index: number, skipped: string[]): ParsedHolding | null => {
-  const label = `Row ${index + 1}`;
-  const symbol = raw.symbol ? String(raw.symbol).trim().toUpperCase() : '';
-  if (!symbol) {
-    skipped.push(`${label}: missing symbol`);
-    return null;
-  }
-
-  const qty = toNumber(raw.qty);
-  if (qty === undefined) {
-    skipped.push(`${label}: missing quantity`);
-    return null;
-  }
-
-  const type = String(raw.type ?? '')
-    .toLowerCase()
-    .trim();
-  const averagePrice = toNumber(raw.averagePrice);
-
-  return {
-    symbol,
-    name: raw.name ? String(raw.name).trim() : symbol,
-    qty,
-    type: type === 'crypto' ? 'crypto' : 'stock',
-    ...(averagePrice !== undefined && { averagePrice }),
-  };
+  return Object.values(row).some((v) => v !== undefined && v !== '') ? row : null;
 };
 
 export class DocumentImportController {
@@ -171,35 +160,43 @@ export class DocumentImportController {
     }
 
     const systemPrompt = target === 'holdings' ? HOLDINGS_PROMPT : TRANSACTIONS_PROMPT;
-    const userPrompt = `Parse the following document text:\n\n${text}`;
+    const chunks = splitDocument(text);
+    const rows: ParsedRow[] = [];
+    const skipped: string[] = [];
 
-    const rawText = await provider.generateInsight(systemPrompt, userPrompt);
-    const cleaned = rawText
-      .replace(/```(?:json)?\s*/g, '')
-      .replace(/```\s*/g, '')
-      .trim();
-
-    let parsed: any;
-    try {
-      parsed = JSON.parse(cleaned);
-    } catch (_err) {
-      logger.log({
-        level: 'error',
-        label: 'DocumentImport',
-        message: `Failed to parse Ollama response as JSON: ${cleaned.slice(0, 500)}`,
+    for (const [i, chunk] of chunks.entries()) {
+      const part = chunks.length > 1 ? ` (part ${i + 1} of ${chunks.length})` : '';
+      const rawText = await provider.generateInsight(systemPrompt, `Parse this document text${part}:\n\n${chunk}`, {
+        numCtx: NUM_CTX,
+        timeoutMs: CHUNK_TIMEOUT_MS,
       });
+      const cleaned = rawText
+        .replace(/```(?:json)?\s*/g, '')
+        .replace(/```\s*/g, '')
+        .trim();
+      let parsed: any;
+      try {
+        parsed = JSON.parse(cleaned);
+      } catch (_err) {
+        logger.log({
+          level: 'error',
+          label: 'DocumentImport',
+          message: `Part ${i + 1}: Ollama response wasn't JSON: ${cleaned.slice(0, 500)}`,
+        });
+        skipped.push(`Part ${i + 1} of the document couldn't be read by the local AI`);
+        continue;
+      }
+      const incoming: any[] = Array.isArray(parsed?.rows) ? parsed.rows : [];
+      for (const raw of incoming) {
+        const row = toRow(raw);
+        if (row) rows.push(row);
+      }
+    }
+
+    if (!rows.length && skipped.length === chunks.length) {
       throw new Error('The local AI did not return valid JSON. Try a clearer document or a different model.');
     }
 
-    const incoming: any[] = Array.isArray(parsed?.rows) ? parsed.rows : [];
-    const skipped: string[] = [];
-
-    const rows = incoming
-      .map((raw, i) =>
-        target === 'holdings' ? normalizeHolding(raw, i, skipped) : normalizeTransaction(raw, i, skipped)
-      )
-      .filter((row): row is ParsedTransaction & ParsedHolding => row !== null);
-
-    return { target, rows, skipped, provider: provider.name, model: provider.model };
+    return { target, rows, skipped, provider: provider.name, model: provider.model, chunks: chunks.length };
   };
 }

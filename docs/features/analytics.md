@@ -6,10 +6,17 @@ much risk you are carrying and what the tax consequences look like.
 
 ## Performance
 
-**Portfolio performance chart** — total value over time, drawn from daily
-snapshots. Snapshots are written whenever the dashboard is built, and can also
-be captured on a timer by the
+**Portfolio performance chart** — your return over the selected range next to
+a benchmark (S&P 500, Nasdaq 100 or the Dow), both starting at 0% on the first
+day of the range. It is drawn from daily snapshots of your holdings' market
+value (cash is not included). Snapshots are written whenever the dashboard is
+built, and can also be captured on a timer by the
 [Portfolio Value Tracker](/reference/background-services) service.
+
+Returns are **time-weighted**: each day's buys and sells are taken out before
+the day's change is measured, so buying more shares doesn't show up as a gain
+and selling doesn't show up as a loss. The same daily returns feed the monthly
+grid and the risk metrics.
 
 **Monthly returns** — a year × month grid of percentage returns, so seasonality
 and bad quarters are visible at a glance. Months without comparable data are
@@ -27,7 +34,7 @@ year and split into **short-term and long-term**.
 ## Risk
 
 **Risk metrics** — annualized return, volatility, Sharpe ratio, maximum
-drawdown and beta, computed from the price history of your holdings, along with
+drawdown and beta, computed from the portfolio's daily time-weighted returns, along with
 how many days of data the figures are based on. Short history means weak
 numbers, and the card says so.
 

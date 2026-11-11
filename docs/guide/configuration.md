@@ -39,8 +39,11 @@ Everything else is optional and documented in the
 
 The frontend resolves the API base URL in this order:
 
-1. The `api_host` value in `localStorage`, set under **Settings → Application →
-   Backend URL** — takes precedence, and survives rebuilds.
+1. The `api_host` value in `localStorage`, set under **Settings → General →
+   Backend URL** — takes precedence, and survives rebuilds. Saving checks that
+   the address answers `GET /health` and reloads the page; **Use default**
+   removes the override. It accepts a full `http(s)://` address or a path such
+   as `/api`.
 2. The `VITE_DB_HOST` build-time variable.
 3. `http://localhost:3001`.
 

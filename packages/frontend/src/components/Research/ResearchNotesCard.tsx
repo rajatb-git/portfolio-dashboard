@@ -4,8 +4,13 @@ import { toast } from 'react-toastify';
 
 import apis from '@/api';
 import { Iconify } from '@/components/Iconify';
+import LocalStorageUtil from '@/utils/localStorage';
 
 type Props = { symbol: string };
+
+// An unsaved draft outlives navigating to another ticker and back, so typing a
+// thesis and then checking a peer doesn't silently throw it away.
+const draftKey = (symbol: string) => `notes_draft_${symbol.toUpperCase()}`;
 
 export default function ResearchNotesCard({ symbol }: Props) {
   const [saved, setSaved] = React.useState('');
@@ -20,13 +25,26 @@ export default function ResearchNotesCard({ symbol }: Props) {
       .get(symbol)
       .then((note) => {
         setSaved(note.body ?? '');
-        setDraft(note.body ?? '');
+        setDraft(LocalStorageUtil.getItem<string>(draftKey(symbol)) ?? note.body ?? '');
       })
       .catch((err) => toast.error(err.message || 'Failed to load notes'))
       .finally(() => setIsLoading(false));
   }, [symbol]);
 
   const isDirty = draft !== saved;
+
+  React.useEffect(() => {
+    if (isLoading) return;
+    if (isDirty) LocalStorageUtil.setItem(draftKey(symbol), draft);
+    else LocalStorageUtil.removeItem(draftKey(symbol));
+  }, [draft, isDirty, isLoading, symbol]);
+
+  React.useEffect(() => {
+    if (!isDirty) return;
+    const warn = (e: BeforeUnloadEvent) => e.preventDefault();
+    window.addEventListener('beforeunload', warn);
+    return () => window.removeEventListener('beforeunload', warn);
+  }, [isDirty]);
 
   const handleSave = async () => {
     setSaving(true);

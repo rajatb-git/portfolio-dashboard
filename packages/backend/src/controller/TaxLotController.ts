@@ -1,9 +1,20 @@
 import moment from 'moment';
+import { AccountModel, isTaxableAccount } from '../models/AccountModel';
 import { HoldingsModel, IHoldingsModel, ITaxLot } from '../models/HoldingsModel';
 import { ITaxConfig } from '../models/TaxConfigModel';
 import { ITransaction, ITransactionModel, TransactionModel } from '../models/TransactionModel';
 import { roundQty } from '../utils';
 import { createDashboard } from './DashboardController';
+
+// Accounts whose gains aren't taxed on sale (Roth, traditional IRA, 401(k)).
+// Holdings whose account no longer exists count as taxable.
+export const nonTaxableAccountIds = async (): Promise<Set<string>> =>
+  new Set(
+    (await AccountModel().initialize())
+      .getAllRecords()
+      .filter((a) => !isTaxableAccount(a))
+      .map((a) => a.id)
+  );
 
 export type LotMethod = 'fifo' | 'lifo' | 'hifo' | 'taxOptimal' | 'specific';
 export const LOT_METHODS: LotMethod[] = ['fifo', 'lifo', 'hifo', 'taxOptimal', 'specific'];

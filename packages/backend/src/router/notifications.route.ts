@@ -1,8 +1,6 @@
 import Router from '@koa/router';
-import {
-  NotificationHistoryDBModel,
-  pruneNotificationHistory,
-} from '../models/NotificationHistoryModel';
+import { mqttPublisher } from '../controller/MqttPublisher';
+import { NotificationHistoryDBModel, pruneNotificationHistory } from '../models/NotificationHistoryModel';
 import { errorBody } from '../utils/error';
 import { logger } from '../utils/winston';
 
@@ -25,7 +23,7 @@ export const NotificationsRouter = () => {
         .filter((rec) => !kind || rec.kind === kind)
         .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 
-      ctx.body = { total: records.length, items: records.slice(0, limit) };
+      ctx.body = { total: records.length, items: records.slice(0, limit), channelEnabled: mqttPublisher.isEnabled() };
       ctx.status = 200;
     } catch (err: any) {
       logger.log({ level: 'error', message: err.message, label: 'Get notification history' });

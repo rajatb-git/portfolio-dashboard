@@ -1,6 +1,6 @@
 import React from 'react';
 
-import { Button, IconButton, Stack } from '@mui/material';
+import { Button, Stack } from '@mui/material';
 import InputAdornment from '@mui/material/InputAdornment';
 import OutlinedInput from '@mui/material/OutlinedInput';
 import Toolbar from '@mui/material/Toolbar';
@@ -89,10 +89,6 @@ export default function DashTableToolbar({ filterName, onFilterName, refreshData
       >
         Mock trade
       </Button>
-
-      <IconButton aria-label="Refresh holdings" onClick={refreshData} size="small" sx={{ color: 'text.secondary' }}>
-        <Iconify icon="mingcute:refresh-3-fill" width={18} />
-      </IconButton>
 
       <BuySellDialog handleDialogClose={closeToggle} open={toggleState} refreshData={refreshData} accounts={accounts} />
       <CashDialog

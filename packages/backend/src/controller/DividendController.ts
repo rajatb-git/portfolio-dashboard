@@ -1,5 +1,7 @@
 import moment from 'moment';
 import { getDividendsFromNasdaq, type NasdaqDividends } from '../externalApis/nasdaq';
+import type { CompanyProfile2Response } from '../externalApis/types';
+import { read } from '../marketData/store';
 import { CacheDBModel } from '../models/CacheModel';
 import { HoldingsModel } from '../models/HoldingsModel';
 import { logger } from '../utils/winston';
@@ -38,6 +40,9 @@ export type DividendSummary = {
   // Payments with a known future date, soonest first.
   upcoming: Array<{ symbol: string; name: string; date: string; amount: number; event: 'ex_dividend' | 'payment' }>;
   payerCount: number;
+  // Funds held without dividend data: NASDAQ publishes none for ETFs, so their
+  // distributions are missing from the totals rather than zero.
+  fundsNotCovered: string[];
   generatedAt: string;
 };
 
@@ -99,12 +104,16 @@ export async function buildDividendSummary(): Promise<DividendSummary> {
   const positions = await loadPositions();
 
   const results: HoldingDividend[] = [];
+  const noData: string[] = [];
   for (let i = 0; i < positions.length; i += SYMBOL_CONCURRENCY) {
     const batch = positions.slice(i, i + SYMBOL_CONCURRENCY);
     const settled = await Promise.allSettled(
       batch.map(async (position) => {
         const dividends = await fetchDividendsCached(position.symbol);
-        if (!dividends) return null;
+        if (!dividends) {
+          noData.push(position.symbol);
+          return null;
+        }
 
         const amountPerShare = currentRate(dividends);
         const averagePrice = position.qty > 0 ? position.cost / position.qty : 0;
@@ -118,8 +127,7 @@ export async function buildDividendSummary(): Promise<DividendSummary> {
           amountPerShare,
           annualizedDividend: dividends.annualizedDividend,
           yieldPercent: dividends.yieldPercent,
-          yieldOnCostPercent:
-            averagePrice > 0 ? +((dividends.annualizedDividend / averagePrice) * 100).toFixed(2) : 0,
+          yieldOnCostPercent: averagePrice > 0 ? +((dividends.annualizedDividend / averagePrice) * 100).toFixed(2) : 0,
           annualIncome: +annualIncome.toFixed(2),
           nextExDate: dividends.exDividendDate,
           nextPayDate: dividends.dividendPaymentDate,
@@ -138,13 +146,28 @@ export async function buildDividendSummary(): Promise<DividendSummary> {
 
   results.sort((a, b) => b.annualIncome - a.annualIncome);
 
+  // Finnhub's free plan has a company profile for every listed company but none
+  // for funds, so a stored empty profile marks a fund.
+  const fundsNotCovered: string[] = [];
+  for (const symbol of noData) {
+    const profile = await read<CompanyProfile2Response>('profile', symbol);
+    if (profile.value && !profile.value.name) fundsNotCovered.push(symbol);
+  }
+  fundsNotCovered.sort();
+
   const totalAnnualIncome = +results.reduce((sum, h) => sum + h.annualIncome, 0).toFixed(2);
   const totalCost = results.reduce((sum, h) => sum + h.qty * h.averagePrice, 0);
 
   const today = moment().startOf('day');
   const upcoming = results
     .flatMap((h) => [
-      { symbol: h.symbol, name: h.name, date: h.nextExDate, amount: h.nextPaymentAmount, event: 'ex_dividend' as const },
+      {
+        symbol: h.symbol,
+        name: h.name,
+        date: h.nextExDate,
+        amount: h.nextPaymentAmount,
+        event: 'ex_dividend' as const,
+      },
       { symbol: h.symbol, name: h.name, date: h.nextPayDate, amount: h.nextPaymentAmount, event: 'payment' as const },
     ])
     .filter((e) => e.date && !moment(e.date).isBefore(today))
@@ -157,6 +180,7 @@ export async function buildDividendSummary(): Promise<DividendSummary> {
     portfolioYieldOnCostPercent: totalCost > 0 ? +((totalAnnualIncome / totalCost) * 100).toFixed(2) : 0,
     upcoming,
     payerCount: results.length,
+    fundsNotCovered,
     generatedAt: new Date().toISOString(),
   };
 }

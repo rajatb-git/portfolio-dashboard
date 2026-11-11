@@ -1,23 +1,17 @@
-import * as React from 'react';
-
 import { Box, Grid, Stack, Tab, Tabs } from '@mui/material';
+import * as React from 'react';
 import { toast } from 'react-toastify';
-
-import { Iconify } from '@/components/Iconify';
-import PageHeader from '@/components/ui/PageHeader';
-import LocalStorageUtil from '@/utils/localStorage';
-
 import apis from '@/api';
-import type { DividendSummary } from '@/api/analytics';
-import type { HoldingAggregate, PortfolioSnapshot } from '@/api/dashboard';
 import type {
   CorrelationMatrix,
+  DividendSummary,
   MonthlyReturns,
   RealizedGains,
   RiskMetrics,
   SectorAllocation,
   TaxLossHarvesting,
 } from '@/api/analytics';
+import type { HoldingAggregate, PerformancePoint } from '@/api/dashboard';
 import AllocationCharts from '@/components/Analytics/AllocationCharts';
 import CorrelationMatrixCard from '@/components/Analytics/CorrelationMatrixCard';
 import DividendIncomeCard from '@/components/Analytics/DividendIncomeCard';
@@ -33,6 +27,9 @@ import SectorAllocationChart from '@/components/Analytics/SectorAllocationChart'
 import TaxExposureCard from '@/components/Analytics/TaxExposureCard';
 import TaxLossHarvestingCard from '@/components/Analytics/TaxLossHarvestingCard';
 import TaxRatesCard from '@/components/Analytics/TaxRatesCard';
+import { Iconify } from '@/components/Iconify';
+import PageHeader from '@/components/ui/PageHeader';
+import LocalStorageUtil from '@/utils/localStorage';
 
 // Ten stacked cards is a scroll, not a structure. Grouping them by the question
 // the user is asking keeps each view to a single screen.
@@ -58,7 +55,7 @@ export default function Analytics() {
     LocalStorageUtil.setItem(TAB_KEY, value);
   };
 
-  const [snapshots, setSnapshots] = React.useState<PortfolioSnapshot[]>([]);
+  const [performance, setPerformance] = React.useState<PerformancePoint[]>([]);
   const [dashboardData, setDashboardData] = React.useState<HoldingAggregate[]>([]);
   const [riskMetrics, setRiskMetrics] = React.useState<RiskMetrics | null>(null);
   const [sectors, setSectors] = React.useState<SectorAllocation[]>([]);
@@ -92,17 +89,17 @@ export default function Analytics() {
   React.useEffect(() => {
     setIsLoading(true);
     Promise.all([
-      apis.dashboard.getSnapshots().catch((err) => {
-        toast.error(err.message || 'Failed to load portfolio snapshots');
-        return [] as PortfolioSnapshot[];
+      apis.dashboard.getPerformance().catch((err) => {
+        toast.error(err.message || 'Failed to load portfolio performance');
+        return [] as PerformancePoint[];
       }),
       apis.dashboard.getDashboard().catch((err) => {
         toast.error(err.message || 'Failed to load dashboard data');
         return [] as HoldingAggregate[];
       }),
     ])
-      .then(([snaps, data]) => {
-        setSnapshots(snaps ?? []);
+      .then(([points, data]) => {
+        setPerformance(points ?? []);
         setDashboardData(data ?? []);
       })
       .finally(() => setIsLoading(false));
@@ -181,10 +178,7 @@ export default function Analytics() {
 
   return (
     <>
-      <PageHeader
-        title="Analytics"
-        subtitle="Performance, risk, allocation and tax across the whole portfolio"
-      >
+      <PageHeader title="Analytics" subtitle="Performance, risk, allocation and tax across the whole portfolio">
         <Tabs
           value={tab}
           onChange={handleTabChange}
@@ -212,7 +206,7 @@ export default function Analytics() {
       <Box role="tabpanel" id={`analytics-panel-${tab}`} aria-labelledby={`analytics-tab-${tab}`}>
         {tab === 'performance' && (
           <Stack spacing={2}>
-            <PortfolioPerformanceChart snapshots={snapshots} />
+            <PortfolioPerformanceChart points={performance} isLoading={isLoading} />
             <PortfolioGoalCard />
             <MonthlyReturnsCard data={monthlyReturns} isLoading={isMonthlyLoading} />
             <PerformanceAttributionCard attribution={attribution} isLoading={isAttributionLoading} />

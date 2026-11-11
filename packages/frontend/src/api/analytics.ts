@@ -1,7 +1,6 @@
-import axios from './axios';
-
 import { DB_HOST } from '@/config';
 import { catchCustomError } from './apiUtil';
+import axios from './axios';
 
 export type RiskMetrics = {
   annualizedReturn: number;
@@ -161,6 +160,8 @@ export type CorrelationMatrix = {
   mostCorrelated: { a: string; b: string; value: number } | null;
   leastCorrelated: { a: string; b: string; value: number } | null;
   skipped: string[];
+  omitted: string[];
+  crypto: string[];
 };
 
 export type GoalProgress = {
@@ -205,6 +206,7 @@ export type DividendSummary = {
   portfolioYieldOnCostPercent: number;
   upcoming: Array<{ symbol: string; name: string; date: string; amount: number; event: 'ex_dividend' | 'payment' }>;
   payerCount: number;
+  fundsNotCovered: string[];
   generatedAt: string;
 };
 

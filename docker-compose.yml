@@ -17,6 +17,7 @@ services:
       - FINN_HUB_API_KEY
       - FINN_HUB_BURST_LIMIT
       - FINN_HUB_RATE_LIMIT
+      - FINN_HUB_INTERACTIVE_RESERVE
     volumes:
       - backend-storage:/app/storage
 

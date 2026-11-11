@@ -4,7 +4,7 @@ import { PortfolioSnapshotDBModel } from '../models/PortfolioSnapshotModel';
 import type { IValueCalcConfig } from '../models/ValueCalcConfigModel';
 import { isStockMarketOpen } from '../utils/marketCalendar';
 import { PersistentInterval } from '../utils/PersistentInterval';
-import { LiveQuoteController } from './LiveQuoteController';
+import { getCachedQuotes } from '../marketData/quotes';
 import { logger } from '../utils/winston';
 
 const LABEL = 'PortfolioValueCalcService';
@@ -24,35 +24,21 @@ class PortfolioValueCalcService {
 
       if (allHoldings.length === 0) return;
 
-      const quoteController = new LiveQuoteController();
-      const symbolMeta = new Map<string, boolean>();
-      for (const h of allHoldings) {
-        if (!symbolMeta.has(h.symbol)) {
-          symbolMeta.set(h.symbol, h.type === 'crypto');
-        }
-      }
-      const uniqueSymbols = [...symbolMeta.keys()];
-
-      const quotes = await Promise.all(
-        uniqueSymbols.map((sym) =>
-          quoteController
-            .getLiveQuote(sym, symbolMeta.get(sym))
-            .catch((e: unknown): Error => (e instanceof Error ? e : new Error(String(e))))
-        )
+      const quotes = await getCachedQuotes(
+        allHoldings.map((h) => ({ symbol: h.symbol, isCrypto: h.type === 'crypto' })),
+        { waitForPendingMs: 30_000 }
       );
-
-      const quoteMap = new Map(uniqueSymbols.map((sym, i) => [sym, quotes[i]]));
 
       let totalValue = 0;
       let unpricedCount = 0;
 
       for (const holding of allHoldings) {
-        const quote = quoteMap.get(holding.symbol);
+        const quote = quotes.get(holding.symbol.toUpperCase())?.value;
         // A holding that can't be priced this cycle falls back to its cost basis
         // rather than freezing the entire snapshot — one unpriceable symbol must
         // not stall the whole performance history.
-        const price = quote && !(quote instanceof Error) ? quote.price : holding.averagePrice;
-        if (!quote || quote instanceof Error) unpricedCount++;
+        const price = quote ? quote.price : holding.averagePrice;
+        if (!quote) unpricedCount++;
         totalValue += holding.qty * price;
       }
 

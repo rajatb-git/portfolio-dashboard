@@ -96,6 +96,7 @@ The compose file passes these through to the backend:
 | `FINN_HUB_API_KEY` | ✅ | Free tier is fine |
 | `FINN_HUB_BURST_LIMIT` | — | Defaults to 30 calls/second |
 | `FINN_HUB_RATE_LIMIT` | — | Defaults to 60 calls/minute |
+| `FINN_HUB_INTERACTIVE_RESERVE` | — | Calls/minute kept free for pages you open; defaults to 20 |
 
 Docker Compose reads a `.env` file sitting next to `docker-compose.yml`, so you
 can put them there instead of exporting them.

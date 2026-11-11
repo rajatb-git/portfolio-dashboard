@@ -1,9 +1,21 @@
-import { Button, Dialog, DialogActions, DialogContent, DialogTitle, MenuItem, Stack, TextField } from '@mui/material';
+import {
+  Alert,
+  Button,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  MenuItem,
+  Stack,
+  TextField,
+} from '@mui/material';
 import * as React from 'react';
 import { toast } from 'react-toastify';
 
 import apis from '@/api';
 import { ALERT_CONDITION_LABELS, type AlertCondition, type IAlert } from '@/models/AlertModel';
+import type { IHoldings } from '@/models/HoldingsModel';
+import { fnCurrency } from '@/utils/formatNumber';
 
 export type DraftAlert = {
   id?: string;
@@ -45,10 +57,33 @@ type Props = {
 export default function AlertDialog({ open, initial, onClose, onSaved }: Props) {
   const [draft, setDraft] = React.useState<DraftAlert>(initial);
   const [saving, setSaving] = React.useState(false);
+  const [holdings, setHoldings] = React.useState<IHoldings[] | null>(null);
 
   React.useEffect(() => {
     if (open) setDraft(initial);
+    else setHoldings(null);
   }, [open, initial]);
+
+  const needsHoldings = open && draft.condition === 'cost_basis' && holdings === null;
+  React.useEffect(() => {
+    if (!needsHoldings) return;
+    apis.holdings
+      .getAll()
+      .then(setHoldings)
+      .catch((err) => {
+        setHoldings([]);
+        toast.error(err.message || 'Failed to load your positions');
+      });
+  }, [needsHoldings]);
+
+  const costBasis = React.useMemo(() => {
+    const symbol = draft.symbol.trim().toUpperCase();
+    if (!holdings || !symbol) return null;
+    const positions = holdings.filter((h) => h.symbol?.toUpperCase() === symbol && h.qty > 0);
+    const qty = positions.reduce((sum, h) => sum + h.qty, 0);
+    if (qty <= 0) return { qty: 0, basis: 0 };
+    return { qty, basis: positions.reduce((sum, h) => sum + h.qty * h.averagePrice, 0) / qty };
+  }, [holdings, draft.symbol]);
 
   const isEdit = !!initial.id;
 
@@ -180,6 +215,13 @@ export default function AlertDialog({ open, initial, onClose, onSaved }: Props) 
               <MenuItem value="below">Falls to / below</MenuItem>
             </TextField>
           )}
+          {draft.condition === 'cost_basis' && costBasis && draft.symbol.trim() && (
+            <Alert severity={costBasis.qty > 0 ? 'info' : 'warning'} sx={{ py: 0, fontSize: '0.78rem' }}>
+              {costBasis.qty > 0
+                ? `Your cost basis in ${draft.symbol.trim().toUpperCase()} is ${fnCurrency(costBasis.basis)} a share across ${costBasis.qty.toLocaleString()} held.`
+                : `You don't hold ${draft.symbol.trim().toUpperCase()}, so there's no cost basis to alert on.`}
+            </Alert>
+          )}
           {draft.condition === 'price' && (
             <TextField
               label="Target price"
@@ -199,7 +241,7 @@ export default function AlertDialog({ open, initial, onClose, onSaved }: Props) 
               value={draft.trailPercent}
               onChange={(e) => set({ trailPercent: e.target.value })}
               slotProps={{ htmlInput: { min: 0.1, max: 99, step: 0.5 } }}
-              helperText="The peak is tracked from the moment the alert is created."
+              helperText="The peak starts at today's price and rises with it; the alert fires this far below the peak."
               fullWidth
             />
           )}
@@ -227,7 +269,12 @@ export default function AlertDialog({ open, initial, onClose, onSaved }: Props) 
         <Button onClick={onClose} sx={{ textTransform: 'none' }}>
           Cancel
         </Button>
-        <Button variant="contained" onClick={handleSave} disabled={saving} sx={{ textTransform: 'none' }}>
+        <Button
+          variant="contained"
+          onClick={handleSave}
+          disabled={saving || (draft.condition === 'cost_basis' && costBasis?.qty === 0)}
+          sx={{ textTransform: 'none' }}
+        >
           {saving ? 'Saving…' : isEdit ? 'Save' : 'Create alert'}
         </Button>
       </DialogActions>

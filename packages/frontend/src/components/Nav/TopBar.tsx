@@ -1,13 +1,12 @@
-import * as React from 'react';
-
 import MuiAppBar from '@mui/material/AppBar';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import IconButton from '@mui/material/IconButton';
+import { alpha, useTheme } from '@mui/material/styles';
 import Toolbar from '@mui/material/Toolbar';
 import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
-import { alpha, useTheme } from '@mui/material/styles';
+import * as React from 'react';
 import { useLocation } from 'react-router-dom';
 
 import { Iconify } from '@/components/Iconify';
@@ -39,10 +38,9 @@ function ThemeToggle() {
   return (
     <Tooltip title={`Theme: ${labels[mode]} — switch to ${labels[next]}`}>
       <IconButton
-        size="small"
         onClick={() => setMode(next)}
         aria-label={`Theme: ${labels[mode]}. Switch to ${labels[next]}.`}
-        sx={{ color: 'text.secondary' }}
+        sx={{ color: 'text.secondary', width: 40, height: 40 }}
       >
         <Iconify icon={icon} width={19} />
       </IconButton>
@@ -68,6 +66,18 @@ export default function TopBar({ isMobile, drawerWidth, onOpenMobileDrawer }: To
 
   const refreshSearchHistory = React.useCallback(() => {
     setSearchHistory(LocalStorageArray.getAll('searchText'));
+  }, []);
+
+  const searchTriggerRef = React.useRef<HTMLButtonElement>(null);
+
+  // The dialog hands focus back to whatever had it before opening; when that
+  // was nothing (Ctrl+K from the page), land on the search trigger instead of
+  // dropping keyboard users at the top of the document.
+  const closeSearch = React.useCallback(() => {
+    setShowSearch(false);
+    window.setTimeout(() => {
+      if (document.activeElement === document.body) searchTriggerRef.current?.focus();
+    });
   }, []);
 
   const openSearch = React.useCallback(() => {
@@ -107,10 +117,9 @@ export default function TopBar({ isMobile, drawerWidth, onOpenMobileDrawer }: To
         <Toolbar sx={{ minHeight: `${TOPBAR_HEIGHT}px !important`, gap: 1, px: '12px !important' }}>
           {isMobile && (
             <IconButton
-              size="small"
               onClick={onOpenMobileDrawer}
               aria-label="Open navigation menu"
-              sx={{ color: 'text.secondary' }}
+              sx={{ color: 'text.secondary', width: 40, height: 40 }}
             >
               <Iconify icon="tabler:menu-2" width={21} />
             </IconButton>
@@ -135,11 +144,17 @@ export default function TopBar({ isMobile, drawerWidth, onOpenMobileDrawer }: To
           {!isMobile && <MarketStatusChip />}
 
           {isMobile ? (
-            <IconButton size="small" onClick={openSearch} aria-label="Search ticker" sx={{ color: 'text.secondary' }}>
+            <IconButton
+              ref={searchTriggerRef}
+              onClick={openSearch}
+              aria-label="Search ticker"
+              sx={{ color: 'text.secondary', width: 40, height: 40 }}
+            >
               <Iconify icon="tabler:search" width={20} />
             </IconButton>
           ) : (
             <Button
+              ref={searchTriggerRef}
               onClick={openSearch}
               startIcon={<Iconify icon="tabler:search" width={16} sx={{ color: 'text.disabled' }} />}
               sx={{
@@ -188,7 +203,7 @@ export default function TopBar({ isMobile, drawerWidth, onOpenMobileDrawer }: To
         refreshSearchHistory={refreshSearchHistory}
         searchHistory={searchHistory}
         isOpen={showSearch}
-        onClose={() => setShowSearch(false)}
+        onClose={closeSearch}
       />
     </>
   );

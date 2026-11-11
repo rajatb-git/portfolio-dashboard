@@ -1,10 +1,7 @@
 import moment from 'moment';
-import { LiveQuoteController } from '../controller/LiveQuoteController';
-import { LiveRecommendationController } from '../controller/LiveRecommendationController';
+import { getCachedQuotes, getCachedRecommendation } from '../marketData/quotes';
 import { HoldingsModel } from '../models/HoldingsModel';
 import { PortfolioSnapshotDBModel } from '../models/PortfolioSnapshotModel';
-import { IPriceStoreModel } from '../models/PriceStoreModel';
-import { IRecommendationModel } from '../models/RecommendationModel';
 import { logger } from '../utils/winston';
 
 type HoldingAggregate = {
@@ -33,53 +30,34 @@ type HoldingAggregate = {
 export const createDashboard = async (): Promise<Array<HoldingAggregate>> => {
   const holdingsModel = await HoldingsModel().initialize();
   const allHoldings = holdingsModel.getAllRecords();
-  const quoteController = new LiveQuoteController();
-  const recommendationController = new LiveRecommendationController();
 
-  // Collect unique symbols, preserving the isCrypto flag per symbol.
-  const symbolMeta = new Map<string, boolean>(); // symbol -> isCrypto
-  for (const holding of allHoldings) {
-    if (!symbolMeta.has(holding.symbol)) {
-      symbolMeta.set(holding.symbol, holding.type === 'crypto');
-    }
-  }
-  const uniqueSymbols = [...symbolMeta.keys()];
-
-  // Fetch all quotes and recommendations in parallel across unique symbols.
-  // Errors are caught per-symbol so one failure doesn't abort the rest.
-  const [quotes, recommendations] = await Promise.all([
-    Promise.all(
-      uniqueSymbols.map((sym) =>
-        quoteController
-          .getLiveQuote(sym, symbolMeta.get(sym))
-          .catch((e: unknown): Error => (e instanceof Error ? e : new Error(String(e))))
-      )
-    ) as Promise<Array<IPriceStoreModel | Error>>,
-    Promise.all(
-      uniqueSymbols.map((sym) =>
-        recommendationController
-          .getLiveRecommendation(sym)
-          .catch((e: unknown): Error => (e instanceof Error ? e : new Error(String(e))))
-      )
-    ) as Promise<Array<IRecommendationModel | Error>>,
-  ]);
-
-  const quoteMap = new Map(uniqueSymbols.map((sym, i) => [sym, quotes[i]]));
-  const recMap = new Map(uniqueSymbols.map((sym, i) => [sym, recommendations[i]]));
+  // Everything here is read from the market data store and never waits on
+  // Finnhub: the scheduler keeps held symbols fresh, and a symbol with nothing
+  // stored yet comes back pending and is fetched within seconds.
+  const quotes = await getCachedQuotes(allHoldings.map((h) => ({ symbol: h.symbol, isCrypto: h.type === 'crypto' })));
+  const stockSymbols = [
+    ...new Set(allHoldings.filter((h) => h.type !== 'crypto' && h.symbol).map((h) => h.symbol.toUpperCase())),
+  ];
+  const recommendations = new Map(
+    await Promise.all(stockSymbols.map(async (sym) => [sym, (await getCachedRecommendation(sym)).value] as const))
+  );
 
   const result: Array<HoldingAggregate> = [];
 
   for (const holding of allHoldings) {
-    const livePrice = quoteMap.get(holding.symbol);
-    const recommendation = recMap.get(holding.symbol);
+    const quote = quotes.get(holding.symbol?.toUpperCase());
+    const livePrice = quote?.value;
+    const validRec = recommendations.get(holding.symbol?.toUpperCase()) ?? undefined;
 
-    // A holding with no live quote stays in the list at cost basis, flagged so the UI can say so,
-    // rather than silently vanishing from the totals.
-    if (!livePrice || livePrice instanceof Error) {
+    // A holding with no quote stays in the list at cost basis, flagged so the UI
+    // can say so, rather than silently vanishing from the totals. `pricePending`
+    // means the first quote is on its way; otherwise the symbol can't be priced.
+    if (!livePrice) {
       const originalValue = holding.qty * holding.averagePrice;
       result.push({
         ...holding,
         priceUnavailable: true,
+        pricePending: !!quote?.pending,
         currentPrice: +holding.averagePrice.toFixed(2),
         percentChange: 0,
         originalValue,
@@ -90,7 +68,6 @@ export const createDashboard = async (): Promise<Array<HoldingAggregate>> => {
       continue;
     }
 
-    const validRec = recommendation && !(recommendation instanceof Error) ? recommendation : undefined;
     const currentValue = holding.qty * livePrice.price;
     const originalValue = holding.qty * holding.averagePrice;
     const totalGL = +(currentValue - originalValue).toFixed(2);
@@ -117,11 +94,10 @@ export const createDashboard = async (): Promise<Array<HoldingAggregate>> => {
   }
 
   // Save today's portfolio snapshot (idempotent — skips if already recorded).
-  // Only record once every holding was successfully priced; a partial total
-  // (some holdings dropped due to a failed live fetch) would otherwise be frozen
-  // in as today's snapshot and corrupt the performance chart.
+  // Wait while any first quote is still on its way: a total with those at cost
+  // basis would be frozen in as today's point on the performance chart.
   try {
-    if (allHoldings.length > 0) {
+    if (allHoldings.length > 0 && !result.some((r: any) => r.pricePending)) {
       const now = moment();
       const today = now.format('YYYY-MM-DD');
       // Value every holding, not just the ones that priced cleanly. A holding
@@ -129,8 +105,7 @@ export const createDashboard = async (): Promise<Array<HoldingAggregate>> => {
       // unpriceable symbol doesn't freeze the whole performance history.
       const totalValue = +allHoldings
         .reduce((sum, h) => {
-          const quote = quoteMap.get(h.symbol);
-          const price = quote && !(quote instanceof Error) ? quote.price : h.averagePrice;
+          const price = quotes.get(h.symbol?.toUpperCase())?.value?.price ?? h.averagePrice;
           return sum + h.qty * price;
         }, 0)
         .toFixed(2);

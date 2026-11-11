@@ -6,6 +6,47 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
+## [5.0.0] – 2026-10-23
+
+### Added
+- **Guided import** — a new Import page (and a first-run panel on the Dashboard) walks through what you're importing, the account, the file, column mapping and a full review before anything is saved. Positions files keep one **tax lot per dated row**; history can **build positions and tax lots** by replaying buys and sells (FIFO, realized gains recorded) or be recorded as history only. Reads Fidelity, Schwab, Robinhood, Vanguard and Coinbase exports (and most other CSVs) with preambles, footers, money-market lines, multi-account files and either date order; PDFs and other statements are read by the local AI part by part, with progress, Cancel, and partial results kept. A positions file is a snapshot (each symbol it lists replaces that symbol's lots, its cash line sets the balance), and duplicate trades, deposits and already-applied splits in a history file are skipped, so importing the same file twice changes nothing; "start fresh" replaces an account's data. Fees, stock splits, dividend reinvestments and decimal-comma exports are handled, any row can be corrected before importing, and every row shows why it was imported, skipped or rejected.
+- **Market data store** — every kind of Finnhub data now lives in one store (`market_data` collection) with its own freshness rules, kept warm by a scheduler that ranks what to refresh next: quotes for holdings and alerts first, then whatever page you have open. Pages read from the store instead of waiting on Finnhub, so Research for a held symbol opens from stored data and a symbol you don't hold fills in card by card.
+- **Finnhub budget** — one client spends the free plan's 60 calls a minute, with a reserved share for what you're looking at, deadlines instead of queues that grow without limit, and the server's own rate-limit headers as the source of truth. `GET /health/market-data` shows the budget, the backlog and how fresh the store is.
+- **Account tax types** — each account is taxable, tax-deferred or tax-free (edit under Settings → Accounts). Tax estimates, holding-period savings, loss harvesting and the trade simulator leave non-taxable accounts out.
+- **Rebalance** — Reset and Clear targets buttons, and a summary of total buys, sells and net cash.
+- **Logs** — filter by level and by text.
+- **Alerts** — the table shows what each alert is measured from (peak, 52-week high or cost basis) and how far the price has to move to trigger it.
+
+### Changed
+- **Analytics returns are time-weighted.** Each day's buys and sells are netted out before the day's change is measured, so buying shares no longer counts as a gain. The performance chart now compares % returns from the start of the range against the benchmark, and the monthly grid and risk metrics use the same daily returns. Demo Mode history values holdings the same way the live tracker does.
+- Rebalance targets can only be saved when they add up to 100%, and saving replaces the whole set.
+- Deleting a buy or sell now undoes its effect on the holding's lots (or explains why it can't), and only a trade's date can be edited in place. Deleting an account deletes its holdings and transactions too. Grid deletes ask for confirmation.
+- Transaction imports (CSV, broker and AI) understand broker wording such as "YOU BOUGHT", "Sold" and "Reinvest Shares", and skip and list dividend, interest and transfer rows instead of rejecting the whole file.
+- Imported transactions are marked as history: editing or deleting one never touches a holding or the account's cash (an import never did either).
+- Sells can only relieve lots bought on or before the sale date; trades need a positive price; a buy or withdrawal that would overdraw a funded account asks first.
+- Notifications that fire with no channel configured are recorded in the history as "Not sent — no channel", and the page says nothing is being delivered. Watching an IPO tells you whether its reminder will reach you.
+- Trailing-stop alerts start their peak at the price on creation; cost-basis alerts need a position in the symbol.
+- Settings → Backend URL now takes effect: it is checked against the backend's health endpoint, saved, and the page reloads. **Use default** removes the override. The selected Settings tab is kept in the URL.
+- Search ranks your holdings and prefix matches first, and pages above ticker lookups.
+- Sector allocation groups ETFs as funds and shows crypto as its own slice; the correlation card names the positions it leaves out; the income view says ETF distributions aren't covered.
+- Every page sets its own browser tab title. Secondary text meets WCAG AA contrast in both themes, and small icon buttons have larger tap targets.
+
+### Removed
+- `POST /holdings/import` and `POST /transactions/import` (replaced by `POST /import/preview` and `POST /import/commit`), `GET /portfolio/snapshots` (replaced by `GET /portfolio/performance`), and the five import dialogs on the Database page (replaced by the Import page).
+- `POST /rebalance/targets` now replaces the whole target set and requires it to total 100%.
+
+### Fixed
+- Day high and low were swapped for prices from NASDAQ, and after-hours times were read as UTC.
+- Research showed "No data found" for held ETFs and crypto, priced a held crypto from its namesake ETF, and showed "$0.00 +undefined%" while a price loaded.
+- The 1-day and 5-day price charts were a session behind; the chart now sits under the header and shows a loading state.
+- Insider transactions showed shares held after the trade instead of the trade size, never showed a value, and labelled gifts as sells. Transaction history sorted by when a trade was entered instead of its trade date.
+- The Dashboard account filter ignored clicks on the account name; filtering no longer changes the summary cards, and the headline value no longer gets cut off on laptop widths.
+- Dividends for stocks used a stale annual rate and a past ex-date.
+- Duplicate EPS periods and peers caused React key warnings.
+- The changelog page stopped at 4.4.0.
+
+---
+
 ## [4.10.0] – 2026-10-21
 
 ### Added

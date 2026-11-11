@@ -1,26 +1,25 @@
-import * as React from 'react';
-
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/DeleteOutlined';
 import EditIcon from '@mui/icons-material/Edit';
 import SaveIcon from '@mui/icons-material/Save';
-import { Card, IconButton } from '@mui/material';
+import { Card, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, IconButton } from '@mui/material';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import {
-  GridRowsProp,
-  GridRowModesModel,
-  GridRowModes,
   DataGrid,
-  GridColDef,
-  GridToolbarContainer,
   GridActionsCellItem,
+  GridColDef,
   GridEventListener,
+  GridRowEditStopReasons,
   GridRowId,
   GridRowModel,
-  GridRowEditStopReasons,
+  GridRowModes,
+  GridRowModesModel,
+  GridRowsProp,
   GridSlotProps,
+  GridToolbarContainer,
 } from '@mui/x-data-grid';
+import * as React from 'react';
 
 import { toast } from 'react-toastify';
 
@@ -76,6 +75,8 @@ export default function GenericGrid(props: {
 }) {
   const [rows, setRows] = React.useState<Array<any>>(props.initialRows);
   const [rowModesModel, setRowModesModel] = React.useState<GridRowModesModel>({});
+  const [pendingDelete, setPendingDelete] = React.useState<any | null>(null);
+  const [deleting, setDeleting] = React.useState(false);
 
   const handleRowEditStop: GridEventListener<'rowEditStop'> = (params, event) => {
     if (params.reason === GridRowEditStopReasons.rowFocusOut) {
@@ -91,7 +92,12 @@ export default function GenericGrid(props: {
     setRowModesModel({ ...rowModesModel, [id]: { mode: GridRowModes.View } });
   };
 
-  const handleDeleteClick = (row: any) => async (): Promise<void> => {
+  const handleDeleteClick = (row: any) => () => setPendingDelete(row);
+
+  const confirmDelete = async (): Promise<void> => {
+    const row = pendingDelete;
+    if (!row) return;
+    setDeleting(true);
     try {
       const deleteResult = await props.deleteRecord(row.id);
 
@@ -102,6 +108,11 @@ export default function GenericGrid(props: {
       toast.success('Record deleted successfully');
     } catch (err: any) {
       toast.error(err.message);
+    } finally {
+      setDeleting(false);
+      setPendingDelete(null);
+      // Reload either way, so a refused delete never leaves a stale row behind.
+      props.loadData();
     }
   };
 
@@ -240,6 +251,27 @@ export default function GenericGrid(props: {
           }}
         />
       </Card>
+
+      <Dialog open={!!pendingDelete} onClose={() => !deleting && setPendingDelete(null)}>
+        <DialogTitle>Delete record</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Delete this {props.activeCollection === 'transactions' ? 'transaction' : 'record'}
+            {pendingDelete?.symbol ? ` (${pendingDelete.symbol})` : ''}?
+            {props.activeCollection === 'transactions' &&
+              ' A buy or sell is undone on its holding and its cash is put back; one whose shares have moved on since is refused.'}{' '}
+            This can't be undone.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setPendingDelete(null)} disabled={deleting}>
+            Cancel
+          </Button>
+          <Button onClick={confirmDelete} color="error" variant="contained" disabled={deleting}>
+            {deleting ? 'Deleting…' : 'Delete'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }

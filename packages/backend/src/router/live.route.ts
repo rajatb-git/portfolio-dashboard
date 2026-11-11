@@ -2,25 +2,43 @@ import Router from '@koa/router';
 import type { Context } from 'koa';
 import moment from 'moment';
 import { AgentInsightsController } from '../controller/AgentInsightsController';
-import { CompanyProfileController } from '../controller/CompanyProfileController';
 import { IPOController } from '../controller/IPOController';
 import { IPOInsightsController } from '../controller/IPOInsightsController';
-import { LiveQuoteController } from '../controller/LiveQuoteController';
-import { LiveRecommendationController } from '../controller/LiveRecommendationController';
 import { MarketMoversController } from '../controller/MarketMoversController';
 import { MarketNewsController } from '../controller/MarketNewsController';
 import { MarketStatusController } from '../controller/MarketStatusController';
+import { mqttPublisher } from '../controller/MqttPublisher';
 import { NewsSentimentController } from '../controller/NewsSentimentController';
 import { ResearchController } from '../controller/ResearchController';
 import { WatchedIpoController } from '../controller/WatchedIpoController';
 import { searchSymbols } from '../externalApis/finnHub';
 import { getPriceHistoryCandleStick } from '../externalApis/nasdaq';
+import type { MarketRead } from '../marketData/store';
+import { getIpoReminderConfig } from '../models/IpoReminderConfigModel';
 import { errorBody } from '../utils/error';
 import { logger } from '../utils/winston';
 
 // `?refresh=1` marks a request the user explicitly triggered, which bypasses the
 // serve-from-cache path and waits for live data.
 const isForcedRefresh = (ctx: Context): boolean => ctx.query.refresh === '1' || ctx.query.refresh === 'true';
+
+// 202 means the data is being fetched but wasn't ready within the store's
+// deadline; the frontend client asks again shortly instead of showing "none".
+const sendRead = <T>(ctx: Context, result: MarketRead<T>, label: string): void => {
+  if (result.value === null && result.pending) {
+    ctx.status = 202;
+    ctx.body = { pending: true };
+    return;
+  }
+  if (result.value === null && result.error) {
+    logger.log({ level: 'error', message: result.error, label });
+    ctx.status = 400;
+    ctx.body = errorBody(`Failed to ${label.toLowerCase()}`, result.error);
+    return;
+  }
+  ctx.status = 200;
+  ctx.body = result.value;
+};
 
 const HISTORY_RANGES = ['1d', '5d', '1M', '3M', '6M', '1y', '2y', '3y'];
 
@@ -30,14 +48,7 @@ export const LiveRouter = () => {
 
   router.get('/live/quote/:sym', async (ctx) => {
     try {
-      const controller = new LiveQuoteController();
-      const sym = ctx.params.sym.toUpperCase();
-      const result = isForcedRefresh(ctx)
-        ? await controller.getLiveQuote(sym, false, true)
-        : await controller.getDisplayQuote(sym);
-
-      ctx.body = result;
-      ctx.status = 200;
+      sendRead(ctx, await research.getQuote(ctx.params.sym.toUpperCase(), isForcedRefresh(ctx)), 'Get live quote');
     } catch (err: any) {
       logger.log({ level: 'error', message: err.message, label: `Get live quote "${ctx.params.sym}"` });
       ctx.body = errorBody('Failed to get live quote', err.message);
@@ -47,13 +58,11 @@ export const LiveRouter = () => {
 
   router.get('/live/recommendation/:sym', async (ctx) => {
     try {
-      const result = await new LiveRecommendationController().getLiveRecommendation(
-        ctx.params.sym.toUpperCase(),
-        isForcedRefresh(ctx)
+      sendRead(
+        ctx,
+        await research.getRecommendation(ctx.params.sym.toUpperCase(), isForcedRefresh(ctx)),
+        'Get recommendation'
       );
-
-      ctx.body = result;
-      ctx.status = 200;
     } catch (err: any) {
       logger.log({ level: 'error', message: err.message, label: `Get live recommendation "${ctx.params.sym}"` });
       ctx.body = errorBody('Failed to get recommendation', err.message);
@@ -63,10 +72,7 @@ export const LiveRouter = () => {
 
   router.get('/live/news/:sym', async (ctx) => {
     try {
-      const result = await research.getNews(ctx.params.sym.toUpperCase(), isForcedRefresh(ctx));
-
-      ctx.body = result;
-      ctx.status = 200;
+      sendRead(ctx, await research.getNews(ctx.params.sym.toUpperCase(), isForcedRefresh(ctx)), 'Get news');
     } catch (err: any) {
       logger.log({ level: 'error', message: err.message, label: `Get live company news "${ctx.params.sym}"` });
       ctx.body = errorBody('Failed to get news', err.message);
@@ -142,7 +148,18 @@ export const LiveRouter = () => {
         return;
       }
 
-      ctx.body = await new WatchedIpoController().watch(symbol, name, date);
+      const [watched, reminders] = await Promise.all([
+        new WatchedIpoController().watch(symbol, name, date),
+        getIpoReminderConfig(),
+      ]);
+      ctx.body = {
+        ...watched,
+        reminder: {
+          enabled: reminders.enabled,
+          daysBefore: reminders.daysBefore,
+          channelEnabled: mqttPublisher.isEnabled(),
+        },
+      };
       ctx.status = 200;
     } catch (err: any) {
       logger.log({ level: 'error', message: err.message, label: 'Watch IPO' });
@@ -172,13 +189,11 @@ export const LiveRouter = () => {
   router.get('/live/company-profile/:sym', async (ctx) => {
     try {
       if (ctx.params.sym) {
-        const result = await new CompanyProfileController().getCompanyProfile2(
-          ctx.params.sym.toUpperCase(),
-          isForcedRefresh(ctx)
+        sendRead(
+          ctx,
+          await research.getProfile(ctx.params.sym.toUpperCase(), isForcedRefresh(ctx)),
+          'Get company profile'
         );
-
-        ctx.body = result;
-        ctx.status = 200;
         return;
       }
       ctx.status = 400;
@@ -210,9 +225,7 @@ export const LiveRouter = () => {
 
   router.get('/live/metrics/:sym', async (ctx) => {
     try {
-      const result = await research.getMetrics(ctx.params.sym.toUpperCase(), isForcedRefresh(ctx));
-      ctx.body = result;
-      ctx.status = 200;
+      sendRead(ctx, await research.getMetrics(ctx.params.sym.toUpperCase(), isForcedRefresh(ctx)), 'Get stock metrics');
     } catch (err: any) {
       logger.log({ level: 'error', message: err.message, label: `Get stock metrics "${ctx.params.sym}"` });
       ctx.body = errorBody('Failed to get stock metrics', err.message);
@@ -222,9 +235,7 @@ export const LiveRouter = () => {
 
   router.get('/live/peers/:sym', async (ctx) => {
     try {
-      const result = await research.getPeers(ctx.params.sym.toUpperCase(), isForcedRefresh(ctx));
-      ctx.body = result;
-      ctx.status = 200;
+      sendRead(ctx, await research.getPeers(ctx.params.sym.toUpperCase(), isForcedRefresh(ctx)), 'Get stock peers');
     } catch (err: any) {
       logger.log({ level: 'error', message: err.message, label: `Get stock peers "${ctx.params.sym}"` });
       ctx.body = errorBody('Failed to get stock peers', err.message);
@@ -234,9 +245,7 @@ export const LiveRouter = () => {
 
   router.get('/live/earnings/:sym', async (ctx) => {
     try {
-      const result = await research.getEarnings(ctx.params.sym.toUpperCase(), isForcedRefresh(ctx));
-      ctx.body = result;
-      ctx.status = 200;
+      sendRead(ctx, await research.getEarnings(ctx.params.sym.toUpperCase(), isForcedRefresh(ctx)), 'Get earnings');
     } catch (err: any) {
       logger.log({ level: 'error', message: err.message, label: `Get earnings calendar "${ctx.params.sym}"` });
       ctx.body = errorBody('Failed to get earnings', err.message);
@@ -246,9 +255,11 @@ export const LiveRouter = () => {
 
   router.get('/live/earnings-history/:sym', async (ctx) => {
     try {
-      const result = await research.getEarningsHistory(ctx.params.sym.toUpperCase(), isForcedRefresh(ctx));
-      ctx.body = result;
-      ctx.status = 200;
+      sendRead(
+        ctx,
+        await research.getEarningsHistory(ctx.params.sym.toUpperCase(), isForcedRefresh(ctx)),
+        'Get earnings history'
+      );
     } catch (err: any) {
       logger.log({ level: 'error', message: err.message, label: `Get earnings history "${ctx.params.sym}"` });
       ctx.body = errorBody('Failed to get earnings history', err.message);
@@ -258,9 +269,11 @@ export const LiveRouter = () => {
 
   router.get('/live/insider/:sym', async (ctx) => {
     try {
-      const result = await research.getInsiderTransactions(ctx.params.sym.toUpperCase(), isForcedRefresh(ctx));
-      ctx.body = result;
-      ctx.status = 200;
+      sendRead(
+        ctx,
+        await research.getInsiderTransactions(ctx.params.sym.toUpperCase(), isForcedRefresh(ctx)),
+        'Get insider transactions'
+      );
     } catch (err: any) {
       logger.log({ level: 'error', message: err.message, label: `Get insider transactions "${ctx.params.sym}"` });
       ctx.body = errorBody('Failed to get insider transactions', err.message);

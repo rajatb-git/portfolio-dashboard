@@ -1,14 +1,13 @@
-import { Chip, IconButton, Tooltip } from '@mui/material';
+import { Chip, IconButton, Skeleton, Tooltip } from '@mui/material';
 import Stack from '@mui/material/Stack';
 import { default as MuiTableRow } from '@mui/material/TableRow';
 import Typography from '@mui/material/Typography';
-
+import moment from 'moment';
 import { HoldingAggregate } from '@/api/dashboard';
 import { Iconify } from '@/components/Iconify';
 import Label from '@/components/Label';
-import AnalystBar from '@/components/ui/AnalystBar';
 import { TableCell } from '@/components/Table/TableCell';
-import moment from 'moment';
+import AnalystBar from '@/components/ui/AnalystBar';
 
 import { fnCurrency } from '@/utils/formatNumber';
 import type { AlertState } from './dashTableUtils';
@@ -110,7 +109,8 @@ export default function DashTableRow({
               )}
             </Stack>
             <Typography variant="caption" noWrap>
-              {row.qty} {row.type === 'crypto' ? 'coins' : 'shares'}
+              {(+row.qty.toFixed(8)).toLocaleString('en-US', { maximumFractionDigits: 8 })}{' '}
+              {row.type === 'crypto' ? 'coins' : 'shares'}
             </Typography>
           </Stack>
         </Stack>
@@ -118,10 +118,18 @@ export default function DashTableRow({
 
       <TableCell align="right">
         <Stack direction="column" spacing={0} data-numeric="">
-          {row.priceUnavailable ? '—' : fnCurrency(row.currentPrice)}
-          <Typography variant="caption" noWrap>
-            {row.dayLow?.toFixed(2)} - {row.dayHigh?.toFixed(2)}
-          </Typography>
+          {row.pricePending ? (
+            <Skeleton variant="text" width={64} sx={{ ml: 'auto' }} />
+          ) : row.priceUnavailable ? (
+            '—'
+          ) : (
+            fnCurrency(row.currentPrice)
+          )}
+          {!!row.dayLow && !!row.dayHigh && (
+            <Typography variant="caption" noWrap>
+              {fnCurrency(Math.min(row.dayLow, row.dayHigh))} – {fnCurrency(Math.max(row.dayLow, row.dayHigh))}
+            </Typography>
+          )}
         </Stack>
       </TableCell>
 
@@ -131,6 +139,7 @@ export default function DashTableRow({
             color={row.percentChange === 0 ? 'default' : row.percentChange! > 0 ? 'success' : 'error'}
             sx={{ fontSize: '0.9rem' }}
           >
+            {row.percentChange! > 0 ? '+' : ''}
             {row.percentChange?.toFixed(2)}%
           </Label>
 
@@ -164,7 +173,7 @@ export default function DashTableRow({
         <Stack direction="column" spacing={0} data-numeric="">
           {fnCurrency(row.averagePrice * row.qty)}
           <Typography variant="caption" noWrap>
-            {fnCurrency(row.averagePrice)} / Share
+            {fnCurrency(row.averagePrice)} / {row.type === 'crypto' ? 'Coin' : 'Share'}
           </Typography>
         </Stack>
       </TableCell>

@@ -259,7 +259,7 @@ export default function MockTradeDialog({ open, onClose, accounts, initial }: Pr
         Mock trade
         <Chip label="Simulation — nothing is saved" size="small" sx={{ ml: 1, height: 20, fontSize: '0.65rem' }} />
       </DialogTitle>
-      <DialogContent dividers>
+      <DialogContent dividers sx={{ pt: 2.5 }}>
         <Grid container spacing={1.5}>
           <Grid size={{ xs: 12, sm: 'auto' }}>
             <ToggleButtonGroup

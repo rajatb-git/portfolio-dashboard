@@ -1,6 +1,5 @@
 import { AccountModel } from '../models/AccountModel';
 import { HoldingsModel } from '../models/HoldingsModel';
-import type { IPriceStoreModel } from '../models/PriceStoreModel';
 import {
   getMarketSession,
   getNextSessionChange,
@@ -8,10 +7,10 @@ import {
   type MarketSession,
   mostRecentTradingDay,
 } from '../utils/marketCalendar';
-import { LiveQuoteController } from './LiveQuoteController';
+import { getCachedQuotes, type Quote } from '../marketData/quotes';
 
 // Broad-market proxies. These are ETFs, so Finnhub's free tier returns c=0 and
-// LiveQuoteController transparently falls back to NASDAQ to price them.
+// the quote dataset prices them from NASDAQ instead.
 export const MARKET_INDICES = [
   { symbol: 'SPY', label: 'S&P 500' },
   { symbol: 'QQQ', label: 'Nasdaq 100' },
@@ -43,7 +42,7 @@ export type HoldingMovement = {
 // today's — and the price store can briefly hold a quote fetched in the previous
 // session. Anything comparing prices across time needs the price that trades now,
 // and nothing at all when the stored quote doesn't belong to the current session.
-function livePriceFor(q: IPriceStoreModel, type: 'stock' | 'crypto', session: MarketSession): LivePrice | null {
+function livePriceFor(q: Quote, type: 'stock' | 'crypto', session: MarketSession): LivePrice | null {
   if (type === 'crypto') return { price: q.price, percentChange: q.percentChange, extendedSession: null };
   if (session === 'regular') {
     return q.extendedSession ? null : { price: q.price, percentChange: q.percentChange, extendedSession: null };
@@ -107,7 +106,7 @@ export type DailyRecap = {
 // is normal and should surface as "nothing trading yet", not an empty card.
 function buildExtendedRecap(
   session: MarketSession,
-  quoteMap: Map<string, IPriceStoreModel | null>,
+  quoteMap: Map<string, Quote | null>,
   holdings: Array<{ symbol: string; name: string; qty: number; type: 'stock' | 'crypto' }>,
   bySymbol: Map<string, HoldingMovement>
 ): ExtendedRecap | null {
@@ -115,7 +114,7 @@ function buildExtendedRecap(
 
   // A quote only counts as extended-hours data if it was captured in the session
   // running right now — never a leftover print from the previous evening.
-  const extendedQuote = (symbol: string): IPriceStoreModel | null => {
+  const extendedQuote = (symbol: string): Quote | null => {
     const q = quoteMap.get(symbol);
     if (!q || q.extendedSession !== session) return null;
     return q.extendedPrice > 0 ? q : null;
@@ -183,22 +182,24 @@ function buildExtendedRecap(
 // and per-account day P&L. Shared by the /today page and the trading-summary worker.
 // This mixes personal position data (day P&L) with public market data — callers
 // decide where it goes. It never touches an AI provider.
-export async function buildDailyRecap(): Promise<DailyRecap> {
+// The Today page reads whatever is stored; the recap jobs pass
+// `waitForPendingMs` so a cold symbol is fetched rather than left out.
+export async function buildDailyRecap(options: { waitForPendingMs?: number } = {}): Promise<DailyRecap> {
   const holdingsModel = await HoldingsModel().initialize();
   const holdings = holdingsModel.getAllRecords();
   const accountModel = await AccountModel().initialize();
   const accounts = accountModel.getAllRecords();
 
-  const quoteController = new LiveQuoteController();
   const isCrypto = new Map<string, boolean>();
   for (const h of holdings) if (!isCrypto.has(h.symbol)) isCrypto.set(h.symbol, h.type === 'crypto');
   for (const idx of MARKET_INDICES) if (!isCrypto.has(idx.symbol)) isCrypto.set(idx.symbol, false);
   const symbols = [...isCrypto.keys()];
 
-  const quotes = await Promise.all(
-    symbols.map((s) => quoteController.getLiveQuote(s, isCrypto.get(s)).catch((): null => null))
+  const quotes = await getCachedQuotes(
+    symbols.map((symbol) => ({ symbol, isCrypto: !!isCrypto.get(symbol) })),
+    options
   );
-  const quoteMap = new Map<string, IPriceStoreModel | null>(symbols.map((s, i) => [s, quotes[i]]));
+  const quoteMap = new Map<string, Quote | null>(symbols.map((s) => [s, quotes.get(s.toUpperCase())?.value ?? null]));
 
   const indices = MARKET_INDICES.map((idx) => {
     const q = quoteMap.get(idx.symbol);

@@ -2,7 +2,7 @@ import Router from '@koa/router';
 import { buildPortfolioBrief } from '../controller/BriefController';
 import { buildDailyRecap } from '../controller/DailyRecapController';
 import { createDashboard } from '../controller/DashboardController';
-import { PortfolioSnapshotDBModel } from '../models/PortfolioSnapshotModel';
+import { getDailyPerformance } from '../controller/PortfolioPerformanceController';
 import { errorBody } from '../utils/error';
 import { logger } from '../utils/winston';
 
@@ -45,17 +45,14 @@ export const DashboardRouter = () => {
     }
   });
 
-  router.get('/portfolio/snapshots', async (ctx) => {
+  router.get('/portfolio/performance', async (ctx) => {
     try {
-      const snapshotModel = await PortfolioSnapshotDBModel().initialize();
-      const all = snapshotModel.getAllRecords();
-      const sorted = [...all].sort((a, b) => (a.timestamp ?? a.date).localeCompare(b.timestamp ?? b.date));
-      ctx.body = sorted;
+      ctx.body = await getDailyPerformance();
       ctx.status = 200;
     } catch (err: any) {
-      logger.log({ level: 'error', message: err.message, label: 'Portfolio snapshots route' });
-      ctx.body = errorBody('Failed to get portfolio snapshots', err.message);
-      ctx.status = 400;
+      logger.log({ level: 'error', message: err.message, label: 'Portfolio performance route' });
+      ctx.body = errorBody('Failed to get portfolio performance', err.message);
+      ctx.status = 500;
     }
   });
 

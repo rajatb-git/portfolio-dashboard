@@ -25,6 +25,10 @@ export interface IAlertStatus extends IAlert {
   // The price the alert actually fires at, resolved server-side. Null when the
   // reference data isn't available yet (no peak recorded, no 52-week high).
   resolvedTarget: number | null;
+  // Signed % move from the current price to the trigger; null when either is unknown.
+  distancePercent: number | null;
+  // What a derived target is measured from (peak, 52-week high, cost basis).
+  reference: { label: string; value: number } | null;
   conditionLabel: string;
   triggered: boolean;
 }
