@@ -47,7 +47,7 @@
     "vite": "^8.3.1"
   },
   "devDependencies": {
-    "@biomejs/biome": "2.5.14",
+    "@biomejs/biome": "2.6.6",
     "@types/lodash": "^4.17.25",
     "@types/node": "^26.6.2",
     "@types/numeral": "^2.0.5",
