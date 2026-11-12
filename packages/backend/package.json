@@ -22,7 +22,7 @@
   "private": true,
   "dependencies": {
     "@anthropic-ai/sdk": "^0.128.0",
-    "@google/genai": "^2.24.0",
+    "@google/genai": "^3.0.0",
     "@koa/cors": "^5.0.0",
     "@koa/router": "^15.7.0",
     "archiver": "^8.0.0",
