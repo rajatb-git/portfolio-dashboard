@@ -20,6 +20,7 @@ import {
   Step,
   StepLabel,
   Stepper,
+  Switch,
   Table,
   TableBody,
   TableCell,
@@ -86,7 +87,7 @@ const KINDS: Array<{ kind: ImportKind; icon: string; title: string; body: string
 ];
 
 type Source =
-  | { method: 'table'; fileName: string; table: ParsedTable }
+  | { method: 'table'; fileName: string; table: ParsedTable; text: string }
   | { method: 'ai'; fileName: string; rows: RawImportRow[]; model: string; skipped: string[] };
 
 export default function Import() {
@@ -114,6 +115,7 @@ export default function Import() {
 
   const [source, setSource] = React.useState<Source | null>(null);
   const [pasted, setPasted] = React.useState('');
+  const [alwaysAi, setAlwaysAi] = React.useState(false);
   const [reading, setReading] = React.useState(false);
   const readAbort = React.useRef<AbortController | null>(null);
   const [aiReading, setAiReading] = React.useState(false);
@@ -271,7 +273,7 @@ export default function Import() {
     }
   };
 
-  const applyTable = (fileName: string, table: ParsedTable) => {
+  const applyTable = (fileName: string, text: string, table: ParsedTable) => {
     if (!kind) return;
     const auto = autoMap(table.headers, kind);
     setMapping(auto);
@@ -293,17 +295,19 @@ export default function Import() {
       decimalComma: detectDecimalComma(table.rows.flatMap((r) => numberColumns.map((i) => r[i] ?? ''))),
       costFromMarket: kind === 'positions' && auto.price === undefined && auto.costBasis === undefined,
     }));
-    setSource({ method: 'table', fileName, table });
+    setSource({ method: 'table', fileName, table, text });
     setEdits({});
     setExcluded(new Set());
     setStep(3);
   };
 
-  const readWithAi = async (fileName: string, text: string) => {
+  const readWithAi = async (fileName: string, text: string, chosen: boolean) => {
     if (!kind) return;
     if (!aiReady) {
       setReadError(
-        'This file isn’t a CSV table, so it needs the local AI to read it. Turn on the AI Agent with the Ollama (Local) provider in Settings, or export a CSV from your broker instead.'
+        chosen
+          ? 'Reading with AI needs the AI Agent turned on with the Ollama (Local) provider in Settings.'
+          : 'This file isn’t a CSV table, so it needs the local AI to read it. Turn on the AI Agent with the Ollama (Local) provider in Settings, or export a CSV from your broker instead.'
       );
       return;
     }
@@ -364,7 +368,7 @@ export default function Import() {
     setStep(4);
   };
 
-  const readSource = async (fileName: string, getText: () => Promise<string>, forceAi = false) => {
+  const readSource = async (fileName: string, getText: () => Promise<string>, forceAi: boolean) => {
     setReadError('');
     setReading(true);
     try {
@@ -375,8 +379,9 @@ export default function Import() {
           "This doesn't look like a text file. Export a CSV from your broker, or choose the PDF statement itself."
         );
       }
-      if (!forceAi && looksTabular(text)) applyTable(fileName, parseTable(text));
-      else await readWithAi(fileName, text);
+      const tabular = looksTabular(text);
+      if (!forceAi && tabular) applyTable(fileName, text, parseTable(text));
+      else await readWithAi(fileName, text, tabular);
     } catch (err: any) {
       setReadError(err.message || 'Could not read the file');
     } finally {
@@ -400,7 +405,7 @@ export default function Import() {
     },
     onDrop: (files) => {
       const file = files[0];
-      if (file) readSource(file.name, () => readFileText(file), isPdf(file));
+      if (file) readSource(file.name, () => readFileText(file), alwaysAi || isPdf(file));
     },
     onDropRejected: () => setReadError('That file type isn’t supported. Use CSV, TSV, TXT, PDF, OFX or QFX.'),
   });
@@ -660,7 +665,25 @@ export default function Import() {
               <Iconify icon="tabler:cloud-upload" width={36} sx={{ color: 'primary.main', mb: 1 }} />
               <Typography sx={{ fontWeight: 600 }}>Drop a file here, or click to choose</Typography>
               <Typography sx={{ fontSize: '0.8rem', color: 'text.secondary' }}>
-                CSV or TSV exports are read directly. PDF, OFX/QFX and text statements are read by your local AI.
+                {alwaysAi
+                  ? 'Every file, CSV included, will be read by your local AI.'
+                  : 'CSV or TSV exports are read directly. PDF, OFX/QFX and text statements are read by your local AI.'}
+              </Typography>
+            </Box>
+            <Box>
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={alwaysAi}
+                    onChange={(e) => setAlwaysAi(e.target.checked)}
+                    disabled={reading || !aiReady}
+                  />
+                }
+                label="Read with local AI instead of mapping columns"
+              />
+              <Typography sx={{ fontSize: '0.75rem', color: 'text.secondary', ml: 6 }}>
+                Use this when a CSV’s columns don’t map cleanly. Slower, and the rows still need checking on the review
+                step.
               </Typography>
             </Box>
             {reading && (
@@ -710,7 +733,7 @@ export default function Import() {
               <Button
                 variant="contained"
                 disabled={!pasted.trim() || reading}
-                onClick={() => readSource('Pasted text', async () => pasted)}
+                onClick={() => readSource('Pasted text', async () => pasted, alwaysAi)}
               >
                 Read pasted text
               </Button>
@@ -832,11 +855,24 @@ export default function Import() {
                 </TableBody>
               </Table>
             </Box>
-            <Stack direction="row" spacing={1}>
+            <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', gap: 1 }}>
               {back(2)}
               <Button variant="contained" disabled={!columnsReady} onClick={goToReview}>
                 Review import
               </Button>
+              {aiReady && (
+                <Button
+                  variant="outlined"
+                  startIcon={<Iconify icon="tabler:robot" />}
+                  onClick={() => {
+                    const { fileName, text } = source;
+                    setStep(2);
+                    readSource(fileName, async () => text, true);
+                  }}
+                >
+                  Read with local AI instead
+                </Button>
+              )}
             </Stack>
           </Stack>
         </Panel>
