@@ -14,6 +14,7 @@ export const transactionCashImpact = (tx: {
   switch (tx.action) {
     case 'sell':
     case 'deposit':
+    case 'dividend':
       return gross;
     case 'buy':
     case 'withdraw':
@@ -34,24 +35,32 @@ export const adjustCash = async (accountId: string, delta: number): Promise<numb
   return newBalance;
 };
 
+export type CashAction = 'deposit' | 'withdraw' | 'dividend';
+
+// A dividend is cash in, stored under the paying symbol so income can be
+// totalled per holding.
 export const recordCashMovement = async (
   accountId: string,
   amount: number,
-  action: 'deposit' | 'withdraw',
-  date?: string
+  action: CashAction,
+  date?: string,
+  symbol?: string
 ): Promise<{ cashBalance: number }> => {
   if (!Number.isFinite(amount) || amount <= 0) {
     throw new Error('Amount must be a positive number');
   }
+  if (action === 'dividend' && !symbol) {
+    throw new Error('A dividend needs the symbol that paid it');
+  }
 
-  const delta = action === 'deposit' ? amount : -amount;
+  const delta = action === 'withdraw' ? -amount : amount;
   const cashBalance = await adjustCash(accountId, delta);
 
   try {
     const transactionModel = await TransactionModel().initialize();
     await transactionModel.insertOne({
       accountId,
-      symbol: 'CASH',
+      symbol: action === 'dividend' ? (symbol as string) : 'CASH',
       qty: amount,
       price: 1,
       type: 'cash',

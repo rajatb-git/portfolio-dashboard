@@ -8,7 +8,7 @@ import { errorBody } from '../utils/error';
 import { logger } from '../utils/winston';
 
 const VALID_TYPES = ['stock', 'crypto', 'cash'];
-const VALID_ACTIONS = ['buy', 'sell', 'deposit', 'withdraw'];
+const VALID_ACTIONS = ['buy', 'sell', 'deposit', 'withdraw', 'dividend'];
 
 // A cleared date in the grid comes back as null/'' — drop the key entirely so the
 // row falls back to createdAt rather than storing an empty string.

@@ -125,13 +125,25 @@ export const AccountsRouter = () => {
       const action = body?.action;
       const amount = Number(body?.amount);
 
-      if (action !== 'deposit' && action !== 'withdraw') {
+      if (action !== 'deposit' && action !== 'withdraw' && action !== 'dividend') {
         ctx.status = 400;
-        ctx.body = errorBody('Invalid action', "action must be 'deposit' or 'withdraw'");
+        ctx.body = errorBody('Invalid action', "action must be 'deposit', 'withdraw' or 'dividend'");
         return;
       }
 
-      const result = await recordCashMovement(ctx.params.id, amount, action, normalizeTradeDate(body?.date));
+      let symbol: string | undefined;
+      if (action === 'dividend') {
+        symbol = String(body?.symbol ?? '')
+          .trim()
+          .toUpperCase();
+        if (!/^[A-Z0-9][A-Z0-9.\-^/]{0,19}$/.test(symbol)) {
+          ctx.status = 400;
+          ctx.body = errorBody('Invalid symbol', 'Enter the ticker symbol that paid the dividend');
+          return;
+        }
+      }
+
+      const result = await recordCashMovement(ctx.params.id, amount, action, normalizeTradeDate(body?.date), symbol);
       ctx.body = result;
       ctx.status = 200;
     } catch (error: any) {

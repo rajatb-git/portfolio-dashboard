@@ -53,7 +53,12 @@ business).
 
 ## Income
 
-**Dividend income** — per holding: amount per share, annualized dividend,
+**Dividends received** — what has actually been paid, from imported history
+and payments recorded with *Manage Cash → Dividend received*: this year, the
+last 12 months and all time, per symbol, recent payments and a yearly
+breakdown.
+
+**Projected dividend income** — per holding: amount per share, annualized dividend,
 yield, **yield on cost**, annual income, and the next ex-dividend and payment
 dates with the expected amount. Summarised as total annual income and average
 monthly income.

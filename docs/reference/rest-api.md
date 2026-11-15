@@ -75,7 +75,7 @@ and `GET /settings/lock` stay open.
 | `GET` | `/accounts` | List accounts |
 | `GET` | `/accounts/:id` | One account |
 | `POST` | `/accounts` | Update / upsert an account |
-| `POST` | `/accounts/:id/cash` | Deposit or withdraw cash |
+| `POST` | `/accounts/:id/cash` | Deposit or withdraw cash, or record a dividend (`action: 'dividend'` with `symbol`) |
 | `DELETE` | `/accounts/:id` | Delete an account |
 
 ## Transactions
@@ -133,7 +133,7 @@ same flag works on `/live/market-news`, `/live/portfolio-news`,
 | `GET` | `/analytics/performance-attribution` | Per-holding contribution to return |
 | `GET` | `/analytics/realized-gains` | Closed lots, short/long-term, by year |
 | `GET` | `/analytics/earnings-calendar` | Upcoming earnings for your holdings |
-| `GET` | `/analytics/dividends` | Income, yield, yield on cost, upcoming dates |
+| `GET` | `/analytics/dividends` | Dividends received, projected income, yield, yield on cost, upcoming dates |
 | `GET` | `/analytics/tax-loss-harvesting` | Losing tax lots per position, with wash-sale flags |
 | `GET` | `/analytics/tax-exposure` | Unrealized short/long-term gains, YTD realized, estimated tax, lots turning long-term soon |
 | `GET` / `POST` | `/analytics/tax/config` | Short-term, long-term and state tax rates (percent) used by every estimate |

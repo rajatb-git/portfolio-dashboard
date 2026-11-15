@@ -31,8 +31,8 @@ Adding works so that importing the same file twice changes nothing:
   lists replaces that symbol's lots in the account (the review shows the old
   and new quantity), symbols it doesn't list are left alone, and its cash
   line *sets* the cash balance rather than adding to it.
-- In a **history** file, trades, deposits and withdrawals already in the
-  account (same day, quantity and price) are skipped as duplicates, and a
+- In a **history** file, trades, dividends, deposits and withdrawals already
+  in the account (same day, quantity and price) are skipped as duplicates, and a
   stock split an earlier import already applied isn't applied again.
 
 ## 3. Drop the file
@@ -57,7 +57,7 @@ The review shows every row with its status and the reason for it:
   read, a sale of more shares than held, …). Fix the file and choose it again,
   or untick the row to import the rest.
 - **Skipped** — not a position or trade: totals, pending activity, options
-  contracts, dividends, interest, fees, transfers without a direction.
+  contracts, interest, fees, transfers without a direction.
 - **Duplicate** — already in the account.
 
 Click the pencil on any row to correct it — useful when the local AI misread
@@ -71,7 +71,7 @@ whether a positions file without a cost column uses today's price as an
 estimated cost, and whether cash rows / cash movements update the account's
 cash.
 The summary shows the positions and lots you will end up with, transactions,
-realized gain and cash before and after.
+realized gain, dividend income and cash before and after.
 
 Broker wording is understood — *YOU BOUGHT*, *Sold*, *Reinvest Shares*,
 *Electronic Funds Transfer Received*, *ACH* with a signed amount — as are
@@ -83,8 +83,15 @@ such as `SPAXX**` (cash) and dates like `3/4/2026`, `2026-03-04` or
   from the amount column when it's there.
 - **Stock splits** (*DISTRIBUTION*, *SPL*, *Stock Split*) multiply each held
   lot's shares and divide its cost per share, keeping its date.
-- **Reinvested dividends** with a share quantity are buys; the matching cash
-  dividend line is skipped. Short sales and covers are skipped, since short
+- **Cash dividends** (*Qualified Dividend*, *Cash Div*, *CDIV*, *Dividend
+  Received*, …) are recorded as dividends received from that symbol, using the
+  row's amount. They credit cash when cash movements are on, and appear under
+  **Analytics → Dividends received** and on each holding's Research page. A
+  negative dividend (a reversal) is skipped, and a *stock dividend* is read as
+  a split.
+- **Reinvested dividends** come as two rows: the cash dividend (*Reinvest
+  Dividend*) is recorded as income and the share purchase (*Reinvest Shares*)
+  as a buy, so cash nets out. Short sales and covers are skipped, since short
   positions aren't tracked.
 
 ## After importing

@@ -40,9 +40,9 @@ export const FIELD_HELP: Record<ImportKind, Partial<Record<ImportField, string>>
   },
   history: {
     price: 'Execution price per share',
-    amount: 'Cash amount — used for deposits/withdrawals and when there is no price',
+    amount: 'Cash amount — used for dividends, deposits/withdrawals and when there is no price',
     date: 'Trade date',
-    action: 'Buy, sell, deposit, withdrawal (broker wording is understood)',
+    action: 'Buy, sell, dividend, deposit, withdrawal (broker wording is understood)',
   },
 };
 

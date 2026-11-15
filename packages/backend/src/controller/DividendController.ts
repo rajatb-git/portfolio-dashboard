@@ -2,8 +2,10 @@ import moment from 'moment';
 import { getDividendsFromNasdaq, type NasdaqDividends } from '../externalApis/nasdaq';
 import type { CompanyProfile2Response } from '../externalApis/types';
 import { read } from '../marketData/store';
+import { AccountModel } from '../models/AccountModel';
 import { CacheDBModel } from '../models/CacheModel';
 import { HoldingsModel } from '../models/HoldingsModel';
+import { TransactionModel } from '../models/TransactionModel';
 import { logger } from '../utils/winston';
 
 const LABEL = 'DividendController';
@@ -31,7 +33,28 @@ export type HoldingDividend = {
   nextPaymentAmount: number;
 };
 
+export type DividendPayment = {
+  id: string;
+  accountId: string;
+  accountName: string;
+  symbol: string;
+  date: string;
+  amount: number;
+};
+
+// Dividends actually paid, from the transaction log (imported or entered).
+export type DividendsReceived = {
+  total: number;
+  trailing12Months: number;
+  thisYear: number;
+  payments: number;
+  byYear: Array<{ year: number; amount: number; payments: number }>;
+  bySymbol: Array<{ symbol: string; amount: number; payments: number; lastDate: string }>;
+  recent: DividendPayment[];
+};
+
 export type DividendSummary = {
+  received: DividendsReceived;
   holdings: HoldingDividend[];
   totalAnnualIncome: number;
   averageMonthlyIncome: number;
@@ -96,6 +119,56 @@ function currentRate(dividends: NasdaqDividends): number {
   const newest = [...dividends.history].sort((a, b) => b.exOrEffDate.localeCompare(a.exOrEffDate))[0];
   if (newest?.amount) return newest.amount;
   return dividends.annualizedDividend > 0 ? +(dividends.annualizedDividend / 4).toFixed(4) : 0;
+}
+
+const RECENT_PAYMENTS = 25;
+
+export async function buildDividendsReceived(): Promise<DividendsReceived> {
+  const [txModel, accountsModel] = await Promise.all([TransactionModel().initialize(), AccountModel().initialize()]);
+  const accountNames = new Map(accountsModel.getAllRecords().map((a) => [a.id, a.name]));
+  const payments: DividendPayment[] = txModel
+    .getAllRecords()
+    .filter((t) => t.action === 'dividend')
+    .map((t) => ({
+      id: t.id,
+      accountId: t.accountId,
+      accountName: accountNames.get(t.accountId) ?? t.accountId,
+      symbol: (t.symbol ?? '').toUpperCase(),
+      date: moment(t.date ?? t.createdAt).format('YYYY-MM-DD'),
+      amount: +((t.qty ?? 0) * (t.price ?? 1)).toFixed(2),
+    }))
+    .sort((a, b) => b.date.localeCompare(a.date));
+
+  const yearAgo = moment().subtract(12, 'months').format('YYYY-MM-DD');
+  const year = moment().year();
+  const byYear = new Map<number, { year: number; amount: number; payments: number }>();
+  const bySymbol = new Map<string, { symbol: string; amount: number; payments: number; lastDate: string }>();
+  let total = 0;
+  let trailing = 0;
+  for (const p of payments) {
+    total += p.amount;
+    if (p.date > yearAgo) trailing += p.amount;
+    const y = Number(p.date.slice(0, 4));
+    const yr = byYear.get(y) ?? { year: y, amount: 0, payments: 0 };
+    yr.amount += p.amount;
+    yr.payments += 1;
+    byYear.set(y, yr);
+    const sym = bySymbol.get(p.symbol) ?? { symbol: p.symbol, amount: 0, payments: 0, lastDate: p.date };
+    sym.amount += p.amount;
+    sym.payments += 1;
+    bySymbol.set(p.symbol, sym);
+  }
+  const round = <T extends { amount: number }>(x: T): T => ({ ...x, amount: +x.amount.toFixed(2) });
+
+  return {
+    total: +total.toFixed(2),
+    trailing12Months: +trailing.toFixed(2),
+    thisYear: +(byYear.get(year)?.amount ?? 0).toFixed(2),
+    payments: payments.length,
+    byYear: [...byYear.values()].sort((a, b) => b.year - a.year).map(round),
+    bySymbol: [...bySymbol.values()].sort((a, b) => b.amount - a.amount).map(round),
+    recent: payments.slice(0, RECENT_PAYMENTS),
+  };
 }
 
 // Personal position data (share counts, cost basis, expected income) stays on the
@@ -174,6 +247,7 @@ export async function buildDividendSummary(): Promise<DividendSummary> {
     .sort((a, b) => a.date.localeCompare(b.date));
 
   return {
+    received: await buildDividendsReceived(),
     holdings: results,
     totalAnnualIncome,
     averageMonthlyIncome: +(totalAnnualIncome / 12).toFixed(2),
