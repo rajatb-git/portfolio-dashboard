@@ -199,7 +199,27 @@ export type HoldingDividend = {
   nextPaymentAmount: number;
 };
 
+export type DividendPayment = {
+  id: string;
+  accountId: string;
+  accountName: string;
+  symbol: string;
+  date: string;
+  amount: number;
+};
+
+export type DividendsReceived = {
+  total: number;
+  trailing12Months: number;
+  thisYear: number;
+  payments: number;
+  byYear: Array<{ year: number; amount: number; payments: number }>;
+  bySymbol: Array<{ symbol: string; amount: number; payments: number; lastDate: string }>;
+  recent: DividendPayment[];
+};
+
 export type DividendSummary = {
+  received: DividendsReceived;
   holdings: HoldingDividend[];
   totalAnnualIncome: number;
   averageMonthlyIncome: number;

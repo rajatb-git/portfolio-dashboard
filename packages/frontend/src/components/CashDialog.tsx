@@ -29,9 +29,18 @@ type Props = {
 
 const today = () => moment().format('YYYY-MM-DD');
 
+type CashAction = 'deposit' | 'withdraw' | 'dividend';
+
+const SAVE_LABEL: Record<CashAction, string> = {
+  deposit: 'Deposit',
+  withdraw: 'Withdraw',
+  dividend: 'Record dividend',
+};
+
 export default function CashDialog({ open, account, accounts, onClose, onSaved }: Props) {
   const [accountId, setAccountId] = React.useState(account?.id ?? '');
-  const [action, setAction] = React.useState<'deposit' | 'withdraw'>('deposit');
+  const [action, setAction] = React.useState<CashAction>('deposit');
+  const [symbol, setSymbol] = React.useState('');
   const [amount, setAmount] = React.useState('');
   const [date, setDate] = React.useState(today());
   const [saving, setSaving] = React.useState(false);
@@ -43,6 +52,7 @@ export default function CashDialog({ open, account, accounts, onClose, onSaved }
     if (open && !wasOpen.current) {
       setAccountId(account?.id ?? accounts?.[0]?.id ?? '');
       setAction('deposit');
+      setSymbol('');
       setAmount('');
       setDate(today());
     }
@@ -61,6 +71,11 @@ export default function CashDialog({ open, account, accounts, onClose, onSaved }
       toast.error('Enter a positive amount');
       return;
     }
+    const ticker = symbol.trim().toUpperCase();
+    if (action === 'dividend' && !ticker) {
+      toast.error('Enter the symbol that paid the dividend');
+      return;
+    }
     if (!date || !moment(date, 'YYYY-MM-DD', true).isValid()) {
       toast.error('Enter a valid date');
       return;
@@ -77,11 +92,15 @@ export default function CashDialog({ open, account, accounts, onClose, onSaved }
     setConfirmOverdraft(false);
     setSaving(true);
     try {
-      await apis.accounts.moveCash(accountId, action, value, date);
+      await apis.accounts.moveCash(accountId, action, value, date, action === 'dividend' ? ticker : undefined);
+      const when = moment(date, 'YYYY-MM-DD').format('MMM D, YYYY');
+      const where = selected?.name ?? accountId;
       toast.success(
-        `${action === 'deposit' ? 'Deposited' : 'Withdrew'} ${fnCurrency(value)} ${
-          action === 'deposit' ? 'into' : 'from'
-        } ${selected?.name ?? accountId} on ${moment(date, 'YYYY-MM-DD').format('MMM D, YYYY')}`
+        action === 'dividend'
+          ? `Recorded a ${fnCurrency(value)} dividend from ${ticker} in ${where} on ${when}`
+          : `${action === 'deposit' ? 'Deposited' : 'Withdrew'} ${fnCurrency(value)} ${
+              action === 'deposit' ? 'into' : 'from'
+            } ${where} on ${when}`
       );
       onSaved();
       onClose();
@@ -140,13 +159,24 @@ export default function CashDialog({ open, account, accounts, onClose, onSaved }
 
             <Select
               value={action}
-              onChange={(e) => setAction(e.target.value as 'deposit' | 'withdraw')}
+              onChange={(e) => setAction(e.target.value as CashAction)}
               size="small"
               disabled={saving}
             >
               <MenuItem value="deposit">Deposit</MenuItem>
               <MenuItem value="withdraw">Withdraw</MenuItem>
+              <MenuItem value="dividend">Dividend received</MenuItem>
             </Select>
+            {action === 'dividend' && (
+              <TextField
+                size="small"
+                label="Paid by (symbol)"
+                value={symbol}
+                onChange={(e) => setSymbol(e.target.value.toUpperCase())}
+                disabled={saving}
+                helperText="The holding that paid it, e.g. AAPL"
+              />
+            )}
             <TextField
               size="small"
               label="Amount"
@@ -163,7 +193,7 @@ export default function CashDialog({ open, account, accounts, onClose, onSaved }
               value={date}
               onChange={(e) => setDate(e.target.value)}
               disabled={saving}
-              helperText="When the money actually moved"
+              helperText={action === 'dividend' ? 'The pay date' : 'When the money actually moved'}
               slotProps={{ inputLabel: { shrink: true }, htmlInput: { max: today() } }}
             />
           </Stack>
@@ -172,8 +202,12 @@ export default function CashDialog({ open, account, accounts, onClose, onSaved }
           <Button onClick={onClose} disabled={saving}>
             Cancel
           </Button>
-          <Button onClick={() => handleSave()} variant="contained" disabled={saving || !amount || !date}>
-            {saving ? 'Saving...' : action === 'deposit' ? 'Deposit' : 'Withdraw'}
+          <Button
+            onClick={() => handleSave()}
+            variant="contained"
+            disabled={saving || !amount || !date || (action === 'dividend' && !symbol.trim())}
+          >
+            {saving ? 'Saving...' : SAVE_LABEL[action]}
           </Button>
         </DialogActions>
       </Dialog>

@@ -13,7 +13,7 @@ import {
 } from '@mui/material';
 import moment from 'moment';
 
-import type { DividendSummary } from '@/api/analytics';
+import type { DividendSummary, DividendsReceived } from '@/api/analytics';
 import Metric from '@/components/ui/Metric';
 import Panel from '@/components/ui/Panel';
 import StateView from '@/components/ui/StateView';
@@ -32,6 +32,123 @@ function FundsNotCovered({ symbols }: { symbols: string[] }) {
       Not included: {symbols.join(', ')}. No free data source publishes ETF and fund distributions, so their income is
       missing from these totals.
     </Alert>
+  );
+}
+
+const headCell = { fontSize: '0.7rem' };
+
+function DividendsReceivedPanel({ received }: { received: DividendsReceived }) {
+  if (received.payments === 0) {
+    return (
+      <Panel title="Dividends received" icon="tabler:receipt" flush>
+        <StateView
+          state="empty"
+          title="No dividends recorded"
+          message="Import your broker's activity history, or record a payment with Manage Cash → Dividend received."
+          icon="tabler:receipt-off"
+          minHeight={140}
+        />
+      </Panel>
+    );
+  }
+
+  return (
+    <Panel
+      title="Dividends received"
+      subtitle={`${received.payments} payment${received.payments === 1 ? '' : 's'}`}
+      icon="tabler:receipt"
+      flush
+    >
+      <Stack direction={{ xs: 'column', sm: 'row' }} divider={<Divider flexItem />}>
+        <Box sx={{ flex: 1, p: 2 }}>
+          <Metric label="This year" value={fnCurrency(received.thisYear)} />
+        </Box>
+        <Box sx={{ flex: 1, p: 2 }}>
+          <Metric label="Last 12 months" value={fnCurrency(received.trailing12Months)} />
+        </Box>
+        <Box sx={{ flex: 1, p: 2 }}>
+          <Metric label="All time" value={fnCurrency(received.total)} />
+        </Box>
+      </Stack>
+      <Divider />
+      <Stack direction={{ xs: 'column', md: 'row' }} divider={<Divider flexItem orientation="vertical" />}>
+        <Box sx={{ flex: 1, overflowX: 'auto' }}>
+          <Table size="small">
+            <TableHead>
+              <TableRow>
+                <TableCell sx={headCell}>Symbol</TableCell>
+                <TableCell sx={headCell} align="right">
+                  Payments
+                </TableCell>
+                <TableCell sx={headCell}>Last paid</TableCell>
+                <TableCell sx={headCell} align="right">
+                  Received
+                </TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {received.bySymbol.map((row) => (
+                <TableRow key={row.symbol} hover>
+                  <TableCell sx={{ fontSize: '0.8rem', fontWeight: 700 }}>{row.symbol}</TableCell>
+                  <TableCell sx={{ fontSize: '0.78rem' }} align="right">
+                    {row.payments}
+                  </TableCell>
+                  <TableCell sx={{ fontSize: '0.78rem' }}>{moment(row.lastDate).format('MMM D, YYYY')}</TableCell>
+                  <TableCell sx={{ fontSize: '0.8rem', fontWeight: 700 }} align="right">
+                    {fnCurrency(row.amount)}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </Box>
+        <Box sx={{ flex: 1, overflowX: 'auto' }}>
+          <Table size="small">
+            <TableHead>
+              <TableRow>
+                <TableCell sx={headCell}>Recent</TableCell>
+                <TableCell sx={headCell}>Account</TableCell>
+                <TableCell sx={headCell} align="right">
+                  Amount
+                </TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {received.recent.map((p) => (
+                <TableRow key={p.id} hover>
+                  <TableCell sx={{ fontSize: '0.78rem' }}>
+                    <Typography component="span" sx={{ fontSize: '0.8rem', fontWeight: 700, mr: 1 }}>
+                      {p.symbol}
+                    </Typography>
+                    {moment(p.date).format('MMM D, YYYY')}
+                  </TableCell>
+                  <TableCell sx={{ fontSize: '0.75rem', color: 'text.secondary' }}>{p.accountName}</TableCell>
+                  <TableCell sx={{ fontSize: '0.8rem' }} align="right">
+                    {fnCurrency(p.amount)}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </Box>
+      </Stack>
+      {received.byYear.length > 1 && (
+        <>
+          <Divider />
+          <Stack direction="row" sx={{ flexWrap: 'wrap', gap: 1, p: 1.5 }}>
+            {received.byYear.map((y) => (
+              <Chip
+                key={y.year}
+                size="small"
+                variant="outlined"
+                label={`${y.year}: ${fnCurrency(y.amount)}`}
+                sx={{ fontSize: '0.7rem' }}
+              />
+            ))}
+          </Stack>
+        </>
+      )}
+    </Panel>
   );
 }
 
@@ -55,7 +172,8 @@ export default function DividendIncomeCard({ data, isLoading, error }: Props) {
   if (!data || data.holdings.length === 0) {
     return (
       <Stack spacing={2}>
-        <Panel title="Dividend income" icon="tabler:cash" flush>
+        {data && <DividendsReceivedPanel received={data.received} />}
+        <Panel title="Projected dividend income" icon="tabler:cash" flush>
           <StateView
             state="empty"
             title="No dividend payers"
@@ -71,8 +189,9 @@ export default function DividendIncomeCard({ data, isLoading, error }: Props) {
 
   return (
     <Stack spacing={2}>
+      <DividendsReceivedPanel received={data.received} />
       <Panel
-        title="Dividend income"
+        title="Projected dividend income"
         subtitle={`${data.payerCount} paying position${data.payerCount === 1 ? '' : 's'}`}
         icon="tabler:cash"
         flush

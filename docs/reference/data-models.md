@@ -60,7 +60,9 @@ does not reconcile with the stored quantity, the position is shown as one
 
 ### Transaction
 
-A buy, sell, deposit or withdrawal.
+A buy, sell, dividend, deposit or withdrawal. A dividend stores the paying
+ticker as `symbol` and its cash amount as `qty` (with `price: 1`, `type:
+'cash'`), like a deposit.
 
 ```ts
 interface ITransaction {
@@ -69,7 +71,7 @@ interface ITransaction {
   qty: number;
   price: number;
   type: 'stock' | 'crypto' | 'cash';
-  action: string;   // buy | sell | deposit | withdraw
+  action: string;   // buy | sell | dividend | deposit | withdraw
   pnl?: number;
   date?: string;    // real trade date for imported history
   lotId?: string;   // buys: the tax lot opened

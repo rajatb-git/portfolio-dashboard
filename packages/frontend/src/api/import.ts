@@ -82,6 +82,8 @@ export type ImportPlan = {
     estimatedLots: number;
     transactions: number;
     realizedGain: number;
+    dividends: number;
+    dividendIncome: number;
     removedPositions: number;
     removedTransactions: number;
     replacedPositions: number;

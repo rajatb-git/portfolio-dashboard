@@ -27,7 +27,7 @@ const FIELDS: Record<ImportKind, Array<{ key: Field; label: string; help?: strin
   ],
   history: [
     { key: 'date', label: 'Date', help: 'e.g. 2024-03-15' },
-    { key: 'action', label: 'Action', help: 'Buy, Sell, Deposit, Withdrawal…' },
+    { key: 'action', label: 'Action', help: 'Buy, Sell, Dividend, Deposit, Withdrawal…' },
     { key: 'symbol', label: 'Symbol' },
     { key: 'qty', label: 'Quantity' },
     { key: 'price', label: 'Price per share' },

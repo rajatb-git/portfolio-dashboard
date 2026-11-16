@@ -31,6 +31,7 @@ type Props = {
 const actionColors: Record<string, { fg: string; bg: string; border: string }> = {
   buy: { fg: 'var(--pd-up)', bg: 'var(--pd-up-bg)', border: 'rgba(74,222,128,0.25)' },
   sell: { fg: 'var(--pd-down)', bg: 'var(--pd-down-bg)', border: 'rgba(248,113,113,0.25)' },
+  dividend: { fg: 'var(--pd-up)', bg: 'transparent', border: 'rgba(74,222,128,0.25)' },
 };
 
 export default function ResearchTransactionsCard({ transactions, accounts, isLoading }: Props) {
@@ -52,6 +53,8 @@ export default function ResearchTransactionsCard({ transactions, accounts, isLoa
 
   const buyCount = sorted.filter((t) => t.action === 'buy').length;
   const sellCount = sorted.filter((t) => t.action === 'sell').length;
+  const dividends = sorted.filter((t) => t.action === 'dividend');
+  const dividendTotal = dividends.reduce((sum, t) => sum + (t.qty ?? 0) * (t.price ?? 0), 0);
   const realizedPnl = sorted.reduce((sum, t) => sum + (t.pnl ?? 0), 0);
   const hasRealizedPnl = sorted.some((t) => t.pnl !== undefined);
 
@@ -94,6 +97,8 @@ export default function ResearchTransactionsCard({ transactions, accounts, isLoa
         {sorted.length > 0 && (
           <Typography sx={{ fontSize: '0.7rem', color: 'text.disabled' }}>
             {buyCount} buy · {sellCount} sell
+            {dividends.length > 0 &&
+              ` · ${dividends.length} dividend${dividends.length === 1 ? '' : 's'} (${fnCurrency(dividendTotal)})`}
           </Typography>
         )}
         <Box sx={{ flexGrow: 1 }} />
@@ -159,6 +164,8 @@ export default function ResearchTransactionsCard({ transactions, accounts, isLoa
                     bg: 'action.hover',
                     border: 'divider',
                   };
+                  // A dividend's qty is its cash amount, not shares.
+                  const isDividend = t.action === 'dividend';
                   const total = (t.qty ?? 0) * (t.price ?? 0);
                   return (
                     <TableRow key={t.id} sx={{ '&:last-child td': { border: 0 } }}>
@@ -215,7 +222,7 @@ export default function ResearchTransactionsCard({ transactions, accounts, isLoa
                           borderColor: 'divider',
                         }}
                       >
-                        {t.qty?.toLocaleString()}
+                        {isDividend ? '—' : t.qty?.toLocaleString()}
                       </TableCell>
                       <TableCell
                         sx={{
@@ -225,7 +232,7 @@ export default function ResearchTransactionsCard({ transactions, accounts, isLoa
                           borderColor: 'divider',
                         }}
                       >
-                        {fnCurrency(t.price)}
+                        {isDividend ? '—' : fnCurrency(t.price)}
                       </TableCell>
                       <TableCell
                         sx={{

@@ -38,15 +38,16 @@ export default class AccountsAPI {
       .then((response) => response.data)
       .catch(catchCustomError);
 
-  // cash deposit/withdraw
+  // cash deposit/withdraw, or a dividend received from `symbol`
   moveCash = async (
     id: string,
-    action: 'deposit' | 'withdraw',
+    action: 'deposit' | 'withdraw' | 'dividend',
     amount: number,
-    date?: string
+    date?: string,
+    symbol?: string
   ): Promise<{ cashBalance: number }> =>
     axios
-      .post(DB_HOST + `/accounts/${encodeURIComponent(id)}/cash`, { action, amount, date })
+      .post(DB_HOST + `/accounts/${encodeURIComponent(id)}/cash`, { action, amount, date, symbol })
       .then((response) => response.data)
       .catch(catchCustomError);
 }

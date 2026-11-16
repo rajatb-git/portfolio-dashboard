@@ -6,7 +6,7 @@ import { HoldingsModel, IHoldingsModel, ITaxLot } from '../models/HoldingsModel'
 import { ImportRunDBModel } from '../models/ImportRunModel';
 import { IRelievedLot, ITransaction, TransactionModel } from '../models/TransactionModel';
 import { calendarDayToIso, roundQty } from '../utils';
-import { adjustCash } from './CashController';
+import { adjustCash, transactionCashImpact } from './CashController';
 import { normalizeTradeAction } from './DocumentImportController';
 import { resolveLots, totalsFromLots } from './TaxLotController';
 
@@ -107,6 +107,8 @@ export type ImportPlan = {
     estimatedLots: number;
     transactions: number;
     realizedGain: number;
+    dividends: number;
+    dividendIncome: number;
     removedPositions: number;
     removedTransactions: number;
     replacedPositions: number;
@@ -237,6 +239,18 @@ const CASH_NAME_RE = /^cash\b|money market|cash & cash investments|cash and cash
 const SUMMARY_RE = /^(account )?total|grand total|^subtotal/i;
 const PENDING_RE = /pending activity|pending transactions/i;
 const SPLIT_RE = /\bsplit\b|^spl$|distribution|stock dividend/i;
+// Cash dividends however a broker words them ("Qualified Dividend", "Cash
+// Div", "CDIV", "Dividend Received"), including the cash leg of a reinvestment
+// ("Reinvest Dividend") — the shares it bought come on their own buy row, so
+// the two net out in cash. A stock dividend adds shares and is read as a split.
+const DIVIDEND_RE = /\bdiv(idends?|s)?\b|^c?div$/i;
+const isCashDividend = (rawAction: string, hasShareTrade: boolean): boolean =>
+  DIVIDEND_RE.test(rawAction) &&
+  !/stock div/i.test(rawAction) &&
+  !/\bshares?\b/i.test(rawAction) &&
+  // "Dividend Reinvestment" with a quantity and price is the purchase leg.
+  !(/reinvest/i.test(rawAction) && hasShareTrade);
+
 const NON_TRADE_RE =
   /dividend|interest|\bfee|\btax|journal|split|merger|spinoff|spin-off|stock rewards?|staking|reward|airdrop/i;
 const OPTION_RE = /\b\d{1,2}\/\d{1,2}\/\d{2,4}\b.*\b\d+(\.\d+)?\s*[CP]\b|\b(call|put)\b/i;
@@ -659,7 +673,7 @@ const buildWorkspace = async (request: ImportRequest): Promise<Workspace> => {
       }
       if (!rawAction) {
         row.status = 'error';
-        row.messages.push('No action — each row needs buy, sell, deposit or withdrawal');
+        row.messages.push('No action — each row needs buy, sell, dividend, deposit or withdrawal');
         return;
       }
       const signedAmount = num(raw.amount).value;
@@ -692,16 +706,99 @@ const buildWorkspace = async (request: ImportRequest): Promise<Workspace> => {
         events.push({ row, action: 'split', type: row.type, name });
         return;
       }
+      const tradeQty = num(raw.qty).value;
+      const tradePrice = num(raw.price).value;
+      if (!action && isCashDividend(rawAction, !!tradeQty && !!tradePrice)) {
+        row.action = 'dividend';
+        row.type = 'cash';
+        const date = parseDate(raw.date, options.dateOrder);
+        if (date.invalid) {
+          row.status = 'error';
+          row.messages.push(`Couldn't read the date "${date.invalid}" — check the date format`);
+          return;
+        }
+        if (date.value && moment(date.value).isAfter(moment(), 'day')) {
+          row.status = 'error';
+          row.messages.push(`Date ${date.value} is in the future`);
+          return;
+        }
+        row.date = date.value;
+        const qty = num(raw.qty);
+        const price = num(raw.price);
+        const amount = num(raw.amount);
+        const bad = qty.invalid ?? price.invalid ?? amount.invalid;
+        if (bad) {
+          row.status = 'error';
+          row.messages.push(`"${bad}" isn't a number${numberHint(options.decimalComma)}`);
+          return;
+        }
+        if (!sym.symbol || !SYMBOL_RE.test(sym.symbol)) {
+          row.status = 'error';
+          row.messages.push(
+            sym.symbol ? `"${sym.raw}" isn't a ticker symbol` : 'No symbol — a dividend needs the holding that paid it'
+          );
+          return;
+        }
+        row.symbol = sym.symbol;
+        // The quantity column of a dividend row is usually the shares held,
+        // not cash, so it only counts when a per-share rate sits beside it.
+        const value =
+          amount.value ?? (qty.value !== undefined && price.value !== undefined ? qty.value * price.value : undefined);
+        if (!value) {
+          row.status = 'error';
+          row.messages.push('No amount — add the amount column so the dividend has its cash value');
+          return;
+        }
+        if (value < 0) {
+          row.status = 'skipped';
+          row.messages.push(
+            `A negative dividend (${fmtUsd(value)}) is a reversal or adjustment and isn't imported — check the income total`
+          );
+          return;
+        }
+        row.qty = +value.toFixed(2);
+        row.price = 1;
+        const day = date.value ?? today();
+        if (
+          takeDuplicate(
+            (t) =>
+              t.action === 'dividend' &&
+              (t.symbol ?? '').toUpperCase() === sym.symbol &&
+              Math.abs((t.qty ?? 0) - (row.qty as number)) < 0.005 &&
+              sameDay(t, day)
+          )
+        ) {
+          row.status = 'duplicate';
+          row.messages.push('Already in this account (same dividend on the same day)');
+          return;
+        }
+        if (!date.value) {
+          row.status = 'warning';
+          row.messages.push("No date — it will be recorded as today's");
+        }
+        row.messages.push(`Dividend of ${fmtUsd(row.qty)} from ${sym.symbol}`);
+        transactions.push({
+          symbol: sym.symbol,
+          qty: row.qty,
+          price: 1,
+          type: 'cash',
+          action: 'dividend',
+          date: toIso(day),
+          imported: true,
+          cashApplied: options.applyCash,
+        });
+        return;
+      }
       if (!action) {
         row.status = 'skipped';
         row.messages.push(
           /\bshort\b|to cover/i.test(rawAction)
             ? `"${rawAction}" isn't imported — short sales aren't tracked`
             : NON_TRADE_RE.test(rawAction)
-              ? `"${rawAction}" isn't imported — dividends, interest, fees and rewards don't change your shares or cost`
+              ? `"${rawAction}" isn't imported — interest, fees and rewards don't change your shares or cost`
               : /\b(send|sent|receive|received|transfer|transferred)\b/i.test(rawAction) && sym.symbol
                 ? `"${rawAction}" moves ${sym.symbol} in or out without a price — shares or coins transferred in need their cost basis, so import them from a positions file`
-                : `"${rawAction}" isn't a buy, sell, deposit or withdrawal`
+                : `"${rawAction}" isn't a buy, sell, dividend, deposit or withdrawal`
         );
         return;
       }
@@ -1004,10 +1101,7 @@ const buildWorkspace = async (request: ImportRequest): Promise<Workspace> => {
       }
     }
   } else if (options.applyCash) {
-    const flow = transactions.reduce((sum, t) => {
-      const gross = t.qty * (t.price ?? 0);
-      return sum + (t.action === 'sell' || t.action === 'deposit' ? gross : -gross);
-    }, 0);
+    const flow = transactions.reduce((sum, t) => sum + transactionCashImpact(t), 0);
     cashTarget = { mode: replace ? 'set' : 'adjust', amount: +flow.toFixed(2) };
   }
   const cashAfter = cashTarget
@@ -1047,6 +1141,7 @@ const buildWorkspace = async (request: ImportRequest): Promise<Workspace> => {
   plannedPositions.sort((a, b) => a.symbol.localeCompare(b.symbol));
 
   const count = (status: RowStatus) => rows.filter((r) => r.status === status).length;
+  const dividendRows = transactions.filter((t) => t.action === 'dividend');
   const open = plannedPositions.filter((p) => p.change === 'new' || p.change === 'updated');
   const errors = count('error');
   const summary: ImportPlan['summary'] = {
@@ -1062,6 +1157,8 @@ const buildWorkspace = async (request: ImportRequest): Promise<Workspace> => {
     estimatedLots: open.reduce((s, p) => s + p.estimatedLots, 0),
     transactions: transactions.length,
     realizedGain: +transactions.reduce((s, t) => s + (t.pnl ?? 0), 0).toFixed(2),
+    dividends: dividendRows.length,
+    dividendIncome: +dividendRows.reduce((s, t) => s + t.qty, 0).toFixed(2),
     removedPositions: removeHoldings.length,
     removedTransactions: removeTransactionIds.length,
     replacedPositions: previousQty.size,

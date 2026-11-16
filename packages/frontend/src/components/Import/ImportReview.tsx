@@ -186,7 +186,7 @@ export default function ImportReview({
                   <Typography sx={{ fontSize: '0.72rem', color: 'text.secondary' }}>
                     {kind === 'positions'
                       ? 'Cash and money-market rows become the account’s cash balance'
-                      : 'Deposits, withdrawals, buys and sells move the cash balance. Dividends and interest aren’t imported, so it may need a final adjustment'}
+                      : 'Deposits, withdrawals, dividends, buys and sells move the cash balance. Interest and fees aren’t imported, so it may need a final adjustment'}
                   </Typography>
                 </Box>
               }
@@ -254,6 +254,9 @@ export default function ImportReview({
                   tone={s.realizedGain >= 0 ? 'var(--pd-up)' : 'var(--pd-down)'}
                 />
               )}
+              {kind === 'history' && s.dividends > 0 && (
+                <Figure label={`Dividends (${s.dividends})`} value={fnCurrency(s.dividendIncome)} tone="var(--pd-up)" />
+              )}
               <Figure
                 label="Cash"
                 value={
@@ -315,7 +318,7 @@ export default function ImportReview({
             {s.cashAfter < 0 && s.cashAfter !== s.cashBefore && (
               <Alert severity="warning" sx={{ py: 0 }}>
                 Cash would end at {fnCurrency(s.cashAfter)}. The file probably doesn’t include every deposit (or the
-                dividends that paid for some buys) — consider turning off “Update cash from these rows” and setting the
+                interest that paid for some buys) — consider turning off “Update cash from these rows” and setting the
                 balance yourself.
               </Alert>
             )}

@@ -186,7 +186,7 @@ const columns: { [collection: string]: Array<GridColDef> } = {
       minWidth: 80,
       editable: true,
       type: 'singleSelect',
-      valueOptions: ['buy', 'sell', 'deposit', 'withdraw'],
+      valueOptions: ['buy', 'sell', 'dividend', 'deposit', 'withdraw'],
     },
     {
       field: 'price',
