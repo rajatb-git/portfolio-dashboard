@@ -33,14 +33,14 @@
     "koa-bodyparser": "^4.4.1",
     "koa-helmet": "^9.0.0",
     "moment": "^2.31.0",
-    "mongodb": "^7.6.0",
+    "mongodb": "^7.9.1",
     "mqtt": "^5.16.0",
     "unzipper": "^0.12.5",
     "winston": "^3.19.0",
     "winston-transport": "^4.9.0"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.5.14",
+    "@biomejs/biome": "^2.6.8",
     "@types/archiver": "^8.0.0",
     "@types/koa": "^3.0.3",
     "@types/koa-bodyparser": "^4.3.13",
