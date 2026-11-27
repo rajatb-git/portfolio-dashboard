@@ -19,7 +19,8 @@ import { Iconify } from '@/components/Iconify';
 import { DATA_ACCENT, FONT_SIZE, FONT_STACK_MONO, RADIUS, SURFACE, TABULAR } from '@/components/ThemeRegistry/tokens';
 import { browserRequests, type LoggedRequest, RequestStore } from '@/utils/requestLog';
 
-import { displayUrl, formatBody, formatDuration } from './format';
+import { displayUrl, formatDuration } from './format';
+import RequestDetail from './RequestDetail';
 
 type Source = 'browser' | 'server';
 type Connection = 'connecting' | 'live' | 'retrying';
@@ -153,108 +154,6 @@ function DurationCell({ entry, now }: { entry: LoggedRequest; now: number }) {
   );
 }
 
-function Section({ title, text, defaultOpen }: { title: string; text: string; defaultOpen: boolean }) {
-  const [open, setOpen] = React.useState(defaultOpen);
-  if (!text) return null;
-  const copy = () => {
-    navigator.clipboard
-      .writeText(text)
-      .then(() => toast.success(`Copied ${title.toLowerCase()}`))
-      .catch((err) => toast.error(err?.message || 'Copy failed'));
-  };
-  return (
-    <Box sx={{ mt: 1 }}>
-      <Stack direction="row" sx={{ alignItems: 'center' }}>
-        <ButtonBase
-          onClick={() => setOpen((v) => !v)}
-          aria-expanded={open}
-          sx={{
-            gap: 0.5,
-            py: 0.5,
-            pr: 1,
-            borderRadius: `${RADIUS.xs}px`,
-            color: 'text.secondary',
-            fontSize: FONT_SIZE.xs,
-            fontWeight: 600,
-          }}
-        >
-          <Iconify icon={open ? 'tabler:chevron-down' : 'tabler:chevron-right'} width={14} />
-          {title}
-        </ButtonBase>
-        <Box sx={{ flex: 1 }} />
-        {open && (
-          <Button
-            size="small"
-            color="inherit"
-            onClick={copy}
-            sx={{ minWidth: 0, fontSize: FONT_SIZE.micro, color: 'text.disabled' }}
-          >
-            Copy
-          </Button>
-        )}
-      </Stack>
-      {open && (
-        <Box
-          component="pre"
-          sx={{
-            m: 0,
-            p: 1,
-            maxHeight: 320,
-            overflow: 'auto',
-            fontFamily: FONT_STACK_MONO,
-            fontSize: FONT_SIZE.micro,
-            lineHeight: 1.55,
-            whiteSpace: 'pre-wrap',
-            wordBreak: 'break-word',
-            bgcolor: 'background.default',
-            border: (t) => `1px solid ${t.palette.divider}`,
-            borderRadius: `${RADIUS.sm}px`,
-          }}
-        >
-          {text}
-        </Box>
-      )}
-    </Box>
-  );
-}
-
-function headersText(headers?: Record<string, string>): string {
-  return headers
-    ? Object.entries(headers)
-        .map(([k, v]) => `${k}: ${v}`)
-        .join('\n')
-    : '';
-}
-
-function Detail({ entry, now }: { entry: LoggedRequest; now: number }) {
-  const ms = (entry.endedAt ?? now) - entry.startedAt;
-  return (
-    <Box sx={{ px: 1.5, pb: 1.5, pt: 0.5, fontSize: FONT_SIZE.xs }}>
-      <Typography sx={{ fontFamily: FONT_STACK_MONO, fontSize: FONT_SIZE.xs, wordBreak: 'break-all', mb: 0.5 }}>
-        {entry.method} {entry.url}
-      </Typography>
-      <Typography sx={{ fontSize: FONT_SIZE.xs, color: 'text.secondary' }}>
-        {entry.endedAt === undefined
-          ? 'Waiting for a response'
-          : entry.status
-            ? `Status ${entry.status}`
-            : 'No response'}
-        {', '}
-        {formatDuration(ms)}
-        {', started '}
-        {moment(entry.startedAt).format('HH:mm:ss.SSS')}
-      </Typography>
-      {entry.error && (
-        <Typography sx={{ fontSize: FONT_SIZE.xs, color: 'error.main', mt: 0.5 }}>{entry.error}</Typography>
-      )}
-      <Section title="Request headers" text={headersText(entry.requestHeaders)} defaultOpen={false} />
-      <Section title="Request body" text={formatBody(entry.requestBody)} defaultOpen />
-      <Section title="Response headers" text={headersText(entry.responseHeaders)} defaultOpen={false} />
-      <Section title="Response body" text={formatBody(entry.responseBody)} defaultOpen />
-    </Box>
-  );
-}
-
 const ROW_COLUMNS = {
   browser: '52px minmax(0,1fr) 40px 64px',
   server: '18px 52px minmax(0,1fr) 40px 64px',
@@ -283,7 +182,13 @@ export default function RequestMonitor({ onClose }: RequestMonitorProps) {
   const connection = useServerTail(source === 'server');
   const entries = frozen ?? live;
   const visible = entries.filter((e) => matches(e, query.trim(), errorsOnly));
-  const now = useNow(visible.some((e) => e.endedAt === undefined));
+  // Prefer the live copy so a response that lands while paused still shows in the details.
+  const selectedEntry = selectedId
+    ? (live.find((e) => e.id === selectedId) ?? entries.find((e) => e.id === selectedId))
+    : undefined;
+  const now = useNow(
+    visible.some((e) => e.endedAt === undefined) || (!!selectedEntry && selectedEntry.endedAt === undefined)
+  );
   const newSincePause = React.useMemo(() => {
     if (!frozen) return 0;
     const seen = new Set(frozen.map((e) => e.id));
@@ -338,6 +243,14 @@ export default function RequestMonitor({ onClose }: RequestMonitorProps) {
         bgcolor: SURFACE[mode].sunken,
         containerType: 'inline-size',
         // On a phone, or a narrow side pane, the clock column gives its room to the URL.
+        // Wide enough for both: the details sit beside the list instead of covering it.
+        '@container (min-width: 760px)': {
+          '& .rm-detail': {
+            position: 'static',
+            flex: '0 0 56%',
+            borderLeft: `1px solid ${theme.palette.divider}`,
+          },
+        },
         '@container (max-width: 520px)': {
           '& .rm-row': { gridTemplateColumns: columns },
           '& .rm-time, & .rm-title': { display: 'none' },
@@ -447,139 +360,172 @@ export default function RequestMonitor({ onClose }: RequestMonitorProps) {
       </Stack>
 
       <Box
-        role="row"
-        className="rm-row"
-        sx={{
-          display: 'grid',
-          gridTemplateColumns: TIME_COLUMN + columns,
-          columnGap: 1,
-          px: 1.5,
-          py: 0.5,
-          borderTop: `1px solid ${theme.palette.divider}`,
-          borderBottom: `1px solid ${theme.palette.divider}`,
-          fontSize: FONT_SIZE.micro,
-          color: 'text.disabled',
-          fontWeight: 600,
-        }}
-      >
-        <span className="rm-time">Time</span>
-        {source === 'server' && <span title="In: a request to this server. Out: a call the server made.">Dir</span>}
-        <span>Method</span>
-        <span>URL</span>
-        <span style={{ textAlign: 'right' }}>Status</span>
-        <span style={{ textAlign: 'right' }}>Time taken</span>
-      </Box>
-
-      <Box
-        ref={listRef}
-        onScroll={onScroll}
-        role="log"
-        aria-live="off"
         sx={{
           flex: 1,
           minHeight: 0,
-          overflowY: 'auto',
-          overscrollBehavior: 'contain',
-          fontFamily: FONT_STACK_MONO,
-          fontSize: FONT_SIZE.xs,
-          fontFeatureSettings: TABULAR,
+          display: 'flex',
           position: 'relative',
+          borderTop: `1px solid ${theme.palette.divider}`,
         }}
       >
-        {visible.length === 0 ? (
-          <Box sx={{ px: 2, py: 4, fontFamily: 'inherit', color: 'text.secondary', textAlign: 'center' }}>
-            {entries.length > 0
-              ? 'No requests match this filter.'
-              : source === 'browser'
-                ? 'Use the app and its requests to the server appear here as they happen.'
-                : connection === 'live'
-                  ? 'Requests to the server, and the calls it makes to Finnhub, NASDAQ and Ollama, appear here.'
-                  : 'Connecting to the server…'}
-          </Box>
-        ) : (
-          visible.map((entry) => {
-            const selected = entry.id === selectedId;
-            return (
-              <Box
-                key={entry.id}
-                sx={{
-                  borderBottom: `1px solid ${SURFACE[mode].rule}`,
-                  bgcolor: selected ? SURFACE[mode].selected : 'transparent',
-                }}
-              >
-                <ButtonBase
-                  onClick={() => setSelectedId(selected ? null : entry.id)}
-                  aria-expanded={selected}
-                  className="rm-row"
-                  sx={{
-                    width: '100%',
-                    display: 'grid',
-                    gridTemplateColumns: TIME_COLUMN + columns,
-                    columnGap: 1,
-                    alignItems: 'center',
-                    px: 1.5,
-                    minHeight: 34,
-                    textAlign: 'left',
-                    fontFamily: 'inherit',
-                    fontSize: 'inherit',
-                    color: 'text.primary',
-                    '&:hover': { bgcolor: selected ? undefined : SURFACE[mode].hover },
-                  }}
-                >
-                  <Box component="span" className="rm-time" sx={{ color: 'text.disabled' }}>
-                    {moment(entry.startedAt).format('HH:mm:ss.SS')}
-                  </Box>
-                  {source === 'server' && (
-                    <Iconify
-                      icon={entry.direction === 'in' ? 'tabler:arrow-down-right' : 'tabler:arrow-up-right'}
-                      width={14}
-                      aria-label={entry.direction === 'in' ? 'In' : 'Out'}
-                      role="img"
-                      sx={{ color: entry.direction === 'in' ? 'primary.main' : 'secondary.light' }}
-                    />
-                  )}
-                  <Box
-                    component="span"
-                    sx={{ fontWeight: 600, color: entry.method === 'GET' ? 'text.secondary' : 'text.primary' }}
-                  >
-                    {entry.method}
-                  </Box>
-                  <Box component="span" sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {displayUrl(entry.url)}
-                  </Box>
-                  <StatusCell entry={entry} />
-                  <DurationCell entry={entry} now={now} />
-                </ButtonBase>
-                {selected && <Detail entry={entry} now={now} />}
-              </Box>
-            );
-          })
-        )}
-      </Box>
-
-      {(frozen || !atBottom) && (
-        <Stack direction="row" sx={{ justifyContent: 'center', position: 'relative', height: 0 }}>
-          <Button
-            size="small"
-            variant="contained"
-            onClick={() => {
-              setFrozen(null);
-              setAtBottom(true);
-              scrollToEnd();
-            }}
-            startIcon={<Iconify icon="tabler:arrow-down" width={15} />}
+        <Box
+          sx={{
+            flex: 1,
+            minWidth: 0,
+            display: 'flex',
+            flexDirection: 'column',
+            position: 'relative',
+            containerType: 'inline-size',
+          }}
+        >
+          <Box
+            role="row"
+            className="rm-row"
             sx={{
-              position: 'absolute',
-              bottom: 12,
-              borderRadius: `${RADIUS.pill}px`,
-              boxShadow: 4,
-              textTransform: 'none',
+              display: 'grid',
+              gridTemplateColumns: TIME_COLUMN + columns,
+              columnGap: 1,
+              px: 1.5,
+              py: 0.5,
+              borderBottom: `1px solid ${theme.palette.divider}`,
+              fontSize: FONT_SIZE.micro,
+              color: 'text.disabled',
+              fontWeight: 600,
             }}
           >
-            {frozen ? (newSincePause > 0 ? `Resume, ${newSincePause} new` : 'Resume') : 'Jump to latest'}
-          </Button>
-        </Stack>
-      )}
+            <span className="rm-time">Time</span>
+            {source === 'server' && <span title="In: a request to this server. Out: a call the server made.">Dir</span>}
+            <span>Method</span>
+            <span>URL</span>
+            <span style={{ textAlign: 'right' }}>Status</span>
+            <span style={{ textAlign: 'right' }}>Time taken</span>
+          </Box>
+
+          <Box
+            ref={listRef}
+            onScroll={onScroll}
+            role="log"
+            aria-live="off"
+            sx={{
+              flex: 1,
+              minHeight: 0,
+              overflowY: 'auto',
+              overscrollBehavior: 'contain',
+              fontFamily: FONT_STACK_MONO,
+              fontSize: FONT_SIZE.xs,
+              fontFeatureSettings: TABULAR,
+              position: 'relative',
+            }}
+          >
+            {visible.length === 0 ? (
+              <Box sx={{ px: 2, py: 4, fontFamily: 'inherit', color: 'text.secondary', textAlign: 'center' }}>
+                {entries.length > 0
+                  ? 'No requests match this filter.'
+                  : source === 'browser'
+                    ? 'Use the app and its requests to the server appear here as they happen.'
+                    : connection === 'live'
+                      ? 'Requests to the server, and the calls it makes to Finnhub, NASDAQ and Ollama, appear here.'
+                      : 'Connecting to the server…'}
+              </Box>
+            ) : (
+              visible.map((entry) => {
+                const selected = entry.id === selectedId;
+                return (
+                  <Box
+                    key={entry.id}
+                    sx={{
+                      borderBottom: `1px solid ${SURFACE[mode].rule}`,
+                      bgcolor: selected ? SURFACE[mode].selected : 'transparent',
+                    }}
+                  >
+                    <ButtonBase
+                      onClick={() => setSelectedId(selected ? null : entry.id)}
+                      aria-current={selected ? 'true' : undefined}
+                      className="rm-row"
+                      sx={{
+                        width: '100%',
+                        display: 'grid',
+                        gridTemplateColumns: TIME_COLUMN + columns,
+                        columnGap: 1,
+                        alignItems: 'center',
+                        px: 1.5,
+                        minHeight: 34,
+                        textAlign: 'left',
+                        fontFamily: 'inherit',
+                        fontSize: 'inherit',
+                        color: 'text.primary',
+                        '&:hover': { bgcolor: selected ? undefined : SURFACE[mode].hover },
+                      }}
+                    >
+                      <Box component="span" className="rm-time" sx={{ color: 'text.disabled' }}>
+                        {moment(entry.startedAt).format('HH:mm:ss.SS')}
+                      </Box>
+                      {source === 'server' && (
+                        <Iconify
+                          icon={entry.direction === 'in' ? 'tabler:arrow-down-right' : 'tabler:arrow-up-right'}
+                          width={14}
+                          aria-label={entry.direction === 'in' ? 'In' : 'Out'}
+                          role="img"
+                          sx={{ color: entry.direction === 'in' ? 'primary.main' : 'secondary.light' }}
+                        />
+                      )}
+                      <Box
+                        component="span"
+                        sx={{ fontWeight: 600, color: entry.method === 'GET' ? 'text.secondary' : 'text.primary' }}
+                      >
+                        {entry.method}
+                      </Box>
+                      <Box component="span" sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {displayUrl(entry.url)}
+                      </Box>
+                      <StatusCell entry={entry} />
+                      <DurationCell entry={entry} now={now} />
+                    </ButtonBase>
+                  </Box>
+                );
+              })
+            )}
+          </Box>
+
+          {(frozen || !atBottom) && (
+            <Stack direction="row" sx={{ justifyContent: 'center', position: 'relative', height: 0 }}>
+              <Button
+                size="small"
+                variant="contained"
+                onClick={() => {
+                  setFrozen(null);
+                  setAtBottom(true);
+                  scrollToEnd();
+                }}
+                startIcon={<Iconify icon="tabler:arrow-down" width={15} />}
+                sx={{
+                  position: 'absolute',
+                  bottom: 12,
+                  borderRadius: `${RADIUS.pill}px`,
+                  boxShadow: 4,
+                  textTransform: 'none',
+                }}
+              >
+                {frozen ? (newSincePause > 0 ? `Resume, ${newSincePause} new` : 'Resume') : 'Jump to latest'}
+              </Button>
+            </Stack>
+          )}
+        </Box>
+
+        {selectedEntry && (
+          <Box
+            className="rm-detail"
+            sx={{
+              position: 'absolute',
+              inset: 0,
+              zIndex: 3,
+              minWidth: 0,
+            }}
+          >
+            <RequestDetail key={selectedEntry.id} entry={selectedEntry} now={now} onClose={() => setSelectedId(null)} />
+          </Box>
+        )}
+      </Box>
     </Box>
   );
 }

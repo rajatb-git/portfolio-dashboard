@@ -20,7 +20,7 @@ export interface TapEntry {
 }
 
 const BUFFER_SIZE = 300;
-const BODY_LIMIT = 16_000;
+const BODY_LIMIT = 64_000;
 const SECRET_HEADERS = ['authorization', 'cookie', 'set-cookie', 'x-api-key', 'x-finnhub-token', 'x-goog-api-key'];
 const SECRET_PARAMS = ['token', 'apikey', 'api_key', 'key', 'access_token'];
 
