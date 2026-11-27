@@ -192,7 +192,7 @@ export class AgentInsightsController {
     const marketData = await this.getMarketContext(symbol);
     const prompt = this.buildPrompt(symbol, marketData);
 
-    const rawText = await provider.generateInsight(SYSTEM_PROMPT, prompt);
+    const rawText = await provider.generateInsight(SYSTEM_PROMPT, prompt, { feature: `Agent insights (${symbol})` });
 
     // Strip markdown code fences if present
     const cleaned = rawText

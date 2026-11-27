@@ -89,7 +89,7 @@ export const generatePortfolioInsights = async (): Promise<PortfolioInsight> => 
     );
   }
 
-  const provider = new OllamaProvider(config.ollamaHost, config.ollamaModel);
+  const provider = new OllamaProvider(config.ollamaHost, config.ollamaModel, config.ollamaThink);
   if (!provider.isConfigured()) {
     throw new Error('Ollama is selected but not configured. Set the Ollama host in Settings.');
   }
@@ -99,7 +99,9 @@ export const generatePortfolioInsights = async (): Promise<PortfolioInsight> => 
     throw new Error('No priced holdings available to analyze.');
   }
 
-  const rawText = await provider.generateInsight(SYSTEM_PROMPT, buildPrompt(holdings));
+  const rawText = await provider.generateInsight(SYSTEM_PROMPT, buildPrompt(holdings), {
+    feature: 'Portfolio insights',
+  });
   const cleaned = rawText
     .replace(/```(?:json)?\s*/g, '')
     .replace(/```\s*/g, '')

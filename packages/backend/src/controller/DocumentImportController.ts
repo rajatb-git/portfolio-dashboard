@@ -154,7 +154,7 @@ export class DocumentImportController {
       );
     }
 
-    const provider = new OllamaProvider(config.ollamaHost, config.ollamaModel);
+    const provider = new OllamaProvider(config.ollamaHost, config.ollamaModel, config.ollamaThink);
     if (!provider.isConfigured()) {
       throw new Error('Ollama is selected but not configured. Set the Ollama host in Settings.');
     }
@@ -166,10 +166,15 @@ export class DocumentImportController {
 
     for (const [i, chunk] of chunks.entries()) {
       const part = chunks.length > 1 ? ` (part ${i + 1} of ${chunks.length})` : '';
-      const rawText = await provider.generateInsight(systemPrompt, `Parse this document text${part}:\n\n${chunk}`, {
-        numCtx: NUM_CTX,
-        timeoutMs: CHUNK_TIMEOUT_MS,
-      });
+      const rawText = await provider.generateInsight(
+        systemPrompt,
+        `Parse this document text${part}:\n\n${chunk}`,
+        { feature: `Document import (${target})` },
+        {
+          numCtx: NUM_CTX,
+          timeoutMs: CHUNK_TIMEOUT_MS,
+        }
+      );
       const cleaned = rawText
         .replace(/```(?:json)?\s*/g, '')
         .replace(/```\s*/g, '')

@@ -237,6 +237,7 @@ export const SettingsRouter = () => {
         geminiModel: body.geminiModel || current.geminiModel,
         ollamaHost: body.ollamaHost || current.ollamaHost,
         ollamaModel: body.ollamaModel || current.ollamaModel,
+        ollamaThink: body.ollamaThink ?? current.ollamaThink,
       };
 
       await saveAiConfig(updated);

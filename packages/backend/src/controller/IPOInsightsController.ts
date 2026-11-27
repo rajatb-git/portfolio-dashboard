@@ -96,7 +96,9 @@ export class IPOInsightsController {
     const newsHeadlines = await this.getNewsHeadlines(ipo.symbol);
     const prompt = this.buildPrompt(ipo, newsHeadlines);
 
-    const rawText = await provider.generateInsight(IPO_SYSTEM_PROMPT, prompt);
+    const rawText = await provider.generateInsight(IPO_SYSTEM_PROMPT, prompt, {
+      feature: `IPO insights (${ipo.symbol})`,
+    });
 
     const cleaned = rawText
       .replace(/```(?:json)?\s*/g, '')
