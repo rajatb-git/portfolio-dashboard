@@ -1,9 +1,11 @@
 import AccountsAPI from './account';
+import AgentAPI from './agent';
 import AlertsAPI from './alerts';
 import AnalyticsAPI from './analytics';
 import AuthAPI from './auth';
 import { DashboardAPI } from './dashboard';
 import DatabaseAPI from './database';
+import DebugAPI from './debug';
 import HoldingsAPI from './holdings';
 import ImportAPI from './import';
 import LiveAPI from './live';
@@ -30,6 +32,8 @@ const apis = {
   notifications: new NotificationsAPI(),
   rebalance: new RebalanceAPI(),
   import: new ImportAPI(),
+  agent: new AgentAPI(),
+  debug: new DebugAPI(),
 };
 
 export default apis;

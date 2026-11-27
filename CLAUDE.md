@@ -18,6 +18,8 @@ The only AI feature permitted to call `getActiveProvider()` is `AgentInsightsCon
 
 If Ollama is configured as the provider, data stays local. Even so, do not build features that send personal portfolio data to AI unless explicitly instructed by the user and accompanied by a prominent in-app disclosure.
 
+The one sanctioned exception is the portfolio agent chat (`controller/AgentChatController.ts`, the floating button's "Ask the agent"): the user explicitly asked for an agent with full data access. It talks **only** to the configured Ollama model, never `getActiveProvider()` or a cloud SDK, and its panel always shows the data-access disclosure. Writes it proposes (any non-GET `call_api`) wait for the user's approval in the chat.
+
 **Before implementing any feature that calls `getActiveProvider()` or any AI SDK directly, ask: does the prompt contain the user's personal holdings, quantities, values, or P&L? If yes, do not build it.**
 
 ## Stack

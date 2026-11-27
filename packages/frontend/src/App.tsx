@@ -7,6 +7,7 @@ import { ToastContainer } from 'react-toastify';
 
 import AuthGate from '@/components/AuthGate';
 import ErrorBoundary from '@/components/ErrorBoundary';
+import FloatingTools, { useAppPaneNarrow } from '@/components/FloatingTools';
 import Sidebar from '@/components/Nav/Sidebar';
 import TopBar from '@/components/Nav/TopBar';
 import PWAInstallPrompt from '@/components/PWAInstallPrompt';
@@ -87,7 +88,8 @@ function useDocumentTitle() {
 function AppShell() {
   const [collapsed, setCollapsed] = React.useState(() => localStorage.getItem('nav_collapsed') === 'true');
   const [mobileOpen, setMobileOpen] = React.useState(false);
-  const isMobile = useMediaQuery('(max-width: 899.95px)');
+  const narrowPane = useAppPaneNarrow();
+  const isMobile = useMediaQuery('(max-width: 899.95px)') || narrowPane;
   const location = useLocation();
   useDocumentTitle();
 
@@ -178,6 +180,8 @@ function Toasts() {
       pauseOnHover
       theme={resolvedMode}
       stacked
+      // Clears the floating agent/monitor button in the same corner.
+      style={{ bottom: 'calc(88px + env(safe-area-inset-bottom))' }}
     />
   );
 }
@@ -190,7 +194,9 @@ export default function App() {
           <DemoModeProvider>
             <AuthGate>
               <DashboardDataProvider>
-                <AppShell />
+                <FloatingTools>
+                  <AppShell />
+                </FloatingTools>
               </DashboardDataProvider>
             </AuthGate>
 
