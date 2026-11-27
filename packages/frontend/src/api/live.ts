@@ -91,6 +91,7 @@ export type AiConfig = {
   geminiModel: string;
   ollamaHost: string;
   ollamaModel: string;
+  ollamaThink: boolean;
 };
 
 export default class LiveAPI {

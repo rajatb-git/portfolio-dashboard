@@ -2638,6 +2638,15 @@ export default function Settings() {
                             sx={{ width: { xs: '100%', sm: 260 }, '& input': { fontSize: '0.78rem' } }}
                           />
                         </SettingRow>
+                        <SettingRow
+                          label="Capture thinking"
+                          description="Ask reasoning models (qwen3, deepseek-r1, gpt-oss…) to return their thought process, viewable under Logs → AI requests. Models without thinking support will reject requests while this is on."
+                        >
+                          <Switch
+                            checked={draftAiConfig.ollamaThink ?? false}
+                            onChange={(_, checked) => updateDraft({ ollamaThink: checked })}
+                          />
+                        </SettingRow>
                       </>
                     )}
                   </>

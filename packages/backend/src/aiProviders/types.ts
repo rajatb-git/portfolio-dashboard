@@ -6,11 +6,13 @@ export type AiProviderConfig = {
   configured: boolean;
 };
 
+export type InsightMeta = { feature: string };
+
 export interface AiProvider {
   readonly name: AiProviderName;
   readonly model: string;
   isConfigured(): boolean;
-  generateInsight(systemPrompt: string, userPrompt: string): Promise<string>;
+  generateInsight(systemPrompt: string, userPrompt: string, meta?: InsightMeta): Promise<string>;
 }
 
 export const SYSTEM_PROMPT = `You are a senior equity research analyst writing a sell-side style note. Analyze the stock using only the market data provided, and reason through these dimensions in order:

@@ -14,7 +14,7 @@ function buildProvider(config: IAiConfig): AiProvider {
     case 'gemini':
       return new GeminiProvider(config.geminiApiKey, config.geminiModel);
     case 'ollama':
-      return new OllamaProvider(config.ollamaHost, config.ollamaModel);
+      return new OllamaProvider(config.ollamaHost, config.ollamaModel, config.ollamaThink);
   }
 }
 

@@ -1,6 +1,7 @@
 import fs from 'fs';
 import Router from '@koa/router';
 import path from 'path';
+import { clearAiRequests, listAiRequests } from '../models/AiRequestLogModel';
 import { errorBody } from '../utils/error';
 import { logger } from '../utils/winston';
 
@@ -42,6 +43,29 @@ export const LogsRouter = () => {
       logger.log({ level: 'error', message: err.message, label: 'Delete logs' });
       ctx.body = errorBody('Failed to clear logs', err.message);
       ctx.status = 400;
+    }
+  });
+
+  router.get('/ai-requests', async (ctx) => {
+    try {
+      ctx.body = await listAiRequests();
+      ctx.status = 200;
+    } catch (err: any) {
+      logger.log({ level: 'error', message: err.message, label: 'Get AI requests' });
+      ctx.body = errorBody('Failed to read AI request log', err.message);
+      ctx.status = 500;
+    }
+  });
+
+  router.delete('/ai-requests', async (ctx) => {
+    try {
+      await clearAiRequests();
+      ctx.body = [];
+      ctx.status = 200;
+    } catch (err: any) {
+      logger.log({ level: 'error', message: err.message, label: 'Clear AI requests' });
+      ctx.body = errorBody('Failed to clear AI request log', err.message);
+      ctx.status = 500;
     }
   });
 

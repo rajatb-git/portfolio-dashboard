@@ -9,6 +9,7 @@ export interface IAiConfig {
   geminiModel: string;
   ollamaHost: string;
   ollamaModel: string;
+  ollamaThink: boolean;
 }
 
 export const AiConfigSchema: SchemaType = {
@@ -20,6 +21,7 @@ export const AiConfigSchema: SchemaType = {
   geminiModel: { type: String, required: false },
   ollamaHost: { type: String, required: false },
   ollamaModel: { type: String, required: false },
+  ollamaThink: { type: Boolean, required: false },
 };
 
 export interface IAiConfigModel extends IAiConfig, ISkewerModel {}
@@ -37,6 +39,7 @@ export const DEFAULT_AI_CONFIG: IAiConfig = {
   geminiModel: 'gemini-2.0-flash',
   ollamaHost: 'http://localhost:11434',
   ollamaModel: 'llama3.1',
+  ollamaThink: false,
 };
 
 export async function getAiConfig(): Promise<IAiConfig> {
@@ -52,6 +55,7 @@ export async function getAiConfig(): Promise<IAiConfig> {
       geminiModel: existing.geminiModel || DEFAULT_AI_CONFIG.geminiModel,
       ollamaHost: existing.ollamaHost || DEFAULT_AI_CONFIG.ollamaHost,
       ollamaModel: existing.ollamaModel || DEFAULT_AI_CONFIG.ollamaModel,
+      ollamaThink: existing.ollamaThink ?? false,
     };
   }
   return DEFAULT_AI_CONFIG;
