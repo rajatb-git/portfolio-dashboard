@@ -3,6 +3,20 @@ import { recordAiRequest } from '../models/AiRequestLogModel';
 import { logger } from '../utils/winston';
 import { AiProvider, InsightMeta } from './types';
 
+export type OllamaToolCall = { function: { name: string; arguments: Record<string, unknown> } };
+
+export type OllamaChatMessage = {
+  role: 'system' | 'user' | 'assistant' | 'tool';
+  content: string;
+  tool_calls?: OllamaToolCall[];
+  tool_name?: string;
+};
+
+export type OllamaTool = {
+  type: 'function';
+  function: { name: string; description: string; parameters: Record<string, unknown> };
+};
+
 function normalizeHost(host: string): string {
   return host
     .trim()
@@ -149,6 +163,86 @@ export class OllamaProvider implements AiProvider {
       await recordAiRequest(entry);
     } catch (err: any) {
       logger.log({ level: 'error', message: `Failed to record AI request: ${err.message}`, label: 'AiRequestLog' });
+    }
+  }
+
+  async chat(
+    messages: OllamaChatMessage[],
+    tools: OllamaTool[],
+    meta: InsightMeta,
+    tuning: { numCtx?: number; timeoutMs?: number } = {}
+  ): Promise<OllamaChatMessage> {
+    const url = `${this.host}/api/chat`;
+    const timeoutMs = tuning.timeoutMs ?? 180000;
+    const startedAt = Date.now();
+    const log = {
+      feature: meta.feature,
+      provider: this.name,
+      model: this.model,
+      host: this.host,
+      systemPrompt: messages.find((m) => m.role === 'system')?.content ?? '',
+      userPrompt: JSON.stringify(
+        messages.filter((m) => m.role !== 'system'),
+        null,
+        2
+      ),
+      options: JSON.stringify({
+        think: this.think,
+        numCtx: tuning.numCtx,
+        timeoutMs,
+        tools: tools.map((t) => t.function.name),
+      }),
+    };
+
+    try {
+      const response = await axios.post(
+        url,
+        {
+          model: this.model,
+          messages,
+          tools,
+          stream: false,
+          ...(this.think && { think: true }),
+          ...(tuning.numCtx && { options: { num_ctx: tuning.numCtx } }),
+        },
+        { timeout: timeoutMs }
+      );
+      const data = response.data ?? {};
+      const message = data.message;
+      if (!message) throw new Error('No response from Ollama');
+      const split = splitInlineThinking(message.content ?? '');
+      const toolCalls: OllamaToolCall[] = Array.isArray(message.tool_calls) ? message.tool_calls : [];
+      await this.record({
+        ...log,
+        status: 'success',
+        response: toolCalls.length
+          ? `${split.content}\n\nTool calls:\n${JSON.stringify(toolCalls, null, 2)}`.trim()
+          : split.content,
+        thinking: [message.thinking, split.thinking].filter(Boolean).join('\n\n'),
+        error: '',
+        durationMs: Date.now() - startedAt,
+        loadMs: nsToMs(data.load_duration),
+        promptEvalMs: nsToMs(data.prompt_eval_duration),
+        evalMs: nsToMs(data.eval_duration),
+        promptTokens: data.prompt_eval_count,
+        responseTokens: data.eval_count,
+      });
+      return {
+        role: 'assistant',
+        content: split.content,
+        ...(toolCalls.length > 0 && { tool_calls: toolCalls }),
+      };
+    } catch (err) {
+      const errorMessage = describeOllamaError(err, url, this.model);
+      await this.record({
+        ...log,
+        status: 'error',
+        response: axios.isAxiosError(err) && err.response?.data ? JSON.stringify(err.response.data) : '',
+        thinking: '',
+        error: errorMessage,
+        durationMs: Date.now() - startedAt,
+      });
+      throw new Error(errorMessage);
     }
   }
 }

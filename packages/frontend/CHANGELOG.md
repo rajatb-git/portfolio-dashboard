@@ -6,6 +6,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
+## [5.3.0] – 2026-11-27
+
+### Added
+- **Floating tools button** — a button in the bottom-right corner opens two tools. On a phone its labels stay visible, so you don't need hover to tell them apart.
+- **Portfolio agent** — chat with your local Ollama model. It can read everything the app knows (holdings, accounts, transactions, analytics, settings), call any backend route, search the web and read pages. Each lookup shows up as a step you can expand. Changes to your data wait for you to tap **Allow**. The agent only runs on Ollama, and the panel always says what it can access, with a warning if your Ollama server is not on your network. On a phone it opens full screen.
+- **Request monitor** — splits the screen so the app keeps running in one pane and a live tail of requests runs in the other. It sits side by side on wide screens and stacked on phones, with a draggable divider. **This browser** shows every call the app makes to the backend. **Server** shows requests reaching the backend plus the calls it makes to Finnhub, NASDAQ and Ollama. You can filter, show errors only, pause, and expand a row to see headers and bodies. API keys and auth headers are masked.
+
+---
+
 ## [5.0.0] – 2026-10-23
 
 ### Added

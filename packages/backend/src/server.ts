@@ -10,6 +10,7 @@ import cors from '@koa/cors';
 import Koa from 'koa';
 import KoaBodyParser from 'koa-bodyparser';
 import KoaHelmet from 'koa-helmet';
+import { registerAgentRoutes } from './controller/AgentChatController';
 import { alertMonitorService } from './controller/AlertMonitorService';
 import { dividendWatchService } from './controller/DividendWatchService';
 import { earningsReminderService } from './controller/EarningsReminderService';
@@ -34,12 +35,14 @@ import { getScheduledBackupConfig } from './models/ScheduledBackupConfigModel';
 import { getTradingSummaryConfig } from './models/TradingSummaryConfigModel';
 import { getValueCalcConfig } from './models/ValueCalcConfigModel';
 import { AccountsRouter } from './router/accounts.route';
+import { AgentRouter } from './router/agent.route';
 import { AiImportRouter } from './router/aiImport.route';
 import { AlertsRouter } from './router/alerts.route';
 import { AnalyticsRouter } from './router/analytics.route';
 import { AuthRouter } from './router/auth.route';
 import { DashboardRouter } from './router/dashboard.route';
 import { DatabaseRouter } from './router/database.route';
+import { DebugRouter } from './router/debug.route';
 import { HealthRouter } from './router/health.route';
 import { HoldingsRouter } from './router/holdings.route';
 import { ImportRouter } from './router/import.route';
@@ -50,6 +53,9 @@ import { NotificationsRouter } from './router/notifications.route';
 import { RebalanceRouter } from './router/rebalance.route';
 import { SettingsRouter } from './router/settings.route';
 import { TransactionsRouter } from './router/transactions.route';
+import { inboundTap, installOutboundTap } from './utils/debugTap';
+
+installOutboundTap();
 
 const app = new Koa();
 app.use(cors());
@@ -67,6 +73,7 @@ app.use(async (ctx, next) => {
 });
 // Imports post a whole brokerage history as JSON rows; the 1 MB default is too small.
 app.use(KoaBodyParser({ jsonLimit: '20mb' }));
+app.use(inboundTap);
 app.use(KoaHelmet());
 app.use(authMiddleware);
 
@@ -79,23 +86,31 @@ app.use(async (ctx, next) => {
   ctx.set('X-Response-Time', `${ms}ms`);
 });
 
-app.use(HealthRouter().routes()).use(HealthRouter().allowedMethods());
-app.use(AuthRouter().routes()).use(AuthRouter().allowedMethods());
-app.use(HoldingsRouter().routes()).use(HoldingsRouter().allowedMethods());
-app.use(AccountsRouter().routes()).use(AccountsRouter().allowedMethods());
-app.use(LiveRouter().routes()).use(LiveRouter().allowedMethods());
-app.use(DashboardRouter().routes()).use(DashboardRouter().allowedMethods());
-app.use(TransactionsRouter().routes()).use(TransactionsRouter().allowedMethods());
-app.use(LogsRouter().routes()).use(LogsRouter().allowedMethods());
-app.use(AnalyticsRouter().routes()).use(AnalyticsRouter().allowedMethods());
-app.use(RebalanceRouter().routes()).use(RebalanceRouter().allowedMethods());
-app.use(SettingsRouter().routes()).use(SettingsRouter().allowedMethods());
-app.use(NotesRouter().routes()).use(NotesRouter().allowedMethods());
-app.use(AlertsRouter().routes()).use(AlertsRouter().allowedMethods());
-app.use(NotificationsRouter().routes()).use(NotificationsRouter().allowedMethods());
-app.use(AiImportRouter().routes()).use(AiImportRouter().allowedMethods());
-app.use(ImportRouter().routes()).use(ImportRouter().allowedMethods());
-app.use(DatabaseRouter().routes()).use(DatabaseRouter().allowedMethods());
+const routers = [
+  HealthRouter(),
+  AuthRouter(),
+  HoldingsRouter(),
+  AccountsRouter(),
+  LiveRouter(),
+  DashboardRouter(),
+  TransactionsRouter(),
+  LogsRouter(),
+  AnalyticsRouter(),
+  RebalanceRouter(),
+  SettingsRouter(),
+  NotesRouter(),
+  AlertsRouter(),
+  NotificationsRouter(),
+  AiImportRouter(),
+  ImportRouter(),
+  DatabaseRouter(),
+  AgentRouter(),
+  DebugRouter(),
+];
+for (const router of routers) {
+  app.use(router.routes()).use(router.allowedMethods());
+}
+registerAgentRoutes(routers);
 
 app.listen(port, () => {
   console.log('server started on port ' + port);
