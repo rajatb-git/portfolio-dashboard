@@ -6,7 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
-## [5.3.0] – 2026-11-27
+## [5.4.0] – 2026-11-27
 
 ### Added
 - **Floating tools button** — a button in the bottom-right corner opens two tools. On a phone its labels stay visible, so you don't need hover to tell them apart.
