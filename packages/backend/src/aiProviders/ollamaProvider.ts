@@ -84,10 +84,36 @@ const nsToMs = (ns: unknown) => (typeof ns === 'number' ? Math.round(ns / 1e6) :
 
 // Reasoning models that don't use Ollama's `thinking` field inline their
 // reasoning as <think>…</think>; split it out so callers still get bare JSON.
-function splitInlineThinking(content: string): { content: string; thinking: string } {
+export function splitInlineThinking(content: string): { content: string; thinking: string } {
   const blocks = [...content.matchAll(/<think>([\s\S]*?)<\/think>/gi)].map((m) => m[1].trim());
-  if (!blocks.length) return { content, thinking: '' };
-  return { content: content.replace(/<think>[\s\S]*?<\/think>/gi, '').trim(), thinking: blocks.join('\n\n') };
+  let rest = content.replace(/<think>[\s\S]*?<\/think>/gi, '');
+  // Chat templates that open the think block in the prompt (qwen3 and others)
+  // leave only the closing tag in the output; everything before it is reasoning.
+  const orphan = rest.toLowerCase().lastIndexOf('</think>');
+  if (orphan !== -1) {
+    blocks.push(rest.slice(0, orphan).trim());
+    rest = rest.slice(orphan + '</think>'.length);
+  }
+  return { content: rest.trim(), thinking: blocks.filter(Boolean).join('\n\n') };
+}
+
+const CAPABILITY_TTL_MS = 10 * 60_000;
+const capabilityCache = new Map<string, { capabilities: string[]; expires: number }>();
+
+/** A model's capabilities from /api/show, cached; an empty list when Ollama can't say. */
+async function modelCapabilities(host: string, model: string): Promise<string[]> {
+  const key = `${host}|${model}`;
+  const cached = capabilityCache.get(key);
+  if (cached && cached.expires > Date.now()) return cached.capabilities;
+  try {
+    const response = await axios.post(`${host}/api/show`, { model }, { timeout: 10000 });
+    const capabilities = Array.isArray(response.data?.capabilities) ? response.data.capabilities.map(String) : [];
+    capabilityCache.set(key, { capabilities, expires: Date.now() + CAPABILITY_TTL_MS });
+    return capabilities;
+  } catch {
+    capabilityCache.set(key, { capabilities: [], expires: Date.now() + 60_000 });
+    return [];
+  }
 }
 
 export class OllamaProvider implements AiProvider {
@@ -108,6 +134,17 @@ export class OllamaProvider implements AiProvider {
     this.keepAlive = options.keepAlive ?? '30m';
     this.temperature = options.temperature ?? null;
     this.timeoutMs = options.timeoutMs ?? 180000;
+  }
+
+  /**
+   * Thinking models (qwen3, deepseek-r1…) think by default, which burns the
+   * token budget and can leave an empty answer. Turn it off explicitly when
+   * Capture thinking is off, but only for models that support the switch:
+   * others reject the field.
+   */
+  private async thinkField(): Promise<{ think?: boolean }> {
+    if (this.think) return { think: true };
+    return (await modelCapabilities(this.host, this.model)).includes('thinking') ? { think: false } : {};
   }
 
   /** A caller that needs more room (statement imports) can ask for it; nobody gets less than the configured window. */
@@ -153,6 +190,7 @@ export class OllamaProvider implements AiProvider {
     };
 
     let text: string | undefined;
+    const think = await this.thinkField();
     try {
       const response = await axios.post(
         url,
@@ -164,7 +202,7 @@ export class OllamaProvider implements AiProvider {
           ],
           stream: false,
           format: 'json',
-          ...(this.think && { think: true }),
+          ...think,
           ...body,
         },
         { timeout: timeoutMs }
@@ -243,6 +281,7 @@ export class OllamaProvider implements AiProvider {
       }),
     };
 
+    const think = await this.thinkField();
     try {
       const response = await axios.post(
         url,
@@ -251,7 +290,7 @@ export class OllamaProvider implements AiProvider {
           messages,
           tools,
           stream: false,
-          ...(this.think && { think: true }),
+          ...think,
           ...body,
         },
         { timeout: timeoutMs }
