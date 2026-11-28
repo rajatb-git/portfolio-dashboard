@@ -20,9 +20,14 @@ export type AgentEvent =
   | { type: 'error'; message: string }
   | { type: 'ping' };
 
-const MAX_STEPS = 10;
-const TOOL_RESULT_LIMIT = 12_000;
+const MAX_MODEL_TURNS = 10;
+const TOOL_RESULT_LIMIT = 6_000;
+// Results from earlier questions are cut down hard: Ollama silently drops the
+// oldest tokens once the window is full, which loses the system prompt first.
+const OLD_TOOL_RESULT_LIMIT = 400;
 const NUM_CTX = 16_384;
+const PENDING_RETRY_MS = 2_000;
+const PENDING_MAX_WAIT_MS = 20_000;
 const BLOCKED_PATHS = [/^\/agent\//, /^\/debug\//, /^\/settings\/db\/import/];
 
 let apiRoutes: string[] = [];
@@ -99,9 +104,9 @@ Backend routes (":name" is a path parameter):
 ${apiRoutes.join('\n')}`;
 }
 
-function truncate(text: string): string {
-  return text.length > TOOL_RESULT_LIMIT
-    ? `${text.slice(0, TOOL_RESULT_LIMIT)}\n… truncated ${text.length - TOOL_RESULT_LIMIT} characters`
+function truncate(text: string, limit = TOOL_RESULT_LIMIT): string {
+  return text.length > limit
+    ? `${text.slice(0, limit)}\n… truncated ${text.length - limit} characters. Ask for something narrower if you need more.`
     : text;
 }
 
@@ -135,15 +140,29 @@ async function callApi(args: Record<string, unknown>, authorization?: string): P
   if (!path.startsWith('/')) return 'Error: path must start with "/".';
   if (BLOCKED_PATHS.some((re) => re.test(path))) return `Error: ${path} is not available to the agent.`;
 
-  const response = await axios.request({
-    method,
-    url: `http://127.0.0.1:${process.env.PORT || 3001}${path}`,
-    data: args.body && typeof args.body === 'object' ? args.body : undefined,
-    headers: authorization ? { Authorization: authorization } : undefined,
-    timeout: 60_000,
-    validateStatus: () => true,
-    transformResponse: (data) => data,
-  });
+  const request = () =>
+    axios.request({
+      method,
+      url: `http://127.0.0.1:${process.env.PORT || 3001}${path}`,
+      data: args.body && typeof args.body === 'object' ? args.body : undefined,
+      headers: authorization ? { Authorization: authorization } : undefined,
+      timeout: 60_000,
+      validateStatus: () => true,
+      transformResponse: (data) => data,
+    });
+
+  // Market data routes answer 202 while the data is still being fetched. Wait
+  // for it like the frontend's getUntilReady does; a model shown "pending"
+  // just asks again and burns its turns.
+  const startedAt = Date.now();
+  let response = await request();
+  while (response.status === 202 && Date.now() - startedAt < PENDING_MAX_WAIT_MS) {
+    await new Promise((resolve) => setTimeout(resolve, PENDING_RETRY_MS));
+    response = await request();
+  }
+  if (response.status === 202) {
+    return `HTTP 202: ${path} is still loading market data. Don't ask for it again in this answer; say it isn't available yet.`;
+  }
   const body = typeof response.data === 'string' ? response.data : JSON.stringify(response.data);
   return truncate(`HTTP ${response.status}\n${body}`);
 }
@@ -256,6 +275,18 @@ export async function getLocalAgent(): Promise<OllamaProvider> {
   return new OllamaProvider(config.ollamaHost, config.ollamaModel, config.ollamaThink);
 }
 
+function callKey(call: OllamaToolCall): string {
+  return `${call.function.name}:${JSON.stringify(call.function.arguments ?? {})}`;
+}
+
+/** Earlier questions' tool results are cut down so the current question and the system prompt keep their room. */
+function compactHistory(messages: OllamaChatMessage[]): OllamaChatMessage[] {
+  const lastUser = messages.map((m) => m.role).lastIndexOf('user');
+  return messages.map((m, i) =>
+    m.role === 'tool' && i < lastUser ? { ...m, content: truncate(m.content, OLD_TOOL_RESULT_LIMIT) } : m
+  );
+}
+
 /**
  * Runs the agent until it answers, needs approval for a write, or hits the
  * step limit. The conversation is held by the client and sent whole each time,
@@ -270,8 +301,10 @@ export async function runAgent(
 ): Promise<void> {
   const agent = await getLocalAgent();
   let decision = approval;
+  const seen = new Map<string, string>();
+  let modelTurns = 0;
 
-  for (let step = 0; step < MAX_STEPS; step++) {
+  for (;;) {
     if (isClosed()) return;
 
     const lastAssistant = messages.map((m) => m.role).lastIndexOf('assistant');
@@ -290,7 +323,13 @@ export async function runAgent(
           result = decision === 'approve' ? await runTool(call, authorization) : 'The user declined this request.';
           decision = undefined;
         } else {
-          result = await runTool(call, authorization);
+          const key = callKey(call);
+          const earlier = seen.get(key);
+          result =
+            earlier !== undefined
+              ? `You already made this exact call in this answer and got:\n${truncate(earlier, 1_500)}\nUse that instead of calling it again.`
+              : await runTool(call, authorization);
+          if (earlier === undefined) seen.set(key, result);
         }
         const message: OllamaChatMessage = { role: 'tool', tool_name: call.function.name, content: result };
         messages.push(message);
@@ -300,21 +339,29 @@ export async function runAgent(
       continue;
     }
 
-    const reply = await agent.chat(
-      [{ role: 'system', content: systemPrompt() }, ...messages],
-      TOOLS,
-      { feature: 'agent-chat' },
-      {
-        numCtx: NUM_CTX,
-      }
-    );
-    messages.push(reply);
-    emit({ type: 'message', message: reply });
-    if (!reply.tool_calls?.length) {
+    const outOfTurns = modelTurns >= MAX_MODEL_TURNS;
+    const prompt: OllamaChatMessage[] = [{ role: 'system', content: systemPrompt() }, ...compactHistory(messages)];
+    if (outOfTurns) {
+      prompt.push({
+        role: 'user',
+        content:
+          'You have used all your lookups for this question. Answer now from the results above, and say plainly what you could not find.',
+      });
+    }
+    // With no tools offered, the last turn has to be an answer.
+    const reply = await agent.chat(prompt, outOfTurns ? [] : TOOLS, { feature: 'agent-chat' }, { numCtx: NUM_CTX });
+    modelTurns += 1;
+    const final: OllamaChatMessage = outOfTurns
+      ? {
+          role: 'assistant',
+          content: reply.content.trim() || "I couldn't finish looking this up. Try a narrower question.",
+        }
+      : reply;
+    messages.push(final);
+    emit({ type: 'message', message: final });
+    if (!final.tool_calls?.length) {
       emit({ type: 'done' });
       return;
     }
   }
-
-  emit({ type: 'error', message: `Stopped after ${MAX_STEPS} steps. Ask a narrower question or continue.` });
 }

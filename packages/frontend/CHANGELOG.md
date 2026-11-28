@@ -6,6 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
+## [5.4.1] – 2026-11-28
+
+### Fixed
+- **Portfolio agent stopping with "Stopped after 10 steps".**
+  - The limit now counts the model's turns, not each round of lookups, so it gets twice the room it had.
+  - If it still runs out, it answers from what it found instead of stopping with nothing.
+  - It no longer repeats the same lookup, and it waits for market data that is still loading instead of asking for it again.
+  - Lookups from earlier questions are shortened when sent to the model, so long chats no longer push your question and its instructions out of the model's memory.
+
+---
+
 ## [5.4.0] – 2026-11-27
 
 ### Added
