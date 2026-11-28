@@ -1,4 +1,4 @@
-import { OllamaProvider } from '../aiProviders/ollamaProvider';
+import { buildOllama } from '../aiProviders';
 import { getAiConfig } from '../models/AiConfigModel';
 import { logger } from '../utils/winston';
 
@@ -154,7 +154,7 @@ export class DocumentImportController {
       );
     }
 
-    const provider = new OllamaProvider(config.ollamaHost, config.ollamaModel, config.ollamaThink);
+    const provider = buildOllama(config);
     if (!provider.isConfigured()) {
       throw new Error('Ollama is selected but not configured. Set the Ollama host in Settings.');
     }

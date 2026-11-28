@@ -155,6 +155,7 @@ Use `react-toastify`'s `toast.error(...)` for failures and `toast.success(...)` 
 - `pnpm run migrate:mongo` (`backend/src/scripts/migrateToMongo.ts`) migrates a pre-MongoDB `storage/` directory straight into Mongo, sharing `utils/mongoBackup.ts` with the import route. Only populates collections still empty in Mongo unless run with `--force`.
 - The backend raw-body middleware for `/settings/db/import` must run BEFORE `koa-bodyparser`. Don't reorder `server.ts` middleware.
 - Model name in Ollama config defaults to `llama3.1`; other providers default to their latest (`claude-sonnet-4-6`, `gemini-2.0-flash`).
+- Build every Ollama provider with `buildOllama(config)` (`backend/src/aiProviders/index.ts`), never `new OllamaProvider(...)` directly, so the Settings tuning (context window, keep-alive, temperature, timeout) applies. A caller can ask for a larger `numCtx` or `timeoutMs` per request, but never gets less than the configured value.
 - When adding a new route that takes a filename or path param, always validate against an allowlist.
 - Sells record the lots they relieved on the transaction (`lots`), and buys record `lotId`; `RealizedGainsController` matches those before falling back to FIFO. Tax lots, rates and simulations are personal financial data — never put them in an AI prompt.
 

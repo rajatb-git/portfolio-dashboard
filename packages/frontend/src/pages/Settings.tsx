@@ -27,7 +27,7 @@ import * as React from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import apis from '@/api';
-import type { AiConfig } from '@/api/live';
+import type { AiConfig, OllamaModelInfo } from '@/api/live';
 import type {
   AlertMonitorConfig,
   BackupFile,
@@ -113,6 +113,54 @@ function SettingRow({
   );
 }
 
+const CONTEXT_OPTIONS = [4096, 8192, 16384, 32768, 65536, 131072];
+const KEEP_ALIVE_OPTIONS = [
+  { label: '5 minutes', value: '5m' },
+  { label: '30 minutes', value: '30m' },
+  { label: '2 hours', value: '2h' },
+  { label: '24 hours', value: '24h' },
+  { label: 'Always', value: '-1' },
+];
+const TEMPERATURE_OPTIONS: Array<{ label: string; value: number | null }> = [
+  { label: "Model's default", value: null },
+  { label: '0 (most consistent)', value: 0 },
+  { label: '0.2', value: 0.2 },
+  { label: '0.5', value: 0.5 },
+  { label: '0.8', value: 0.8 },
+  { label: '1.0 (most varied)', value: 1 },
+];
+const TIMEOUT_OPTIONS = [60, 120, 180, 300, 600, 900];
+const AGENT_TURN_OPTIONS = [5, 10, 15, 20, 30];
+
+/** Keeps a saved value that isn't one of the presets selectable instead of showing a blank field. */
+function withCurrent<T>(options: T[], current: T): T[] {
+  return options.includes(current) ? options : [...options, current];
+}
+
+function describeOllamaModel(info: OllamaModelInfo, draft: AiConfig): { text: string; warnings: string[] } {
+  const parts = [
+    info.parameterSize && `${info.parameterSize} parameters`,
+    info.quantization && `${info.quantization} quantization`,
+    info.contextLength && `context up to ${info.contextLength.toLocaleString()} tokens`,
+  ].filter(Boolean);
+  const can = (capability: string) => info.capabilities.includes(capability);
+  const supports = [can('tools') ? 'Calls tools' : null, can('thinking') ? 'Can think' : null].filter(Boolean);
+  const warnings: string[] = [];
+  if (info.capabilities.length > 0 && !can('tools')) {
+    warnings.push("This model can't call tools, so the portfolio agent won't work with it. AI insights still will.");
+  }
+  if (draft.ollamaThink && info.capabilities.length > 0 && !can('thinking')) {
+    warnings.push("Capture thinking is on, but this model doesn't think. Its requests will be rejected; turn it off.");
+  }
+  if (info.contextLength && draft.ollamaNumCtx > info.contextLength) {
+    warnings.push(
+      `The context window is larger than this model supports. Ollama will cap it at ${info.contextLength.toLocaleString()} tokens.`
+    );
+  }
+  const sentence = [parts.join(', '), supports.join(' and ')].filter(Boolean).join('. ');
+  return { text: sentence ? `${info.model}: ${sentence}.` : `${info.model} is available.`, warnings };
+}
+
 function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
   const kb = bytes / 1024;
@@ -167,6 +215,8 @@ export default function Settings() {
   const [aiConfig, setAiConfig] = React.useState<AiConfig | null>(null);
   const [draftAiConfig, setDraftAiConfig] = React.useState<AiConfig | null>(null);
   const [saving, setSaving] = React.useState(false);
+  const [modelInfo, setModelInfo] = React.useState<OllamaModelInfo | null>(null);
+  const [checkingModel, setCheckingModel] = React.useState(false);
 
   const [savedLock, setSavedLock] = React.useState<LockStatus>(DEFAULT_LOCK);
   const [draftLock, setDraftLock] = React.useState<LockStatus>(DEFAULT_LOCK);
@@ -677,6 +727,19 @@ export default function Settings() {
 
   const handleResetAiConfig = () => {
     setDraftAiConfig(aiConfig);
+  };
+
+  const handleCheckOllamaModel = async () => {
+    if (!draftAiConfig) return;
+    setCheckingModel(true);
+    try {
+      setModelInfo(await apis.live.checkOllamaModel(draftAiConfig.ollamaHost, draftAiConfig.ollamaModel));
+    } catch (err: any) {
+      setModelInfo(null);
+      toast.error(err.message || 'Could not read the model from Ollama');
+    } finally {
+      setCheckingModel(false);
+    }
   };
 
   const handleSaveValueCalc = async () => {
@@ -2631,13 +2694,44 @@ export default function Settings() {
                           />
                         </SettingRow>
                         <SettingRow label="Model" description="Ollama model name (e.g. llama3.1, mistral)">
-                          <TextField
-                            size="small"
-                            value={draftAiConfig.ollamaModel}
-                            onChange={(e) => updateDraft({ ollamaModel: e.target.value })}
-                            sx={{ width: { xs: '100%', sm: 260 }, '& input': { fontSize: '0.78rem' } }}
-                          />
+                          <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
+                            <TextField
+                              size="small"
+                              value={draftAiConfig.ollamaModel}
+                              onChange={(e) => {
+                                setModelInfo(null);
+                                updateDraft({ ollamaModel: e.target.value });
+                              }}
+                              sx={{ width: { xs: '100%', sm: 260 }, '& input': { fontSize: '0.78rem' } }}
+                            />
+                            <Button
+                              size="small"
+                              variant="outlined"
+                              onClick={handleCheckOllamaModel}
+                              disabled={checkingModel || !draftAiConfig.ollamaModel.trim()}
+                              sx={{ fontSize: '0.78rem', textTransform: 'none', whiteSpace: 'nowrap', flexShrink: 0 }}
+                            >
+                              {checkingModel ? 'Checking...' : 'Check model'}
+                            </Button>
+                          </Stack>
                         </SettingRow>
+                        {modelInfo &&
+                          (() => {
+                            const { text, warnings } = describeOllamaModel(modelInfo, draftAiConfig);
+                            return (
+                              <Box sx={{ px: 2, py: 1.25, borderBottom: '1px solid', borderColor: 'divider' }}>
+                                <Typography sx={{ fontSize: '0.78rem', color: 'text.secondary' }}>{text}</Typography>
+                                {warnings.map((warning) => (
+                                  <Typography
+                                    key={warning}
+                                    sx={{ fontSize: '0.78rem', color: 'warning.main', mt: 0.5 }}
+                                  >
+                                    {warning}
+                                  </Typography>
+                                ))}
+                              </Box>
+                            );
+                          })()}
                         <SettingRow
                           label="Capture thinking"
                           description="Ask reasoning models (qwen3, deepseek-r1, gpt-oss…) to return their thought process, viewable under Logs → AI requests. Models without thinking support will reject requests while this is on."
@@ -2646,6 +2740,111 @@ export default function Settings() {
                             checked={draftAiConfig.ollamaThink ?? false}
                             onChange={(_, checked) => updateDraft({ ollamaThink: checked })}
                           />
+                        </SettingRow>
+                        <SettingRow
+                          label="Context window"
+                          description={`How much text the model reads at once. Larger lets the agent keep more of a conversation and longer lookups, but uses more GPU memory and runs slower.${
+                            modelInfo?.contextLength
+                              ? ` This model supports up to ${modelInfo.contextLength.toLocaleString()} tokens.`
+                              : ''
+                          }`}
+                        >
+                          <Select
+                            size="small"
+                            value={draftAiConfig.ollamaNumCtx}
+                            onChange={(e) => updateDraft({ ollamaNumCtx: Number(e.target.value) })}
+                            sx={{ minWidth: { xs: '100%', sm: 200 }, fontSize: '0.82rem' }}
+                          >
+                            {withCurrent(CONTEXT_OPTIONS, draftAiConfig.ollamaNumCtx).map((tokens) => (
+                              <MenuItem key={tokens} value={tokens}>
+                                {tokens.toLocaleString()} tokens
+                              </MenuItem>
+                            ))}
+                          </Select>
+                        </SettingRow>
+                        <SettingRow
+                          label="Keep model loaded"
+                          description="How long Ollama keeps the model in memory after a request. Longer avoids a wait of 10 seconds or more while it loads again."
+                        >
+                          <Select
+                            size="small"
+                            value={draftAiConfig.ollamaKeepAlive}
+                            onChange={(e) => updateDraft({ ollamaKeepAlive: e.target.value })}
+                            sx={{ minWidth: { xs: '100%', sm: 200 }, fontSize: '0.82rem' }}
+                          >
+                            {withCurrent(
+                              KEEP_ALIVE_OPTIONS.map((o) => o.value),
+                              draftAiConfig.ollamaKeepAlive
+                            ).map((value) => (
+                              <MenuItem key={value} value={value}>
+                                {KEEP_ALIVE_OPTIONS.find((o) => o.value === value)?.label ?? value}
+                              </MenuItem>
+                            ))}
+                          </Select>
+                        </SettingRow>
+                        <SettingRow
+                          label="Temperature"
+                          description="Lower answers are more consistent. The agent picks tools most reliably between 0 and 0.2."
+                        >
+                          <Select
+                            size="small"
+                            value={
+                              draftAiConfig.ollamaTemperature === null
+                                ? 'default'
+                                : String(draftAiConfig.ollamaTemperature)
+                            }
+                            onChange={(e) =>
+                              updateDraft({
+                                ollamaTemperature: e.target.value === 'default' ? null : Number(e.target.value),
+                              })
+                            }
+                            sx={{ minWidth: { xs: '100%', sm: 200 }, fontSize: '0.82rem' }}
+                          >
+                            {withCurrent(
+                              TEMPERATURE_OPTIONS.map((o) => o.value),
+                              draftAiConfig.ollamaTemperature
+                            ).map((value) => (
+                              <MenuItem key={String(value)} value={value === null ? 'default' : String(value)}>
+                                {TEMPERATURE_OPTIONS.find((o) => o.value === value)?.label ?? String(value)}
+                              </MenuItem>
+                            ))}
+                          </Select>
+                        </SettingRow>
+                        <SettingRow
+                          label="Request timeout"
+                          description="How long to wait for one answer from the model before giving up. Statement imports always get at least 5 minutes."
+                        >
+                          <Select
+                            size="small"
+                            value={draftAiConfig.ollamaTimeoutSec}
+                            onChange={(e) => updateDraft({ ollamaTimeoutSec: Number(e.target.value) })}
+                            sx={{ minWidth: { xs: '100%', sm: 200 }, fontSize: '0.82rem' }}
+                          >
+                            {withCurrent(TIMEOUT_OPTIONS, draftAiConfig.ollamaTimeoutSec).map((seconds) => (
+                              <MenuItem key={seconds} value={seconds}>
+                                {seconds < 60
+                                  ? `${seconds} seconds`
+                                  : `${seconds / 60} minute${seconds === 60 ? '' : 's'}`}
+                              </MenuItem>
+                            ))}
+                          </Select>
+                        </SettingRow>
+                        <SettingRow
+                          label="Agent steps per answer"
+                          description="How many times the portfolio agent may think and look things up for one question. When it runs out, it answers from what it found."
+                        >
+                          <Select
+                            size="small"
+                            value={draftAiConfig.agentMaxTurns}
+                            onChange={(e) => updateDraft({ agentMaxTurns: Number(e.target.value) })}
+                            sx={{ minWidth: { xs: '100%', sm: 200 }, fontSize: '0.82rem' }}
+                          >
+                            {withCurrent(AGENT_TURN_OPTIONS, draftAiConfig.agentMaxTurns).map((turns) => (
+                              <MenuItem key={turns} value={turns}>
+                                {turns} steps
+                              </MenuItem>
+                            ))}
+                          </Select>
                         </SettingRow>
                       </>
                     )}

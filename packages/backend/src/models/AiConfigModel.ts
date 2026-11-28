@@ -10,6 +10,14 @@ export interface IAiConfig {
   ollamaHost: string;
   ollamaModel: string;
   ollamaThink: boolean;
+  /** Context window in tokens sent as num_ctx; Ollama's own default (2–4K) silently cuts longer prompts. */
+  ollamaNumCtx: number;
+  /** How long Ollama keeps the model loaded after a request, in its keep_alive format ("30m", "-1"). */
+  ollamaKeepAlive: string;
+  /** null leaves the model's own default in place. */
+  ollamaTemperature: number | null;
+  ollamaTimeoutSec: number;
+  agentMaxTurns: number;
 }
 
 export const AiConfigSchema: SchemaType = {
@@ -22,7 +30,44 @@ export const AiConfigSchema: SchemaType = {
   ollamaHost: { type: String, required: false },
   ollamaModel: { type: String, required: false },
   ollamaThink: { type: Boolean, required: false },
+  ollamaNumCtx: { type: Number, required: false },
+  ollamaKeepAlive: { type: String, required: false },
+  ollamaTemperature: { type: Number, required: false },
+  ollamaTimeoutSec: { type: Number, required: false },
+  agentMaxTurns: { type: Number, required: false },
 };
+
+export const OLLAMA_LIMITS = {
+  numCtx: { min: 2048, max: 262144 },
+  temperature: { min: 0, max: 2 },
+  timeoutSec: { min: 30, max: 1800 },
+  agentMaxTurns: { min: 2, max: 30 },
+} as const;
+
+const KEEP_ALIVE = /^(-1|0|\d+(\.\d+)?(s|m|h))$/;
+
+function clampInt(value: unknown, fallback: number, { min, max }: { min: number; max: number }): number {
+  const n = Number(value);
+  return Number.isFinite(n) ? Math.min(max, Math.max(min, Math.round(n))) : fallback;
+}
+
+/** Fills defaults and clamps stored or submitted Ollama tuning into ranges Ollama accepts. */
+export function normalizeOllamaTuning(raw: Partial<IAiConfig>, fallback: IAiConfig = DEFAULT_AI_CONFIG) {
+  const temperature =
+    raw.ollamaTemperature === null || raw.ollamaTemperature === undefined
+      ? raw.ollamaTemperature === undefined
+        ? fallback.ollamaTemperature
+        : null
+      : Math.min(OLLAMA_LIMITS.temperature.max, Math.max(OLLAMA_LIMITS.temperature.min, Number(raw.ollamaTemperature)));
+  const keepAlive = typeof raw.ollamaKeepAlive === 'string' ? raw.ollamaKeepAlive.trim() : '';
+  return {
+    ollamaNumCtx: clampInt(raw.ollamaNumCtx, fallback.ollamaNumCtx, OLLAMA_LIMITS.numCtx),
+    ollamaKeepAlive: KEEP_ALIVE.test(keepAlive) ? keepAlive : fallback.ollamaKeepAlive,
+    ollamaTemperature: Number.isFinite(temperature as number) ? (temperature as number) : null,
+    ollamaTimeoutSec: clampInt(raw.ollamaTimeoutSec, fallback.ollamaTimeoutSec, OLLAMA_LIMITS.timeoutSec),
+    agentMaxTurns: clampInt(raw.agentMaxTurns, fallback.agentMaxTurns, OLLAMA_LIMITS.agentMaxTurns),
+  };
+}
 
 export interface IAiConfigModel extends IAiConfig, ISkewerModel {}
 
@@ -40,6 +85,11 @@ export const DEFAULT_AI_CONFIG: IAiConfig = {
   ollamaHost: 'http://localhost:11434',
   ollamaModel: 'llama3.1',
   ollamaThink: false,
+  ollamaNumCtx: 16384,
+  ollamaKeepAlive: '30m',
+  ollamaTemperature: null,
+  ollamaTimeoutSec: 180,
+  agentMaxTurns: 10,
 };
 
 export async function getAiConfig(): Promise<IAiConfig> {
@@ -56,6 +106,7 @@ export async function getAiConfig(): Promise<IAiConfig> {
       ollamaHost: existing.ollamaHost || DEFAULT_AI_CONFIG.ollamaHost,
       ollamaModel: existing.ollamaModel || DEFAULT_AI_CONFIG.ollamaModel,
       ollamaThink: existing.ollamaThink ?? false,
+      ...normalizeOllamaTuning(existing),
     };
   }
   return DEFAULT_AI_CONFIG;

@@ -6,7 +6,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
-## [5.4.1] – 2026-11-28
+## [5.5.0] – 2026-11-28
+
+### Added
+- **Ollama tuning in Settings → AI Agent:**
+  - **Context window:** 4K to 128K tokens. It used to be Ollama's own 2–4K default for insights, and a fixed 16K for the agent.
+  - **Keep model loaded:** so the first request after a pause doesn't wait while the model loads.
+  - **Temperature.**
+  - **Request timeout.**
+  - **Agent steps per answer.**
+  - These apply to every Ollama feature: insights, statement imports and the agent.
+- **Check model** asks Ollama what the selected model supports: its size, maximum context, and whether it can call tools or think. It warns when a setting won't work with that model.
+- The agent warns in the chat when a conversation nears the context limit, instead of silently forgetting its start.
 
 ### Fixed
 - **Portfolio agent stopping with "Stopped after 10 steps".**

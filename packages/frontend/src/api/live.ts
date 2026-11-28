@@ -92,6 +92,19 @@ export type AiConfig = {
   ollamaHost: string;
   ollamaModel: string;
   ollamaThink: boolean;
+  ollamaNumCtx: number;
+  ollamaKeepAlive: string;
+  ollamaTemperature: number | null;
+  ollamaTimeoutSec: number;
+  agentMaxTurns: number;
+};
+
+export type OllamaModelInfo = {
+  model: string;
+  contextLength?: number;
+  capabilities: string[];
+  parameterSize?: string;
+  quantization?: string;
 };
 
 export default class LiveAPI {
@@ -204,6 +217,11 @@ export default class LiveAPI {
 
   getAiConfig = async (): Promise<AiConfig> =>
     axios(DB_HOST + '/settings/ai-config')
+      .then((response) => response.data)
+      .catch(catchCustomError);
+
+  checkOllamaModel = async (host: string, model: string): Promise<OllamaModelInfo> =>
+    axios(DB_HOST + '/settings/ai-config/ollama-model', { params: { host, model } })
       .then((response) => response.data)
       .catch(catchCustomError);
 
