@@ -54,6 +54,27 @@ function argText(call: AgentToolCall, name: string): string {
   return typeof value === 'string' ? value : '';
 }
 
+const TOOL_LABELS: Record<string, string> = {
+  get_portfolio_overview: 'Portfolio overview',
+  get_accounts: 'Accounts',
+  get_realized_gains: 'Realized gains',
+  get_transactions: 'Transactions',
+  get_holding: 'Holding',
+  get_performance: 'Performance',
+  get_daily_brief: 'Daily brief',
+  get_tax_exposure: 'Tax exposure',
+  get_tax_loss_harvesting: 'Tax-loss harvesting',
+  get_dividends: 'Dividends',
+  get_risk: 'Risk',
+  get_sector_allocation: 'Sector allocation',
+  get_rebalance_plan: 'Rebalance plan',
+  get_alerts: 'Alerts',
+  get_quote: 'Quote',
+  get_company: 'Company',
+  get_symbol_news: 'News',
+  get_market_overview: 'Market overview',
+};
+
 function describeCall(call: AgentToolCall): { icon: string; label: string } {
   switch (call.function.name) {
     case 'call_api':
@@ -65,8 +86,11 @@ function describeCall(call: AgentToolCall): { icon: string; label: string } {
       return { icon: 'tabler:world-search', label: `Search “${argText(call, 'query')}”` };
     case 'fetch_url':
       return { icon: 'tabler:world-download', label: argText(call, 'url').replace(/^https?:\/\//, '') };
-    default:
-      return { icon: 'tabler:tool', label: call.function.name };
+    default: {
+      const label = TOOL_LABELS[call.function.name] ?? call.function.name.replace(/^get_/, '').replace(/_/g, ' ');
+      const detail = argText(call, 'symbol') || String(call.function.arguments?.year ?? '');
+      return { icon: 'tabler:database-search', label: detail ? `${label}: ${detail.toUpperCase()}` : label };
+    }
   }
 }
 

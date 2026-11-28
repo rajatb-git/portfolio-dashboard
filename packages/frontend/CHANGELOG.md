@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
+## [5.5.1] – 2026-11-28
+
+### Fixed
+- **The portfolio agent now uses your data instead of searching the web for it.** Questions like "What have I realized in gains this year?" or "Summarize my accounts" were answered with web searches, or with guesses at the app's address, because the agent had only one generic tool for the app. It now has named tools for the common questions: portfolio overview, accounts, realized gains, transactions, holdings, performance, taxes, dividends, risk, sectors, rebalancing, alerts, quotes, company data, news and the market. It is told never to search the web for your own figures, and it can't fetch the app or other local addresses as web pages.
+- **No more blank or half-finished replies.** Reasoning models (qwen3 and others) no longer show their hidden reasoning in replies, and they are told not to reason at all unless Capture thinking is on. If the model returns nothing, it is asked once more, and if it still returns nothing the chat says so instead of staying blank.
+
+---
+
 ## [5.5.0] – 2026-11-28
 
 ### Added
