@@ -17,6 +17,7 @@ export type AgentEvent =
   | { type: 'approval'; call: AgentToolCall }
   | { type: 'done' }
   | { type: 'error'; message: string }
+  | { type: 'notice'; message: string }
   | { type: 'ping' };
 
 export type AgentStatus = {

@@ -9,6 +9,7 @@ export type AgentConversation = {
   running: boolean;
   pending: AgentToolCall | null;
   error: string | null;
+  notice: string | null;
   send: (text: string) => void;
   respond: (approve: boolean) => void;
   stop: () => void;
@@ -20,6 +21,7 @@ export function useAgentConversation(): AgentConversation {
   const [running, setRunning] = React.useState(false);
   const [pending, setPending] = React.useState<AgentToolCall | null>(null);
   const [error, setError] = React.useState<string | null>(null);
+  const [notice, setNotice] = React.useState<string | null>(null);
   const messagesRef = React.useRef<AgentMessage[]>([]);
   const abortRef = React.useRef<AbortController | null>(null);
 
@@ -34,11 +36,13 @@ export function useAgentConversation(): AgentConversation {
     setRunning(true);
     setPending(null);
     setError(null);
+    setNotice(null);
     commit(history);
 
     const onEvent = (event: AgentEvent) => {
       if (event.type === 'message') commit([...messagesRef.current, event.message]);
       else if (event.type === 'approval') setPending(event.call);
+      else if (event.type === 'notice') setNotice(event.message);
       else if (event.type === 'error') {
         setError(event.message);
         toast.error(event.message);
@@ -83,7 +87,8 @@ export function useAgentConversation(): AgentConversation {
     commit([]);
     setPending(null);
     setError(null);
+    setNotice(null);
   };
 
-  return { messages, running, pending, error, send, respond, stop, reset };
+  return { messages, running, pending, error, notice, send, respond, stop, reset };
 }

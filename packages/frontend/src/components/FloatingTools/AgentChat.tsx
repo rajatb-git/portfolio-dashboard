@@ -320,14 +320,14 @@ function ChatPanel({ conversation, onClose, fullScreen }: ChatPanelProps) {
   React.useEffect(loadStatus, [loadStatus]);
 
   const items = buildItems(conversation);
-  const { running, pending, error } = conversation;
+  const { running, pending, error, notice } = conversation;
   const lastItem = items[items.length - 1];
   const toolRunning = running && lastItem?.kind === 'tool' && lastItem.result === undefined;
 
   React.useEffect(() => {
     const el = scrollRef.current;
     if (el) el.scrollTo({ top: el.scrollHeight });
-  }, [items.length, running, pending, error]);
+  }, [items.length, running, pending, error, notice]);
 
   React.useEffect(() => {
     if (status?.available && !coarse) inputRef.current?.focus();
@@ -449,6 +449,17 @@ function ChatPanel({ conversation, onClose, fullScreen }: ChatPanelProps) {
         )}
 
         {pending && !running && <ApprovalCard call={pending} onRespond={conversation.respond} />}
+
+        {notice && (
+          <Stack
+            direction="row"
+            role="status"
+            sx={{ gap: 1, alignItems: 'flex-start', color: DATA_ACCENT[theme.palette.mode].main }}
+          >
+            <Iconify icon="tabler:alert-triangle" width={16} sx={{ mt: '2px', flexShrink: 0 }} />
+            <Typography sx={{ fontSize: FONT_SIZE.sm }}>{notice}</Typography>
+          </Stack>
+        )}
 
         {error && !running && (
           <Stack direction="row" sx={{ gap: 1, alignItems: 'flex-start', color: 'error.main' }}>

@@ -3,7 +3,8 @@ import path from 'node:path';
 import { PassThrough } from 'node:stream';
 import Router from '@koa/router';
 
-import { getAiConfig, IAiConfig, maskAiConfig, saveAiConfig } from '../models/AiConfigModel';
+import { showOllamaModel } from '../aiProviders/ollamaProvider';
+import { getAiConfig, IAiConfig, maskAiConfig, normalizeOllamaTuning, saveAiConfig } from '../models/AiConfigModel';
 import { getAlertMonitorConfig, IAlertMonitorConfig, saveAlertMonitorConfig } from '../models/AlertMonitorConfigModel';
 import {
   getIpoAnnouncementConfig,
@@ -238,6 +239,7 @@ export const SettingsRouter = () => {
         ollamaHost: body.ollamaHost || current.ollamaHost,
         ollamaModel: body.ollamaModel || current.ollamaModel,
         ollamaThink: body.ollamaThink ?? current.ollamaThink,
+        ...normalizeOllamaTuning(body, current),
       };
 
       await saveAiConfig(updated);
@@ -246,6 +248,26 @@ export const SettingsRouter = () => {
     } catch (error: any) {
       ctx.status = 500;
       ctx.body = errorBody('Failed to save AI config', error.message);
+    }
+  });
+
+  // Reads the model from the host and model in the request so Settings can
+  // check a draft before saving it.
+  router.get('/settings/ai-config/ollama-model', async (ctx) => {
+    const host = typeof ctx.query.host === 'string' ? ctx.query.host.trim() : '';
+    const model = typeof ctx.query.model === 'string' ? ctx.query.model.trim() : '';
+    if (!/^https?:\/\//i.test(host) || !model) {
+      ctx.status = 400;
+      ctx.body = errorBody('Invalid Ollama model check', 'Give an http(s) host and a model name');
+      return;
+    }
+    try {
+      ctx.body = await showOllamaModel(host, model);
+      ctx.status = 200;
+    } catch (error: any) {
+      logger.log({ level: 'error', message: error.message, label: 'Ollama model check' });
+      ctx.status = 400;
+      ctx.body = errorBody('Could not read the Ollama model', error.message);
     }
   });
 

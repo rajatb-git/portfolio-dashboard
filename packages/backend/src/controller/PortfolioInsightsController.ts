@@ -1,5 +1,5 @@
 import moment from 'moment';
-import { OllamaProvider } from '../aiProviders/ollamaProvider';
+import { buildOllama } from '../aiProviders';
 import { getAiConfig } from '../models/AiConfigModel';
 import { logger } from '../utils/winston';
 import { createDashboard } from './DashboardController';
@@ -89,7 +89,7 @@ export const generatePortfolioInsights = async (): Promise<PortfolioInsight> => 
     );
   }
 
-  const provider = new OllamaProvider(config.ollamaHost, config.ollamaModel, config.ollamaThink);
+  const provider = buildOllama(config);
   if (!provider.isConfigured()) {
     throw new Error('Ollama is selected but not configured. Set the Ollama host in Settings.');
   }

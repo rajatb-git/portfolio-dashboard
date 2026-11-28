@@ -12,6 +12,28 @@ export type OllamaChatMessage = {
   tool_name?: string;
 };
 
+export type OllamaOptions = {
+  think?: boolean;
+  numCtx?: number;
+  keepAlive?: string;
+  temperature?: number | null;
+  timeoutMs?: number;
+};
+
+export type OllamaChatResult = {
+  message: OllamaChatMessage;
+  promptTokens?: number;
+  numCtx: number;
+};
+
+export type OllamaModelInfo = {
+  model: string;
+  contextLength?: number;
+  capabilities: string[];
+  parameterSize?: string;
+  quantization?: string;
+};
+
 export type OllamaTool = {
   type: 'function';
   function: { name: string; description: string; parameters: Record<string, unknown> };
@@ -73,11 +95,30 @@ export class OllamaProvider implements AiProvider {
   readonly model: string;
   private host: string;
   private think: boolean;
+  private numCtx: number;
+  private keepAlive: string;
+  private temperature: number | null;
+  private timeoutMs: number;
 
-  constructor(host?: string, model?: string, think = false) {
+  constructor(host?: string, model?: string, options: OllamaOptions = {}) {
     this.host = normalizeHost(host || 'http://localhost:11434');
     this.model = model || 'llama3.1';
-    this.think = think;
+    this.think = options.think ?? false;
+    this.numCtx = options.numCtx ?? 16384;
+    this.keepAlive = options.keepAlive ?? '30m';
+    this.temperature = options.temperature ?? null;
+    this.timeoutMs = options.timeoutMs ?? 180000;
+  }
+
+  /** A caller that needs more room (statement imports) can ask for it; nobody gets less than the configured window. */
+  private requestTuning(tuning: { numCtx?: number; timeoutMs?: number }) {
+    const numCtx = Math.max(this.numCtx, tuning.numCtx ?? 0);
+    const timeoutMs = Math.max(this.timeoutMs, tuning.timeoutMs ?? 0);
+    const body = {
+      keep_alive: this.keepAlive,
+      options: { num_ctx: numCtx, ...(this.temperature !== null && { temperature: this.temperature }) },
+    };
+    return { numCtx, timeoutMs, body };
   }
 
   isConfigured(): boolean {
@@ -93,7 +134,7 @@ export class OllamaProvider implements AiProvider {
     tuning: { numCtx?: number; timeoutMs?: number } = {}
   ): Promise<string> {
     const url = `${this.host}/api/chat`;
-    const timeoutMs = tuning.timeoutMs ?? 120000;
+    const { numCtx, timeoutMs, body } = this.requestTuning(tuning);
     const startedAt = Date.now();
     const log = {
       feature: meta.feature,
@@ -102,7 +143,13 @@ export class OllamaProvider implements AiProvider {
       host: this.host,
       systemPrompt,
       userPrompt,
-      options: JSON.stringify({ think: this.think, numCtx: tuning.numCtx, timeoutMs }),
+      options: JSON.stringify({
+        think: this.think,
+        numCtx,
+        timeoutMs,
+        keepAlive: this.keepAlive,
+        temperature: this.temperature,
+      }),
     };
 
     let text: string | undefined;
@@ -118,7 +165,7 @@ export class OllamaProvider implements AiProvider {
           stream: false,
           format: 'json',
           ...(this.think && { think: true }),
-          ...(tuning.numCtx && { options: { num_ctx: tuning.numCtx } }),
+          ...body,
         },
         { timeout: timeoutMs }
       );
@@ -171,9 +218,9 @@ export class OllamaProvider implements AiProvider {
     tools: OllamaTool[],
     meta: InsightMeta,
     tuning: { numCtx?: number; timeoutMs?: number } = {}
-  ): Promise<OllamaChatMessage> {
+  ): Promise<OllamaChatResult> {
     const url = `${this.host}/api/chat`;
-    const timeoutMs = tuning.timeoutMs ?? 180000;
+    const { numCtx, timeoutMs, body } = this.requestTuning(tuning);
     const startedAt = Date.now();
     const log = {
       feature: meta.feature,
@@ -188,8 +235,10 @@ export class OllamaProvider implements AiProvider {
       ),
       options: JSON.stringify({
         think: this.think,
-        numCtx: tuning.numCtx,
+        numCtx,
         timeoutMs,
+        keepAlive: this.keepAlive,
+        temperature: this.temperature,
         tools: tools.map((t) => t.function.name),
       }),
     };
@@ -203,7 +252,7 @@ export class OllamaProvider implements AiProvider {
           tools,
           stream: false,
           ...(this.think && { think: true }),
-          ...(tuning.numCtx && { options: { num_ctx: tuning.numCtx } }),
+          ...body,
         },
         { timeout: timeoutMs }
       );
@@ -228,9 +277,13 @@ export class OllamaProvider implements AiProvider {
         responseTokens: data.eval_count,
       });
       return {
-        role: 'assistant',
-        content: split.content,
-        ...(toolCalls.length > 0 && { tool_calls: toolCalls }),
+        message: {
+          role: 'assistant',
+          content: split.content,
+          ...(toolCalls.length > 0 && { tool_calls: toolCalls }),
+        },
+        promptTokens: typeof data.prompt_eval_count === 'number' ? data.prompt_eval_count : undefined,
+        numCtx,
       };
     } catch (err) {
       const errorMessage = describeOllamaError(err, url, this.model);
@@ -244,5 +297,27 @@ export class OllamaProvider implements AiProvider {
       });
       throw new Error(errorMessage);
     }
+  }
+}
+
+/** Reads what Ollama knows about a model: its maximum context, and whether it can call tools or think. */
+export async function showOllamaModel(host: string, model: string): Promise<OllamaModelInfo> {
+  const base = normalizeHost(host || 'http://localhost:11434');
+  const url = `${base}/api/show`;
+  try {
+    const response = await axios.post(url, { model }, { timeout: 15000 });
+    const data = response.data ?? {};
+    const info: Record<string, unknown> = data.model_info ?? {};
+    const contextKey = Object.keys(info).find((key) => key.endsWith('.context_length'));
+    const contextLength = contextKey ? Number(info[contextKey]) : undefined;
+    return {
+      model,
+      contextLength: Number.isFinite(contextLength) ? contextLength : undefined,
+      capabilities: Array.isArray(data.capabilities) ? data.capabilities.map(String) : [],
+      parameterSize: data.details?.parameter_size,
+      quantization: data.details?.quantization_level,
+    };
+  } catch (err) {
+    throw new Error(describeOllamaError(err, url, model));
   }
 }

@@ -1,13 +1,14 @@
 import type Router from '@koa/router';
 import axios from 'axios';
 import moment from 'moment';
+import { buildOllama } from '../aiProviders';
 import {
   type OllamaChatMessage,
   OllamaProvider,
   type OllamaTool,
   type OllamaToolCall,
 } from '../aiProviders/ollamaProvider';
-import { getAiConfig } from '../models/AiConfigModel';
+import { getAiConfig, type IAiConfig } from '../models/AiConfigModel';
 
 // PRIVACY: this agent reads the user's personal portfolio data, so it only ever
 // talks to a local Ollama model. It must never fall back to getActiveProvider()
@@ -18,11 +19,18 @@ export type AgentEvent =
   | { type: 'approval'; call: OllamaToolCall }
   | { type: 'done' }
   | { type: 'error'; message: string }
+  | { type: 'notice'; message: string }
   | { type: 'ping' };
 
-const MAX_STEPS = 10;
-const TOOL_RESULT_LIMIT = 12_000;
-const NUM_CTX = 16_384;
+// About 4 characters per token; one tool result may take ~12% of the window,
+// so a few lookups plus the system prompt still fit.
+const toolResultLimit = (numCtx: number) => Math.min(24_000, Math.max(3_000, Math.round(numCtx * 4 * 0.12)));
+const CONTEXT_WARNING_SHARE = 0.9;
+// Results from earlier questions are cut down hard: Ollama silently drops the
+// oldest tokens once the window is full, which loses the system prompt first.
+const OLD_TOOL_RESULT_LIMIT = 400;
+const PENDING_RETRY_MS = 2_000;
+const PENDING_MAX_WAIT_MS = 20_000;
 const BLOCKED_PATHS = [/^\/agent\//, /^\/debug\//, /^\/settings\/db\/import/];
 
 let apiRoutes: string[] = [];
@@ -99,9 +107,9 @@ Backend routes (":name" is a path parameter):
 ${apiRoutes.join('\n')}`;
 }
 
-function truncate(text: string): string {
-  return text.length > TOOL_RESULT_LIMIT
-    ? `${text.slice(0, TOOL_RESULT_LIMIT)}\n… truncated ${text.length - TOOL_RESULT_LIMIT} characters`
+function truncate(text: string, limit: number): string {
+  return text.length > limit
+    ? `${text.slice(0, limit)}\n… truncated ${text.length - limit} characters. Ask for something narrower if you need more.`
     : text;
 }
 
@@ -129,26 +137,40 @@ export function needsApproval(call: OllamaToolCall): boolean {
   return call.function.name === 'call_api' && str(call.function.arguments?.method).toUpperCase() !== 'GET';
 }
 
-async function callApi(args: Record<string, unknown>, authorization?: string): Promise<string> {
+async function callApi(args: Record<string, unknown>, limit: number, authorization?: string): Promise<string> {
   const method = (str(args.method) || 'GET').toUpperCase();
   const path = str(args.path);
   if (!path.startsWith('/')) return 'Error: path must start with "/".';
   if (BLOCKED_PATHS.some((re) => re.test(path))) return `Error: ${path} is not available to the agent.`;
 
-  const response = await axios.request({
-    method,
-    url: `http://127.0.0.1:${process.env.PORT || 3001}${path}`,
-    data: args.body && typeof args.body === 'object' ? args.body : undefined,
-    headers: authorization ? { Authorization: authorization } : undefined,
-    timeout: 60_000,
-    validateStatus: () => true,
-    transformResponse: (data) => data,
-  });
+  const request = () =>
+    axios.request({
+      method,
+      url: `http://127.0.0.1:${process.env.PORT || 3001}${path}`,
+      data: args.body && typeof args.body === 'object' ? args.body : undefined,
+      headers: authorization ? { Authorization: authorization } : undefined,
+      timeout: 60_000,
+      validateStatus: () => true,
+      transformResponse: (data) => data,
+    });
+
+  // Market data routes answer 202 while the data is still being fetched. Wait
+  // for it like the frontend's getUntilReady does; a model shown "pending"
+  // just asks again and burns its turns.
+  const startedAt = Date.now();
+  let response = await request();
+  while (response.status === 202 && Date.now() - startedAt < PENDING_MAX_WAIT_MS) {
+    await new Promise((resolve) => setTimeout(resolve, PENDING_RETRY_MS));
+    response = await request();
+  }
+  if (response.status === 202) {
+    return `HTTP 202: ${path} is still loading market data. Don't ask for it again in this answer; say it isn't available yet.`;
+  }
   const body = typeof response.data === 'string' ? response.data : JSON.stringify(response.data);
-  return truncate(`HTTP ${response.status}\n${body}`);
+  return truncate(`HTTP ${response.status}\n${body}`, limit);
 }
 
-async function fetchUrl(args: Record<string, unknown>): Promise<string> {
+async function fetchUrl(args: Record<string, unknown>, limit: number): Promise<string> {
   const url = str(args.url);
   if (!/^https?:\/\//i.test(url)) return 'Error: url must start with http:// or https://.';
   const response = await axios.get(url, {
@@ -161,7 +183,7 @@ async function fetchUrl(args: Record<string, unknown>): Promise<string> {
   });
   const type = String(response.headers['content-type'] ?? '');
   const text = type.includes('html') ? htmlToText(String(response.data)) : String(response.data);
-  return truncate(`HTTP ${response.status}\n${text}`);
+  return truncate(`HTTP ${response.status}\n${text}`, limit);
 }
 
 async function webSearch(args: Record<string, unknown>): Promise<string> {
@@ -189,14 +211,14 @@ async function webSearch(args: Record<string, unknown>): Promise<string> {
   return results.length ? results.join('\n\n') : `No results for "${query}".`;
 }
 
-async function runTool(call: OllamaToolCall, authorization?: string): Promise<string> {
+async function runTool(call: OllamaToolCall, limit: number, authorization?: string): Promise<string> {
   const args = call.function.arguments ?? {};
   try {
     switch (call.function.name) {
       case 'call_api':
-        return await callApi(args, authorization);
+        return await callApi(args, limit, authorization);
       case 'fetch_url':
-        return await fetchUrl(args);
+        return await fetchUrl(args, limit);
       case 'web_search':
         return await webSearch(args);
       default:
@@ -248,12 +270,24 @@ export function sanitizeMessages(input: unknown): OllamaChatMessage[] {
   );
 }
 
-export async function getLocalAgent(): Promise<OllamaProvider> {
+export async function getLocalAgent(): Promise<{ agent: OllamaProvider; config: IAiConfig }> {
   const config = await getAiConfig();
   if (!config.enabled || config.provider !== 'ollama') {
     throw new Error('The agent only runs on a local Ollama model. Choose Ollama under Settings → AI agent.');
   }
-  return new OllamaProvider(config.ollamaHost, config.ollamaModel, config.ollamaThink);
+  return { agent: buildOllama(config), config };
+}
+
+function callKey(call: OllamaToolCall): string {
+  return `${call.function.name}:${JSON.stringify(call.function.arguments ?? {})}`;
+}
+
+/** Earlier questions' tool results are cut down so the current question and the system prompt keep their room. */
+function compactHistory(messages: OllamaChatMessage[]): OllamaChatMessage[] {
+  const lastUser = messages.map((m) => m.role).lastIndexOf('user');
+  return messages.map((m, i) =>
+    m.role === 'tool' && i < lastUser ? { ...m, content: truncate(m.content, OLD_TOOL_RESULT_LIMIT) } : m
+  );
 }
 
 /**
@@ -268,10 +302,14 @@ export async function runAgent(
   emit: (event: AgentEvent) => void,
   isClosed: () => boolean
 ): Promise<void> {
-  const agent = await getLocalAgent();
+  const { agent, config } = await getLocalAgent();
+  const limit = toolResultLimit(config.ollamaNumCtx);
   let decision = approval;
+  let warnedAboutContext = false;
+  const seen = new Map<string, string>();
+  let modelTurns = 0;
 
-  for (let step = 0; step < MAX_STEPS; step++) {
+  for (;;) {
     if (isClosed()) return;
 
     const lastAssistant = messages.map((m) => m.role).lastIndexOf('assistant');
@@ -287,10 +325,17 @@ export async function runAgent(
             emit({ type: 'approval', call });
             return;
           }
-          result = decision === 'approve' ? await runTool(call, authorization) : 'The user declined this request.';
+          result =
+            decision === 'approve' ? await runTool(call, limit, authorization) : 'The user declined this request.';
           decision = undefined;
         } else {
-          result = await runTool(call, authorization);
+          const key = callKey(call);
+          const earlier = seen.get(key);
+          result =
+            earlier !== undefined
+              ? `You already made this exact call in this answer and got:\n${truncate(earlier, 1_500)}\nUse that instead of calling it again.`
+              : await runTool(call, limit, authorization);
+          if (earlier === undefined) seen.set(key, result);
         }
         const message: OllamaChatMessage = { role: 'tool', tool_name: call.function.name, content: result };
         messages.push(message);
@@ -300,21 +345,41 @@ export async function runAgent(
       continue;
     }
 
-    const reply = await agent.chat(
-      [{ role: 'system', content: systemPrompt() }, ...messages],
-      TOOLS,
-      { feature: 'agent-chat' },
-      {
-        numCtx: NUM_CTX,
-      }
-    );
-    messages.push(reply);
-    emit({ type: 'message', message: reply });
-    if (!reply.tool_calls?.length) {
+    const outOfTurns = modelTurns >= config.agentMaxTurns;
+    const prompt: OllamaChatMessage[] = [{ role: 'system', content: systemPrompt() }, ...compactHistory(messages)];
+    if (outOfTurns) {
+      prompt.push({
+        role: 'user',
+        content:
+          'You have used all your lookups for this question. Answer now from the results above, and say plainly what you could not find.',
+      });
+    }
+    // With no tools offered, the last turn has to be an answer.
+    const result = await agent.chat(prompt, outOfTurns ? [] : TOOLS, { feature: 'agent-chat' });
+    const reply = result.message;
+    modelTurns += 1;
+    if (
+      !warnedAboutContext &&
+      result.promptTokens !== undefined &&
+      result.promptTokens >= result.numCtx * CONTEXT_WARNING_SHARE
+    ) {
+      warnedAboutContext = true;
+      emit({
+        type: 'notice',
+        message: `This conversation used ${result.promptTokens.toLocaleString()} of the model's ${result.numCtx.toLocaleString()}-token context, so the oldest messages may have been dropped. Start a new conversation, or raise the context window in Settings → AI Agent.`,
+      });
+    }
+    const final: OllamaChatMessage = outOfTurns
+      ? {
+          role: 'assistant',
+          content: reply.content.trim() || "I couldn't finish looking this up. Try a narrower question.",
+        }
+      : reply;
+    messages.push(final);
+    emit({ type: 'message', message: final });
+    if (!final.tool_calls?.length) {
       emit({ type: 'done' });
       return;
     }
   }
-
-  emit({ type: 'error', message: `Stopped after ${MAX_STEPS} steps. Ask a narrower question or continue.` });
 }
